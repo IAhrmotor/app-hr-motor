@@ -33,7 +33,7 @@ Route::get('/', function () {
             'label' => 'Lendismart',
             'url' => 'https://hrmotor.lendismart.com/login',
             'image' => asset('images/tools/lendismart.png'),
-            ],
+        ],
         [
             'label' => 'My Mutua',
             'url' => 'https://access.mutua.es/auth/realms/mymutua/protocol/openid-connect/auth?response_type=code&client_id=appseguros-front-canal-mediacion&scope=openid&state=kmbjXkQ7kJGvwZLQYHuo6lrnl1g7xDf-l2dCRIdr04M%3D&redirect_uri=https://www.mymutua.es/front-canal-mediacion/login/oauth2/code/sso&nonce=L0XFsW7iFaW1ZhX6dGXDl-tQm1y89v-5n7mKoEBgpv4',
@@ -56,5 +56,20 @@ Route::get('/', function () {
         ],
     ];
 
-    return view('home', compact('buttons'));
+    $videos = [
+        [
+            'title' => 'Firma electrónica DocuSign',
+            'youtube_id' => 'jibss9YUw8M',
+        ],
+        [
+            'title' => 'Vista general Salesforce',
+            'youtube_id' => 'ERovlZLtQbE',
+        ],
+        [
+            'title' => 'Proceso Seguros Mutua',
+            'youtube_id' => '7zVvaFasavY',
+        ],
+    ];
+
+    return view('home', compact('buttons', 'videos'));
 });
