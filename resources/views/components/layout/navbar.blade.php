@@ -11,7 +11,7 @@
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
         <a href="{{ route('home') }}" class="flex items-center">
             <img
-                src="{{ asset('images/logo-hr.svg') }}"
+                src="{{ asset('images/logo-horizontal.svg') }}"
                 alt="HR Motor"
                 class="h-10 w-auto"
             >
