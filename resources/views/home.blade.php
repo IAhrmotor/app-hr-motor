@@ -18,26 +18,15 @@
         $otherSections = collect($buttonSections)->reject(function ($section) {
             return in_array($section['title'], ['Herramientas generales', 'Comunicación', 'Office 365 online']);
         });
+
         $itSupportUrl =
             'https://hrmotor.my.site.com/hrmotorcommunity/s/login/?ec=302&startURL=%2Fhrmotorcommunity%2Fs%2Frecordlist%2FTareas_Departamento_Informatico__c%2FDefault';
+
+        $magazineUrl = asset('revista/revista-enero-2026.pdf');
+        $magazineEmbedUrl = asset('revista/revista-enero-2026.pdf');
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10">
-        <header class="mb-6">
-            <div
-                class="mb-3 inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-sm font-medium text-brand-primary">
-                App HR Motor
-            </div>
-
-            <h1 class="text-4xl font-bold tracking-tight text-brand-secondary">
-                Accesos rápidos
-            </h1>
-
-            <p class="mt-3 max-w-2xl text-base text-brand-secondary/70">
-                Selecciona una herramienta para abrir su acceso correspondiente.
-            </p>
-        </header>
-
         <div class="space-y-8">
             <div class="grid gap-8 lg:grid-cols-2 lg:items-stretch">
                 <div class="flex h-full flex-col gap-8">
@@ -126,7 +115,7 @@
                 </div>
 
                 @if ($generalSection)
-                    <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm h-full">
+                    <section class="h-full rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
                         <div class="mb-5">
                             <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                                 {{ $generalSection['title'] }}
@@ -217,13 +206,42 @@
             @endforeach
         </div>
 
-        <section class="mt-8">
+        <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
+            <div class="relative mb-5">
+                <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
+                    Revista mensual
+                </h2>
+
+                <div
+                    class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
+                    Enero
+                </div>
+
+                <p class="mt-2 text-center text-sm text-brand-secondary/70">
+                    Consulta la última edición de la revista interna.
+                </p>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-brand-secondary/10">
+                <iframe src="{{ $magazineEmbedUrl }}" class="h-[440px] w-full" frameborder="0" allowfullscreen>
+                </iframe>
+            </div>
+
+            <div class="mt-4 text-right">
+                <a href="{{ $magazineUrl }}" target="_blank" rel="noopener noreferrer"
+                    class="text-sm font-medium text-brand-primary hover:underline">
+                    Abrir revista en una nueva pestaña
+                </a>
+            </div>
+        </section>
+
+        <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
             <div class="mb-6">
-                <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">
+                <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                     Vídeos de formación
                 </h2>
 
-                <p class="mt-2 text-brand-secondary/70">
+                <p class="mt-2 text-center text-brand-secondary/70">
                     Consulta aquí los vídeos destacados.
                 </p>
             </div>
