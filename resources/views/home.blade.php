@@ -13,8 +13,8 @@
         $itSupportUrl =
             'https://hrmotor.my.site.com/hrmotorcommunity/s/login/?ec=302&startURL=%2Fhrmotorcommunity%2Fs%2Frecordlist%2FTareas_Departamento_Informatico__c%2FDefault';
 
-        $magazineUrl = asset('revista/revista-enero-2026.pdf');
-        $magazineEmbedUrl = asset('revista/revista-enero-2026.pdf');
+        $magazineUrl = asset('revista/revista-marzo-2026.pdf');
+        $magazineEmbedUrl = asset('revista/revista-marzo-2026.pdf');
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10">
@@ -205,7 +205,7 @@
 
                 <div
                     class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
-                    Enero
+                    Marzo
                 </div>
 
                 <p class="mt-2 text-center text-sm text-brand-secondary/70">
