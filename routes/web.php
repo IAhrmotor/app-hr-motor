@@ -122,4 +122,8 @@ Route::get('/', function () {
     ];
 
     return view('home', compact('buttonSections', 'videos'));
-});
+})->name('home');
+
+Route::get('/videos', function () {
+    return view('videos');
+})->name('videos');
