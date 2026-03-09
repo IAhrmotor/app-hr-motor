@@ -125,5 +125,60 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/videos', function () {
-    return view('videos');
+    $videos = [
+        [
+            'title' => 'Vista general Salesforce',
+            'youtube_id' => 'ERovlZLtQbE',
+        ],
+        [
+            'title' => 'Creación y gestión de leads en Salesforce',
+            'youtube_id' => 'alcUcfS5S4Y',
+        ],
+        [
+            'title' => 'Conversión del lead en Salesforce',
+            'youtube_id' => 'sGzVQy_Wh_4',
+        ],
+        [
+            'title' => 'Solicitud de financiación en Salesforce',
+            'youtube_id' => 'eujhUlpJ5Qk',
+        ],
+        [
+            'title' => 'Venta con cambio en Salesforce',
+            'youtube_id' => '8gZb9uKgdfE',
+        ],
+        [
+            'title' => 'Proceso de reserva en Salesforce',
+            'youtube_id' => 'w-_wLjFHzQE',
+        ],
+        [
+            'title' => 'Seguimiento de las reservas en Salesforce',
+            'youtube_id' => 'DiXNmle_pMs',
+        ],
+        [
+            'title' => 'Proceso de tasación en Salesforce',
+            'youtube_id' => 'kU4OQHZ8dNc',
+        ],
+        [
+            'title' => 'Firma electrónica DocuSign',
+            'youtube_id' => 'jibss9YUw8M',
+        ],
+        [
+            'title' => 'Proceso de entrega en Salesforce',
+            'youtube_id' => 'cP8RnVg3V0c',
+        ],
+        [
+            'title' => 'Ficha del vehículo en Salesforce',
+            'youtube_id' => '0KF5hs-lBlk',
+        ],
+        [
+            'title' => 'Proceso Seguros Mutua',
+            'youtube_id' => '7zVvaFasavY',
+        ],
+        [
+            'title' => 'Gestión de reseñas',
+            'youtube_id' => 'cGDOABxjNbs',
+        ],
+    ];
+
+    return view('videos', compact('videos'));
 })->name('videos');
