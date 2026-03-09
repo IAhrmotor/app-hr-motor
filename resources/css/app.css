@@ -8,3 +8,7 @@
     --color-brand-primary: #E51A2E;
     --color-brand-secondary: #1F2944;
 }
+
+[x-cloak] {
+    display: none !important;
+}

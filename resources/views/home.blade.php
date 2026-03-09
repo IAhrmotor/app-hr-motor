@@ -1,15 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+@extends('layouts.app')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App HR Motor</title>
-    <link rel="icon" href="{{ asset('favicon.ico') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-
-<body class="min-h-screen bg-slate-50 text-brand-secondary">
+@section('content')
     @php
         $generalSection = collect($buttonSections)->firstWhere('title', 'Herramientas generales');
         $communicationSection = collect($buttonSections)->firstWhere('title', 'Comunicación');
@@ -223,8 +214,7 @@
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-brand-secondary/10">
-                <iframe src="{{ $magazineEmbedUrl }}" class="h-[440px] w-full" frameborder="0" allowfullscreen>
-                </iframe>
+                <iframe src="{{ $magazineEmbedUrl }}" class="h-[440px] w-full" frameborder="0" allowfullscreen></iframe>
             </div>
 
             <div class="mt-4 text-right">
@@ -254,8 +244,7 @@
                                 src="https://www.youtube.com/embed/{{ $video['youtube_id'] }}"
                                 title="{{ $video['title'] }}" frameborder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowfullscreen>
-                            </iframe>
+                                allowfullscreen></iframe>
                         </div>
 
                         <div class="px-4 py-3">
@@ -268,6 +257,4 @@
             </div>
         </section>
     </main>
-</body>
-
-</html>
+@endsection
