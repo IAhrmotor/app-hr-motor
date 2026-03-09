@@ -10,8 +10,18 @@
 </head>
 
 <body class="min-h-screen bg-slate-100 text-slate-900">
+    @php
+        $generalSection = collect($buttonSections)->firstWhere('title', 'Herramientas generales');
+        $communicationSection = collect($buttonSections)->firstWhere('title', 'Comunicación');
+        $officeSection = collect($buttonSections)->firstWhere('title', 'Office 365 online');
+
+        $otherSections = collect($buttonSections)->reject(function ($section) {
+            return in_array($section['title'], ['Herramientas generales', 'Comunicación', 'Office 365 online']);
+        });
+    @endphp
+
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10">
-        <header class="mb-10">
+        <header class="mb-6">
             <div class="mb-3 inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
                 App HR Motor
             </div>
@@ -25,25 +35,121 @@
             </p>
         </header>
 
-        <div class="space-y-12">
-            @foreach ($buttonSections as $section)
+        <div class="space-y-8">
+            <div class="grid gap-8 lg:grid-cols-2">
+                @if ($communicationSection)
+                    <section class="rounded-3xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+                        <div class="relative mb-5">
+                            <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
+                                {{ $communicationSection['title'] }}
+                            </h2>
+
+                            <div
+                                class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                                Destacado
+                            </div>
+                        </div>
+
+                        <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
+                            @foreach ($communicationSection['buttons'] as $button)
+                                <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
+                                    class="group overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                    <div class="bg-white">
+                                        <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                            class="block w-full">
+                                    </div>
+
+                                    <div class="border-t border-blue-100 px-4 py-3">
+                                        <h3
+                                            class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                            {{ $button['label'] }}
+                                        </h3>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+
+                @if ($generalSection)
+                    <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div class="mb-5">
+                            <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
+                                {{ $generalSection['title'] }}
+                            </h2>
+                        </div>
+
+                        <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
+                            @foreach ($generalSection['buttons'] as $button)
+                                <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
+                                    class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                    <div class="bg-white">
+                                        <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                            class="block w-full">
+                                    </div>
+
+                                    <div class="border-t border-slate-200 px-4 py-3">
+                                        <h3
+                                            class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                            {{ $button['label'] }}
+                                        </h3>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+            </div>
+
+            @if ($officeSection)
+                <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div class="mb-5">
+                        <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
+                            {{ $officeSection['title'] }}
+                        </h2>
+                    </div>
+
+                    <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
+                        @foreach ($officeSection['buttons'] as $button)
+                            <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
+                                class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                <div class="bg-white">
+                                    <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                        class="block w-full">
+                                </div>
+
+                                <div class="border-t border-slate-200 px-4 py-3">
+                                    <h3
+                                        class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                        {{ $button['label'] }}
+                                    </h3>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            @foreach ($otherSections as $section)
                 <section>
                     <div class="mb-5">
-                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">
+                        <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
                             {{ $section['title'] }}
                         </h2>
                     </div>
 
-                    <div class="grid grid-cols-[repeat(auto-fill,minmax(136px,136px))] gap-6">
+                    <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                         @foreach ($section['buttons'] as $button)
                             <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
                                 class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                 <div class="bg-white">
-                                    <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}" class="block w-full">
+                                    <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                        class="block w-full">
                                 </div>
 
-                                <div class="border-t border-slate-200 px-4 py-2">
-                                    <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                <div class="border-t border-slate-200 px-4 py-3">
+                                    <h3
+                                        class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
                                         {{ $button['label'] }}
                                     </h3>
                                 </div>
@@ -69,18 +175,16 @@
                 @foreach ($videos as $video)
                     <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <div class="aspect-video">
-                            <iframe
-                                class="h-full w-full"
+                            <iframe class="h-full w-full"
                                 src="https://www.youtube.com/embed/{{ $video['youtube_id'] }}"
-                                title="{{ $video['title'] }}"
-                                frameborder="0"
+                                title="{{ $video['title'] }}" frameborder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                 allowfullscreen>
                             </iframe>
                         </div>
 
                         <div class="px-4 py-3">
-                            <h3 class="text-sm font-semibold text-slate-800">
+                            <h3 class="text-sm font-semibold text-slate-800 text-center">
                                 {{ $video['title'] }}
                             </h3>
                         </div>

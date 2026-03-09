@@ -43,11 +43,6 @@ Route::get('/', function () {
                     'image' => asset('images/tools/mutua.png'),
                 ],
                 [
-                    'label' => 'WhatsApp Web',
-                    'url' => 'https://web.whatsapp.com/',
-                    'image' => asset('images/tools/whatsapp.jpg'),
-                ],
-                [
                     'label' => 'Formación Comerciales HR Motor',
                     'url' => 'https://formacion.hrmotor.com/my/courses.php',
                     'image' => asset('images/tools/logo-formacion-cuadrado.png'),
@@ -86,6 +81,26 @@ Route::get('/', function () {
                     'label' => 'Excel',
                     'url' => 'https://www.office.com/launch/excel',
                     'image' => asset('images/tools/excel.png'),
+                ],
+            ],
+        ],
+        [
+            'title' => 'Comunicación',
+            'buttons' => [
+                [
+                    'label' => 'WhatsApp Web',
+                    'url' => 'https://web.whatsapp.com/',
+                    'image' => asset('images/tools/whatsapp.jpg'),
+                ],
+                [
+                    'label' => '3CX',
+                    'url' => 'AQUI_TU_URL_DE_3CX',
+                    'image' => asset('images/tools/3cx.png'),
+                ],
+                [
+                    'label' => 'Webmail',
+                    'url' => 'http://mail.hrmotor.com/correoweb/?_task=mail&_mbox=INBOX',
+                    'image' => asset('images/tools/webmail.png'),
                 ],
             ],
         ],
