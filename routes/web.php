@@ -3,56 +3,106 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    $buttons = [
+    $buttonSections = [
         [
-            'label' => 'DocuSign',
-            'url' => 'https://account.docusign.com/oauth/auth?response_type=code&scope=all%20click.manage%20me_profile%20room_forms%20room_fields%20inproductcommunication_read%20data_explorer_signing_insights%20notary_read%20notary_write%20search_read%20search_write%20webforms_manage%20dtr%20valmod_manage%20spring_read%20spring_write%20signature&client_id=2CC56DC9-4BCD-4B55-8AB0-8BA60BAE1065&redirect_uri=https://apps.docusign.com/authenticate&state=%7b%22widgetId%22:%22%40ds/send%22%2c%22xsrfToken%22:%22IYIogBvwZtz%2BEZviKPqyJlr915WEM8vmFZ14xMfBM5jq%2BBofLnLQDzRb37YARzOUNCSgjxu5e3ub3V0hoZVtzDbLaz7JvwviWui6HrM8DIybiaUP6kTN162yJKtVehy4Vm5nUroRdbTTg0cV3qpGirh%2BH3owkhvZb9GPMPNPPCE%3D%22%2c%22redirectUri%22:%22/send/authentication?back%3D%252Fhome%22%2c%22authTxnId%22:%2217f86b96-dd9d-4f8d-8d26-f741b689b5c2%22%7d',
-            'image' => asset('images/tools/docusign.jpg'),
+            'title' => 'Herramientas generales',
+            'buttons' => [
+                [
+                    'label' => 'DocuSign',
+                    'url' => 'https://account.docusign.com/oauth/auth?response_type=code&scope=all%20click.manage%20me_profile%20room_forms%20room_fields%20inproductcommunication_read%20data_explorer_signing_insights%20notary_read%20notary_write%20search_read%20search_write%20webforms_manage%20dtr%20valmod_manage%20spring_read%20spring_write%20signature&client_id=2CC56DC9-4BCD-4B55-8AB0-8BA60BAE1065&redirect_uri=https://apps.docusign.com/authenticate&state=%7b%22widgetId%22:%22%40ds/send%22%2c%22xsrfToken%22:%22IYIogBvwZtz%2BEZviKPqyJlr915WEM8vmFZ14xMfBM5jq%2BBofLnLQDzRb37YARzOUNCSgjxu5e3ub3V0hoZVtzDbLaz7JvwviWui6HrM8DIybiaUP6kTN162yJKtVehy4Vm5nUroRdbTTg0cV3qpGirh%2BH3owkhvZb9GPMPNPPCE%3D%22%2c%22redirectUri%22:%22/send/authentication?back%3D%252Fhome%22%2c%22authTxnId%22:%2217f86b96-dd9d-4f8d-8d26-f741b689b5c2%22%7d',
+                    'image' => asset('images/tools/docusign.jpg'),
+                ],
+                [
+                    'label' => 'Google Drive',
+                    'url' => 'https://drive.google.com',
+                    'image' => asset('images/tools/drive.png'),
+                ],
+                [
+                    'label' => 'Web HR Motor',
+                    'url' => 'https://www.hrmotor.com/',
+                    'image' => asset('images/tools/hrmotor.png'),
+                ],
+                [
+                    'label' => 'Woffu',
+                    'url' => 'https://hrmotor.woffu.com/v2/personal/dashboard/user',
+                    'image' => asset('images/tools/woffu.png'),
+                ],
+                [
+                    'label' => 'Salesforce comunidad',
+                    'url' => 'https://hrmotor.my.site.com/hrmotorcommunity/s/login/?ec=302&startURL=%2Fhrmotorcommunity%2Fs%2F',
+                    'image' => asset('images/tools/salesforce.png'),
+                ],
+                [
+                    'label' => 'Lendismart',
+                    'url' => 'https://hrmotor.lendismart.com/login',
+                    'image' => asset('images/tools/lendismart.png'),
+                ],
+                [
+                    'label' => 'My Mutua',
+                    'url' => 'https://access.mutua.es/auth/realms/mymutua/protocol/openid-connect/auth?response_type=code&client_id=appseguros-front-canal-mediacion&scope=openid&state=kmbjXkQ7kJGvwZLQYHuo6lrnl1g7xDf-l2dCRIdr04M%3D&redirect_uri=https://www.mymutua.es/front-canal-mediacion/login/oauth2/code/sso&nonce=L0XFsW7iFaW1ZhX6dGXDl-tQm1y89v-5n7mKoEBgpv4',
+                    'image' => asset('images/tools/mutua.png'),
+                ],
+                [
+                    'label' => 'Formación Comerciales',
+                    'url' => 'https://formacion.hrmotor.com/my/courses.php',
+                    'image' => asset('images/tools/logo-formacion-cuadrado.png'),
+                ],
+                [
+                    'label' => 'ServiceForm',
+                    'url' => 'https://www.serviceform.es/',
+                    'image' => asset('images/tools/serviceform.png'),
+                ],
+            ],
         ],
         [
-            'label' => 'Google Drive',
-            'url' => 'https://drive.google.com',
-            'image' => asset('images/tools/drive.png'),
+            'title' => 'Office 365 online',
+            'buttons' => [
+                [
+                    'label' => 'Outlook',
+                    'url' => 'https://outlook.office.com/',
+                    'image' => asset('images/tools/outlook.webp'),
+                ],
+                [
+                    'label' => 'Teams',
+                    'url' => 'https://teams.microsoft.com/',
+                    'image' => asset('images/tools/teams.png'),
+                ],
+                [
+                    'label' => 'OneDrive',
+                    'url' => 'https://www.office.com/launch/onedrive',
+                    'image' => asset('images/tools/onedrive.webp'),
+                ],
+                [
+                    'label' => 'Word',
+                    'url' => 'https://www.office.com/launch/word',
+                    'image' => asset('images/tools/word.png'),
+                ],
+                [
+                    'label' => 'Excel',
+                    'url' => 'https://www.office.com/launch/excel',
+                    'image' => asset('images/tools/excel.png'),
+                ],
+            ],
         ],
         [
-            'label' => 'Web de HR Motor',
-            'url' => 'https://www.hrmotor.com/',
-            'image' => asset('images/tools/hrmotor.png'),
-        ],
-        [
-            'label' => 'Woffu',
-            'url' => 'https://hrmotor.woffu.com/v2/personal/dashboard/user',
-            'image' => asset('images/tools/woffu.png'),
-        ],
-        [
-            'label' => 'Salesforce comunidad',
-            'url' => 'https://hrmotor.my.site.com/hrmotorcommunity/s/login/?ec=302&startURL=%2Fhrmotorcommunity%2Fs%2F',
-            'image' => asset('images/tools/salesforce.png'),
-        ],
-        [
-            'label' => 'Lendismart',
-            'url' => 'https://hrmotor.lendismart.com/login',
-            'image' => asset('images/tools/lendismart.png'),
-        ],
-        [
-            'label' => 'My Mutua',
-            'url' => 'https://access.mutua.es/auth/realms/mymutua/protocol/openid-connect/auth?response_type=code&client_id=appseguros-front-canal-mediacion&scope=openid&state=kmbjXkQ7kJGvwZLQYHuo6lrnl1g7xDf-l2dCRIdr04M%3D&redirect_uri=https://www.mymutua.es/front-canal-mediacion/login/oauth2/code/sso&nonce=L0XFsW7iFaW1ZhX6dGXDl-tQm1y89v-5n7mKoEBgpv4',
-            'image' => asset('images/tools/mutua.png'),
-        ],
-        [
-            'label' => 'WhatsApp Web',
-            'url' => 'https://web.whatsapp.com/',
-            'image' => asset('images/tools/whatsapp.jpg'),
-        ],
-        [
-            'label' => 'Formación Comerciales HR Motor',
-            'url' => 'https://formacion.hrmotor.com/my/courses.php',
-            'image' => asset('images/tools/logo-formacion-cuadrado.png'),
-        ],
-        [
-            'label' => 'ServiceForm',
-            'url' => 'https://www.serviceform.es/',
-            'image' => asset('images/tools/serviceform.png'),
+            'title' => 'Comunicación',
+            'buttons' => [
+                [
+                    'label' => 'WhatsApp Web',
+                    'url' => 'https://web.whatsapp.com/',
+                    'image' => asset('images/tools/whatsapp.jpg'),
+                ],
+                [
+                    'label' => '3CX',
+                    'url' => 'AQUI_TU_URL_DE_3CX',
+                    'image' => asset('images/tools/3cx.png'),
+                ],
+                [
+                    'label' => 'Webmail',
+                    'url' => 'http://mail.hrmotor.com/correoweb/?_task=mail&_mbox=INBOX',
+                    'image' => asset('images/tools/webmail.png'),
+                ],
+            ],
         ],
     ];
 
@@ -71,5 +121,5 @@ Route::get('/', function () {
         ],
     ];
 
-    return view('home', compact('buttons', 'videos'));
+    return view('home', compact('buttonSections', 'videos'));
 });
