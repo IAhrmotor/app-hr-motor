@@ -9,7 +9,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="min-h-screen bg-slate-100 text-slate-900">
+<body class="min-h-screen bg-slate-50 text-brand-secondary">
     @php
         $generalSection = collect($buttonSections)->firstWhere('title', 'Herramientas generales');
         $communicationSection = collect($buttonSections)->firstWhere('title', 'Comunicación');
@@ -22,15 +22,16 @@
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10">
         <header class="mb-6">
-            <div class="mb-3 inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
+            <div
+                class="mb-3 inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-sm font-medium text-brand-primary">
                 App HR Motor
             </div>
 
-            <h1 class="text-4xl font-bold tracking-tight">
+            <h1 class="text-4xl font-bold tracking-tight text-brand-secondary">
                 Accesos rápidos
             </h1>
 
-            <p class="mt-3 max-w-2xl text-base text-slate-600">
+            <p class="mt-3 max-w-2xl text-base text-brand-secondary/70">
                 Selecciona una herramienta para abrir su acceso correspondiente.
             </p>
         </header>
@@ -38,14 +39,14 @@
         <div class="space-y-8">
             <div class="grid gap-8 lg:grid-cols-2">
                 @if ($communicationSection)
-                    <section class="rounded-3xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+                    <section class="rounded-3xl border border-brand-primary/20 bg-brand-primary/5 p-6 shadow-sm">
                         <div class="relative mb-5">
-                            <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
+                            <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                                 {{ $communicationSection['title'] }}
                             </h2>
 
                             <div
-                                class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                                class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
                                 Destacado
                             </div>
                         </div>
@@ -53,15 +54,16 @@
                         <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                             @foreach ($communicationSection['buttons'] as $button)
                                 <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
-                                    class="group overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                    class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-primary/20 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                     <div class="bg-white">
                                         <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
                                             class="block w-full">
                                     </div>
 
-                                    <div class="border-t border-blue-100 px-4 py-3">
+                                    <div
+                                        class="flex flex-1 items-center justify-center border-t border-brand-primary/10 px-4 py-3">
                                         <h3
-                                            class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                            class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
                                             {{ $button['label'] }}
                                         </h3>
                                     </div>
@@ -72,9 +74,9 @@
                 @endif
 
                 @if ($generalSection)
-                    <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
                         <div class="mb-5">
-                            <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
+                            <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                                 {{ $generalSection['title'] }}
                             </h2>
                         </div>
@@ -82,15 +84,16 @@
                         <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                             @foreach ($generalSection['buttons'] as $button)
                                 <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
-                                    class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                    class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                     <div class="bg-white">
                                         <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
                                             class="block w-full">
                                     </div>
 
-                                    <div class="border-t border-slate-200 px-4 py-3">
+                                    <div
+                                        class="flex flex-1 items-center justify-center border-t border-brand-primary/10 px-4 py-3">
                                         <h3
-                                            class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                            class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
                                             {{ $button['label'] }}
                                         </h3>
                                     </div>
@@ -102,9 +105,9 @@
             </div>
 
             @if ($officeSection)
-                <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
                     <div class="mb-5">
-                        <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
+                        <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                             {{ $officeSection['title'] }}
                         </h2>
                     </div>
@@ -112,15 +115,16 @@
                     <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                         @foreach ($officeSection['buttons'] as $button)
                             <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
-                                class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                 <div class="bg-white">
                                     <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
                                         class="block w-full">
                                 </div>
 
-                                <div class="border-t border-slate-200 px-4 py-3">
+                                <div
+                                    class="flex flex-1 items-center justify-center border-t border-brand-secondary/10 px-4 py-3">
                                     <h3
-                                        class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                        class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
                                         {{ $button['label'] }}
                                     </h3>
                                 </div>
@@ -133,7 +137,7 @@
             @foreach ($otherSections as $section)
                 <section>
                     <div class="mb-5">
-                        <h2 class="text-center text-2xl font-bold tracking-tight text-slate-900">
+                        <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                             {{ $section['title'] }}
                         </h2>
                     </div>
@@ -141,15 +145,16 @@
                     <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                         @foreach ($section['buttons'] as $button)
                             <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
-                                class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                 <div class="bg-white">
                                     <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
                                         class="block w-full">
                                 </div>
 
-                                <div class="border-t border-slate-200 px-4 py-3">
+                                <div
+                                    class="flex flex-1 items-center justify-center border-t border-brand-primary/10 px-4 py-3">
                                     <h3
-                                        class="text-center text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                        class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
                                         {{ $button['label'] }}
                                     </h3>
                                 </div>
@@ -160,20 +165,20 @@
             @endforeach
         </div>
 
-        <section class="mt-14">
+        <section class="mt-8">
             <div class="mb-6">
-                <h2 class="text-2xl font-bold tracking-tight text-slate-900">
+                <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">
                     Vídeos de formación
                 </h2>
 
-                <p class="mt-2 text-slate-600">
+                <p class="mt-2 text-brand-secondary/70">
                     Consulta aquí los vídeos destacados.
                 </p>
             </div>
 
             <div class="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
                 @foreach ($videos as $video)
-                    <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <article class="overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm">
                         <div class="aspect-video">
                             <iframe class="h-full w-full"
                                 src="https://www.youtube.com/embed/{{ $video['youtube_id'] }}"
@@ -184,7 +189,7 @@
                         </div>
 
                         <div class="px-4 py-3">
-                            <h3 class="text-sm font-semibold text-slate-800 text-center">
+                            <h3 class="text-center text-sm font-semibold text-brand-secondary">
                                 {{ $video['title'] }}
                             </h3>
                         </div>

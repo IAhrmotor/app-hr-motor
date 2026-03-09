@@ -18,7 +18,7 @@ Route::get('/', function () {
                     'image' => asset('images/tools/drive.png'),
                 ],
                 [
-                    'label' => 'Web de HR Motor',
+                    'label' => 'Web HR Motor',
                     'url' => 'https://www.hrmotor.com/',
                     'image' => asset('images/tools/hrmotor.png'),
                 ],
@@ -43,7 +43,7 @@ Route::get('/', function () {
                     'image' => asset('images/tools/mutua.png'),
                 ],
                 [
-                    'label' => 'Formación Comerciales HR Motor',
+                    'label' => 'Formación Comerciales',
                     'url' => 'https://formacion.hrmotor.com/my/courses.php',
                     'image' => asset('images/tools/logo-formacion-cuadrado.png'),
                 ],
