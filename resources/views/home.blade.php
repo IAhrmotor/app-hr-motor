@@ -17,7 +17,7 @@
         $magazineEmbedUrl = asset('revista/revista-marzo-2026.pdf');
     @endphp
 
-    <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10">
+    <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
         <div class="space-y-8">
             <div class="grid gap-8 lg:grid-cols-2 lg:items-stretch">
                 <div class="flex h-full flex-col gap-8">
