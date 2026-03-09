@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>App HR Motor</title>
-    <link rel="icon" type="image/png" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -25,22 +25,34 @@
             </p>
         </header>
 
-        <section class="grid justify-center grid-cols-[repeat(auto-fill,minmax(136px,136px))] gap-6">
-            @foreach ($buttons as $button)
-                <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
-                    class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
-                    <div class="bg-white">
-                        <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}" class="block w-full">
-                    </div>
-
-                    <div class="border-t border-slate-200 px-4 py-2">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-800">
-                            {{ $button['label'] }}
+        <div class="space-y-12">
+            @foreach ($buttonSections as $section)
+                <section>
+                    <div class="mb-5">
+                        <h2 class="text-2xl font-bold tracking-tight text-slate-900">
+                            {{ $section['title'] }}
                         </h2>
                     </div>
-                </a>
+
+                    <div class="grid grid-cols-[repeat(auto-fill,minmax(136px,136px))] gap-6">
+                        @foreach ($section['buttons'] as $button)
+                            <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
+                                class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                <div class="bg-white">
+                                    <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}" class="block w-full">
+                                </div>
+
+                                <div class="border-t border-slate-200 px-4 py-2">
+                                    <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                        {{ $button['label'] }}
+                                    </h3>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
             @endforeach
-        </section>
+        </div>
 
         <section class="mt-14">
             <div class="mb-6">
@@ -57,8 +69,11 @@
                 @foreach ($videos as $video)
                     <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <div class="aspect-video">
-                            <iframe class="h-full w-full" src="https://www.youtube.com/embed/{{ $video['youtube_id'] }}"
-                                title="{{ $video['title'] }}" frameborder="0"
+                            <iframe
+                                class="h-full w-full"
+                                src="https://www.youtube.com/embed/{{ $video['youtube_id'] }}"
+                                title="{{ $video['title'] }}"
+                                frameborder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                 allowfullscreen>
                             </iframe>
