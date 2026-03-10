@@ -11,5 +11,7 @@
     <x-layout.navbar />
 
     @yield('content')
+
+    <x-layout.footer />
 </body>
 </html>
