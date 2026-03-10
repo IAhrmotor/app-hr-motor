@@ -10,9 +10,6 @@
             return in_array($section['title'], ['Herramientas generales', 'Comunicación', 'Office 365 online']);
         });
 
-        $itSupportUrl =
-            'https://hrmotor.my.site.com/hrmotorcommunity/s/login/?ec=302&startURL=%2Fhrmotorcommunity%2Fs%2Frecordlist%2FTareas_Departamento_Informatico__c%2FDefault';
-
         $magazineUrl = asset('revista/revista-marzo-2026.pdf');
         $magazineEmbedUrl = asset('revista/revista-marzo-2026.pdf');
     @endphp
@@ -69,7 +66,7 @@
                         </div>
 
                         <div class="flex flex-1 items-center justify-center">
-                            <a href="{{ $itSupportUrl }}" target="_blank" rel="noopener noreferrer"
+                            <a href="{{ config('portal.links.it_support') }}" target="_blank" rel="noopener noreferrer"
                                 class="group flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-brand-primary/15 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                 <div class="px-6 py-6">
                                     <div class="text-center">
