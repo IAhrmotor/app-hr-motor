@@ -1,10 +1,5 @@
 @php
-    $navItems = [
-        [
-            'label' => 'Vídeos',
-            'route' => 'videos',
-        ],
-    ];
+    $navItems = config('navigation.main', []);
 @endphp
 
 <nav x-data="{ open: false }" class="sticky top-0 z-50 border-b border-gray-200 bg-white">
