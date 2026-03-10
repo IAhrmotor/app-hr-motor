@@ -1,5 +1,5 @@
 @php
-    $itSupportUrl = 'https://hrmotor.my.site.com/hrmotorcommunity/s/login/?ec=302&startURL=%2Fhrmotorcommunity%2Fs%2Frecordlist%2FTareas_Departamento_Informatico__c%2FDefault';
+    $footerPlatformItems = config('navigation.footer.platform', []);
 @endphp
 
 <footer class="mt-16 bg-brand-secondary text-white">
@@ -22,16 +22,13 @@
                     </h2>
 
                     <ul class="mt-4 space-y-3 text-sm text-white/75">
-                        <li>
-                            <a href="{{ route('home') }}" class="transition hover:text-white">
-                                Inicio
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('videos') }}" class="transition hover:text-white">
-                                Vídeos
-                            </a>
-                        </li>
+                        @foreach ($footerPlatformItems as $item)
+                            <li>
+                                <a href="{{ route($item['route']) }}" class="transition hover:text-white">
+                                    {{ $item['label'] }}
+                                </a>
+                            </li>
+                        @endforeach
                     </ul>
                 </div>
 
@@ -42,7 +39,7 @@
 
                     <ul class="mt-4 space-y-3 text-sm text-white/75">
                         <li>
-                            <a href="{{ $itSupportUrl }}" class="transition hover:text-white">
+                            <a href="{{ config('portal.links.it_support') }}" target="_blank" rel="noopener noreferrer" class="transition hover:text-white">
                                 Asistencia IT
                             </a>
                         </li>
