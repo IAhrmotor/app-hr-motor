@@ -45,6 +45,36 @@
                 </svg>
             </button>
 
+            <form method="POST" action="{{ route('logout') }}" class="hidden md:block">
+                @csrf
+                <button
+                    type="submit"
+                    class="inline-flex cursor-pointer h-10 w-10 items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-red-600"
+                    aria-label="Cerrar sesión"
+                    title="Cerrar sesión"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+                        />
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M18 12H9m0 0l3-3m-3 3l3 3"
+                        />
+                    </svg>
+                </button>
+            </form>
+
             <button
                 type="button"
                 @click="open = !open"
@@ -101,6 +131,36 @@
                     {{ $item['label'] }}
                 </a>
             @endforeach
+
+            <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t border-gray-200 pt-2">
+                @csrf
+                <button
+                    type="submit"
+                    @click="open = false"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-red-600"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+                        />
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M18 12H9m0 0l3-3m-3 3l3 3"
+                        />
+                    </svg>
+                    <span>Cerrar sesión</span>
+                </button>
+            </form>
         </div>
     </div>
 </nav>
