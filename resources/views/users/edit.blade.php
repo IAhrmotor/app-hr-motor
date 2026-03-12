@@ -78,9 +78,9 @@
                         </label>
 
                         @if (auth()->user()->role === 'gestor')
-                            <input type="hidden" name="role" value="user">
+                            <input type="hidden" name="role" value="comercial">
 
-                            <input type="text" value="Usuario" disabled
+                            <input type="text" value="Comercial" disabled
                                 class="w-full cursor-not-allowed rounded-2xl border border-gray-300 bg-gray-100 px-4 py-3 text-sm text-brand-secondary/60">
 
                             <p class="mt-2 text-xs text-brand-secondary/60">

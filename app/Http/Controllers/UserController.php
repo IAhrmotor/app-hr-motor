@@ -9,11 +9,29 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::orderBy('name')->get();
+        $search = $request->query('search');
+        $sort = $request->query('sort', 'name');
+        $direction = $request->query('direction', 'asc');
 
-        return view('users.index', compact('users'));
+        $allowedSorts = ['name', 'email', 'role'];
+        $sort = in_array($sort, $allowedSorts) ? $sort : 'name';
+        $direction = $direction === 'desc' ? 'desc' : 'asc';
+
+        $users = User::query()
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($subquery) use ($search) {
+                    $subquery->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('role', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy($sort, $direction)
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('users.index', compact('users', 'search', 'sort', 'direction'));
     }
 
     public function create()
@@ -21,8 +39,8 @@ class UserController extends Controller
         $authUser = request()->user();
 
         $availableRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'user']
-            : ['user'];
+            ? ['admin', 'gestor', 'comercial']
+            : ['comercial'];
 
         return view('users.create', compact('availableRoles'));
     }
@@ -32,8 +50,8 @@ class UserController extends Controller
         $authUser = $request->user();
 
         $allowedRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'user']
-            : ['user'];
+            ? ['admin', 'gestor', 'comercial']
+            : ['comercial'];
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -64,7 +82,7 @@ class UserController extends Controller
                 ->with('error', 'No puedes eliminar tu propio usuario.');
         }
 
-        if ($authUser->role === 'gestor' && $user->role !== 'user') {
+        if ($authUser->role === 'gestor' && $user->role !== 'comercial') {
             return redirect()
                 ->route('users.index')
                 ->with('error', 'No tienes permisos para eliminar este usuario.');
@@ -82,7 +100,7 @@ class UserController extends Controller
         $authUser = request()->user();
 
         if ($authUser->role === 'gestor') {
-            if ($authUser->id === $user->id || $user->role !== 'user') {
+            if ($authUser->id === $user->id || $user->role !== 'comercial') {
                 return redirect()
                     ->route('users.index')
                     ->with('error', 'No tienes permisos para editar este usuario.');
@@ -90,8 +108,8 @@ class UserController extends Controller
         }
 
         $availableRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'user']
-            : ['user'];
+            ? ['admin', 'gestor', 'comercial']
+            : ['comercial'];
 
         return view('users.edit', compact('user', 'availableRoles'));
     }
@@ -101,7 +119,7 @@ class UserController extends Controller
         $authUser = $request->user();
 
         if ($authUser->role === 'gestor') {
-            if ($authUser->id === $user->id || $user->role !== 'user') {
+            if ($authUser->id === $user->id || $user->role !== 'comercial') {
                 return redirect()
                     ->route('users.index')
                     ->with('error', 'No tienes permisos para editar este usuario.');
@@ -109,8 +127,8 @@ class UserController extends Controller
         }
 
         $allowedRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'user']
-            : ['user'];
+            ? ['admin', 'gestor', 'comercial']
+            : ['comercial'];
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -121,7 +139,7 @@ class UserController extends Controller
 
         $user->name = $validated['name'];
         $user->email = $validated['email'];
-        $user->role = $authUser->role === 'admin' ? $validated['role'] : 'user';
+        $user->role = $authUser->role === 'admin' ? $validated['role'] : 'comercial';
 
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
