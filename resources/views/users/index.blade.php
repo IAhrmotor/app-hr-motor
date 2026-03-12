@@ -65,7 +65,7 @@
                                         $authUser->role === 'admin' ||
                                         ($authUser->role === 'gestor' &&
                                             $authUser->id !== $user->id &&
-                                            $user->role === 'user');
+                                            $user->role === 'comercial');
                                 @endphp
                                 <tr class="transition hover:bg-brand-secondary/5">
                                     <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
