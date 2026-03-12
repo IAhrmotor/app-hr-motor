@@ -211,7 +211,7 @@
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-brand-secondary/10">
-                <iframe src="{{ $magazineEmbedUrl }}" class="h-[440px] w-full" frameborder="0" allowfullscreen></iframe>
+                <iframe src="{{ $magazineEmbedUrl }}" class="h-110 w-full" frameborder="0" allowfullscreen></iframe>
             </div>
 
             <div class="mt-4 text-right">

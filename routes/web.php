@@ -1,6 +1,11 @@
 <?php
 
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/reset-password', function () {
+    return redirect()->route('password.request');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/', function () {
@@ -183,8 +188,13 @@ Route::middleware('auth')->group(function () {
 
         return view('videos', compact('videos'));
     })->name('videos');
-});
 
-Route::get('/reset-password', function () {
-    return redirect()->route('password.request');
+    Route::middleware('role:admin,gestor')->group(function () {
+        Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
+        Route::get('/usuarios/crear', [UserController::class, 'create'])->name('users.create');
+        Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
+        Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
+    });
 });
