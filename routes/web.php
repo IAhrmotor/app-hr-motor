@@ -191,5 +191,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin,gestor')->group(function () {
         Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
+        Route::get('/usuarios/crear', [UserController::class, 'create'])->name('users.create');
+        Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
+        Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
     });
 });
