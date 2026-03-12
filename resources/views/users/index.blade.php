@@ -1,9 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $authUser = auth()->user();
+
+        function sortDirection($column, $sort, $direction)
+        {
+            if ($sort !== $column) {
+                return 'asc';
+            }
+
+            return $direction === 'asc' ? 'desc' : 'asc';
+        }
+    @endphp
+
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
         <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
-            <div class="mb-6 flex items-start justify-between gap-4">
+            <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight text-brand-secondary">
                         Gestión de usuarios
@@ -15,8 +28,15 @@
                 </div>
 
                 <a href="{{ route('users.create') }}"
-                    class="inline-flex items-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
-                    Crear usuario
+                    class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary text-white transition hover:opacity-90"
+                    title="Crear usuario" aria-label="Crear usuario">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="1.8">
+                        <circle cx="9" cy="8" r="2.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 17c.9-2 2.5-3 4.5-3s3.6 1 4.5 3" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 8v6" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 11h6" />
+                    </svg>
                 </a>
             </div>
 
@@ -32,23 +52,128 @@
                 </div>
             @endif
 
+            <form method="GET" action="{{ route('users.index') }}" class="mb-6">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div class="relative w-full md:max-w-md">
+                        <div
+                            class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-brand-secondary/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+
+                        <input type="text" name="search" value="{{ request('search') }}"
+                            placeholder="Buscar por nombre, correo o rol"
+                            class="w-full rounded-2xl border border-gray-300 py-3 pl-11 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button type="submit"
+                            class="inline-flex items-center rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90">
+                            Buscar
+                        </button>
+
+                        @if (request('search') || request('sort') || request('direction'))
+                            <a href="{{ route('users.index') }}"
+                                class="inline-flex items-center rounded-xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                Limpiar
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </form>
+
             <div class="overflow-hidden rounded-2xl border border-brand-secondary/10">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-brand-secondary/10">
                         <thead class="bg-brand-secondary/5">
                             <tr>
-                                <th
-                                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">
-                                    Nombre
+                                <th class="px-6 py-4 text-left">
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'name', 'direction' => sortDirection('name', $sort, $direction)])) }}"
+                                        class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
+                                        title="Ordenar por nombre">
+                                        <span>Nombre</span>
+
+                                        @if ($sort === 'name' && $direction === 'asc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                            </svg>
+                                        @elseif ($sort === 'name' && $direction === 'desc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-secondary/40"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7l4-4 4 4" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 17l-4 4-4-4" />
+                                            </svg>
+                                        @endif
+                                    </a>
                                 </th>
-                                <th
-                                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">
-                                    Correo
+
+                                <th class="px-6 py-4 text-left">
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'email', 'direction' => sortDirection('email', $sort, $direction)])) }}"
+                                        class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
+                                        title="Ordenar por correo">
+                                        <span>Correo</span>
+
+                                        @if ($sort === 'email' && $direction === 'asc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                            </svg>
+                                        @elseif ($sort === 'email' && $direction === 'desc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 text-brand-secondary/40" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7l4-4 4 4" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M16 17l-4 4-4-4" />
+                                            </svg>
+                                        @endif
+                                    </a>
                                 </th>
-                                <th
-                                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">
-                                    Rol
+
+                                <th class="px-6 py-4 text-left">
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'role', 'direction' => sortDirection('role', $sort, $direction)])) }}"
+                                        class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
+                                        title="Ordenar por rol">
+                                        <span>Rol</span>
+
+                                        @if ($sort === 'role' && $direction === 'asc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                            </svg>
+                                        @elseif ($sort === 'role' && $direction === 'desc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 text-brand-secondary/40" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7l4-4 4 4" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M16 17l-4 4-4-4" />
+                                            </svg>
+                                        @endif
+                                    </a>
                                 </th>
+
                                 <th
                                     class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">
                                     Acciones
@@ -59,35 +184,38 @@
                         <tbody class="divide-y divide-brand-secondary/10 bg-white">
                             @forelse ($users as $user)
                                 @php
-                                    $authUser = auth()->user();
-
                                     $canManageUser =
                                         $authUser->role === 'admin' ||
                                         ($authUser->role === 'gestor' &&
                                             $authUser->id !== $user->id &&
-                                            $user->role === 'user');
+                                            $user->role === 'comercial');
                                 @endphp
+
                                 <tr class="transition hover:bg-brand-secondary/5">
                                     <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
                                         {{ $user->name }}
                                     </td>
+
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
                                         {{ $user->email }}
                                     </td>
+
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
                                         <span
                                             class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
                                             {{ ucfirst($user->role) }}
                                         </span>
                                     </td>
+
                                     <td class="px-6 py-4">
                                         @if ($canManageUser)
                                             <div class="flex justify-end gap-2">
                                                 <a href="{{ route('users.edit', $user) }}"
                                                     class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-brand-secondary/15 bg-white text-brand-secondary transition hover:bg-brand-secondary/5"
                                                     title="Editar usuario" aria-label="Editar usuario">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                        stroke-width="1.8">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
                                                             d="M16.862 3.487a2.25 2.25 0 113.182 3.182L8.25 18.462 3 20l1.538-5.25L16.862 3.487z" />
                                                     </svg>
@@ -124,6 +252,12 @@
                     </table>
                 </div>
             </div>
+
+            @if ($users->hasPages())
+                <div class="mt-6">
+                    {{ $users->links() }}
+                </div>
+            @endif
         </section>
     </main>
 @endsection
