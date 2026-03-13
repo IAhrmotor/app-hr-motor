@@ -27,7 +27,12 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
+            'role' => 'comercial',
+            'salesforce_user_id' => null,
             'password' => static::$password ??= Hash::make('password'),
+            'is_active' => true,
+            'must_change_password' => false,
+            'activated_at' => now(),
             'remember_token' => Str::random(10),
         ];
     }
