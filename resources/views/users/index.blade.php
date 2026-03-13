@@ -65,8 +65,24 @@
                         </div>
 
                         <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Buscar por nombre, correo o rol"
+                            placeholder="Buscar por nombre, correo, rol o ID Salesforce"
                             class="w-full rounded-2xl border border-gray-300 py-3 pl-11 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                    </div>
+
+                    <div class="relative w-full md:w-56">
+                        <select name="status"
+                            class="w-full cursor-pointer appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                            <option value="">Todos los estados</option>
+                            <option value="active" @selected($status === 'active')>Activos</option>
+                            <option value="pending" @selected($status === 'pending')>Pendientes</option>
+                        </select>
+
+                        <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-brand-secondary/70">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-3">
@@ -75,7 +91,7 @@
                             Buscar
                         </button>
 
-                        @if (request('search') || request('sort') || request('direction'))
+                        @if (request('search') || request('status') || request('sort') || request('direction'))
                             <a href="{{ route('users.index') }}"
                                 class="inline-flex items-center rounded-xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
                                 Limpiar
@@ -174,6 +190,62 @@
                                     </a>
                                 </th>
 
+                                <th class="px-6 py-4 text-left">
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'is_active', 'direction' => sortDirection('is_active', $sort, $direction)])) }}"
+                                        class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
+                                        title="Ordenar por estado">
+                                        <span>Estado</span>
+
+                                        @if ($sort === 'is_active' && $direction === 'asc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                            </svg>
+                                        @elseif ($sort === 'is_active' && $direction === 'desc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 text-brand-secondary/40" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7l4-4 4 4" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M16 17l-4 4-4-4" />
+                                            </svg>
+                                        @endif
+                                    </a>
+                                </th>
+
+                                <th class="px-6 py-4 text-left">
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'salesforce_user_id', 'direction' => sortDirection('salesforce_user_id', $sort, $direction)])) }}"
+                                        class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
+                                        title="Ordenar por ID de Salesforce">
+                                        <span>ID Salesforce</span>
+
+                                        @if ($sort === 'salesforce_user_id' && $direction === 'asc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                            </svg>
+                                        @elseif ($sort === 'salesforce_user_id' && $direction === 'desc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 text-brand-secondary/40" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7l4-4 4 4" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M16 17l-4 4-4-4" />
+                                            </svg>
+                                        @endif
+                                    </a>
+                                </th>
+
                                 <th
                                     class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">
                                     Acciones
@@ -191,7 +263,8 @@
                                             $user->role === 'comercial');
                                 @endphp
 
-                                <tr class="transition hover:bg-brand-secondary/5">
+                                <tr
+                                    class="{{ $user->is_active ? 'transition hover:bg-brand-secondary/5' : 'bg-amber-50/70 transition hover:bg-amber-100/70' }}">
                                     <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
                                         {{ $user->name }}
                                     </td>
@@ -205,6 +278,24 @@
                                             class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
                                             {{ ucfirst($user->role) }}
                                         </span>
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">
+                                        @if ($user->is_active)
+                                            <span
+                                                class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-700">
+                                                Activo
+                                            </span>
+                                        @else
+                                            <span
+                                                class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                                                Pendiente
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">
+                                        {{ $user->salesforce_user_id ?: 'No aplica' }}
                                     </td>
 
                                     <td class="px-6 py-4">
@@ -243,7 +334,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-sm text-brand-secondary/70">
+                                    <td colspan="6" class="px-6 py-8 text-center text-sm text-brand-secondary/70">
                                         No hay usuarios registrados.
                                     </td>
                                 </tr>

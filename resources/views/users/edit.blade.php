@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $isManager = auth()->user()->role === 'gestor';
+        $selectedRole = old('role', $user->role);
+        $showSalesforceField = $selectedRole === 'comercial';
+    @endphp
+
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
         <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
             <div class="mb-8">
@@ -77,7 +83,7 @@
                             Rol
                         </label>
 
-                        @if (auth()->user()->role === 'gestor')
+                        @if ($isManager)
                             <input type="hidden" name="role" value="comercial">
 
                             <input type="text" value="Comercial" disabled
@@ -88,10 +94,10 @@
                             </p>
                         @else
                             <div class="relative">
-                                <select id="role" name="role" required
+                                <select id="role" name="role" required data-role-select
                                     class="w-full appearance-none bg-none rounded-2xl border border-gray-300 px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                                     @foreach ($availableRoles as $role)
-                                        <option value="{{ $role }}" @selected(old('role', $user->role) === $role)>
+                                        <option value="{{ $role }}" @selected($selectedRole === $role)>
                                             {{ ucfirst($role) }}
                                         </option>
                                     @endforeach
@@ -108,7 +114,21 @@
                         @endif
                     </div>
 
-                    <div></div>
+                    <div id="salesforce-user-id-wrapper" @class([
+                        'hidden' => ! $showSalesforceField,
+                    ])>
+                        <label for="salesforce_user_id" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            ID de usuario en Salesforce
+                        </label>
+
+                        <input id="salesforce_user_id" name="salesforce_user_id" type="text"
+                            value="{{ old('salesforce_user_id', $user->salesforce_user_id) }}" @required($showSalesforceField)
+                            class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">
+                            Si el usuario deja de ser comercial, este campo se limpiará automáticamente.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="flex items-center justify-between gap-4">
@@ -123,4 +143,31 @@
             </form>
         </section>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const roleSelect = document.querySelector('[data-role-select]');
+            const salesforceWrapper = document.getElementById('salesforce-user-id-wrapper');
+            const salesforceInput = document.getElementById('salesforce_user_id');
+
+            if (!salesforceWrapper || !salesforceInput) {
+                return;
+            }
+
+            const toggleSalesforceField = () => {
+                const isCommercial = !roleSelect || roleSelect.value === 'comercial';
+
+                salesforceWrapper.classList.toggle('hidden', !isCommercial);
+                salesforceInput.required = isCommercial;
+
+                if (!isCommercial) {
+                    salesforceInput.value = '';
+                }
+            };
+
+            toggleSalesforceField();
+
+            roleSelect?.addEventListener('change', toggleSalesforceField);
+        });
+    </script>
 @endsection
