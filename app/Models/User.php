@@ -12,6 +12,8 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public const DEFAULT_AVATAR_PATH = 'images/users/hrmotor-default-user-avatar.png';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -22,11 +24,22 @@ class User extends Authenticatable
         'email',
         'role',
         'salesforce_user_id',
+        'avatar_path',
+        'linkedin_url',
         'password',
         'is_active',
         'must_change_password',
         'activated_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $user): void {
+            if (blank($user->avatar_path)) {
+                $user->avatar_path = self::DEFAULT_AVATAR_PATH;
+            }
+        });
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -52,5 +65,10 @@ class User extends Authenticatable
             'must_change_password' => 'boolean',
             'password' => 'hashed',
         ];
+    }
+
+    public function getAvatarUrlAttribute(): string
+    {
+        return asset($this->avatar_path ?: self::DEFAULT_AVATAR_PATH);
     }
 }

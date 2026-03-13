@@ -4,14 +4,13 @@
     @php
         $authUser = auth()->user();
 
-        function sortDirection($column, $sort, $direction)
-        {
+        $sortDirection = function ($column, $sort, $direction) {
             if ($sort !== $column) {
                 return 'asc';
             }
 
             return $direction === 'asc' ? 'desc' : 'asc';
-        }
+        };
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
@@ -107,7 +106,7 @@
                         <thead class="bg-brand-secondary/5">
                             <tr>
                                 <th class="px-6 py-4 text-left">
-                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'name', 'direction' => sortDirection('name', $sort, $direction)])) }}"
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'name', 'direction' => $sortDirection('name', $sort, $direction)])) }}"
                                         class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
                                         title="Ordenar por nombre">
                                         <span>Nombre</span>
@@ -133,7 +132,7 @@
                                 </th>
 
                                 <th class="px-6 py-4 text-left">
-                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'email', 'direction' => sortDirection('email', $sort, $direction)])) }}"
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'email', 'direction' => $sortDirection('email', $sort, $direction)])) }}"
                                         class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
                                         title="Ordenar por correo">
                                         <span>Correo</span>
@@ -161,7 +160,7 @@
                                 </th>
 
                                 <th class="px-6 py-4 text-left">
-                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'role', 'direction' => sortDirection('role', $sort, $direction)])) }}"
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'role', 'direction' => $sortDirection('role', $sort, $direction)])) }}"
                                         class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
                                         title="Ordenar por rol">
                                         <span>Rol</span>
@@ -191,7 +190,7 @@
                                 </th>
 
                                 <th class="px-6 py-4 text-left">
-                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'is_active', 'direction' => sortDirection('is_active', $sort, $direction)])) }}"
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'is_active', 'direction' => $sortDirection('is_active', $sort, $direction)])) }}"
                                         class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
                                         title="Ordenar por estado">
                                         <span>Estado</span>
@@ -219,7 +218,7 @@
                                 </th>
 
                                 <th class="px-6 py-4 text-left">
-                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'salesforce_user_id', 'direction' => sortDirection('salesforce_user_id', $sort, $direction)])) }}"
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'salesforce_user_id', 'direction' => $sortDirection('salesforce_user_id', $sort, $direction)])) }}"
                                         class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
                                         title="Ordenar por ID de Salesforce">
                                         <span>ID Salesforce</span>
@@ -266,7 +265,13 @@
                                 <tr
                                     class="{{ $user->is_active ? 'transition hover:bg-brand-secondary/5' : 'bg-amber-50/70 transition hover:bg-amber-100/70' }}">
                                     <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
-                                        {{ $user->name }}
+                                        <a href="{{ route('users.show', $user) }}"
+                                            class="flex items-center gap-3 transition hover:opacity-80"
+                                            title="Ver perfil de {{ $user->name }}">
+                                            <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}"
+                                                class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
+                                            <span>{{ $user->name }}</span>
+                                        </a>
                                     </td>
 
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">

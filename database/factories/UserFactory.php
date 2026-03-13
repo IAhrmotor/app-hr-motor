@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -29,6 +30,8 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'role' => 'comercial',
             'salesforce_user_id' => null,
+            'avatar_path' => User::DEFAULT_AVATAR_PATH,
+            'linkedin_url' => null,
             'password' => static::$password ??= Hash::make('password'),
             'is_active' => true,
             'must_change_password' => false,
