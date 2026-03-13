@@ -23,7 +23,7 @@
                     </h1>
 
                     <p class="mt-2 text-sm text-brand-secondary/70">
-                        Listado inicial de usuarios registrados en la plataforma.
+                        Listado de usuarios registrados en la plataforma.
                     </p>
                 </div>
 
@@ -71,7 +71,7 @@
 
                     <div class="flex items-center gap-3">
                         <button type="submit"
-                            class="inline-flex items-center rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90">
+                            class="inline-flex cursor-pointer items-center rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90">
                             Buscar
                         </button>
 
