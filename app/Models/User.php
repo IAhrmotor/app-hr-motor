@@ -21,7 +21,11 @@ class User extends Authenticatable
         'name',
         'email',
         'role',
+        'salesforce_user_id',
         'password',
+        'is_active',
+        'must_change_password',
+        'activated_at',
     ];
 
     /**
@@ -43,6 +47,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'activated_at' => 'datetime',
+            'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
             'password' => 'hashed',
         ];
     }

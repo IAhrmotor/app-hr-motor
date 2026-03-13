@@ -27,6 +27,9 @@ class ResetUserPassword implements ResetsUserPasswords
 
         $user->forceFill([
             'password' => Hash::make($input['password']),
+            'is_active' => true,
+            'must_change_password' => false,
+            'activated_at' => now(),
         ])->save();
     }
 }
