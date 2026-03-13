@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -8,6 +9,10 @@ Route::get('/reset-password', function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/mi-perfil', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
+
     Route::get('/', function () {
         $buttonSections = [
             [
@@ -193,8 +198,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
         Route::get('/usuarios/crear', [UserController::class, 'create'])->name('users.create');
         Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
-        Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/usuarios/{user}', [UserController::class, 'show'])->name('users.show');
         Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 });

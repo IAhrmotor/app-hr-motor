@@ -38,7 +38,27 @@ class UserInvitationTest extends TestCase
         $this->assertTrue($createdUser->must_change_password);
         $this->assertNull($createdUser->activated_at);
         $this->assertSame('SF-USER-001', $createdUser->salesforce_user_id);
+        $this->assertSame(User::DEFAULT_AVATAR_PATH, $createdUser->avatar_path);
 
         Notification::assertSentTo($createdUser, ResetPassword::class);
+    }
+
+    public function test_users_index_displays_the_user_avatar_next_to_the_name(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $user = User::factory()->create([
+            'name' => 'Usuario Con Avatar',
+            'avatar_path' => User::DEFAULT_AVATAR_PATH,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.index'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Usuario Con Avatar')
+            ->assertSee($user->avatar_url, false);
     }
 }
