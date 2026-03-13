@@ -57,6 +57,19 @@ class UserController extends Controller
         return view('users.create', compact('availableRoles'));
     }
 
+    public function show(User $user)
+    {
+        $authUser = request()->user();
+
+        if ($authUser->role === 'gestor' && $user->role !== 'comercial') {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'No tienes permisos para ver este usuario.');
+        }
+
+        return view('users.show', compact('user'));
+    }
+
     public function store(Request $request)
     {
         $authUser = $request->user();
