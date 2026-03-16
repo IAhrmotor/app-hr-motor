@@ -1,0 +1,41 @@
+name: laravel-staging
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel-staging-app
+    working_dir: /var/www
+    volumes:
+      - ./app:/var/www
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: laravel-staging-nginx
+    ports:
+      - "8081:80"
+    volumes:
+      - ./app:/var/www
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+
+  db:
+    image: mariadb:11
+    container_name: laravel-staging-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - staging_db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+
+volumes:
+  staging_db_data:
