@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Profile;
 
+use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -71,6 +72,36 @@ class ProfileNavigationTest extends TestCase
             ->assertSee(route('profile.show'), false)
             ->assertSee(route('profile.edit'), false)
             ->assertSee('Cerrar sesi', false);
+    }
+
+    public function test_homepage_shows_top_10_leaderboard_section_when_data_exists(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Usuario Menu',
+        ]);
+
+        $commercial = User::factory()->create([
+            'name' => 'Comercial Uno',
+            'email' => 'comercial-uno@example.com',
+            'salesforce_user_id' => 'SF-001',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-001',
+            'seller_name' => 'Nombre Salesforce',
+            'total_sales' => 12,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('home'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Top 10 comerciales del mes')
+            ->assertSee('Comercial Uno')
+            ->assertSee('comercial-uno@example.com');
     }
 
     public function test_user_can_update_linkedin_url_and_avatar_from_profile(): void

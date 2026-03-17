@@ -199,10 +199,10 @@
                                             <a href="{{ route('users.show', $entry->user) }}"
                                                 class="flex items-center gap-4 rounded-2xl transition hover:opacity-90">
                                                 <img src="{{ $entry->user->avatar_url }}"
-                                                    alt="Avatar de {{ $entry->seller_name }}"
+                                                    alt="Avatar de {{ $entry->user->name }}"
                                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                                 <div>
-                                                    <p class="text-xl font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->seller_name }}</p>
+                                                    <p class="text-xl font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->user->name }}</p>
                                                     <p class="text-sm text-brand-secondary/60">
                                                         {{ $entry->user->email }}
                                                     </p>
@@ -210,10 +210,10 @@
                                             </a>
                                         @else
                                             <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                                alt="Avatar de {{ $entry->seller_name }}"
+                                                alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                                 class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                             <div>
-                                                <p class="text-xl font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
+                                                <p class="text-xl font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                                 <p class="text-sm text-brand-secondary/60">
                                                     {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
                                                 </p>
@@ -276,16 +276,16 @@
                                             <td class="px-6 py-4">
                                                 <div class="flex items-center gap-3">
                                                     <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                                        alt="Avatar de {{ $entry->seller_name }}"
+                                                        alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                                         class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
                                                     @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
                                                         <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
-                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
+                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user->name }}</p>
                                                             <p class="text-xs text-brand-secondary/55">{{ $entry->user->email }}</p>
                                                         </a>
                                                     @else
                                                         <div>
-                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
+                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                                             <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
                                                         </div>
                                                     @endif
