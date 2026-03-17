@@ -28,7 +28,7 @@
                         </p>
                         <p class="mt-1 text-xs text-brand-secondary/60">
                             @if ($connection?->last_synced_at)
-                                Ultima sincronizacion: {{ $connection->last_synced_at->format('d/m/Y H:i') }}
+                                Ultima sincronizacion: {{ $connection->last_synced_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
                             @elseif ($salesforceConfigReady)
                                 La app esta preparada, pero aun no se ha completado el OAuth.
                             @else
@@ -148,7 +148,7 @@
                     </div>
 
                     <div class="overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
-                        <div class="overflow-x-auto">
+                        <div class="max-h-[32rem] overflow-auto">
                             <table class="min-w-full divide-y divide-slate-200">
                                 <thead class="bg-slate-50">
                                     <tr>
