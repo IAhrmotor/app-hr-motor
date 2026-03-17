@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SalesforceAuthController;
+use App\Http\Controllers\SalesforceLeaderboardSyncController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +15,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/mi-perfil', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
 
     Route::get('/', function () {
         $buttonSections = [
@@ -195,6 +199,10 @@ Route::middleware('auth')->group(function () {
     })->name('videos');
 
     Route::middleware('role:admin,gestor')->group(function () {
+        Route::get('/integraciones/salesforce/conectar', [SalesforceAuthController::class, 'redirect'])->name('salesforce.connect');
+        Route::get('/integraciones/salesforce/callback', [SalesforceAuthController::class, 'callback'])->name('salesforce.callback');
+        Route::post('/leaderboard/sync', SalesforceLeaderboardSyncController::class)->name('leaderboard.sync');
+
         Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
         Route::get('/usuarios/crear', [UserController::class, 'create'])->name('users.create');
         Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');

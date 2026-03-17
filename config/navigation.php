@@ -3,8 +3,12 @@
 return [
     'main' => [
         [
-            'label' => 'Vídeos',
+            'label' => 'Videos',
             'route' => 'videos',
+        ],
+        [
+            'label' => 'Leaderboard',
+            'route' => 'leaderboard.index',
         ],
     ],
 
@@ -15,8 +19,12 @@ return [
                 'route' => 'home',
             ],
             [
-                'label' => 'Vídeos',
+                'label' => 'Videos',
                 'route' => 'videos',
+            ],
+            [
+                'label' => 'Leaderboard',
+                'route' => 'leaderboard.index',
             ],
         ],
     ],
