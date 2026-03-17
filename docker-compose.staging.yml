@@ -12,6 +12,20 @@ services:
     depends_on:
       - db
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel-staging-scheduler
+    working_dir: /var/www
+    command: ["php", "artisan", "schedule:work"]
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www
+    depends_on:
+      - app
+      - db
+
   nginx:
     image: nginx:stable-alpine
     container_name: laravel-staging-nginx
