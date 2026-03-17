@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'salesforce' => [
+        'client_id' => env('SALESFORCE_CLIENT_ID'),
+        'client_secret' => env('SALESFORCE_CLIENT_SECRET'),
+        'authorize_url' => env('SALESFORCE_AUTHORIZE_URL', 'https://login.salesforce.com/services/oauth2/authorize'),
+        'token_url' => env('SALESFORCE_TOKEN_URL', 'https://login.salesforce.com/services/oauth2/token'),
+        'redirect_uri' => env('SALESFORCE_REDIRECT_URI'),
+        'scope' => env('SALESFORCE_SCOPE', 'api refresh_token offline_access'),
+        'leaderboard_soql' => env(
+            'SALESFORCE_LEADERBOARD_SOQL',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, SUM(Amount) totalSales FROM Opportunity WHERE IsWon = true AND CloseDate = THIS_MONTH GROUP BY OwnerId, Owner.Name ORDER BY SUM(Amount) DESC LIMIT 10'
+        ),
+    ],
+
 ];
