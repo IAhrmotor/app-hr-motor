@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="bg-[radial-gradient(circle_at_top,_rgba(229,26,46,0.14),_transparent_45%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] py-10 sm:py-14">
+    <section class="-mb-16 bg-[radial-gradient(circle_at_top,_rgba(229,26,46,0.14),_transparent_45%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] py-10 pb-24 sm:py-14 sm:pb-28">
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
             <div class="flex flex-col gap-6 rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -11,7 +11,7 @@
                             Leaderboard comercial
                         </h1>
                         <p class="mt-3 max-w-2xl text-sm leading-6 text-brand-secondary/70 sm:text-base">
-                            Ranking de comerciales por numero de ventas del mes sincronizado desde Salesforce cada 10 minutos.
+                            Ranking de comerciales por número de ventas del mes sincronizado desde Salesforce.
                         </p>
                     </div>
 
@@ -122,7 +122,7 @@
                             </div>
                             <div class="flex gap-3">
                                 <button type="submit"
-                                    class="inline-flex items-center justify-center rounded-2xl bg-brand-secondary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110">
+                                    class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-secondary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110">
                                     Buscar
                                 </button>
                                 @if ($search !== '')
@@ -164,7 +164,7 @@
                         @endif
                     </div>
                 @else
-                    @if ($topEntries->isNotEmpty() && $search === '')
+                    @if ($topEntries->isNotEmpty())
                         <div class="grid gap-4 lg:grid-cols-3">
                             @foreach ($topEntries as $entry)
                                 @php
@@ -177,7 +177,7 @@
                                         ],
                                         2 => [
                                             'card' => 'border-slate-300/80 bg-[linear-gradient(180deg,rgba(241,245,249,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(100,116,139,0.15)]',
-                                            'badge' => 'bg-gradient-to-r from-slate-500 via-slate-300 to-slate-100 text-slate-900',
+                                            'badge' => 'border border-slate-300/80 bg-[linear-gradient(135deg,#64748b_0%,#e2e8f0_50%,#94a3b8_100%)] text-slate-900',
                                             'ring' => 'ring-slate-300/80',
                                             'accent' => 'text-slate-500',
                                         ],
@@ -195,15 +195,30 @@
                                         #{{ $entry->ranking_position }}
                                     </div>
                                     <div class="flex items-center gap-4">
-                                        <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                            alt="Avatar de {{ $entry->seller_name }}"
-                                            class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
-                                        <div>
-                                            <p class="text-xl font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
-                                            <p class="text-sm text-brand-secondary/60">
-                                                {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
-                                            </p>
-                                        </div>
+                                        @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
+                                            <a href="{{ route('users.show', $entry->user) }}"
+                                                class="flex items-center gap-4 rounded-2xl transition hover:opacity-90">
+                                                <img src="{{ $entry->user->avatar_url }}"
+                                                    alt="Avatar de {{ $entry->seller_name }}"
+                                                    class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
+                                                <div>
+                                                    <p class="text-xl font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->seller_name }}</p>
+                                                    <p class="text-sm text-brand-secondary/60">
+                                                        {{ $entry->user->email }}
+                                                    </p>
+                                                </div>
+                                            </a>
+                                        @else
+                                            <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                                alt="Avatar de {{ $entry->seller_name }}"
+                                                class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
+                                            <div>
+                                                <p class="text-xl font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
+                                                <p class="text-sm text-brand-secondary/60">
+                                                    {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
+                                                </p>
+                                            </div>
+                                        @endif
                                     </div>
                                     <p class="mt-6 text-sm uppercase tracking-[0.3em] text-brand-secondary/50">Ventas</p>
                                     <p class="mt-2 text-3xl font-semibold {{ $medalStyles['accent'] }}">
@@ -227,17 +242,53 @@
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
                                     @foreach ($entries as $entry)
+                                        @php
+                                            $rowBadge = match ($entry->ranking_position) {
+                                                1 => [
+                                                    'pill' => 'border-yellow-300/80 bg-[linear-gradient(135deg,#f59e0b_0%,#fde68a_55%,#fff7cc_100%)] text-amber-950',
+                                                    'marker' => 'bg-yellow-400',
+                                                ],
+                                                2 => [
+                                                    'pill' => 'border-slate-300/80 bg-[linear-gradient(135deg,#64748b_0%,#e2e8f0_55%,#f8fafc_100%)] text-slate-900',
+                                                    'marker' => 'bg-slate-400',
+                                                ],
+                                                3 => [
+                                                    'pill' => 'border-orange-300/80 bg-[linear-gradient(135deg,#c2410c_0%,#fdba74_55%,#ffedd5_100%)] text-orange-950',
+                                                    'marker' => 'bg-orange-400',
+                                                ],
+                                                default => null,
+                                            };
+                                        @endphp
+
                                         <tr class="transition hover:bg-slate-50/80">
-                                            <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">#{{ $entry->ranking_position }}</td>
+                                            <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
+                                                <div class="flex items-center gap-3">
+                                                    @if ($rowBadge)
+                                                        <span class="h-8 w-1.5 rounded-full {{ $rowBadge['marker'] }}"></span>
+                                                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold {{ $rowBadge['pill'] }}">
+                                                            #{{ $entry->ranking_position }}
+                                                        </span>
+                                                    @else
+                                                        <span>#{{ $entry->ranking_position }}</span>
+                                                    @endif
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4">
                                                 <div class="flex items-center gap-3">
                                                     <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                                         alt="Avatar de {{ $entry->seller_name }}"
                                                         class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                                    <div>
-                                                        <p class="text-sm font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
-                                                        <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
-                                                    </div>
+                                                    @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
+                                                        <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
+                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
+                                                            <p class="text-xs text-brand-secondary/55">{{ $entry->user->email }}</p>
+                                                        </a>
+                                                    @else
+                                                        <div>
+                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
+                                                            <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 text-sm text-brand-secondary/70">{{ $entry->salesforce_user_id ?: 'No informado' }}</td>
