@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl bcmath intl
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
 WORKDIR /var/www
 
