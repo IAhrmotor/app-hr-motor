@@ -5,7 +5,10 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
 use App\Http\Controllers\UserController;
+use App\Models\SalesLeaderboardEntry;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 Route::get('/reset-password', function () {
     return redirect()->route('password.request');
@@ -136,7 +139,15 @@ Route::middleware('auth')->group(function () {
             ],
         ];
 
-        return view('home', compact('buttonSections', 'videos'));
+        $homeLeaderboardEntries = Schema::hasTable('sales_leaderboard_entries')
+            ? SalesLeaderboardEntry::query()
+                ->with('user')
+                ->orderBy('ranking_position')
+                ->limit(10)
+                ->get()
+            : new Collection();
+
+        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries'));
     })->name('home');
 
     Route::get('/videos', function () {
