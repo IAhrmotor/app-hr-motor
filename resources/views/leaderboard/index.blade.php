@@ -105,52 +105,119 @@
                     @endif
                 @endauth
 
+                @if ($hasLeaderboardData)
+                    <form method="GET" action="{{ route('leaderboard.index') }}"
+                        class="rounded-[1.75rem] border border-brand-secondary/10 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                        <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                            <div class="relative flex-1">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-secondary/35"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <input type="text" name="search" value="{{ $search }}"
+                                    placeholder="Buscar comercial, email o ID de Salesforce"
+                                    class="w-full rounded-2xl border border-brand-secondary/10 bg-slate-50 py-3 pl-12 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:bg-white">
+                            </div>
+                            <div class="flex gap-3">
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-2xl bg-brand-secondary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110">
+                                    Buscar
+                                </button>
+                                @if ($search !== '')
+                                    <a href="{{ route('leaderboard.index') }}"
+                                        class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                        Limpiar
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                        @if ($search !== '')
+                            <p class="mt-3 text-sm text-brand-secondary/65">
+                                Mostrando resultados para <span class="font-semibold text-brand-secondary">"{{ $search }}"</span> con su posicion real en el ranking.
+                            </p>
+                        @endif
+                    </form>
+                @endif
+
                 @if ($entries->isEmpty())
                     <div class="rounded-[2rem] border border-dashed border-brand-secondary/15 bg-slate-50 px-6 py-12 text-center text-brand-secondary/75">
-                        <p class="text-lg font-semibold text-brand-secondary">Aun no hay datos de ventas</p>
-                        <p class="mt-2 text-sm">
-                            @if (! $leaderboardTablesReady)
-                                Ejecuta primero las migraciones para activar el almacenamiento del leaderboard.
-                            @elseif ($connection)
-                                Ejecuta una sincronizacion para llenar el ranking.
-                            @elseif ($salesforceConfigReady)
-                                Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.
-                            @else
-                                Completa la configuracion de Salesforce y despues autoriza la conexion.
-                            @endif
-                        </p>
+                        @if ($hasLeaderboardData && $search !== '')
+                            <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu busqueda</p>
+                            <p class="mt-2 text-sm">
+                                Prueba con otro nombre, email o ID de Salesforce.
+                            </p>
+                        @else
+                            <p class="text-lg font-semibold text-brand-secondary">Aun no hay datos de ventas</p>
+                            <p class="mt-2 text-sm">
+                                @if (! $leaderboardTablesReady)
+                                    Ejecuta primero las migraciones para activar el almacenamiento del leaderboard.
+                                @elseif ($connection)
+                                    Ejecuta una sincronizacion para llenar el ranking.
+                                @elseif ($salesforceConfigReady)
+                                    Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.
+                                @else
+                                    Completa la configuracion de Salesforce y despues autoriza la conexion.
+                                @endif
+                            </p>
+                        @endif
                     </div>
                 @else
-                    <div class="grid gap-4 lg:grid-cols-3">
-                        @foreach ($entries->take(3) as $entry)
-                            <article
-                                class="relative overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white p-6 shadow-[0_18px_35px_rgba(15,23,42,0.07)]">
-                                <div class="absolute right-4 top-4 rounded-full bg-brand-secondary px-3 py-1 text-xs font-semibold text-white">
-                                    #{{ $entry->ranking_position }}
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                        alt="Avatar de {{ $entry->seller_name }}"
-                                        class="h-16 w-16 rounded-2xl object-cover ring-1 ring-brand-secondary/10">
-                                    <div>
-                                        <p class="text-xl font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
-                                        <p class="text-sm text-brand-secondary/60">
-                                            {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
-                                        </p>
+                    @if ($topEntries->isNotEmpty() && $search === '')
+                        <div class="grid gap-4 lg:grid-cols-3">
+                            @foreach ($topEntries as $entry)
+                                @php
+                                    $medalStyles = match ($entry->ranking_position) {
+                                        1 => [
+                                            'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(217,167,34,0.18)]',
+                                            'badge' => 'bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-300 text-amber-950',
+                                            'ring' => 'ring-yellow-300/70',
+                                            'accent' => 'text-amber-600',
+                                        ],
+                                        2 => [
+                                            'card' => 'border-slate-300/80 bg-[linear-gradient(180deg,rgba(241,245,249,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(100,116,139,0.15)]',
+                                            'badge' => 'bg-gradient-to-r from-slate-500 via-slate-300 to-slate-100 text-slate-900',
+                                            'ring' => 'ring-slate-300/80',
+                                            'accent' => 'text-slate-500',
+                                        ],
+                                        default => [
+                                            'card' => 'border-orange-300/80 bg-[linear-gradient(180deg,rgba(255,237,213,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(180,83,9,0.14)]',
+                                            'badge' => 'bg-gradient-to-r from-orange-700 via-amber-700 to-orange-300 text-white',
+                                            'ring' => 'ring-orange-300/80',
+                                            'accent' => 'text-orange-600',
+                                        ],
+                                    };
+                                @endphp
+
+                                <article class="relative overflow-hidden rounded-[1.75rem] border p-6 {{ $medalStyles['card'] }}">
+                                    <div class="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
+                                        #{{ $entry->ranking_position }}
                                     </div>
-                                </div>
-                                <p class="mt-6 text-sm uppercase tracking-[0.3em] text-brand-secondary/50">Ventas</p>
-                                <p class="mt-2 text-3xl font-semibold text-brand-primary">
-                                    {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
-                                </p>
-                            </article>
-                        @endforeach
-                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                            alt="Avatar de {{ $entry->seller_name }}"
+                                            class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
+                                        <div>
+                                            <p class="text-xl font-semibold text-brand-secondary">{{ $entry->seller_name }}</p>
+                                            <p class="text-sm text-brand-secondary/60">
+                                                {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <p class="mt-6 text-sm uppercase tracking-[0.3em] text-brand-secondary/50">Ventas</p>
+                                    <p class="mt-2 text-3xl font-semibold {{ $medalStyles['accent'] }}">
+                                        {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
+                                    </p>
+                                </article>
+                            @endforeach
+                        </div>
+                    @endif
 
                     <div class="overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
                         <div class="max-h-[32rem] overflow-auto">
                             <table class="min-w-full divide-y divide-slate-200">
-                                <thead class="bg-slate-50">
+                                <thead class="sticky top-0 bg-slate-50">
                                     <tr>
                                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</th>
                                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Comercial</th>
