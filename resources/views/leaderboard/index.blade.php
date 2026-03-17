@@ -11,7 +11,7 @@
                             Leaderboard comercial
                         </h1>
                         <p class="mt-3 max-w-2xl text-sm leading-6 text-brand-secondary/70 sm:text-base">
-                            Ranking de comerciales por volumen de ventas sincronizado desde Salesforce cada 10 minutos.
+                            Ranking de comerciales por numero de ventas del mes sincronizado desde Salesforce cada 10 minutos.
                         </p>
                     </div>
 
@@ -58,28 +58,30 @@
 
                 @auth
                     @if (in_array(auth()->user()->role, ['admin', 'gestor']))
-                        <div class="flex flex-col gap-3 sm:flex-row">
-                            @if ($salesforceConfigReady && $leaderboardTablesReady)
-                                <a href="{{ route('salesforce.connect') }}"
-                                    class="inline-flex items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-95">
-                                    {{ $connection ? 'Reconectar Salesforce' : 'Conectar Salesforce' }}
-                                </a>
-                            @else
-                                <span
-                                    class="inline-flex items-center justify-center rounded-2xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-500">
-                                    Configuracion pendiente
-                                </span>
-                            @endif
+                        @if (! $connection || ! $leaderboardTablesReady)
+                            <div class="flex flex-col gap-3 sm:flex-row">
+                                @if ($salesforceConfigReady && $leaderboardTablesReady)
+                                    <a href="{{ route('salesforce.connect') }}"
+                                        class="inline-flex items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-95">
+                                        Conectar Salesforce
+                                    </a>
+                                @else
+                                    <span
+                                        class="inline-flex items-center justify-center rounded-2xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-500">
+                                        Configuracion pendiente
+                                    </span>
+                                @endif
 
-                            <form method="POST" action="{{ route('leaderboard.sync') }}">
-                                @csrf
-                                <button type="submit"
-                                    @disabled(! $connection || ! $leaderboardTablesReady)
-                                    class="inline-flex w-full items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:w-auto">
-                                    Sincronizar ahora
-                                </button>
-                            </form>
-                        </div>
+                                <form method="POST" action="{{ route('leaderboard.sync') }}">
+                                    @csrf
+                                    <button type="submit"
+                                        @disabled(! $connection || ! $leaderboardTablesReady)
+                                        class="inline-flex w-full items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:w-auto">
+                                        Sincronizar ahora
+                                    </button>
+                                </form>
+                            </div>
+                        @endif
 
                         @if (! $leaderboardTablesReady)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
@@ -93,7 +95,7 @@
                                 y
                                 <code class="rounded bg-white/80 px-1.5 py-0.5 text-xs">SALESFORCE_REDIRECT_URI</code>.
                             </div>
-                        @else
+                        @elseif (! $connection)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
                                 En Salesforce Connected App debes autorizar exactamente la misma callback URL que uses aqui en
                                 <code class="rounded bg-white/80 px-1.5 py-0.5 text-xs">{{ config('services.salesforce.redirect_uri') }}</code>.
@@ -139,7 +141,7 @@
                                 </div>
                                 <p class="mt-6 text-sm uppercase tracking-[0.3em] text-brand-secondary/50">Ventas</p>
                                 <p class="mt-2 text-3xl font-semibold text-brand-primary">
-                                    {{ number_format((float) $entry->total_sales, 2, ',', '.') }} €
+                                    {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
                                 </p>
                             </article>
                         @endforeach
@@ -173,7 +175,7 @@
                                             </td>
                                             <td class="px-6 py-4 text-sm text-brand-secondary/70">{{ $entry->salesforce_user_id ?: 'No informado' }}</td>
                                             <td class="px-6 py-4 text-right text-sm font-semibold text-brand-primary">
-                                                {{ number_format((float) $entry->total_sales, 2, ',', '.') }} €
+                                                {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
                                             </td>
                                         </tr>
                                     @endforeach
