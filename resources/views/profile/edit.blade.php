@@ -59,7 +59,7 @@
                                 <label for="avatar"
                                     class="mb-2 block text-sm font-semibold text-brand-secondary/80">Nueva foto</label>
                                 <input id="avatar" name="avatar" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                    class="block w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary file:mr-4 file:rounded-xl file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:font-semibold file:text-white hover:file:opacity-90">
+                                    class="block w-full cursor-pointer rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary file:mr-4 file:cursor-pointer file:rounded-xl file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:font-semibold file:text-white hover:file:opacity-90">
                                 @error('avatar')
                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
