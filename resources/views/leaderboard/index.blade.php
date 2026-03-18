@@ -257,7 +257,7 @@
                     @endif
 
                     <div class="overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
-                        <div class="max-h-[32rem] overflow-auto">
+                        <div class="overflow-auto" style="max-height: 32rem;">
                             <table class="min-w-full divide-y divide-slate-200">
                                 <thead class="sticky top-0 bg-slate-50">
                                     <tr>
