@@ -4,10 +4,9 @@
     @php
         $generalSection = collect($buttonSections)->firstWhere('title', 'Herramientas generales');
         $communicationSection = collect($buttonSections)->firstWhere('title', 'Comunicación');
-        $officeSection = collect($buttonSections)->firstWhere('title', 'Office 365 online');
 
         $otherSections = collect($buttonSections)->reject(function ($section) {
-            return in_array($section['title'], ['Herramientas generales', 'Comunicación', 'Office 365 online']);
+            return in_array($section['title'], ['Herramientas generales', 'Comunicación']);
         });
 
         $magazineUrl = asset('revista/revista-marzo-2026.pdf');
@@ -54,47 +53,72 @@
                     @endif
 
                     <section
-                        class="flex flex-1 flex-col rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
-                        <div class="mb-6 text-center">
+                        class="flex flex-1 flex-col rounded-3xl border border-brand-secondary/10 bg-white p-5 shadow-sm">
+                        <div class="mb-4 text-center">
                             <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                                 Asistencia IT
                             </h2>
-
-                            <p class="mt-2 text-sm text-brand-secondary/70">
-                                Reporta incidencias o solicita ayuda al equipo técnico.
-                            </p>
                         </div>
 
                         <div class="flex flex-1 items-center justify-center">
                             <a href="{{ config('portal.links.it_support') }}" target="_blank" rel="noopener noreferrer"
-                                class="group flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-brand-primary/15 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
-                                <div class="px-6 py-6">
-                                    <div class="text-center">
-                                        <div
-                                            class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary transition duration-200 group-hover:bg-brand-primary/15">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M16.5 6.75V6a4.5 4.5 0 10-9 0v.75m-1.5 0h12A1.5 1.5 0 0119.5 8.25v8.25A3 3 0 0116.5 19.5h-9a3 3 0 01-3-3V8.25A1.5 1.5 0 016 6.75z" />
-                                            </svg>
+                                class="group relative flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-brand-primary/15 bg-white shadow-sm ring-1 ring-brand-primary/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
+                                <div class="absolute right-5 top-5 rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary ring-1 ring-brand-primary/10">
+                                    Soporte
+                                </div>
+
+                                <div class="absolute inset-x-0 top-0 h-1.5 bg-brand-primary"></div>
+
+                                <div class="px-6 py-5 sm:px-7 sm:py-6">
+                                    <div class="text-center sm:text-left">
+                                        <div class="mb-4 flex justify-center sm:justify-start">
+                                            <div
+                                                class="flex h-18 w-18 items-center justify-center rounded-3xl border border-brand-primary/10 bg-brand-primary/8 text-brand-primary transition duration-200 group-hover:scale-105 group-hover:bg-brand-primary/12">
+                                                <x-icons.it-support class="h-7 w-7" />
+                                            </div>
                                         </div>
 
-                                        <h3
-                                            class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
-                                            Abrir incidencia
-                                        </h3>
+                                        <div class="space-y-2">
+                                            <h3 class="text-xl font-bold tracking-tight text-brand-secondary">
+                                                Reportar incidencia
+                                            </h3>
 
-                                        <p class="mt-4 text-sm leading-6 text-brand-secondary/70">
-                                            Accede al portal de soporte para registrar una incidencia.
-                                        </p>
+                                            <p class="text-sm leading-5 text-brand-secondary/70">
+                                                Abre una incidencia para que IT revise errores, bloqueos o accesos.
+                                            </p>
+
+                                            <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
+                                                <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
+                                                    Hardware
+                                                </span>
+                                                <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
+                                                    Software
+                                                </span>
+                                                <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
+                                                    Accesos
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div
-                                    class="flex items-center justify-center border-t border-brand-primary/10 bg-brand-primary/5 px-4 py-3">
+                                <div class="flex items-center justify-between gap-4 border-t border-brand-primary/10 bg-slate-50/80 px-6 py-3.5 sm:px-7">
+                                    <div class="text-left">
+                                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary/50">
+                                            Canal recomendado
+                                        </p>
+                                        <p class="mt-1 text-sm font-medium text-brand-secondary">
+                                            Portal de incidencias IT
+                                        </p>
+                                    </div>
+
                                     <span
-                                        class="text-center text-sm font-semibold uppercase tracking-[0.12em] text-brand-primary">
-                                        Solicitar asistencia
+                                        class="inline-flex items-center gap-2 rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition duration-200 group-hover:translate-x-1">
+                                        Abrir ahora
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5l6 6m0 0-6 6m6-6h-15" />
+                                        </svg>
                                     </span>
                                 </div>
                             </a>
@@ -132,36 +156,6 @@
                     </section>
                 @endif
             </div>
-
-            @if ($officeSection)
-                <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
-                    <div class="mb-5">
-                        <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
-                            {{ $officeSection['title'] }}
-                        </h2>
-                    </div>
-
-                    <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
-                        @foreach ($officeSection['buttons'] as $button)
-                            <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
-                                class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
-                                <div class="bg-white">
-                                    <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
-                                        class="block w-full">
-                                </div>
-
-                                <div
-                                    class="flex flex-1 items-center justify-center border-t border-brand-secondary/10 px-4 py-3">
-                                    <h3
-                                        class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
-                                        {{ $button['label'] }}
-                                    </h3>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
 
             @foreach ($otherSections as $section)
                 <section>
