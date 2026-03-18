@@ -195,7 +195,7 @@
         </div>
 
         @if ($homeLeaderboardEntries->isNotEmpty())
-            <section class="mt-8 overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-[radial-gradient(circle_at_top,_rgba(229,26,46,0.12),_transparent_42%),linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-6 shadow-sm">
+            <section class="mt-8 overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.28em] text-brand-primary">Leaderboard</p>
@@ -216,6 +216,7 @@
                 <div class="mt-6 grid gap-4 lg:grid-cols-3">
                     @foreach ($homeLeaderboardEntries->take(3) as $entry)
                         @php
+                            $canOpenProfile = $entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']);
                             $medalStyles = match ($entry->ranking_position) {
                                 1 => [
                                     'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(217,167,34,0.18)]',
@@ -238,7 +239,11 @@
                             };
                         @endphp
 
-                        <article class="relative overflow-hidden rounded-[1.75rem] border p-6 {{ $medalStyles['card'] }}">
+                        @if ($canOpenProfile)
+                            <a href="{{ route('users.show', $entry->user) }}"
+                                class="group block overflow-hidden rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
+                        @endif
+                        <article class="relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }} {{ $canOpenProfile ? 'hover:shadow-[0_24px_44px_rgba(15,23,42,0.14)]' : '' }}">
                             <div class="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
                                 #{{ $entry->ranking_position }}
                             </div>
@@ -247,7 +252,7 @@
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                 <div>
-                                    <p class="text-xl font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                    <p class="text-xl font-semibold text-brand-secondary {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="text-sm text-brand-secondary/60">
                                         {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
                                     </p>
@@ -258,13 +263,17 @@
                                 {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
                             </p>
                         </article>
+                        @if ($canOpenProfile)
+                            </a>
+                        @endif
                     @endforeach
                 </div>
 
                 @if ($homeLeaderboardEntries->count() > 3)
                     <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         @foreach ($homeLeaderboardEntries->slice(3) as $entry)
-                            @php
+                        @php
+                                $canOpenProfile = $entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']);
                                 $rankStyles = match ($entry->ranking_position) {
                                     4 => 'border-brand-primary/20 bg-brand-primary/[0.03]',
                                     5 => 'border-brand-secondary/12 bg-white',
@@ -273,7 +282,11 @@
                                 };
                             @endphp
 
-                            <article class="flex items-center gap-4 rounded-[1.5rem] border px-4 py-4 shadow-sm {{ $rankStyles }}">
+                            @if ($canOpenProfile)
+                                <a href="{{ route('users.show', $entry->user) }}"
+                                    class="group block rounded-[1.5rem] transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                            @endif
+                            <article class="flex items-center gap-4 rounded-[1.5rem] border px-4 py-4 shadow-sm transition duration-200 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
                                 <div class="flex h-11 min-w-11 items-center justify-center rounded-full bg-brand-secondary text-sm font-semibold text-white">
                                     #{{ $entry->ranking_position }}
                                 </div>
@@ -281,7 +294,7 @@
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                     class="h-12 w-12 rounded-xl object-cover ring-1 ring-brand-secondary/10">
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                    <p class="truncate text-sm font-semibold text-brand-secondary {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="truncate text-xs text-brand-secondary/60">
                                         {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
                                     </p>
@@ -293,6 +306,9 @@
                                     </p>
                                 </div>
                             </article>
+                            @if ($canOpenProfile)
+                                </a>
+                            @endif
                         @endforeach
                     </div>
                 @endif
