@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PurchaseLeaderboardService;
 use App\Services\SalesforceLeaderboardService;
 use Throwable;
 
 class SalesforceLeaderboardSyncController extends Controller
 {
-    public function __invoke(SalesforceLeaderboardService $service)
+    public function __invoke(SalesforceLeaderboardService $service, PurchaseLeaderboardService $purchaseService)
     {
         if (! $service->getConnection()) {
             return redirect()
@@ -17,16 +18,17 @@ class SalesforceLeaderboardSyncController extends Controller
 
         try {
             $service->sync();
+            $purchaseService->sync();
         } catch (Throwable $exception) {
             report($exception);
 
             return redirect()
                 ->route('leaderboard.index')
-                ->with('error', 'No se ha podido sincronizar el leaderboard con Salesforce. Revisa la conexion o la consulta configurada.');
+                ->with('error', 'No se han podido sincronizar los rankings con Salesforce. Revisa la conexion o las consultas configuradas.');
         }
 
         return redirect()
             ->route('leaderboard.index')
-            ->with('success', 'Leaderboard actualizado correctamente.');
+            ->with('success', 'Rankings de ventas y compras actualizados correctamente.');
     }
 }

@@ -46,6 +46,10 @@ return [
             'SALESFORCE_LEADERBOARD_SOQL',
             'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity WHERE OPO_CAS_Contrato_CV_firmado__c = true AND Fecha_firma_contrato__c = THIS_MONTH AND StageName NOT IN (\'Cerrada ganada\', \'Cerrada perdida\') AND Gestion_de_venta__c = false AND RecordType.Name IN (\'Venta\', \'Cambio\') GROUP BY OwnerId, Owner.Name ORDER BY COUNT(Id) DESC, Owner.Name ASC'
         ),
+        'purchase_leaderboard_soql' => env(
+            'SALESFORCE_PURCHASE_LEADERBOARD_SOQL',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity WHERE CreatedDate = THIS_MONTH AND StageName NOT IN (\'Cerrada ganada\', \'Cerrada perdida\') AND Gestion_de_venta__c = false AND RecordType.Name IN (\'Compra\') GROUP BY OwnerId, Owner.Name ORDER BY COUNT(Id) DESC, Owner.Name ASC'
+        ),
     ],
 
 ];
