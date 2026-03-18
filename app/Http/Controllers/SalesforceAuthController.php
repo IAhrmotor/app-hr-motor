@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PurchaseLeaderboardService;
 use App\Services\SalesforceLeaderboardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -34,7 +35,11 @@ class SalesforceAuthController extends Controller
         return redirect()->away(config('services.salesforce.authorize_url') . '?' . $query);
     }
 
-    public function callback(Request $request, SalesforceLeaderboardService $service)
+    public function callback(
+        Request $request,
+        SalesforceLeaderboardService $service,
+        PurchaseLeaderboardService $purchaseService
+    )
     {
         $expectedState = (string) $request->session()->pull('salesforce_oauth_state');
         $receivedState = (string) $request->string('state');
@@ -62,6 +67,7 @@ class SalesforceAuthController extends Controller
 
         try {
             $service->sync();
+            $purchaseService->sync();
         } catch (Throwable $exception) {
             Log::warning('Initial Salesforce leaderboard sync failed after OAuth.', [
                 'message' => $exception->getMessage(),
@@ -69,11 +75,11 @@ class SalesforceAuthController extends Controller
 
             return redirect()
                 ->route('leaderboard.index')
-                ->with('error', 'Salesforce se ha conectado, pero el primer refresco del leaderboard ha fallado. Revisa la SOQL configurada.');
+                ->with('error', 'Salesforce se ha conectado, pero el primer refresco de los rankings ha fallado. Revisa la SOQL configurada.');
         }
 
         return redirect()
             ->route('leaderboard.index')
-            ->with('success', 'Salesforce conectado correctamente y leaderboard sincronizado.');
+            ->with('success', 'Salesforce conectado correctamente y rankings sincronizados.');
     }
 }

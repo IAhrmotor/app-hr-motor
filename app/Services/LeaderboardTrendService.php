@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardDailySnapshot;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -10,13 +11,21 @@ use Illuminate\Support\Str;
 
 class LeaderboardTrendService
 {
-    public function buildMovementMap(Collection $entries): array
+    public function buildMovementMap(
+        Collection $entries,
+        string $snapshotModelClass = SalesLeaderboardDailySnapshot::class,
+        ?string $snapshotTable = null
+    ): array
     {
-        if ($entries->isEmpty() || ! Schema::hasTable('sales_leaderboard_daily_snapshots')) {
+        $snapshotTable ??= $snapshotModelClass === PurchaseLeaderboardDailySnapshot::class
+            ? 'purchase_leaderboard_daily_snapshots'
+            : 'sales_leaderboard_daily_snapshots';
+
+        if ($entries->isEmpty() || ! Schema::hasTable($snapshotTable)) {
             return $this->flatMovementMap($entries);
         }
 
-        $yesterdaySnapshots = SalesLeaderboardDailySnapshot::query()
+        $yesterdaySnapshots = $snapshotModelClass::query()
             ->whereDate('snapshot_date', today()->subDay())
             ->get();
 
@@ -24,7 +33,7 @@ class LeaderboardTrendService
             return $this->flatMovementMap($entries);
         }
 
-        $snapshotMap = $yesterdaySnapshots->keyBy(fn (SalesLeaderboardDailySnapshot $snapshot) => $this->resolveComparableKey($snapshot));
+        $snapshotMap = $yesterdaySnapshots->keyBy(fn (Model $snapshot) => $this->resolveComparableKey($snapshot));
 
         return $entries->mapWithKeys(function (Model $entry) use ($snapshotMap): array {
             $snapshot = $snapshotMap->get($this->resolveComparableKey($entry));
