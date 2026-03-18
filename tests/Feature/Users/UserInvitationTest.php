@@ -25,6 +25,7 @@ class UserInvitationTest extends TestCase
             'email' => 'invitado@example.com',
             'role' => 'comercial',
             'salesforce_user_id' => 'SF-USER-001',
+            'dealership' => 'Torrejón',
         ]);
 
         $createdUser = User::where('email', 'invitado@example.com')->first();
@@ -38,6 +39,7 @@ class UserInvitationTest extends TestCase
         $this->assertTrue($createdUser->must_change_password);
         $this->assertNull($createdUser->activated_at);
         $this->assertSame('SF-USER-001', $createdUser->salesforce_user_id);
+        $this->assertSame('Torrejón', $createdUser->dealership);
         $this->assertSame(User::DEFAULT_AVATAR_PATH, $createdUser->avatar_path);
 
         Notification::assertSentTo($createdUser, ResetPassword::class);

@@ -77,6 +77,13 @@
                             </span>
                         </dd>
                     </div>
+
+                    @if ($user->dealership)
+                        <div>
+                            <dt class="text-brand-secondary/60">Delegación</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->dealership }}</dd>
+                        </div>
+                    @endif
                 </dl>
             </section>
         </section>
