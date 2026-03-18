@@ -141,7 +141,7 @@
                     </form>
                 @endif
 
-                @if ($entries->isEmpty())
+                @if ($entryItems->isEmpty())
                     <div class="rounded-[2rem] border border-dashed border-brand-secondary/15 bg-slate-50 px-6 py-12 text-center text-brand-secondary/75">
                         @if ($hasLeaderboardData && $search !== '')
                             <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu busqueda</p>
@@ -269,8 +269,8 @@
                             </div>
                         </div>
 
-                        <div class="overflow-y-auto overflow-x-hidden" style="max-height: 32rem;">
-                            @foreach ($entries as $entry)
+                        <div>
+                            @foreach ($entryItems as $entry)
                                 @php
                                     $rowBadge = match ($entry->ranking_position) {
                                         1 => [
@@ -402,6 +402,42 @@
                             @endforeach
                         </div>
                     </div>
+
+                    @if ($entries->hasPages())
+                        <div class="flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p class="text-sm text-brand-secondary/65">
+                                Mostrando del {{ $entries->firstItem() }} al {{ $entries->lastItem() }} de {{ $entries->total() }} comerciales.
+                            </p>
+
+                            <nav class="flex items-center gap-2" aria-label="Paginacion del ranking">
+                                @if ($entries->onFirstPage())
+                                    <span class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-brand-secondary/35">
+                                        Anterior
+                                    </span>
+                                @else
+                                    <a href="{{ $entries->previousPageUrl() }}"
+                                        class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-white px-4 py-2 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                        Anterior
+                                    </a>
+                                @endif
+
+                                <span class="inline-flex items-center justify-center rounded-2xl bg-brand-secondary px-4 py-2 text-sm font-semibold text-white">
+                                    Pagina {{ $entries->currentPage() }} de {{ $entries->lastPage() }}
+                                </span>
+
+                                @if ($entries->hasMorePages())
+                                    <a href="{{ $entries->nextPageUrl() }}"
+                                        class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-white px-4 py-2 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                        Siguiente
+                                    </a>
+                                @else
+                                    <span class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-brand-secondary/35">
+                                        Siguiente
+                                    </span>
+                                @endif
+                            </nav>
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>

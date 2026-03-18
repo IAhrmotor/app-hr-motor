@@ -293,4 +293,29 @@ class SalesforceLeaderboardTest extends TestCase
 
         $this->assertSame(2, SalesLeaderboardEntry::query()->count());
     }
+
+    public function test_leaderboard_is_paginated_instead_of_rendering_an_infinite_scroll_list(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        foreach (range(1, 18) as $position) {
+            SalesLeaderboardEntry::query()->create([
+                'ranking_position' => $position,
+                'seller_name' => 'Comercial '.$position,
+                'salesforce_user_id' => 'SF-'.$position,
+                'total_sales' => max(0, 20 - $position),
+                'synced_at' => now(),
+            ]);
+        }
+
+        $response = $this->actingAs($user)->get(route('leaderboard.index', ['page' => 2]));
+
+        $response
+            ->assertOk()
+            ->assertSee('Pagina 2 de 2')
+            ->assertSee('#16')
+            ->assertDontSee('#15');
+    }
 }

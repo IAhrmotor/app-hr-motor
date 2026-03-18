@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\SalesLeaderboardEntry;
 use App\Services\LeaderboardTrendService;
 use App\Services\SalesforceLeaderboardService;
-use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
 class LeaderboardController extends Controller
@@ -17,7 +18,8 @@ class LeaderboardController extends Controller
         $leaderboardTablesReady = Schema::hasTable('sales_leaderboard_entries')
             && Schema::hasTable('salesforce_connections');
 
-        $entries = new Collection();
+        $entries = new LengthAwarePaginator([], 0, 15);
+        $entryItems = new Collection();
         $topEntries = new Collection();
         $hasLeaderboardData = false;
 
@@ -43,7 +45,10 @@ class LeaderboardController extends Controller
                 });
             }
 
-            $entries = $entriesQuery->get();
+            $entries = $entriesQuery
+                ->paginate(15)
+                ->withQueryString();
+            $entryItems = collect($entries->items());
             $hasLeaderboardData = SalesLeaderboardEntry::query()->exists();
         }
 
@@ -53,8 +58,9 @@ class LeaderboardController extends Controller
 
         return view('leaderboard.index', [
             'entries' => $entries,
+            'entryItems' => $entryItems,
             'topEntries' => $topEntries,
-            'entryMovements' => $trendService->buildMovementMap($entries),
+            'entryMovements' => $trendService->buildMovementMap($entryItems),
             'topEntryMovements' => $trendService->buildMovementMap($topEntries),
             'search' => $search,
             'hasLeaderboardData' => $hasLeaderboardData,
