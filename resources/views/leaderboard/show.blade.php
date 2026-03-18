@@ -8,10 +8,10 @@
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">Salesforce</p>
                         <h1 class="mt-3 text-3xl font-semibold tracking-tight text-brand-secondary sm:text-4xl">
-                            Rankings comerciales
+                            {{ $title }}
                         </h1>
                         <p class="mt-3 max-w-2xl text-sm leading-6 text-brand-secondary/70 sm:text-base">
-                            Consulta los rankings de ventas y compras sincronizados desde Salesforce.
+                            {{ $description }}
                         </p>
                     </div>
 
@@ -50,17 +50,17 @@
                     </div>
                 @endif
 
-                @if (! $salesLeaderboardTablesReady || ! $purchaseLeaderboardTablesReady)
+                @if (! $leaderboardTablesReady)
                     <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-900">
-                        El ranking esta en modo preparacion. La pagina ya no falla aunque falten tablas, pero todavia necesitas ejecutar las migraciones para guardar la conexion, las ventas y las compras.
+                        El ranking esta en modo preparacion. La pagina ya no falla aunque falten tablas, pero todavia necesitas ejecutar las migraciones para guardar la conexion y los datos de este ranking.
                     </div>
                 @endif
 
                 @auth
                     @if (in_array(auth()->user()->role, ['admin', 'gestor']))
-                        @if (! $connection || ! $salesLeaderboardTablesReady || ! $purchaseLeaderboardTablesReady)
+                        @if (! $connection || ! $leaderboardTablesReady)
                             <div class="flex flex-col gap-3 sm:flex-row">
-                                @if ($salesforceConfigReady && $salesLeaderboardTablesReady && $purchaseLeaderboardTablesReady)
+                                @if ($salesforceConfigReady && $leaderboardTablesReady)
                                     <a href="{{ route('salesforce.connect') }}"
                                         class="inline-flex items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-95">
                                         Conectar Salesforce
@@ -75,7 +75,7 @@
                                 <form method="POST" action="{{ route('leaderboard.sync') }}">
                                     @csrf
                                     <button type="submit"
-                                        @disabled(! $connection || ! $salesLeaderboardTablesReady || ! $purchaseLeaderboardTablesReady)
+                                        @disabled(! $connection || ! $leaderboardTablesReady)
                                         class="inline-flex w-full items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:w-auto">
                                         Sincronizar ahora
                                     </button>
@@ -83,9 +83,9 @@
                             </div>
                         @endif
 
-                        @if (! $salesLeaderboardTablesReady || ! $purchaseLeaderboardTablesReady)
+                        @if (! $leaderboardTablesReady)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-                                Antes de conectar Salesforce, ejecuta las migraciones de Laravel para crear las tablas nuevas de los rankings de ventas y compras.
+                                Antes de conectar Salesforce, ejecuta las migraciones de Laravel para crear las tablas nuevas de este ranking.
                             </div>
                         @elseif (! $salesforceConfigReady)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
@@ -99,44 +99,21 @@
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
                                 En Salesforce Connected App debes autorizar exactamente la misma callback URL que uses aqui en
                                 <code class="rounded bg-white/80 px-1.5 py-0.5 text-xs">{{ config('services.salesforce.redirect_uri') }}</code>.
-                                Hasta que eso ocurra, la web seguira funcionando y los rankings quedaran pendientes de conexion.
+                                Hasta que eso ocurra, la web seguira funcionando y este ranking quedara pendiente de conexion.
                             </div>
                         @endif
                     @endif
                 @endauth
 
                 @include('leaderboard.partials.section', [
-                    'leaderboard' => $salesLeaderboard,
-                    'eyebrow' => 'Ventas',
-                    'title' => 'Ranking de ventas',
-                    'description' => 'Ranking de comerciales por numero de ventas del mes sincronizado desde Salesforce.',
-                    'metricLabel' => 'Ventas',
-                    'metricField' => 'total_sales',
-                    'emptyTitle' => 'Aun no hay datos de ventas',
-                    'emptyDescription' => ! $salesLeaderboardTablesReady
-                        ? 'Ejecuta primero las migraciones para activar el almacenamiento del ranking.'
-                        : ($connection
-                            ? 'Ejecuta una sincronizacion para llenar el ranking.'
-                            : ($salesforceConfigReady
-                                ? 'Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.'
-                                : 'Completa la configuracion de Salesforce y despues autoriza la conexion.')),
-                ])
-
-                @include('leaderboard.partials.section', [
-                    'leaderboard' => $purchaseLeaderboard,
-                    'eyebrow' => 'Compras',
-                    'title' => 'Ranking de compras',
-                    'description' => 'Ranking de comerciales por numero de compras de coches del mes sincronizado desde Salesforce.',
-                    'metricLabel' => 'Compras',
-                    'metricField' => 'total_purchases',
-                    'emptyTitle' => 'Aun no hay datos de compras',
-                    'emptyDescription' => ! $purchaseLeaderboardTablesReady
-                        ? 'Ejecuta primero las migraciones para activar el almacenamiento del ranking de compras.'
-                        : ($connection
-                            ? 'Ejecuta una sincronizacion para llenar el ranking de compras.'
-                            : ($salesforceConfigReady
-                                ? 'Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.'
-                                : 'Completa la configuracion de Salesforce y despues autoriza la conexion.')),
+                    'leaderboard' => $leaderboard,
+                    'eyebrow' => $eyebrow,
+                    'title' => $title,
+                    'description' => $description,
+                    'metricLabel' => $metricLabel,
+                    'metricField' => $metricField,
+                    'emptyTitle' => $emptyTitle,
+                    'emptyDescription' => $emptyDescription,
                 ])
             </div>
         </div>

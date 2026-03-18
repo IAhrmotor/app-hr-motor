@@ -20,6 +20,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
+    Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
+    Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
 
     Route::get('/', function (LeaderboardTrendService $trendService) {
         $buttonSections = [

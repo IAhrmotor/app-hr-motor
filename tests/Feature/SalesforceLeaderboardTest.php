@@ -15,15 +15,34 @@ class SalesforceLeaderboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authenticated_user_can_open_leaderboard_page(): void
+    public function test_authenticated_user_is_redirected_from_generic_leaderboard_route_to_sales_page(): void
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get(route('leaderboard.index'));
 
+        $response->assertRedirect(route('leaderboard.sales'));
+    }
+
+    public function test_authenticated_user_can_open_sales_leaderboard_page(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('leaderboard.sales'));
+
         $response
             ->assertOk()
-            ->assertSee('Ranking de ventas')
+            ->assertSee('Ranking de ventas');
+    }
+
+    public function test_authenticated_user_can_open_purchase_leaderboard_page(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('leaderboard.purchases'));
+
+        $response
+            ->assertOk()
             ->assertSee('Ranking de compras');
     }
 
@@ -105,7 +124,7 @@ class SalesforceLeaderboardTest extends TestCase
             ]));
 
         $response
-            ->assertRedirect(route('leaderboard.index'))
+            ->assertRedirect(route('leaderboard.sales'))
             ->assertSessionHas('success');
 
         $this->assertDatabaseHas('salesforce_connections', [
@@ -177,7 +196,7 @@ class SalesforceLeaderboardTest extends TestCase
             'captured_at' => now()->subDay(),
         ]);
 
-        $response = $this->actingAs($user)->get(route('leaderboard.index'));
+        $response = $this->actingAs($user)->get(route('leaderboard.sales'));
 
         $response
             ->assertOk()
@@ -215,7 +234,7 @@ class SalesforceLeaderboardTest extends TestCase
             'captured_at' => now()->subDay(),
         ]);
 
-        $response = $this->actingAs($user)->get(route('leaderboard.index'));
+        $response = $this->actingAs($user)->get(route('leaderboard.purchases'));
 
         $response
             ->assertOk()
@@ -386,7 +405,7 @@ class SalesforceLeaderboardTest extends TestCase
             ]);
         }
 
-        $response = $this->actingAs($user)->get(route('leaderboard.index', ['page' => 2]));
+        $response = $this->actingAs($user)->get(route('leaderboard.sales', ['page' => 2]));
 
         $response
             ->assertOk()
@@ -420,6 +439,6 @@ class SalesforceLeaderboardTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Top 10 comerciales del mes')
-            ->assertDontSee('Ranking de compras');
+            ->assertDontSee('Comercial Compra Home');
     }
 }
