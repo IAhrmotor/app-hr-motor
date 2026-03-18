@@ -19,6 +19,7 @@ class UserProfileViewTest extends TestCase
         $user = User::factory()->create([
             'name' => 'Perfil Comercial',
             'linkedin_url' => 'https://www.linkedin.com/in/perfil-comercial/',
+            'dealership' => 'Bilbao',
         ]);
 
         $response = $this->actingAs($admin)->get(route('users.show', $user));
@@ -29,6 +30,8 @@ class UserProfileViewTest extends TestCase
             ->assertSee('aria-label="Ver LinkedIn"', false)
             ->assertSee('href="' . $user->linkedin_url . '"', false)
             ->assertDontSeeText($user->linkedin_url)
+            ->assertSee('Delegación')
+            ->assertSee('Bilbao')
             ->assertDontSee('Estado')
             ->assertDontSee('ID Salesforce');
     }

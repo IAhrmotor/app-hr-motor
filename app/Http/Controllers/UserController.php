@@ -53,8 +53,9 @@ class UserController extends Controller
         $availableRoles = $authUser->role === 'admin'
             ? ['admin', 'gestor', 'comercial']
             : ['comercial'];
+        $availableDealerships = User::DEALERSHIPS;
 
-        return view('users.create', compact('availableRoles'));
+        return view('users.create', compact('availableRoles', 'availableDealerships'));
     }
 
     public function show(User $user)
@@ -89,6 +90,12 @@ class UserController extends Controller
                 'max:255',
                 Rule::unique('users', 'salesforce_user_id'),
             ],
+            'dealership' => [
+                Rule::requiredIf(fn () => $request->input('role') === 'comercial'),
+                'nullable',
+                'string',
+                Rule::in(User::DEALERSHIPS),
+            ],
         ]);
 
         DB::transaction(function () use ($validated): void {
@@ -99,6 +106,7 @@ class UserController extends Controller
                 'email' => $validated['email'],
                 'role' => $validated['role'],
                 'salesforce_user_id' => $isCommercial ? $validated['salesforce_user_id'] : null,
+                'dealership' => $isCommercial ? $validated['dealership'] : null,
                 'password' => Hash::make(Str::password(32)),
                 'is_active' => false,
                 'must_change_password' => true,
@@ -153,8 +161,9 @@ class UserController extends Controller
         $availableRoles = $authUser->role === 'admin'
             ? ['admin', 'gestor', 'comercial']
             : ['comercial'];
+        $availableDealerships = User::DEALERSHIPS;
 
-        return view('users.edit', compact('user', 'availableRoles'));
+        return view('users.edit', compact('user', 'availableRoles', 'availableDealerships'));
     }
 
     public function update(Request $request, User $user)
@@ -184,6 +193,12 @@ class UserController extends Controller
                 'max:255',
                 Rule::unique('users', 'salesforce_user_id')->ignore($user->id),
             ],
+            'dealership' => [
+                Rule::requiredIf(fn () => $request->input('role') === 'comercial'),
+                'nullable',
+                'string',
+                Rule::in(User::DEALERSHIPS),
+            ],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -192,6 +207,9 @@ class UserController extends Controller
         $user->role = $authUser->role === 'admin' ? $validated['role'] : 'comercial';
         $user->salesforce_user_id = $user->role === 'comercial'
             ? $validated['salesforce_user_id']
+            : null;
+        $user->dealership = $user->role === 'comercial'
+            ? $validated['dealership']
             : null;
 
         if (! empty($validated['password'])) {

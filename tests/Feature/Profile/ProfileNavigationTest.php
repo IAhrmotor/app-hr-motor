@@ -46,6 +46,7 @@ class ProfileNavigationTest extends TestCase
     {
         $user = User::factory()->create([
             'name' => 'Perfil Visible',
+            'dealership' => 'Valencia',
         ]);
 
         $response = $this->actingAs($user)->get(route('profile.show'));
@@ -53,6 +54,8 @@ class ProfileNavigationTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Perfil Visible')
+            ->assertSee('Delegación')
+            ->assertSee('Valencia')
             ->assertSee('Editar perfil')
             ->assertDontSee('Estado')
             ->assertDontSee('ID Salesforce');
