@@ -257,100 +257,149 @@
                     @endif
 
                     <div class="overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
-                        <div class="overflow-auto" style="max-height: 32rem;">
-                            <table class="min-w-full divide-y divide-slate-200">
-                                <thead class="sticky top-0 bg-slate-50">
-                                    <tr>
-                                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</th>
-                                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Comercial</th>
-                                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">ID Salesforce</th>
-                                        <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Ventas</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    @foreach ($entries as $entry)
-                                        @php
-                                            $rowBadge = match ($entry->ranking_position) {
-                                                1 => [
-                                                    'pill' => 'border-yellow-300/80 bg-[linear-gradient(135deg,#f59e0b_0%,#fde68a_55%,#fff7cc_100%)] text-amber-950',
-                                                    'marker' => 'bg-yellow-400',
-                                                ],
-                                                2 => [
-                                                    'pill' => 'border-slate-300/80 bg-[linear-gradient(135deg,#64748b_0%,#e2e8f0_55%,#f8fafc_100%)] text-slate-900',
-                                                    'marker' => 'bg-slate-400',
-                                                ],
-                                                3 => [
-                                                    'pill' => 'border-orange-300/80 bg-[linear-gradient(135deg,#c2410c_0%,#fdba74_55%,#ffedd5_100%)] text-orange-950',
-                                                    'marker' => 'bg-orange-400',
-                                                ],
-                                                default => null,
-                                            };
-                                            $movement = $entryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
-                                        @endphp
+                        <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
+                            <div class="hidden grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] gap-6 md:grid">
+                                <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
+                                <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Comercial</div>
+                                <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">ID Salesforce</div>
+                                <div class="text-right text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Ventas</div>
+                            </div>
+                            <div class="md:hidden text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">
+                                Ranking de comerciales
+                            </div>
+                        </div>
 
-                                        <tr class="transition hover:bg-slate-50/80">
-                                            <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
-                                                <div class="flex items-center gap-3">
-                                                    @if ($rowBadge)
-                                                        <span class="h-8 w-1.5 rounded-full {{ $rowBadge['marker'] }}"></span>
-                                                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold {{ $rowBadge['pill'] }}">
-                                                            #{{ $entry->ranking_position }}
-                                                        </span>
-                                                    @else
-                                                        <span>#{{ $entry->ranking_position }}</span>
-                                                    @endif
-                                                    @if ($movement['direction'] === 'up')
-                                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200" title="{{ $movement['label'] }}">
-                                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
-                                                            </svg>
-                                                            <span>{{ $movement['amount'] }}</span>
-                                                            <span class="sr-only">{{ $movement['label'] }}</span>
-                                                        </span>
-                                                    @elseif ($movement['direction'] === 'down')
-                                                        <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200" title="{{ $movement['label'] }}">
-                                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
-                                                            </svg>
-                                                            <span>{{ $movement['amount'] }}</span>
-                                                            <span class="sr-only">{{ $movement['label'] }}</span>
-                                                        </span>
-                                                    @else
-                                                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-300" title="{{ $movement['label'] }}">
-                                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
-                                                            </svg>
-                                                            <span class="sr-only">{{ $movement['label'] }}</span>
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                <div class="flex items-center gap-3">
-                                                    <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                                        alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
-                                                        class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                                    @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
-                                                        <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
-                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user->name }}</p>
-                                                            <p class="text-xs text-brand-secondary/55">{{ $entry->user->email }}</p>
-                                                        </a>
-                                                    @else
-                                                        <div>
-                                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                                            <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4 text-sm text-brand-secondary/70">{{ $entry->salesforce_user_id ?: 'No informado' }}</td>
-                                            <td class="px-6 py-4 text-right text-sm font-semibold text-brand-primary">
-                                                {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                        <div class="overflow-y-auto overflow-x-hidden" style="max-height: 32rem;">
+                            @foreach ($entries as $entry)
+                                @php
+                                    $rowBadge = match ($entry->ranking_position) {
+                                        1 => [
+                                            'pill' => 'border-yellow-300/80 bg-[linear-gradient(135deg,#f59e0b_0%,#fde68a_55%,#fff7cc_100%)] text-amber-950',
+                                            'marker' => 'bg-yellow-400',
+                                        ],
+                                        2 => [
+                                            'pill' => 'border-slate-300/80 bg-[linear-gradient(135deg,#64748b_0%,#e2e8f0_55%,#f8fafc_100%)] text-slate-900',
+                                            'marker' => 'bg-slate-400',
+                                        ],
+                                        3 => [
+                                            'pill' => 'border-orange-300/80 bg-[linear-gradient(135deg,#c2410c_0%,#fdba74_55%,#ffedd5_100%)] text-orange-950',
+                                            'marker' => 'bg-orange-400',
+                                        ],
+                                        default => null,
+                                    };
+                                    $movement = $entryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
+                                @endphp
+
+                                <div class="border-b border-slate-100 px-6 py-4 transition hover:bg-slate-50/80 last:border-b-0">
+                                    <div class="hidden grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] items-center gap-6 md:grid">
+                                        <div class="text-sm font-semibold text-brand-secondary">
+                                            <div class="flex items-center gap-3">
+                                                @if ($rowBadge)
+                                                    <span class="h-8 w-1.5 rounded-full {{ $rowBadge['marker'] }}"></span>
+                                                    <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold {{ $rowBadge['pill'] }}">
+                                                        #{{ $entry->ranking_position }}
+                                                    </span>
+                                                @else
+                                                    <span>#{{ $entry->ranking_position }}</span>
+                                                @endif
+                                                @if ($movement['direction'] === 'up')
+                                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200" title="{{ $movement['label'] }}">
+                                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
+                                                        </svg>
+                                                        <span>{{ $movement['amount'] }}</span>
+                                                        <span class="sr-only">{{ $movement['label'] }}</span>
+                                                    </span>
+                                                @elseif ($movement['direction'] === 'down')
+                                                    <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200" title="{{ $movement['label'] }}">
+                                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
+                                                        </svg>
+                                                        <span>{{ $movement['amount'] }}</span>
+                                                        <span class="sr-only">{{ $movement['label'] }}</span>
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-300" title="{{ $movement['label'] }}">
+                                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
+                                                        </svg>
+                                                        <span class="sr-only">{{ $movement['label'] }}</span>
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div class="flex items-center gap-3">
+                                                <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                                    alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
+                                                    class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
+                                                @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
+                                                    <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
+                                                        <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user->name }}</p>
+                                                        <p class="text-xs text-brand-secondary/55">{{ $entry->user->email }}</p>
+                                                    </a>
+                                                @else
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                                        <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <div class="truncate text-sm text-brand-secondary/70">{{ $entry->salesforce_user_id ?: 'No informado' }}</div>
+
+                                        <div class="text-right text-sm font-semibold text-brand-primary">
+                                            {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-3 md:hidden">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-3 text-sm font-semibold text-brand-secondary">
+                                                <span>#{{ $entry->ranking_position }}</span>
+                                                @if ($movement['direction'] === 'up')
+                                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
+                                                        </svg>
+                                                        <span>{{ $movement['amount'] }}</span>
+                                                    </span>
+                                                @elseif ($movement['direction'] === 'down')
+                                                    <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
+                                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
+                                                        </svg>
+                                                        <span>{{ $movement['amount'] }}</span>
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-300">
+                                                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
+                                                        </svg>
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Ventas</p>
+                                                <p class="mt-1 text-lg font-semibold text-brand-primary">{{ number_format((float) $entry->total_sales, 0, ',', '.') }}</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center gap-3">
+                                            <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                                alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
+                                                class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                                <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
+                                                <p class="truncate text-xs text-brand-secondary/55">{{ $entry->salesforce_user_id ?: 'No informado' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     </div>
                 @endif
