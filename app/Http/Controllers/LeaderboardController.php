@@ -15,48 +15,101 @@ use Illuminate\Support\Facades\Schema;
 
 class LeaderboardController extends Controller
 {
-    public function index(
-        Request $request,
-        SalesforceLeaderboardService $service,
-        LeaderboardTrendService $trendService
-    )
+    public function index()
     {
-        $salesLeaderboardTablesReady = Schema::hasTable('sales_leaderboard_entries')
+        return redirect()->route('leaderboard.sales');
+    }
+
+    public function sales(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
+    {
+        $leaderboardTablesReady = Schema::hasTable('sales_leaderboard_entries')
             && Schema::hasTable('sales_leaderboard_daily_snapshots')
             && Schema::hasTable('salesforce_connections');
-        $purchaseLeaderboardTablesReady = Schema::hasTable('purchase_leaderboard_entries')
+
+        return $this->renderPage(
+            request: $request,
+            service: $service,
+            trendService: $trendService,
+            config: [
+                'entry_model' => SalesLeaderboardEntry::class,
+                'entry_table' => 'sales_leaderboard_entries',
+                'snapshot_model' => SalesLeaderboardDailySnapshot::class,
+                'snapshot_table' => 'sales_leaderboard_daily_snapshots',
+                'search_param' => 'search',
+                'page_param' => 'page',
+                'route_name' => 'leaderboard.sales',
+                'eyebrow' => 'Ventas',
+                'title' => 'Ranking de ventas',
+                'description' => 'Ranking de comerciales por numero de ventas del mes sincronizado desde Salesforce.',
+                'metric_label' => 'Ventas',
+                'metric_field' => 'total_sales',
+                'empty_title' => 'Aun no hay datos de ventas',
+            ],
+            leaderboardTablesReady: $leaderboardTablesReady
+        );
+    }
+
+    public function purchases(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
+    {
+        $leaderboardTablesReady = Schema::hasTable('purchase_leaderboard_entries')
             && Schema::hasTable('purchase_leaderboard_daily_snapshots')
             && Schema::hasTable('salesforce_connections');
 
-        $salesLeaderboard = $this->buildLeaderboardViewData($request, $trendService, [
-            'entry_model' => SalesLeaderboardEntry::class,
-            'entry_table' => 'sales_leaderboard_entries',
-            'snapshot_model' => SalesLeaderboardDailySnapshot::class,
-            'snapshot_table' => 'sales_leaderboard_daily_snapshots',
-            'search_param' => 'search',
-            'page_param' => 'page',
-        ]);
+        return $this->renderPage(
+            request: $request,
+            service: $service,
+            trendService: $trendService,
+            config: [
+                'entry_model' => PurchaseLeaderboardEntry::class,
+                'entry_table' => 'purchase_leaderboard_entries',
+                'snapshot_model' => PurchaseLeaderboardDailySnapshot::class,
+                'snapshot_table' => 'purchase_leaderboard_daily_snapshots',
+                'search_param' => 'search',
+                'page_param' => 'page',
+                'route_name' => 'leaderboard.purchases',
+                'eyebrow' => 'Compras',
+                'title' => 'Ranking de compras',
+                'description' => 'Ranking de comerciales por numero de compras de coches del mes sincronizado desde Salesforce.',
+                'metric_label' => 'Compras',
+                'metric_field' => 'total_purchases',
+                'empty_title' => 'Aun no hay datos de compras',
+            ],
+            leaderboardTablesReady: $leaderboardTablesReady
+        );
+    }
 
-        $purchaseLeaderboard = $this->buildLeaderboardViewData($request, $trendService, [
-            'entry_model' => PurchaseLeaderboardEntry::class,
-            'entry_table' => 'purchase_leaderboard_entries',
-            'snapshot_model' => PurchaseLeaderboardDailySnapshot::class,
-            'snapshot_table' => 'purchase_leaderboard_daily_snapshots',
-            'search_param' => 'search_purchases',
-            'page_param' => 'purchases_page',
-        ]);
-
+    private function renderPage(
+        Request $request,
+        SalesforceLeaderboardService $service,
+        LeaderboardTrendService $trendService,
+        array $config,
+        bool $leaderboardTablesReady
+    ) {
+        $leaderboard = $this->buildLeaderboardViewData($request, $trendService, $config);
         $salesforceConfigReady = filled(config('services.salesforce.client_id'))
             && filled(config('services.salesforce.client_secret'))
             && filled(config('services.salesforce.redirect_uri'));
 
-        return view('leaderboard.index', [
-            'salesLeaderboard' => $salesLeaderboard,
-            'purchaseLeaderboard' => $purchaseLeaderboard,
+        $emptyDescription = ! $leaderboardTablesReady
+            ? 'Ejecuta primero las migraciones para activar el almacenamiento del ranking.'
+            : ($service->getConnection()
+                ? 'Ejecuta una sincronizacion para llenar el ranking.'
+                : ($salesforceConfigReady
+                    ? 'Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.'
+                    : 'Completa la configuracion de Salesforce y despues autoriza la conexion.'));
+
+        return view('leaderboard.show', [
+            'leaderboard' => $leaderboard,
             'connection' => $service->getConnection(),
             'salesforceConfigReady' => $salesforceConfigReady,
-            'salesLeaderboardTablesReady' => $salesLeaderboardTablesReady,
-            'purchaseLeaderboardTablesReady' => $purchaseLeaderboardTablesReady,
+            'leaderboardTablesReady' => $leaderboardTablesReady,
+            'eyebrow' => $config['eyebrow'],
+            'title' => $config['title'],
+            'description' => $config['description'],
+            'metricLabel' => $config['metric_label'],
+            'metricField' => $config['metric_field'],
+            'emptyTitle' => $config['empty_title'],
+            'emptyDescription' => $emptyDescription,
         ]);
     }
 
@@ -124,6 +177,7 @@ class LeaderboardController extends Controller
             'hasLeaderboardData' => $hasLeaderboardData,
             'searchParam' => $config['search_param'],
             'pageParam' => $config['page_param'],
+            'routeName' => $config['route_name'],
         ];
     }
 }
