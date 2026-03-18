@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\PurchaseLeaderboardDailySnapshot;
+use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
@@ -21,7 +23,8 @@ class SalesforceLeaderboardTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Ranking comercial');
+            ->assertSee('Ranking de ventas')
+            ->assertSee('Ranking de compras');
     }
 
     public function test_admin_can_start_salesforce_oauth_flow(): void
@@ -52,6 +55,10 @@ class SalesforceLeaderboardTest extends TestCase
         config()->set(
             'services.salesforce.leaderboard_soql',
             'SELECT OwnerId ownerId, Owner.Name ownerName, SUM(Amount) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.purchase_leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
         );
 
         $admin = User::factory()->create([
@@ -124,6 +131,20 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'salesforce_user_id' => '005xx0000000001AAA',
         ]);
+
+        $this->assertDatabaseHas('purchase_leaderboard_entries', [
+            'ranking_position' => 1,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => '005xx0000000001AAA',
+            'seller_name' => 'Laura Ventas',
+            'total_purchases' => 25000.75,
+        ]);
+
+        $this->assertDatabaseHas('purchase_leaderboard_daily_snapshots', [
+            'snapshot_date' => now()->toDateString(),
+            'ranking_position' => 1,
+            'salesforce_user_id' => '005xx0000000001AAA',
+        ]);
     }
 
     public function test_leaderboard_shows_rank_movement_against_previous_day(): void
@@ -164,6 +185,44 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('#1');
     }
 
+    public function test_purchase_leaderboard_shows_rank_movement_against_previous_day(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $commercial = User::factory()->create([
+            'name' => 'Comprador Escalador',
+            'salesforce_user_id' => 'SF-BUY-001',
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-BUY-001',
+            'seller_name' => 'Nombre Salesforce Compra',
+            'total_purchases' => 7,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardDailySnapshot::query()->create([
+            'snapshot_date' => today()->subDay(),
+            'ranking_position' => 4,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-BUY-001',
+            'seller_name' => 'Nombre Salesforce Compra',
+            'total_purchases' => 4,
+            'captured_at' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.index'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Ranking de compras')
+            ->assertSee('Sube 3 puestos');
+    }
+
     public function test_sync_adds_commercial_users_without_sales_as_zero_sales_rows(): void
     {
         config()->set('services.salesforce.client_id', 'client-id');
@@ -172,6 +231,10 @@ class SalesforceLeaderboardTest extends TestCase
         config()->set(
             'services.salesforce.leaderboard_soql',
             'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.purchase_leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
         );
 
         $admin = User::factory()->create([
@@ -230,6 +293,14 @@ class SalesforceLeaderboardTest extends TestCase
             'seller_name' => 'Comercial sin ventas',
             'total_sales' => 0,
         ]);
+
+        $this->assertDatabaseHas('purchase_leaderboard_entries', [
+            'ranking_position' => 2,
+            'user_id' => $commercialWithoutSales->id,
+            'salesforce_user_id' => 'SF-999',
+            'seller_name' => 'Comercial sin ventas',
+            'total_purchases' => 0,
+        ]);
     }
 
     public function test_sync_keeps_all_commercials_in_ranking_even_when_salesforce_returns_no_rows(): void
@@ -240,6 +311,10 @@ class SalesforceLeaderboardTest extends TestCase
         config()->set(
             'services.salesforce.leaderboard_soql',
             'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.purchase_leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
         );
 
         $admin = User::factory()->create([
@@ -292,6 +367,7 @@ class SalesforceLeaderboardTest extends TestCase
         ]);
 
         $this->assertSame(2, SalesLeaderboardEntry::query()->count());
+        $this->assertSame(2, PurchaseLeaderboardEntry::query()->count());
     }
 
     public function test_leaderboard_is_paginated_instead_of_rendering_an_infinite_scroll_list(): void
@@ -317,5 +393,33 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('Pagina 2 de 2')
             ->assertSee('Comercial 16')
             ->assertDontSee('Comercial 10');
+    }
+
+    public function test_home_only_shows_sales_leaderboard_and_not_purchase_leaderboard(): void
+    {
+        $user = User::factory()->create();
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'seller_name' => 'Comercial Home',
+            'salesforce_user_id' => 'SF-HOME-1',
+            'total_sales' => 12,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'seller_name' => 'Comercial Compra Home',
+            'salesforce_user_id' => 'SF-HOME-BUY-1',
+            'total_purchases' => 5,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('home'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Top 10 comerciales del mes')
+            ->assertDontSee('Ranking de compras');
     }
 }
