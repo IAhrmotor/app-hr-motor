@@ -18,7 +18,7 @@ class LeaderboardController extends Controller
         $leaderboardTablesReady = Schema::hasTable('sales_leaderboard_entries')
             && Schema::hasTable('salesforce_connections');
 
-        $entries = new LengthAwarePaginator([], 0, 15);
+        $entries = new LengthAwarePaginator([], 0, 10);
         $entryItems = new Collection();
         $topEntries = new Collection();
         $hasLeaderboardData = false;
@@ -46,7 +46,7 @@ class LeaderboardController extends Controller
             }
 
             $entries = $entriesQuery
-                ->paginate(15)
+                ->paginate(10)
                 ->withQueryString();
             $entryItems = collect($entries->items());
             $hasLeaderboardData = SalesLeaderboardEntry::query()->exists();
