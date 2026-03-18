@@ -8,7 +8,16 @@ return [
         ],
         [
             'label' => 'Ranking',
-            'route' => 'leaderboard.index',
+            'children' => [
+                [
+                    'label' => 'Ranking de ventas',
+                    'route' => 'leaderboard.sales',
+                ],
+                [
+                    'label' => 'Ranking de compras',
+                    'route' => 'leaderboard.purchases',
+                ],
+            ],
         ],
     ],
 
@@ -23,8 +32,12 @@ return [
                 'route' => 'videos',
             ],
             [
-                'label' => 'Ranking',
-                'route' => 'leaderboard.index',
+                'label' => 'Ranking ventas',
+                'route' => 'leaderboard.sales',
+            ],
+            [
+                'label' => 'Ranking compras',
+                'route' => 'leaderboard.purchases',
             ],
         ],
     ],

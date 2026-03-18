@@ -8,6 +8,7 @@
     $hasLeaderboardData = $leaderboard['hasLeaderboardData'];
     $searchParam = $leaderboard['searchParam'];
     $pageParam = $leaderboard['pageParam'];
+    $routeName = $leaderboard['routeName'];
     $persistedQuery = request()->except([$searchParam, $pageParam]);
 @endphp
 
@@ -23,7 +24,7 @@
     </div>
 
     @if ($hasLeaderboardData)
-        <form method="GET" action="{{ route('leaderboard.index') }}"
+        <form method="GET" action="{{ route($routeName) }}"
             class="mt-6 rounded-[1.75rem] border border-brand-secondary/10 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
             @foreach ($persistedQuery as $queryKey => $queryValue)
                 @if (is_array($queryValue))
@@ -53,7 +54,7 @@
                         Buscar
                     </button>
                     @if ($search !== '')
-                        <a href="{{ route('leaderboard.index', $persistedQuery) }}"
+                        <a href="{{ route($routeName, $persistedQuery) }}"
                             class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
                             Limpiar
                         </a>

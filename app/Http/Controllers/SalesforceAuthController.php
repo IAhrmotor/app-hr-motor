@@ -17,7 +17,7 @@ class SalesforceAuthController extends Controller
 
         if (blank(config('services.salesforce.client_id')) || blank($redirectUri)) {
             return redirect()
-                ->route('leaderboard.index')
+                ->route('leaderboard.sales')
                 ->with('error', 'Faltan variables de entorno de Salesforce. Revisa SALESFORCE_CLIENT_ID y SALESFORCE_REDIRECT_URI.');
         }
 
@@ -61,7 +61,7 @@ class SalesforceAuthController extends Controller
             ]);
 
             return redirect()
-                ->route('leaderboard.index')
+                ->route('leaderboard.sales')
                 ->with('error', 'No se ha podido completar la conexión OAuth con Salesforce.');
         }
 
@@ -74,12 +74,12 @@ class SalesforceAuthController extends Controller
             ]);
 
             return redirect()
-                ->route('leaderboard.index')
+                ->route('leaderboard.sales')
                 ->with('error', 'Salesforce se ha conectado, pero el primer refresco de los rankings ha fallado. Revisa la SOQL configurada.');
         }
 
         return redirect()
-            ->route('leaderboard.index')
+            ->route('leaderboard.sales')
             ->with('success', 'Salesforce conectado correctamente y rankings sincronizados.');
     }
 }
