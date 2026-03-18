@@ -198,7 +198,7 @@
             <section class="mt-8 overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.28em] text-brand-primary">Leaderboard</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.28em] text-brand-primary">Ranking</p>
                         <h2 class="mt-2 text-2xl font-bold tracking-tight text-brand-secondary">
                             Top 10 comerciales del mes
                         </h2>
@@ -209,7 +209,7 @@
 
                     <a href="{{ route('leaderboard.index') }}"
                         class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-white px-4 py-2 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
-                        Ver leaderboard completo
+                        Ver ranking completo
                     </a>
                 </div>
 
@@ -217,6 +217,7 @@
                     @foreach ($homeLeaderboardEntries->take(3) as $entry)
                         @php
                             $canOpenProfile = $entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']);
+                            $movement = $homeLeaderboardMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                             $medalStyles = match ($entry->ranking_position) {
                                 1 => [
                                     'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(217,167,34,0.18)]',
@@ -244,8 +245,28 @@
                                 class="group block overflow-hidden rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
                         @endif
                         <article class="relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }} {{ $canOpenProfile ? 'hover:shadow-[0_24px_44px_rgba(15,23,42,0.14)]' : '' }}">
-                            <div class="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
-                                #{{ $entry->ranking_position }}
+                            <div class="absolute right-4 top-4 flex items-center gap-2">
+                                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
+                                    #{{ $entry->ranking_position }}
+                                </span>
+                                @if ($movement['direction'] === 'up')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700" title="{{ $movement['label'] }}">
+                                        <span aria-hidden="true">↑</span>
+                                        <span>{{ $movement['amount'] }}</span>
+                                        <span class="sr-only">{{ $movement['label'] }}</span>
+                                    </span>
+                                @elseif ($movement['direction'] === 'down')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-600" title="{{ $movement['label'] }}">
+                                        <span aria-hidden="true">↓</span>
+                                        <span>{{ $movement['amount'] }}</span>
+                                        <span class="sr-only">{{ $movement['label'] }}</span>
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" title="{{ $movement['label'] }}">
+                                        <span aria-hidden="true">-</span>
+                                        <span class="sr-only">{{ $movement['label'] }}</span>
+                                    </span>
+                                @endif
                             </div>
                             <div class="flex items-center gap-4">
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
@@ -274,6 +295,7 @@
                         @foreach ($homeLeaderboardEntries->slice(3) as $entry)
                         @php
                                 $canOpenProfile = $entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']);
+                                $movement = $homeLeaderboardMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                                 $rankStyles = match ($entry->ranking_position) {
                                     4 => 'border-brand-primary/20 bg-brand-primary/[0.03]',
                                     5 => 'border-brand-secondary/12 bg-white',
@@ -287,8 +309,28 @@
                                     class="group block rounded-[1.5rem] transition duration-200 hover:-translate-y-1 hover:shadow-md">
                             @endif
                             <article class="flex items-center gap-4 rounded-[1.5rem] border px-4 py-4 shadow-sm transition duration-200 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
-                                <div class="flex h-11 min-w-11 items-center justify-center rounded-full bg-brand-secondary text-sm font-semibold text-white">
-                                    #{{ $entry->ranking_position }}
+                                <div class="flex items-center gap-2">
+                                    <div class="flex h-11 min-w-11 items-center justify-center rounded-full bg-brand-secondary text-sm font-semibold text-white">
+                                        #{{ $entry->ranking_position }}
+                                    </div>
+                                    @if ($movement['direction'] === 'up')
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700" title="{{ $movement['label'] }}">
+                                            <span aria-hidden="true">↑</span>
+                                            <span>{{ $movement['amount'] }}</span>
+                                            <span class="sr-only">{{ $movement['label'] }}</span>
+                                        </span>
+                                    @elseif ($movement['direction'] === 'down')
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-600" title="{{ $movement['label'] }}">
+                                            <span aria-hidden="true">↓</span>
+                                            <span>{{ $movement['amount'] }}</span>
+                                            <span class="sr-only">{{ $movement['label'] }}</span>
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500" title="{{ $movement['label'] }}">
+                                            <span aria-hidden="true">-</span>
+                                            <span class="sr-only">{{ $movement['label'] }}</span>
+                                        </span>
+                                    @endif
                                 </div>
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"

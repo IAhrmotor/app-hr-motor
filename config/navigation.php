@@ -7,7 +7,7 @@ return [
             'route' => 'videos',
         ],
         [
-            'label' => 'Leaderboard',
+            'label' => 'Ranking',
             'route' => 'leaderboard.index',
         ],
     ],
@@ -23,7 +23,7 @@ return [
                 'route' => 'videos',
             ],
             [
-                'label' => 'Leaderboard',
+                'label' => 'Ranking',
                 'route' => 'leaderboard.index',
             ],
         ],
