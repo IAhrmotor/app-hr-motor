@@ -13,19 +13,9 @@
 @endphp
 
 <section class="rounded-[1.85rem] border border-brand-secondary/10 bg-white/90 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-6">
-    <div class="border-b border-slate-200 pb-5">
-        <p class="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">{{ $eyebrow }}</p>
-        <h2 class="mt-3 text-2xl font-semibold tracking-tight text-brand-secondary sm:text-3xl">
-            {{ $title }}
-        </h2>
-        <p class="mt-2 max-w-3xl text-sm leading-6 text-brand-secondary/70 sm:text-base">
-            {{ $description }}
-        </p>
-    </div>
-
     @if ($hasLeaderboardData)
         <form method="GET" action="{{ route($routeName) }}"
-            class="mt-6 rounded-[1.75rem] border border-brand-secondary/10 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+            class="rounded-[1.75rem] border border-brand-secondary/10 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
             @foreach ($persistedQuery as $queryKey => $queryValue)
                 @if (is_array($queryValue))
                     @foreach ($queryValue as $nestedValue)
@@ -70,7 +60,7 @@
     @endif
 
     @if ($entryItems->isEmpty())
-        <div class="mt-6 rounded-[2rem] border border-dashed border-brand-secondary/15 bg-slate-50 px-6 py-12 text-center text-brand-secondary/75">
+        <div class="rounded-[2rem] border border-dashed border-brand-secondary/15 bg-slate-50 px-6 py-12 text-center text-brand-secondary/75">
             @if ($hasLeaderboardData && $search !== '')
                 <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu busqueda</p>
                 <p class="mt-2 text-sm">Prueba con otro nombre, email o ID de Salesforce.</p>
@@ -81,7 +71,7 @@
         </div>
     @else
         @if ($topEntries->isNotEmpty())
-            <div class="mt-6 grid gap-4 lg:grid-cols-3">
+            <div class="grid gap-4 lg:grid-cols-3">
                 @foreach ($topEntries as $entry)
                     @php
                         $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
@@ -170,7 +160,7 @@
             </div>
         @endif
 
-        <div class="mt-6 overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
+        <div class="overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
             <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
                 <div class="hidden grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] gap-6 md:grid">
                     <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
