@@ -25,6 +25,8 @@
                                 </svg>
                             </button>
 
+                            <div class="absolute left-1/2 top-full h-3 w-60 -translate-x-1/2"></div>
+
                             <div x-show="rankingOpen" x-cloak x-transition:enter="transition ease-out duration-150"
                                 x-transition:enter-start="opacity-0 translate-y-1"
                                 x-transition:enter-end="opacity-100 translate-y-0"
