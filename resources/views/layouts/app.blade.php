@@ -10,7 +10,9 @@
 <body class="flex min-h-screen flex-col bg-slate-50 text-brand-secondary">
     <x-layout.navbar />
 
-    @yield('content')
+    <main class="flex-1">
+        @yield('content')
+    </main>
 
     <x-layout.footer />
 </body>
