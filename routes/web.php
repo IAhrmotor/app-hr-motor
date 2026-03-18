@@ -6,6 +6,7 @@ use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
 use App\Http\Controllers\UserController;
 use App\Models\SalesLeaderboardEntry;
+use App\Services\LeaderboardTrendService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -20,7 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
 
-    Route::get('/', function () {
+    Route::get('/', function (LeaderboardTrendService $trendService) {
         $buttonSections = [
             [
                 'title' => 'Herramientas generales',
@@ -147,7 +148,9 @@ Route::middleware('auth')->group(function () {
                 ->get()
             : new Collection();
 
-        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries'));
+        $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
+
+        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements'));
     })->name('home');
 
     Route::get('/videos', function () {

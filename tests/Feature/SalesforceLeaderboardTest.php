@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\SalesLeaderboardDailySnapshot;
+use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -19,7 +21,7 @@ class SalesforceLeaderboardTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Leaderboard comercial');
+            ->assertSee('Ranking comercial');
     }
 
     public function test_admin_can_start_salesforce_oauth_flow(): void
@@ -116,5 +118,49 @@ class SalesforceLeaderboardTest extends TestCase
             'salesforce_user_id' => '005xx0000000002AAA',
             'seller_name' => 'Carlos Cierre',
         ]);
+
+        $this->assertDatabaseHas('sales_leaderboard_daily_snapshots', [
+            'snapshot_date' => now()->toDateString(),
+            'ranking_position' => 1,
+            'salesforce_user_id' => '005xx0000000001AAA',
+        ]);
+    }
+
+    public function test_leaderboard_shows_rank_movement_against_previous_day(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $commercial = User::factory()->create([
+            'name' => 'Comercial Escalador',
+            'salesforce_user_id' => 'SF-UP-001',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-UP-001',
+            'seller_name' => 'Nombre Salesforce',
+            'total_sales' => 10,
+            'synced_at' => now(),
+        ]);
+
+        SalesLeaderboardDailySnapshot::query()->create([
+            'snapshot_date' => today()->subDay(),
+            'ranking_position' => 3,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-UP-001',
+            'seller_name' => 'Nombre Salesforce',
+            'total_sales' => 8,
+            'captured_at' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.index'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Sube 2 puestos')
+            ->assertSee('#1');
     }
 }
