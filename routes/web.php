@@ -74,36 +74,6 @@ Route::middleware('auth')->group(function () {
                 ],
             ],
             [
-                'title' => 'Office 365 online',
-                'buttons' => [
-                    [
-                        'label' => 'Outlook',
-                        'url' => config('portal.links.tools.outlook'),
-                        'image' => asset('images/tools/outlook.webp'),
-                    ],
-                    [
-                        'label' => 'Teams',
-                        'url' => config('portal.links.tools.teams'),
-                        'image' => asset('images/tools/teams.png'),
-                    ],
-                    [
-                        'label' => 'OneDrive',
-                        'url' => config('portal.links.tools.onedrive'),
-                        'image' => asset('images/tools/onedrive.webp'),
-                    ],
-                    [
-                        'label' => 'Word',
-                        'url' => config('portal.links.tools.word'),
-                        'image' => asset('images/tools/word.png'),
-                    ],
-                    [
-                        'label' => 'Excel',
-                        'url' => config('portal.links.tools.excel'),
-                        'image' => asset('images/tools/excel.png'),
-                    ],
-                ],
-            ],
-            [
                 'title' => 'Comunicación',
                 'buttons' => [
                     [
