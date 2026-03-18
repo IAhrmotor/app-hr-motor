@@ -71,7 +71,7 @@
         </div>
     @else
         @if ($topEntries->isNotEmpty())
-            <div class="grid gap-4 lg:grid-cols-3">
+            <div class="mt-6 grid gap-4 lg:grid-cols-3">
                 @foreach ($topEntries as $entry)
                     @php
                         $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
@@ -160,7 +160,7 @@
             </div>
         @endif
 
-        <div class="overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
+        <div class="mt-6 overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
             <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
                 <div class="hidden grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] gap-6 md:grid">
                     <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
