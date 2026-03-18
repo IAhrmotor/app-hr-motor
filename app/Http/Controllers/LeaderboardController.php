@@ -69,7 +69,7 @@ class LeaderboardController extends Controller
                 'route_name' => 'leaderboard.purchases',
                 'eyebrow' => 'Compras',
                 'title' => 'Ranking de compras',
-                'description' => 'Ranking de comerciales por numero de compras de coches del mes sincronizado desde Salesforce.',
+                'description' => 'Ranking de comerciales por numero de compras del mes sincronizado desde Salesforce.',
                 'metric_label' => 'Compras',
                 'metric_field' => 'total_purchases',
                 'empty_title' => 'Aun no hay datos de compras',
