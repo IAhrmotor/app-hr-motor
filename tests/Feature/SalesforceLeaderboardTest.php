@@ -163,4 +163,134 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('Sube 2 puestos')
             ->assertSee('#1');
     }
+
+    public function test_sync_adds_commercial_users_without_sales_as_zero_sales_rows(): void
+    {
+        config()->set('services.salesforce.client_id', 'client-id');
+        config()->set('services.salesforce.client_secret', 'client-secret');
+        config()->set('services.salesforce.redirect_uri', 'https://staging.hrmotor.com/integraciones/salesforce/callback');
+        config()->set(
+            'services.salesforce.leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $commercialWithSales = User::factory()->create([
+            'role' => 'comercial',
+            'name' => 'Comercial con ventas',
+            'salesforce_user_id' => 'SF-001',
+        ]);
+
+        $commercialWithoutSales = User::factory()->create([
+            'role' => 'comercial',
+            'name' => 'Comercial sin ventas',
+            'salesforce_user_id' => 'SF-999',
+        ]);
+
+        Http::fake([
+            'https://login.salesforce.com/services/oauth2/token' => Http::response([
+                'access_token' => 'access-token',
+                'refresh_token' => 'refresh-token',
+                'instance_url' => 'https://example.my.salesforce.com',
+                'token_type' => 'Bearer',
+                'scope' => 'api refresh_token',
+            ], 200),
+            'https://example.my.salesforce.com/*' => Http::response([
+                'records' => [
+                    [
+                        'ownerId' => 'SF-001',
+                        'ownerName' => 'Nombre SF con ventas',
+                        'totalSales' => 5,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->withSession(['salesforce_oauth_state' => 'known-state'])
+            ->actingAs($admin)
+            ->get(route('salesforce.callback', [
+                'code' => 'oauth-code',
+                'state' => 'known-state',
+            ]));
+
+        $this->assertDatabaseHas('sales_leaderboard_entries', [
+            'ranking_position' => 1,
+            'user_id' => $commercialWithSales->id,
+            'salesforce_user_id' => 'SF-001',
+            'total_sales' => 5,
+        ]);
+
+        $this->assertDatabaseHas('sales_leaderboard_entries', [
+            'ranking_position' => 2,
+            'user_id' => $commercialWithoutSales->id,
+            'salesforce_user_id' => 'SF-999',
+            'seller_name' => 'Comercial sin ventas',
+            'total_sales' => 0,
+        ]);
+    }
+
+    public function test_sync_keeps_all_commercials_in_ranking_even_when_salesforce_returns_no_rows(): void
+    {
+        config()->set('services.salesforce.client_id', 'client-id');
+        config()->set('services.salesforce.client_secret', 'client-secret');
+        config()->set('services.salesforce.redirect_uri', 'https://staging.hrmotor.com/integraciones/salesforce/callback');
+        config()->set(
+            'services.salesforce.leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $commercialWithoutSalesforceId = User::factory()->create([
+            'role' => 'comercial',
+            'name' => 'Ana Comercial',
+            'salesforce_user_id' => null,
+        ]);
+
+        $commercialWithSalesforceId = User::factory()->create([
+            'role' => 'comercial',
+            'name' => 'Bernardo Comercial',
+            'salesforce_user_id' => 'SF-404',
+        ]);
+
+        Http::fake([
+            'https://login.salesforce.com/services/oauth2/token' => Http::response([
+                'access_token' => 'access-token',
+                'refresh_token' => 'refresh-token',
+                'instance_url' => 'https://example.my.salesforce.com',
+                'token_type' => 'Bearer',
+                'scope' => 'api refresh_token',
+            ], 200),
+            'https://example.my.salesforce.com/*' => Http::response([
+                'records' => [],
+            ], 200),
+        ]);
+
+        $this->withSession(['salesforce_oauth_state' => 'known-state'])
+            ->actingAs($admin)
+            ->get(route('salesforce.callback', [
+                'code' => 'oauth-code',
+                'state' => 'known-state',
+            ]));
+
+        $this->assertDatabaseHas('sales_leaderboard_entries', [
+            'user_id' => $commercialWithoutSalesforceId->id,
+            'seller_name' => 'Ana Comercial',
+            'total_sales' => 0,
+        ]);
+
+        $this->assertDatabaseHas('sales_leaderboard_entries', [
+            'user_id' => $commercialWithSalesforceId->id,
+            'salesforce_user_id' => 'SF-404',
+            'seller_name' => 'Bernardo Comercial',
+            'total_sales' => 0,
+        ]);
+
+        $this->assertSame(2, SalesLeaderboardEntry::query()->count());
+    }
 }

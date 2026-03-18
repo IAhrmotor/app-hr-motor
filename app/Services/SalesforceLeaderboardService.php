@@ -80,6 +80,8 @@ class SalesforceLeaderboardService
                 ];
             });
 
+        $entries = $this->appendCommercialUsersWithoutSales($entries, $syncedAt);
+
         DB::transaction(function () use ($entries, $connection, $syncedAt): void {
             SalesLeaderboardEntry::query()->delete();
 
@@ -253,6 +255,51 @@ class SalesforceLeaderboardService
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function appendCommercialUsersWithoutSales(Collection $entries, $syncedAt): Collection
+    {
+        $existingUserIds = $entries
+            ->pluck('user_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        $existingSalesforceUserIds = $entries
+            ->pluck('salesforce_user_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        $missingCommercials = User::query()
+            ->where('role', 'comercial')
+            ->where(function ($query) use ($existingUserIds, $existingSalesforceUserIds): void {
+                $query->whereNotIn('id', $existingUserIds)
+                    ->where(function ($userQuery) use ($existingSalesforceUserIds): void {
+                        $userQuery->whereNull('salesforce_user_id')
+                            ->orWhere('salesforce_user_id', '')
+                            ->orWhereNotIn('salesforce_user_id', $existingSalesforceUserIds);
+                    });
+            })
+            ->orderBy('name')
+            ->get();
+
+        $nextRankingPosition = $entries->count() + 1;
+
+        $missingEntries = $missingCommercials->map(function (User $user) use (&$nextRankingPosition, $syncedAt): array {
+            return [
+                'ranking_position' => $nextRankingPosition++,
+                'user_id' => $user->id,
+                'salesforce_user_id' => $user->salesforce_user_id,
+                'seller_name' => $user->name,
+                'total_sales' => 0,
+                'synced_at' => $syncedAt,
+                'created_at' => $syncedAt,
+                'updated_at' => $syncedAt,
+            ];
+        });
+
+        return $entries->concat($missingEntries)->values();
     }
 
     private function ensureRequiredTablesExist(): void
