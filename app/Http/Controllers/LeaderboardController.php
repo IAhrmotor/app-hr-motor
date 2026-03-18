@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SalesLeaderboardEntry;
+use App\Services\LeaderboardTrendService;
 use App\Services\SalesforceLeaderboardService;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 
 class LeaderboardController extends Controller
 {
-    public function index(Request $request, SalesforceLeaderboardService $service)
+    public function index(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
     {
         $search = trim((string) $request->query('search', ''));
         $leaderboardTablesReady = Schema::hasTable('sales_leaderboard_entries')
@@ -53,6 +54,8 @@ class LeaderboardController extends Controller
         return view('leaderboard.index', [
             'entries' => $entries,
             'topEntries' => $topEntries,
+            'entryMovements' => $trendService->buildMovementMap($entries),
+            'topEntryMovements' => $trendService->buildMovementMap($topEntries),
             'search' => $search,
             'hasLeaderboardData' => $hasLeaderboardData,
             'connection' => $service->getConnection(),

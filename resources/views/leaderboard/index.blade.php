@@ -8,7 +8,7 @@
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">Salesforce</p>
                         <h1 class="mt-3 text-3xl font-semibold tracking-tight text-brand-secondary sm:text-4xl">
-                            Leaderboard comercial
+                            Ranking comercial
                         </h1>
                         <p class="mt-3 max-w-2xl text-sm leading-6 text-brand-secondary/70 sm:text-base">
                             Ranking de comerciales por número de ventas del mes sincronizado desde Salesforce.
@@ -52,7 +52,7 @@
 
                 @if (! $leaderboardTablesReady)
                     <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-900">
-                        El leaderboard esta en modo preparacion. La pagina ya no falla aunque falten tablas, pero todavia necesitas ejecutar las migraciones para guardar la conexion y las ventas.
+                        El ranking esta en modo preparacion. La pagina ya no falla aunque falten tablas, pero todavia necesitas ejecutar las migraciones para guardar la conexion y las ventas.
                     </div>
                 @endif
 
@@ -85,7 +85,7 @@
 
                         @if (! $leaderboardTablesReady)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-                                Antes de conectar Salesforce, ejecuta las migraciones de Laravel para crear las tablas nuevas del leaderboard.
+                                Antes de conectar Salesforce, ejecuta las migraciones de Laravel para crear las tablas nuevas del ranking.
                             </div>
                         @elseif (! $salesforceConfigReady)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
@@ -99,7 +99,7 @@
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
                                 En Salesforce Connected App debes autorizar exactamente la misma callback URL que uses aqui en
                                 <code class="rounded bg-white/80 px-1.5 py-0.5 text-xs">{{ config('services.salesforce.redirect_uri') }}</code>.
-                                Hasta que eso ocurra, la web seguira funcionando y el leaderboard quedara simplemente pendiente de conexion.
+                                Hasta que eso ocurra, la web seguira funcionando y el ranking quedara simplemente pendiente de conexion.
                             </div>
                         @endif
                     @endif
@@ -152,7 +152,7 @@
                             <p class="text-lg font-semibold text-brand-secondary">Aun no hay datos de ventas</p>
                             <p class="mt-2 text-sm">
                                 @if (! $leaderboardTablesReady)
-                                    Ejecuta primero las migraciones para activar el almacenamiento del leaderboard.
+                                    Ejecuta primero las migraciones para activar el almacenamiento del ranking.
                                 @elseif ($connection)
                                     Ejecuta una sincronizacion para llenar el ranking.
                                 @elseif ($salesforceConfigReady)
@@ -168,6 +168,7 @@
                         <div class="grid gap-4 lg:grid-cols-3">
                             @foreach ($topEntries as $entry)
                                 @php
+                                    $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                                     $medalStyles = match ($entry->ranking_position) {
                                         1 => [
                                             'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(217,167,34,0.18)]',
@@ -191,8 +192,28 @@
                                 @endphp
 
                                 <article class="relative overflow-hidden rounded-[1.75rem] border p-6 {{ $medalStyles['card'] }}">
-                                    <div class="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
-                                        #{{ $entry->ranking_position }}
+                                    <div class="absolute right-4 top-4 flex items-center gap-2">
+                                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
+                                            #{{ $entry->ranking_position }}
+                                        </span>
+                                        @if ($movement['direction'] === 'up')
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700" title="{{ $movement['label'] }}">
+                                                <span aria-hidden="true">↑</span>
+                                                <span>{{ $movement['amount'] }}</span>
+                                                <span class="sr-only">{{ $movement['label'] }}</span>
+                                            </span>
+                                        @elseif ($movement['direction'] === 'down')
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-600" title="{{ $movement['label'] }}">
+                                                <span aria-hidden="true">↓</span>
+                                                <span>{{ $movement['amount'] }}</span>
+                                                <span class="sr-only">{{ $movement['label'] }}</span>
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" title="{{ $movement['label'] }}">
+                                                <span aria-hidden="true">-</span>
+                                                <span class="sr-only">{{ $movement['label'] }}</span>
+                                            </span>
+                                        @endif
                                     </div>
                                     <div class="flex items-center gap-4">
                                         @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
@@ -258,6 +279,7 @@
                                                 ],
                                                 default => null,
                                             };
+                                            $movement = $entryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                                         @endphp
 
                                         <tr class="transition hover:bg-slate-50/80">
@@ -270,6 +292,24 @@
                                                         </span>
                                                     @else
                                                         <span>#{{ $entry->ranking_position }}</span>
+                                                    @endif
+                                                    @if ($movement['direction'] === 'up')
+                                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700" title="{{ $movement['label'] }}">
+                                                            <span aria-hidden="true">↑</span>
+                                                            <span>{{ $movement['amount'] }}</span>
+                                                            <span class="sr-only">{{ $movement['label'] }}</span>
+                                                        </span>
+                                                    @elseif ($movement['direction'] === 'down')
+                                                        <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-600" title="{{ $movement['label'] }}">
+                                                            <span aria-hidden="true">↓</span>
+                                                            <span>{{ $movement['amount'] }}</span>
+                                                            <span class="sr-only">{{ $movement['label'] }}</span>
+                                                        </span>
+                                                    @else
+                                                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500" title="{{ $movement['label'] }}">
+                                                            <span aria-hidden="true">-</span>
+                                                            <span class="sr-only">{{ $movement['label'] }}</span>
+                                                        </span>
                                                     @endif
                                                 </div>
                                             </td>

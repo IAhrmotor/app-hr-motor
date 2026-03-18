@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\SalesLeaderboardEntry;
+use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesforceConnection;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -84,6 +85,26 @@ class SalesforceLeaderboardService
 
             if ($entries->isNotEmpty()) {
                 SalesLeaderboardEntry::query()->insert($entries->all());
+            }
+
+            SalesLeaderboardDailySnapshot::query()
+                ->whereDate('snapshot_date', $syncedAt->toDateString())
+                ->delete();
+
+            if ($entries->isNotEmpty()) {
+                SalesLeaderboardDailySnapshot::query()->insert(
+                    $entries->map(fn (array $entry): array => [
+                        'snapshot_date' => $syncedAt->toDateString(),
+                        'ranking_position' => $entry['ranking_position'],
+                        'user_id' => $entry['user_id'],
+                        'salesforce_user_id' => $entry['salesforce_user_id'],
+                        'seller_name' => $entry['seller_name'],
+                        'total_sales' => $entry['total_sales'],
+                        'captured_at' => $syncedAt,
+                        'created_at' => $syncedAt,
+                        'updated_at' => $syncedAt,
+                    ])->all()
+                );
             }
 
             $connection->forceFill([
@@ -239,6 +260,7 @@ class SalesforceLeaderboardService
         if (
             ! Schema::hasTable('salesforce_connections')
             || ! Schema::hasTable('sales_leaderboard_entries')
+            || ! Schema::hasTable('sales_leaderboard_daily_snapshots')
         ) {
             throw new RuntimeException('Faltan las tablas del leaderboard. Ejecuta las migraciones antes de conectar Salesforce.');
         }
