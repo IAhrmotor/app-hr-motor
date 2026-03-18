@@ -14,6 +14,42 @@ class User extends Authenticatable
 
     public const DEFAULT_AVATAR_PATH = 'images/users/hrmotor-default-user-avatar.png';
 
+    public const DEALERSHIPS = [
+        'Torrejón',
+        'Manresa',
+        'Pamplona',
+        'Zaragoza',
+        'Bilbao',
+        'Sevilla',
+        'Fontellas',
+        'Valencia',
+        'Alicante',
+        'Villalba',
+        'Sant Boi de Llobregat',
+        'Rivas-Vaciamadrid',
+        'Gijón',
+        'Murcia',
+        'Valladolid',
+        'Alcalá de Guadaira',
+        'Lleida',
+        'San Sebastián',
+        'Lliçà de Vall',
+        'Alcobendas',
+        'Badalona',
+        'Girona',
+        'Mallorca',
+        'A Coruña',
+        'Paterna',
+        'Málaga',
+        'Málaga Centro',
+        'Castellón',
+        'Sedaví',
+        'Elche',
+        'Alcoy',
+        'Villarreal',
+        'Dos Hermanas',
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -24,6 +60,7 @@ class User extends Authenticatable
         'email',
         'role',
         'salesforce_user_id',
+        'dealership',
         'avatar_path',
         'linkedin_url',
         'password',

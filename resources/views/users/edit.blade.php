@@ -5,6 +5,7 @@
         $isManager = auth()->user()->role === 'gestor';
         $selectedRole = old('role', $user->role);
         $showSalesforceField = $selectedRole === 'comercial';
+        $showDealershipField = $selectedRole === 'comercial';
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
@@ -114,6 +115,39 @@
                         @endif
                     </div>
 
+                    <div id="dealership-wrapper" @class([
+                        'hidden' => ! $showDealershipField,
+                    ])>
+                        <label for="dealership" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            Delegación
+                        </label>
+
+                        <div class="relative">
+                            <select id="dealership" name="dealership" @required($showDealershipField)
+                                class="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                                <option value="">Selecciona una delegación</option>
+                                @foreach ($availableDealerships as $dealership)
+                                    <option value="{{ $dealership }}"
+                                        @selected(old('dealership', $user->dealership) === $dealership)>
+                                        {{ $dealership }}
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-brand-secondary/70">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">
+                            Solo administradores y gestores pueden modificar esta delegación.
+                        </p>
+                    </div>
+
                     <div id="salesforce-user-id-wrapper" @class([
                         'hidden' => ! $showSalesforceField,
                     ])>
@@ -147,20 +181,25 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const roleSelect = document.querySelector('[data-role-select]');
+            const dealershipWrapper = document.getElementById('dealership-wrapper');
+            const dealershipSelect = document.getElementById('dealership');
             const salesforceWrapper = document.getElementById('salesforce-user-id-wrapper');
             const salesforceInput = document.getElementById('salesforce_user_id');
 
-            if (!salesforceWrapper || !salesforceInput) {
+            if (!salesforceWrapper || !salesforceInput || !dealershipWrapper || !dealershipSelect) {
                 return;
             }
 
             const toggleSalesforceField = () => {
                 const isCommercial = !roleSelect || roleSelect.value === 'comercial';
 
+                dealershipWrapper.classList.toggle('hidden', !isCommercial);
+                dealershipSelect.required = isCommercial;
                 salesforceWrapper.classList.toggle('hidden', !isCommercial);
                 salesforceInput.required = isCommercial;
 
                 if (!isCommercial) {
+                    dealershipSelect.value = '';
                     salesforceInput.value = '';
                 }
             };
