@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="bg-[radial-gradient(circle_at_top,_rgba(229,26,46,0.14),_transparent_45%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] py-10 sm:py-14">
+    <section class="py-10 sm:py-14">
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
             <div class="flex flex-col gap-6 rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

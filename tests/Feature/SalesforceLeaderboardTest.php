@@ -315,7 +315,7 @@ class SalesforceLeaderboardTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Pagina 2 de 2')
-            ->assertSee('#16')
-            ->assertDontSee('#15');
+            ->assertSee('Comercial 16')
+            ->assertDontSee('Comercial 10');
     }
 }
