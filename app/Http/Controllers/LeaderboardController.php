@@ -8,10 +8,12 @@ use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
 use App\Services\LeaderboardTrendService;
 use App\Services\SalesforceLeaderboardService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class LeaderboardController extends Controller
 {
@@ -44,6 +46,12 @@ class LeaderboardController extends Controller
                 'metric_label' => 'Ventas',
                 'metric_field' => 'total_sales',
                 'empty_title' => 'Aun no hay datos de ventas',
+                'entity_label_plural' => 'comerciales',
+                'search_placeholder' => 'Buscar comercial, email o delegacion',
+                'show_dealership_leaderboard' => true,
+                'dealership_title' => 'Ranking por delegaciones',
+                'dealership_description' => 'Comparativa de ventas acumuladas por delegacion para fomentar la competicion entre equipos.',
+                'dealership_empty_title' => 'Aun no hay datos de delegaciones',
             ],
             leaderboardTablesReady: $leaderboardTablesReady
         );
@@ -73,6 +81,12 @@ class LeaderboardController extends Controller
                 'metric_label' => 'Compras',
                 'metric_field' => 'total_purchases',
                 'empty_title' => 'Aun no hay datos de compras',
+                'entity_label_plural' => 'comerciales',
+                'search_placeholder' => 'Buscar comercial, email o delegacion',
+                'show_dealership_leaderboard' => true,
+                'dealership_title' => 'Ranking por delegaciones',
+                'dealership_description' => 'Comparativa de compras acumuladas por delegacion para fomentar la competicion entre equipos.',
+                'dealership_empty_title' => 'Aun no hay datos de delegaciones',
             ],
             leaderboardTablesReady: $leaderboardTablesReady
         );
@@ -86,6 +100,9 @@ class LeaderboardController extends Controller
         bool $leaderboardTablesReady
     ) {
         $leaderboard = $this->buildLeaderboardViewData($request, $trendService, $config);
+        $dealershipLeaderboard = ($config['show_dealership_leaderboard'] ?? false)
+            ? $this->buildDealershipLeaderboardViewData($request, $trendService, $config)
+            : null;
         $salesforceConfigReady = filled(config('services.salesforce.client_id'))
             && filled(config('services.salesforce.client_secret'))
             && filled(config('services.salesforce.redirect_uri'));
@@ -110,6 +127,12 @@ class LeaderboardController extends Controller
             'metricField' => $config['metric_field'],
             'emptyTitle' => $config['empty_title'],
             'emptyDescription' => $emptyDescription,
+            'dealershipLeaderboard' => $dealershipLeaderboard,
+            'dealershipTitle' => $config['dealership_title'] ?? 'Ranking por delegaciones',
+            'dealershipDescription' => $config['dealership_description'] ?? '',
+            'dealershipEmptyTitle' => $config['dealership_empty_title'] ?? 'Aun no hay datos de delegaciones',
+            'entityLabelPlural' => $config['entity_label_plural'] ?? 'comerciales',
+            'searchPlaceholder' => $config['search_placeholder'] ?? 'Buscar comercial, email o delegacion',
         ]);
     }
 
@@ -131,14 +154,15 @@ class LeaderboardController extends Controller
         $hasLeaderboardData = false;
 
         if (Schema::hasTable($config['entry_table'])) {
-            $topEntries = $config['entry_model']::query()
+            $allEntries = $config['entry_model']::query()
                 ->with('user')
                 ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
                     $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
                 })
                 ->orderBy('ranking_position')
-                ->limit(3)
                 ->get();
+
+            $topEntries = $allEntries->take(3)->values();
 
             $entriesQuery = $config['entry_model']::query()
                 ->with('user')
@@ -163,11 +187,7 @@ class LeaderboardController extends Controller
                 ->paginate(10, ['*'], $config['page_param'])
                 ->withQueryString();
             $entryItems = collect($entries->items());
-            $hasLeaderboardData = $config['entry_model']::query()
-                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
-                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
-                })
-                ->exists();
+            $hasLeaderboardData = $allEntries->isNotEmpty();
         }
 
         return [
@@ -192,8 +212,141 @@ class LeaderboardController extends Controller
         ];
     }
 
+    private function buildDealershipLeaderboardViewData(Request $request, LeaderboardTrendService $trendService, array $config): array
+    {
+        $search = trim((string) $request->query('dealership_search', ''));
+        $entries = new LengthAwarePaginator(
+            [],
+            0,
+            10,
+            1,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'dealership_page',
+            ]
+        );
+        $entryItems = new Collection();
+        $topEntries = new Collection();
+        $hasLeaderboardData = false;
+
+        if (Schema::hasTable($config['entry_table'])) {
+            $allEntries = $config['entry_model']::query()
+                ->with('user')
+                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                })
+                ->orderBy('ranking_position')
+                ->get();
+
+            $aggregatedEntries = $this->aggregateEntriesByDealership($allEntries, $config['metric_field'], $search);
+            $topEntries = $aggregatedEntries->take(3)->values();
+            $entries = $this->paginateCollection($aggregatedEntries, 'dealership_page');
+            $entryItems = collect($entries->items());
+            $hasLeaderboardData = $aggregatedEntries->isNotEmpty();
+        }
+
+        return [
+            'entries' => $entries,
+            'entryItems' => $entryItems,
+            'topEntries' => $topEntries,
+            'entryMovements' => $trendService->buildDealershipMovementMap(
+                $entryItems,
+                $config['snapshot_model'],
+                $config['snapshot_table'],
+                $config['metric_field']
+            ),
+            'topEntryMovements' => $trendService->buildDealershipMovementMap(
+                $topEntries,
+                $config['snapshot_model'],
+                $config['snapshot_table'],
+                $config['metric_field']
+            ),
+            'search' => $search,
+            'hasLeaderboardData' => $hasLeaderboardData,
+            'searchParam' => 'dealership_search',
+            'pageParam' => 'dealership_page',
+            'routeName' => $config['route_name'],
+        ];
+    }
+
     private function excludedLeaderboardUserIds(): array
     {
         return config('services.salesforce.excluded_leaderboard_user_ids', []);
+    }
+
+    private function aggregateEntriesByDealership(Collection $entries, string $metricField, string $search): Collection
+    {
+        $aggregatedEntries = $entries
+            ->groupBy(fn (Model $entry): string => $this->resolveDealershipName($entry))
+            ->map(function (Collection $dealershipEntries, string $dealership) use ($metricField) {
+                $representative = $dealershipEntries->first();
+                $totalMetric = (float) $dealershipEntries->sum($metricField);
+                $commercialCount = $dealershipEntries->pluck('user_id')->filter()->unique()->count();
+
+                $entry = new ($representative::class)();
+                $entry->forceFill([
+                    'id' => 'dealership:' . Str::slug($dealership, '-'),
+                    'ranking_position' => 0,
+                    'seller_name' => $dealership,
+                    'salesforce_user_id' => null,
+                    $metricField => $totalMetric,
+                    'dealership_name' => $dealership,
+                    'commercial_count' => $commercialCount,
+                ]);
+
+                return $entry;
+            })
+            ->sort(function (Model $left, Model $right) use ($metricField) {
+                $metricComparison = (float) $right->getAttribute($metricField) <=> (float) $left->getAttribute($metricField);
+
+                if ($metricComparison !== 0) {
+                    return $metricComparison;
+                }
+
+                return strcmp(
+                    (string) $left->getAttribute('dealership_name'),
+                    (string) $right->getAttribute('dealership_name')
+                );
+            })
+            ->values()
+            ->map(function (Model $entry, int $index) {
+                $entry->setAttribute('ranking_position', $index + 1);
+
+                return $entry;
+            });
+
+        if ($search === '') {
+            return $aggregatedEntries;
+        }
+
+        $needle = Str::lower($search);
+
+        return $aggregatedEntries
+            ->filter(fn (Model $entry): bool => str_contains(Str::lower((string) $entry->getAttribute('dealership_name')), $needle))
+            ->values();
+    }
+
+    private function paginateCollection(Collection $entries, string $pageParam): LengthAwarePaginator
+    {
+        $currentPage = LengthAwarePaginator::resolveCurrentPage($pageParam);
+        $perPage = 10;
+
+        return new LengthAwarePaginator(
+            $entries->forPage($currentPage, $perPage)->values(),
+            $entries->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => $pageParam,
+            ]
+        );
+    }
+
+    private function resolveDealershipName(Model $entry): string
+    {
+        $dealership = trim((string) ($entry->user?->dealership ?? ''));
+
+        return $dealership !== '' ? $dealership : 'Sin delegacion asignada';
     }
 }
