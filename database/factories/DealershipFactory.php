@@ -20,6 +20,7 @@ class DealershipFactory extends Factory
             'name' => $city,
             'salesforce_id' => 'DLR-' . fake()->unique()->bothify('####'),
             'image_path' => null,
+            'phone' => fake()->phoneNumber(),
             'google_maps_url' => fake()->url(),
             'reviews_url' => fake()->url(),
         ];

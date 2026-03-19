@@ -27,6 +27,7 @@ class DealershipController extends Controller
                 $query->where(function ($subquery) use ($search) {
                     $subquery->where('name', 'like', "%{$search}%")
                         ->orWhere('salesforce_id', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
                         ->orWhere('google_maps_url', 'like', "%{$search}%")
                         ->orWhere('reviews_url', 'like', "%{$search}%");
                 });
@@ -47,23 +48,23 @@ class DealershipController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:dealerships,name'],
-            'salesforce_id' => ['nullable', 'string', 'max:255', 'unique:dealerships,salesforce_id'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'google_maps_url' => ['nullable', 'url', 'max:255'],
-            'reviews_url' => ['nullable', 'url', 'max:255'],
+            'salesforce_id' => ['required', 'string', 'max:255', 'unique:dealerships,salesforce_id'],
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'phone' => ['required', 'string', 'max:255'],
+            'google_maps_url' => ['required', 'url', 'max:255'],
+            'reviews_url' => ['required', 'url', 'max:255'],
         ]);
 
         $dealership = Dealership::create([
             'name' => $validated['name'],
-            'salesforce_id' => $validated['salesforce_id'] ?? null,
-            'google_maps_url' => $validated['google_maps_url'] ?? null,
-            'reviews_url' => $validated['reviews_url'] ?? null,
+            'salesforce_id' => $validated['salesforce_id'],
+            'phone' => $validated['phone'],
+            'google_maps_url' => $validated['google_maps_url'],
+            'reviews_url' => $validated['reviews_url'],
         ]);
 
-        if ($request->hasFile('image')) {
-            $dealership->image_path = $this->storeImage($request, $dealership);
-            $dealership->save();
-        }
+        $dealership->image_path = $this->storeImage($request, $dealership);
+        $dealership->save();
 
         return redirect()
             ->route('dealerships.index')
@@ -86,17 +87,19 @@ class DealershipController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:dealerships,name,' . $dealership->id],
-            'salesforce_id' => ['nullable', 'string', 'max:255', 'unique:dealerships,salesforce_id,' . $dealership->id],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'google_maps_url' => ['nullable', 'url', 'max:255'],
-            'reviews_url' => ['nullable', 'url', 'max:255'],
+            'salesforce_id' => ['required', 'string', 'max:255', 'unique:dealerships,salesforce_id,' . $dealership->id],
+            'image' => [$dealership->image_path ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'phone' => ['required', 'string', 'max:255'],
+            'google_maps_url' => ['required', 'url', 'max:255'],
+            'reviews_url' => ['required', 'url', 'max:255'],
         ]);
 
         $dealership->fill([
             'name' => $validated['name'],
-            'salesforce_id' => $validated['salesforce_id'] ?? null,
-            'google_maps_url' => $validated['google_maps_url'] ?? null,
-            'reviews_url' => $validated['reviews_url'] ?? null,
+            'salesforce_id' => $validated['salesforce_id'],
+            'phone' => $validated['phone'],
+            'google_maps_url' => $validated['google_maps_url'],
+            'reviews_url' => $validated['reviews_url'],
         ]);
 
         if ($request->hasFile('image')) {

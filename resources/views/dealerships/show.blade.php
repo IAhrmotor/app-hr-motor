@@ -15,9 +15,9 @@
                     @endif
 
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Delegación</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Delegacion</p>
                         <h1 class="mt-2 text-3xl font-bold tracking-tight text-brand-secondary">{{ $dealership->name }}</h1>
-                        <p class="mt-2 text-sm text-brand-secondary/65">{{ $dealership->salesforce_id ?: 'Sin ID de Salesforce' }}</p>
+                        <p class="mt-2 text-sm text-brand-secondary/65">{{ $dealership->phone }}</p>
                     </div>
                 </div>
 
@@ -32,7 +32,7 @@
                     @if ($dealership->reviews_url)
                         <a href="{{ $dealership->reviews_url }}" target="_blank" rel="noopener noreferrer"
                             class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
-                            Reseñas
+                            Resenas
                         </a>
                     @endif
 
@@ -43,7 +43,7 @@
             </div>
 
             <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-slate-50 p-6">
-                <h2 class="text-lg font-semibold text-brand-secondary">Información general</h2>
+                <h2 class="text-lg font-semibold text-brand-secondary">Informacion general</h2>
 
                 <dl class="mt-5 grid gap-5 text-sm md:grid-cols-2">
                     <div>
@@ -51,16 +51,32 @@
                         <dd class="mt-1 font-semibold text-brand-secondary">{{ $dealership->name }}</dd>
                     </div>
                     <div>
-                        <dt class="text-brand-secondary/60">ID de Salesforce</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $dealership->salesforce_id ?: 'Sin configurar' }}</dd>
+                        <dt class="text-brand-secondary/60">Telefono</dt>
+                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $dealership->phone }}</dd>
                     </div>
                     <div>
                         <dt class="text-brand-secondary/60">Google Maps</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary break-all">{{ $dealership->google_maps_url ?: 'Sin configurar' }}</dd>
+                        @if ($dealership->google_maps_url)
+                            <dd class="mt-1 font-semibold text-brand-secondary break-all">
+                                <a href="{{ $dealership->google_maps_url }}" target="_blank" rel="noopener noreferrer" class="transition hover:text-brand-primary">
+                                    {{ $dealership->google_maps_url }}
+                                </a>
+                            </dd>
+                        @else
+                            <dd class="mt-1 font-semibold text-brand-secondary">Sin configurar</dd>
+                        @endif
                     </div>
                     <div>
-                        <dt class="text-brand-secondary/60">Reseñas</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary break-all">{{ $dealership->reviews_url ?: 'Sin configurar' }}</dd>
+                        <dt class="text-brand-secondary/60">Resenas</dt>
+                        @if ($dealership->reviews_url)
+                            <dd class="mt-1 font-semibold text-brand-secondary break-all">
+                                <a href="{{ $dealership->reviews_url }}" target="_blank" rel="noopener noreferrer" class="transition hover:text-brand-primary">
+                                    {{ $dealership->reviews_url }}
+                                </a>
+                            </dd>
+                        @else
+                            <dd class="mt-1 font-semibold text-brand-secondary">Sin configurar</dd>
+                        @endif
                     </div>
                 </dl>
             </section>
@@ -74,7 +90,7 @@
                 </div>
 
                 @if ($dealership->users->isEmpty())
-                    <p class="mt-4 text-sm text-brand-secondary/70">No hay usuarios asociados a esta delegación.</p>
+                    <p class="mt-4 text-sm text-brand-secondary/70">No hay usuarios asociados a esta delegacion.</p>
                 @else
                     <div class="mt-4 grid gap-3">
                         @foreach ($dealership->users as $user)
