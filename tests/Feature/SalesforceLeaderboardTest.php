@@ -15,6 +15,13 @@ class SalesforceLeaderboardTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
     public function test_authenticated_user_is_redirected_from_generic_leaderboard_route_to_sales_page(): void
     {
         $user = User::factory()->create();
@@ -74,6 +81,132 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('Delegación')
             ->assertSee('Sevilla')
             ->assertDontSee('ID Salesforce');
+    }
+
+    public function test_sales_leaderboard_keeps_commercial_ranking_and_adds_dealership_ranking_below(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $sevillaA = User::factory()->create([
+            'name' => 'Laura Sevilla',
+            'dealership' => 'Sevilla',
+            'salesforce_user_id' => 'SF-SEV-1',
+        ]);
+
+        $sevillaB = User::factory()->create([
+            'name' => 'Pablo Sevilla',
+            'dealership' => 'Sevilla',
+            'salesforce_user_id' => 'SF-SEV-2',
+        ]);
+
+        $valencia = User::factory()->create([
+            'name' => 'Ana Valencia',
+            'dealership' => 'Valencia',
+            'salesforce_user_id' => 'SF-VAL-1',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $valencia->id,
+            'salesforce_user_id' => 'SF-VAL-1',
+            'seller_name' => 'Ana Valencia',
+            'total_sales' => 8,
+            'synced_at' => now(),
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 2,
+            'user_id' => $sevillaA->id,
+            'salesforce_user_id' => 'SF-SEV-1',
+            'seller_name' => 'Laura Sevilla',
+            'total_sales' => 6,
+            'synced_at' => now(),
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 3,
+            'user_id' => $sevillaB->id,
+            'salesforce_user_id' => 'SF-SEV-2',
+            'seller_name' => 'Pablo Sevilla',
+            'total_sales' => 5,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.sales'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Laura Sevilla')
+            ->assertSee('Ana Valencia')
+            ->assertSee('Ranking por delegaciones')
+            ->assertSee('Sevilla')
+            ->assertSee('11')
+            ->assertSee('2 comerciales');
+    }
+
+    public function test_purchase_leaderboard_keeps_commercial_ranking_and_adds_dealership_ranking_below(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $sevillaA = User::factory()->create([
+            'name' => 'Lucia Sevilla',
+            'dealership' => 'Sevilla',
+            'salesforce_user_id' => 'BUY-SEV-1',
+        ]);
+
+        $sevillaB = User::factory()->create([
+            'name' => 'Mario Sevilla',
+            'dealership' => 'Sevilla',
+            'salesforce_user_id' => 'BUY-SEV-2',
+        ]);
+
+        $bilbao = User::factory()->create([
+            'name' => 'Iker Bilbao',
+            'dealership' => 'Bilbao',
+            'salesforce_user_id' => 'BUY-BIL-1',
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $bilbao->id,
+            'salesforce_user_id' => 'BUY-BIL-1',
+            'seller_name' => 'Iker Bilbao',
+            'total_purchases' => 7,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 2,
+            'user_id' => $sevillaA->id,
+            'salesforce_user_id' => 'BUY-SEV-1',
+            'seller_name' => 'Lucia Sevilla',
+            'total_purchases' => 4,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 3,
+            'user_id' => $sevillaB->id,
+            'salesforce_user_id' => 'BUY-SEV-2',
+            'seller_name' => 'Mario Sevilla',
+            'total_purchases' => 4,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.purchases'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Lucia Sevilla')
+            ->assertSee('Iker Bilbao')
+            ->assertSee('Ranking por delegaciones')
+            ->assertSee('Sevilla')
+            ->assertSee('8')
+            ->assertSee('2 comerciales');
     }
 
     public function test_admin_can_start_salesforce_oauth_flow(): void

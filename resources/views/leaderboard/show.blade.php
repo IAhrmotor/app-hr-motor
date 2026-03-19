@@ -114,7 +114,26 @@
                     'metricField' => $metricField,
                     'emptyTitle' => $emptyTitle,
                     'emptyDescription' => $emptyDescription,
+                    'entityLabelPlural' => $entityLabelPlural,
+                    'searchPlaceholder' => $searchPlaceholder,
+                    'aggregateByDealership' => false,
                 ])
+
+                @if ($dealershipLeaderboard)
+                    @include('leaderboard.partials.section', [
+                        'leaderboard' => $dealershipLeaderboard,
+                        'eyebrow' => $eyebrow,
+                        'title' => $dealershipTitle,
+                        'description' => $dealershipDescription,
+                        'metricLabel' => $metricLabel,
+                        'metricField' => $metricField,
+                        'emptyTitle' => $dealershipEmptyTitle,
+                        'emptyDescription' => $emptyDescription,
+                        'entityLabelPlural' => 'delegaciones',
+                        'searchPlaceholder' => 'Buscar delegacion',
+                        'aggregateByDealership' => true,
+                    ])
+                @endif
             </div>
         </div>
     </section>
