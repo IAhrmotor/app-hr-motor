@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Users;
 
+use App\Models\Dealership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,16 +11,27 @@ class UserProfileViewTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
     public function test_admin_can_open_user_profile_view_and_see_linkedin_button(): void
     {
         $admin = User::factory()->create([
             'role' => 'admin',
+        ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Bilbao',
         ]);
 
         $user = User::factory()->create([
             'name' => 'Perfil Comercial',
             'linkedin_url' => 'https://www.linkedin.com/in/perfil-comercial/',
             'dealership' => 'Bilbao',
+            'dealership_id' => $dealership->id,
         ]);
 
         $response = $this->actingAs($admin)->get(route('users.show', $user));

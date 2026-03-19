@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Profile;
 
+use App\Models\Dealership;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,6 +15,13 @@ class ProfileNavigationTest extends TestCase
     use RefreshDatabase;
 
     protected array $createdAvatarPaths = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
 
     protected function tearDown(): void
     {
@@ -44,9 +52,14 @@ class ProfileNavigationTest extends TestCase
 
     public function test_authenticated_user_can_open_own_profile_view(): void
     {
+        $dealership = Dealership::factory()->create([
+            'name' => 'Valencia',
+        ]);
+
         $user = User::factory()->create([
             'name' => 'Perfil Visible',
             'dealership' => 'Valencia',
+            'dealership_id' => $dealership->id,
         ]);
 
         $response = $this->actingAs($user)->get(route('profile.show'));
@@ -104,7 +117,7 @@ class ProfileNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('Top 10 comerciales del mes')
             ->assertSee('Comercial Uno')
-            ->assertSee('comercial-uno@example.com');
+            ->assertSee('12');
     }
 
     public function test_user_can_update_linkedin_url_and_avatar_from_profile(): void

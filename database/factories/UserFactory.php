@@ -31,6 +31,7 @@ class UserFactory extends Factory
             'role' => 'comercial',
             'salesforce_user_id' => null,
             'dealership' => null,
+            'dealership_id' => null,
             'avatar_path' => User::DEFAULT_AVATAR_PATH,
             'linkedin_url' => null,
             'password' => static::$password ??= Hash::make('password'),

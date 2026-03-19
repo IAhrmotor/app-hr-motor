@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -61,6 +62,7 @@ class User extends Authenticatable
         'role',
         'salesforce_user_id',
         'dealership',
+        'dealership_id',
         'avatar_path',
         'linkedin_url',
         'password',
@@ -107,5 +109,15 @@ class User extends Authenticatable
     public function getAvatarUrlAttribute(): string
     {
         return asset($this->avatar_path ?: self::DEFAULT_AVATAR_PATH);
+    }
+
+    public function assignedDealership(): BelongsTo
+    {
+        return $this->belongsTo(Dealership::class, 'dealership_id');
+    }
+
+    public function getResolvedDealershipNameAttribute(): ?string
+    {
+        return $this->assignedDealership?->name ?: $this->dealership;
     }
 }
