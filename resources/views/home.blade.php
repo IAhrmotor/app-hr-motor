@@ -11,6 +11,7 @@
 
         $magazineUrl = asset('revista/revista-marzo-2026.pdf');
         $magazineEmbedUrl = asset('revista/revista-marzo-2026.pdf');
+        $homeLeaderboardSubtitle = static fn ($entry) => $entry->user?->dealership ?: 'Sin delegación asignada';
     @endphp
 
     <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-6">
@@ -274,9 +275,7 @@
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                 <div>
                                     <p class="text-xl font-semibold text-brand-secondary {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                    <p class="text-sm text-brand-secondary/60">
-                                        {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
-                                    </p>
+                                    <p class="text-sm text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
                                 </div>
                             </div>
                             <p class="mt-6 text-sm uppercase tracking-[0.3em] text-brand-secondary/50">Ventas</p>
@@ -343,9 +342,7 @@
                                     class="h-12 w-12 rounded-xl object-cover ring-1 ring-brand-secondary/10">
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-semibold text-brand-secondary {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                    <p class="truncate text-xs text-brand-secondary/60">
-                                        {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
-                                    </p>
+                                    <p class="truncate text-xs text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Ventas</p>

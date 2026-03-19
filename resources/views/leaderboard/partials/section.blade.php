@@ -35,7 +35,7 @@
                             d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <input type="text" name="{{ $searchParam }}" value="{{ $search }}"
-                        placeholder="Buscar comercial, email o ID de Salesforce"
+                        placeholder="Buscar comercial, email o delegación"
                         class="w-full rounded-2xl border border-brand-secondary/10 bg-slate-50 py-3 pl-12 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:bg-white">
                 </div>
                 <div class="flex gap-3">
@@ -63,7 +63,7 @@
         <div class="rounded-[2rem] border border-dashed border-brand-secondary/15 bg-slate-50 px-6 py-12 text-center text-brand-secondary/75">
             @if ($hasLeaderboardData && $search !== '')
                 <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu busqueda</p>
-                <p class="mt-2 text-sm">Prueba con otro nombre, email o ID de Salesforce.</p>
+                <p class="mt-2 text-sm">Prueba con otro nombre, email o delegación.</p>
             @else
                 <p class="text-lg font-semibold text-brand-secondary">{{ $emptyTitle }}</p>
                 <p class="mt-2 text-sm">{{ $emptyDescription }}</p>
@@ -136,7 +136,7 @@
                                         class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                     <div>
                                         <p class="text-xl font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->user->name }}</p>
-                                        <p class="text-sm text-brand-secondary/60">{{ $entry->user->email }}</p>
+                                        <p class="text-sm text-brand-secondary/60">{{ $entry->user->dealership ?: 'Sin delegación asignada' }}</p>
                                     </div>
                                 </a>
                             @else
@@ -146,7 +146,7 @@
                                 <div>
                                     <p class="text-xl font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="text-sm text-brand-secondary/60">
-                                        {{ $entry->user?->email ?? ($entry->salesforce_user_id ?: 'Sin vincular con usuario interno') }}
+                                        {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
                                     </p>
                                 </div>
                             @endif
@@ -163,10 +163,10 @@
         <div class="mt-6 overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
             <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
                 <div class="hidden grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] gap-6 md:grid">
-                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
-                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Comercial</div>
-                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">ID Salesforce</div>
-                    <div class="text-right text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $metricLabel }}</div>
+                        <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
+                        <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Comercial</div>
+                        <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Delegación</div>
+                        <div class="text-right text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $metricLabel }}</div>
                 </div>
                 <div class="md:hidden text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $title }}</div>
             </div>
@@ -241,7 +241,7 @@
                                 </div>
                             </div>
 
-                            <div class="truncate text-sm text-brand-secondary/70">{{ $entry->salesforce_user_id ?: 'No informado' }}</div>
+                            <div class="truncate text-sm text-brand-secondary/70">{{ $entry->user?->dealership ?: 'Sin delegación asignada' }}</div>
 
                             <div class="text-right text-sm font-semibold text-brand-primary">
                                 {{ number_format((float) $entry->{$metricField}, 0, ',', '.') }}
@@ -287,7 +287,7 @@
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
-                                    <p class="truncate text-xs text-brand-secondary/55">{{ $entry->salesforce_user_id ?: 'No informado' }}</p>
+                                    <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->dealership ?: 'Sin delegación asignada' }}</p>
                                 </div>
                             </div>
                         </div>

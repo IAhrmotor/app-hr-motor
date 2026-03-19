@@ -64,7 +64,7 @@
                         </div>
 
                         <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Buscar por nombre, correo, rol o ID Salesforce"
+                            placeholder="Buscar por nombre, correo, rol, delegación o ID Salesforce"
                             class="w-full rounded-2xl border border-gray-300 py-3 pl-11 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
 
@@ -190,6 +190,34 @@
                                 </th>
 
                                 <th class="px-6 py-4 text-left">
+                                    <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'dealership', 'direction' => $sortDirection('dealership', $sort, $direction)])) }}"
+                                        class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
+                                        title="Ordenar por delegación">
+                                        <span>Delegación</span>
+
+                                        @if ($sort === 'dealership' && $direction === 'asc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                            </svg>
+                                        @elseif ($sort === 'dealership' && $direction === 'desc')
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-primary"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 text-brand-secondary/40" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7l4-4 4 4" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M16 17l-4 4-4-4" />
+                                            </svg>
+                                        @endif
+                                    </a>
+                                </th>
+
+                                <th class="px-6 py-4 text-left">
                                     <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => 'is_active', 'direction' => $sortDirection('is_active', $sort, $direction)])) }}"
                                         class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70 transition hover:text-brand-secondary"
                                         title="Ordenar por estado">
@@ -286,6 +314,10 @@
                                     </td>
 
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
+                                        {{ $user->dealership ?: 'No aplica' }}
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">
                                         @if ($user->is_active)
                                             <span
                                                 class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-700">
@@ -339,7 +371,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-6 py-8 text-center text-sm text-brand-secondary/70">
+                                    <td colspan="7" class="px-6 py-8 text-center text-sm text-brand-secondary/70">
                                         No hay usuarios registrados.
                                     </td>
                                 </tr>

@@ -133,12 +133,18 @@ class LeaderboardController extends Controller
         if (Schema::hasTable($config['entry_table'])) {
             $topEntries = $config['entry_model']::query()
                 ->with('user')
+                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                })
                 ->orderBy('ranking_position')
                 ->limit(3)
                 ->get();
 
             $entriesQuery = $config['entry_model']::query()
                 ->with('user')
+                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                })
                 ->orderBy('ranking_position');
 
             if ($search !== '') {
@@ -147,7 +153,8 @@ class LeaderboardController extends Controller
                         ->orWhere('salesforce_user_id', 'like', "%{$search}%")
                         ->orWhereHas('user', function ($userQuery) use ($search) {
                             $userQuery->where('name', 'like', "%{$search}%")
-                                ->orWhere('email', 'like', "%{$search}%");
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('dealership', 'like', "%{$search}%");
                         });
                 });
             }
@@ -156,7 +163,11 @@ class LeaderboardController extends Controller
                 ->paginate(10, ['*'], $config['page_param'])
                 ->withQueryString();
             $entryItems = collect($entries->items());
-            $hasLeaderboardData = $config['entry_model']::query()->exists();
+            $hasLeaderboardData = $config['entry_model']::query()
+                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                })
+                ->exists();
         }
 
         return [
@@ -179,5 +190,10 @@ class LeaderboardController extends Controller
             'pageParam' => $config['page_param'],
             'routeName' => $config['route_name'],
         ];
+    }
+
+    private function excludedLeaderboardUserIds(): array
+    {
+        return config('services.salesforce.excluded_leaderboard_user_ids', []);
     }
 }

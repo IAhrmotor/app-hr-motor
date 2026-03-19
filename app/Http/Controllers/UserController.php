@@ -19,7 +19,7 @@ class UserController extends Controller
         $sort = $request->query('sort', 'name');
         $direction = $request->query('direction', 'asc');
 
-        $allowedSorts = ['name', 'email', 'role', 'is_active', 'salesforce_user_id'];
+        $allowedSorts = ['name', 'email', 'role', 'dealership', 'is_active', 'salesforce_user_id'];
         $sort = in_array($sort, $allowedSorts) ? $sort : 'name';
         $direction = $direction === 'desc' ? 'desc' : 'asc';
         $status = in_array($status, ['active', 'pending'], true) ? $status : null;
@@ -30,6 +30,7 @@ class UserController extends Controller
                     $subquery->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('role', 'like', "%{$search}%")
+                        ->orWhere('dealership', 'like', "%{$search}%")
                         ->orWhere('salesforce_user_id', 'like', "%{$search}%");
                 });
             })

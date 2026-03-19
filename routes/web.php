@@ -115,6 +115,9 @@ Route::middleware('auth')->group(function () {
         $homeLeaderboardEntries = Schema::hasTable('sales_leaderboard_entries')
             ? SalesLeaderboardEntry::query()
                 ->with('user')
+                ->when(config('services.salesforce.excluded_leaderboard_user_ids', []) !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', config('services.salesforce.excluded_leaderboard_user_ids', []));
+                })
                 ->orderBy('ranking_position')
                 ->limit(10)
                 ->get()
