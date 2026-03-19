@@ -155,7 +155,7 @@ class LeaderboardController extends Controller
 
         if (Schema::hasTable($config['entry_table'])) {
             $allEntries = $config['entry_model']::query()
-                ->with('user')
+                ->with(['user.assignedDealership'])
                 ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
                     $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
                 })
@@ -165,7 +165,7 @@ class LeaderboardController extends Controller
             $topEntries = $allEntries->take(3)->values();
 
             $entriesQuery = $config['entry_model']::query()
-                ->with('user')
+                ->with(['user.assignedDealership'])
                 ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
                     $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
                 })
@@ -231,7 +231,7 @@ class LeaderboardController extends Controller
 
         if (Schema::hasTable($config['entry_table'])) {
             $allEntries = $config['entry_model']::query()
-                ->with('user')
+                ->with(['user.assignedDealership'])
                 ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
                     $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
                 })
@@ -277,20 +277,24 @@ class LeaderboardController extends Controller
     private function aggregateEntriesByDealership(Collection $entries, string $metricField, string $search): Collection
     {
         $aggregatedEntries = $entries
-            ->groupBy(fn (Model $entry): string => $this->resolveDealershipName($entry))
-            ->map(function (Collection $dealershipEntries, string $dealership) use ($metricField) {
+            ->groupBy(fn (Model $entry): string => $this->resolveDealershipGroupKey($entry))
+            ->map(function (Collection $dealershipEntries) use ($metricField) {
                 $representative = $dealershipEntries->first();
+                $dealership = $representative->user?->assignedDealership;
+                $dealershipName = $this->resolveDealershipName($representative);
                 $totalMetric = (float) $dealershipEntries->sum($metricField);
                 $commercialCount = $dealershipEntries->pluck('user_id')->filter()->unique()->count();
 
                 $entry = new ($representative::class)();
                 $entry->forceFill([
-                    'id' => 'dealership:' . Str::slug($dealership, '-'),
+                    'id' => 'dealership:' . ($dealership?->getKey() ?? Str::slug($dealershipName, '-')),
                     'ranking_position' => 0,
-                    'seller_name' => $dealership,
+                    'seller_name' => $dealershipName,
                     'salesforce_user_id' => null,
                     $metricField => $totalMetric,
-                    'dealership_name' => $dealership,
+                    'dealership_id' => $dealership?->getKey(),
+                    'dealership_name' => $dealershipName,
+                    'dealership_image_url' => $dealership?->image_url,
                     'commercial_count' => $commercialCount,
                 ]);
 
@@ -345,8 +349,19 @@ class LeaderboardController extends Controller
 
     private function resolveDealershipName(Model $entry): string
     {
-        $dealership = trim((string) ($entry->user?->dealership ?? ''));
+        $dealership = trim((string) ($entry->user?->resolved_dealership_name ?? ''));
 
         return $dealership !== '' ? $dealership : 'Sin delegacion asignada';
+    }
+
+    private function resolveDealershipGroupKey(Model $entry): string
+    {
+        $dealershipId = $entry->user?->assignedDealership?->getKey();
+
+        if ($dealershipId !== null) {
+            return 'id:' . $dealershipId;
+        }
+
+        return 'name:' . $this->resolveDealershipName($entry);
     }
 }
