@@ -63,4 +63,25 @@ class UserInvitationTest extends TestCase
             ->assertSee('Usuario Con Avatar')
             ->assertSee($user->avatar_url, false);
     }
+
+    public function test_users_index_displays_the_user_dealership_column(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        User::factory()->create([
+            'role' => 'comercial',
+            'dealership' => 'Pamplona',
+            'salesforce_user_id' => 'SF-PAM-001',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.index'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Delegación')
+            ->assertSee('Pamplona')
+            ->assertSee('SF-PAM-001');
+    }
 }

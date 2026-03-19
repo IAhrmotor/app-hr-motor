@@ -43,6 +43,7 @@ class PurchaseLeaderboardService
         $syncedAt = now();
 
         $entries = collect($records)
+            ->reject(fn (array $record): bool => $this->isExcludedSalesforceUserId($this->extractSalesforceUserId($record)))
             ->values()
             ->map(function (array $record, int $index) use ($syncedAt): array {
                 $salesforceUserId = $this->extractSalesforceUserId($record);
@@ -248,6 +249,15 @@ class PurchaseLeaderboardService
 
         $missingCommercials = User::query()
             ->where('role', 'comercial')
+            ->where(function ($query): void {
+                $query->whereNull('salesforce_user_id');
+
+                if ($this->excludedLeaderboardUserIds() !== []) {
+                    $query->orWhereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                } else {
+                    $query->orWhereNotNull('salesforce_user_id');
+                }
+            })
             ->where(function ($query) use ($existingUserIds, $existingSalesforceUserIds): void {
                 $query->whereNotIn('id', $existingUserIds)
                     ->where(function ($userQuery) use ($existingSalesforceUserIds): void {
@@ -275,6 +285,17 @@ class PurchaseLeaderboardService
         });
 
         return $entries->concat($missingEntries)->values();
+    }
+
+    private function excludedLeaderboardUserIds(): array
+    {
+        return config('services.salesforce.excluded_leaderboard_user_ids', []);
+    }
+
+    private function isExcludedSalesforceUserId(?string $salesforceUserId): bool
+    {
+        return $salesforceUserId !== null
+            && in_array($salesforceUserId, $this->excludedLeaderboardUserIds(), true);
     }
 
     private function ensureRequiredTablesExist(): void

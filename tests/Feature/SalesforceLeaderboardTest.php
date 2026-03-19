@@ -46,6 +46,36 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('Ranking de compras');
     }
 
+    public function test_sales_leaderboard_shows_dealership_instead_of_salesforce_id(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $commercial = User::factory()->create([
+            'name' => 'Comercial Delegacion',
+            'dealership' => 'Sevilla',
+            'salesforce_user_id' => 'SF-DEAL-001',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-DEAL-001',
+            'seller_name' => 'Comercial Delegacion',
+            'total_sales' => 15,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.sales'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Delegación')
+            ->assertSee('Sevilla')
+            ->assertDontSee('ID Salesforce');
+    }
+
     public function test_admin_can_start_salesforce_oauth_flow(): void
     {
         config()->set('services.salesforce.client_id', 'client-id');
@@ -322,6 +352,76 @@ class SalesforceLeaderboardTest extends TestCase
         ]);
     }
 
+    public function test_sync_excludes_configured_salesforce_user_from_rankings(): void
+    {
+        config()->set('services.salesforce.client_id', 'client-id');
+        config()->set('services.salesforce.client_secret', 'client-secret');
+        config()->set('services.salesforce.redirect_uri', 'https://staging.hrmotor.com/integraciones/salesforce/callback');
+        config()->set('services.salesforce.excluded_leaderboard_user_ids', ['0057R00000B2SGHQA3']);
+        config()->set(
+            'services.salesforce.leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.purchase_leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        User::factory()->create([
+            'role' => 'comercial',
+            'name' => 'Usuario Excluido',
+            'salesforce_user_id' => '0057R00000B2SGHQA3',
+        ]);
+
+        Http::fake([
+            'https://login.salesforce.com/services/oauth2/token' => Http::response([
+                'access_token' => 'access-token',
+                'refresh_token' => 'refresh-token',
+                'instance_url' => 'https://example.my.salesforce.com',
+                'token_type' => 'Bearer',
+                'scope' => 'api refresh_token',
+            ], 200),
+            'https://example.my.salesforce.com/*' => Http::response([
+                'records' => [
+                    [
+                        'ownerId' => '0057R00000B2SGHQA3',
+                        'ownerName' => 'Excluido Salesforce',
+                        'totalSales' => 99,
+                    ],
+                    [
+                        'ownerId' => 'SF-KEEP-001',
+                        'ownerName' => 'Comercial Visible',
+                        'totalSales' => 10,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->withSession(['salesforce_oauth_state' => 'known-state'])
+            ->actingAs($admin)
+            ->get(route('salesforce.callback', [
+                'code' => 'oauth-code',
+                'state' => 'known-state',
+            ]));
+
+        $this->assertDatabaseMissing('sales_leaderboard_entries', [
+            'salesforce_user_id' => '0057R00000B2SGHQA3',
+        ]);
+
+        $this->assertDatabaseMissing('purchase_leaderboard_entries', [
+            'salesforce_user_id' => '0057R00000B2SGHQA3',
+        ]);
+
+        $this->assertDatabaseHas('sales_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-KEEP-001',
+            'ranking_position' => 1,
+        ]);
+    }
+
     public function test_sync_keeps_all_commercials_in_ranking_even_when_salesforce_returns_no_rows(): void
     {
         config()->set('services.salesforce.client_id', 'client-id');
@@ -440,5 +540,32 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertOk()
             ->assertSee('Top 10 comerciales del mes')
             ->assertDontSee('Comercial Compra Home');
+    }
+
+    public function test_home_shows_commercial_dealership_in_leaderboard_cards(): void
+    {
+        $user = User::factory()->create();
+
+        $commercial = User::factory()->create([
+            'name' => 'Comercial Home Delegacion',
+            'dealership' => 'Valencia',
+            'salesforce_user_id' => 'SF-HOME-VAL',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $commercial->id,
+            'seller_name' => 'Comercial Home Delegacion',
+            'salesforce_user_id' => 'SF-HOME-VAL',
+            'total_sales' => 22,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('home'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Valencia')
+            ->assertDontSee('SF-HOME-VAL');
     }
 }
