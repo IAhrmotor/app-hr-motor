@@ -13,10 +13,13 @@
             <div class="hidden items-center gap-8 md:flex">
                 @foreach ($navItems as $item)
                     @if (! empty($item['children']))
-                        @php $dropdownKey = 'nav-' . \Illuminate\Support\Str::slug($item['label']); @endphp
+                        @php
+                            $dropdownKey = 'nav-' . \Illuminate\Support\Str::slug($item['label']);
+                            $isParentActive = collect($item['children'])->contains(fn ($child) => request()->routeIs($child['route']));
+                        @endphp
                         <div class="relative" @mouseenter="activeDropdown = '{{ $dropdownKey }}'" @mouseleave="activeDropdown = null">
                             <button type="button"
-                                class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 transition hover:text-gray-900"
+                                class="inline-flex items-center gap-2 text-sm font-medium transition {{ $isParentActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}"
                                 :aria-expanded="(activeDropdown === '{{ $dropdownKey }}').toString()">
                                 <span>{{ $item['label'] }}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition"
@@ -37,8 +40,9 @@
                                 class="absolute left-1/2 top-full mt-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
                                 <div class="p-2">
                                     @foreach ($item['children'] as $child)
+                                        @php $isChildActive = request()->routeIs($child['route']); @endphp
                                         <a href="{{ route($child['route']) }}"
-                                            class="block rounded-xl px-4 py-3 text-sm font-medium text-brand-secondary transition hover:bg-brand-secondary/5 hover:text-brand-primary">
+                                            class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isChildActive ? 'bg-brand-secondary/5 text-brand-primary' : 'text-brand-secondary transition hover:bg-brand-secondary/5 hover:text-brand-primary' }}">
                                             {{ $child['label'] }}
                                         </a>
                                     @endforeach
@@ -46,8 +50,9 @@
                             </div>
                         </div>
                     @else
+                        @php $isItemActive = request()->routeIs($item['route']); @endphp
                         <a href="{{ route($item['route']) }}"
-                            class="text-sm font-medium text-gray-700 transition hover:text-gray-900">
+                            class="text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
                             {{ $item['label'] }}
                         </a>
                     @endif
@@ -193,20 +198,23 @@
 
             @foreach ($navItems as $item)
                 @if (! empty($item['children']))
+                    @php $isParentActive = collect($item['children'])->contains(fn ($child) => request()->routeIs($child['route'])); @endphp
                     <div class="mt-2 rounded-2xl border border-brand-secondary/10 bg-slate-50 px-3 py-3">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">{{ $item['label'] }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $isParentActive ? 'text-brand-primary' : 'text-brand-secondary/45' }}">{{ $item['label'] }}</p>
                         <div class="mt-2 space-y-1">
                             @foreach ($item['children'] as $child)
+                                @php $isChildActive = request()->routeIs($child['route']); @endphp
                                 <a href="{{ route($child['route']) }}" @click="open = false"
-                                    class="block rounded-xl px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-white hover:text-brand-primary">
+                                    class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isChildActive ? 'bg-white text-brand-primary' : 'text-gray-700 transition hover:bg-white hover:text-brand-primary' }}">
                                     {{ $child['label'] }}
                                 </a>
                             @endforeach
                         </div>
                     </div>
                 @else
+                    @php $isItemActive = request()->routeIs($item['route']); @endphp
                     <a href="{{ route($item['route']) }}" @click="open = false"
-                        class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
+                        class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         {{ $item['label'] }}
                     </a>
                 @endif
@@ -219,7 +227,7 @@
                         $isDealershipsActive = request()->routeIs('dealerships.*');
                     @endphp
                     <div class="mt-2 rounded-2xl border border-brand-secondary/10 bg-slate-50 px-3 py-3">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Admin</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-brand-secondary/45' }}">Admin</p>
                         <div class="mt-2 space-y-1">
                             <a href="{{ route('users.index') }}" @click="open = false"
                                 class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isUsersActive ? 'bg-white text-brand-primary' : 'text-gray-700 transition hover:bg-white hover:text-brand-primary' }}">
