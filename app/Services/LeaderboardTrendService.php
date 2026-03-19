@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardDailySnapshot;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -43,6 +44,74 @@ class LeaderboardTrendService
             }
 
             $delta = (int) $snapshot->ranking_position - (int) $entry->ranking_position;
+
+            return [$entry->getKey() => $this->makeMovementData($delta)];
+        })->all();
+    }
+
+    public function buildDealershipMovementMap(
+        Collection $entries,
+        string $snapshotModelClass = SalesLeaderboardDailySnapshot::class,
+        ?string $snapshotTable = null,
+        string $metricField = 'total_sales'
+    ): array
+    {
+        $snapshotTable ??= $snapshotModelClass === PurchaseLeaderboardDailySnapshot::class
+            ? 'purchase_leaderboard_daily_snapshots'
+            : 'sales_leaderboard_daily_snapshots';
+
+        if ($entries->isEmpty() || ! Schema::hasTable($snapshotTable)) {
+            return $this->flatMovementMap($entries);
+        }
+
+        $yesterdaySnapshots = $snapshotModelClass::query()
+            ->whereDate('snapshot_date', today()->subDay())
+            ->get();
+
+        if ($yesterdaySnapshots->isEmpty()) {
+            return $this->flatMovementMap($entries);
+        }
+
+        $userDealerships = User::query()
+            ->select('id', 'dealership')
+            ->get()
+            ->mapWithKeys(fn (User $user): array => [$user->id => $this->normalizeDealership($user->dealership)])
+            ->all();
+
+        $rankedDealerships = $yesterdaySnapshots
+            ->groupBy(function (Model $snapshot) use ($userDealerships): string {
+                return $userDealerships[$snapshot->user_id] ?? $this->normalizeDealership(null);
+            })
+            ->map(function (Collection $dealershipSnapshots, string $dealership) use ($metricField): array {
+                return [
+                    'dealership' => $dealership,
+                    'total' => (float) $dealershipSnapshots->sum($metricField),
+                ];
+            })
+            ->sort(function (array $left, array $right) {
+                $metricComparison = $right['total'] <=> $left['total'];
+
+                if ($metricComparison !== 0) {
+                    return $metricComparison;
+                }
+
+                return strcmp($left['dealership'], $right['dealership']);
+            })
+            ->values()
+            ->map(fn (array $row, int $index): array => $row + ['ranking_position' => $index + 1]);
+
+        $snapshotMap = collect($rankedDealerships)
+            ->mapWithKeys(fn (array $row): array => [$this->dealershipKey($row['dealership']) => $row]);
+
+        return $entries->mapWithKeys(function (Model $entry) use ($snapshotMap): array {
+            $dealership = $this->normalizeDealership($entry->getAttribute('dealership_name'));
+            $snapshot = $snapshotMap->get($this->dealershipKey($dealership));
+
+            if (! $snapshot) {
+                return [$entry->getKey() => $this->makeMovementData(0)];
+            }
+
+            $delta = (int) $snapshot['ranking_position'] - (int) $entry->ranking_position;
 
             return [$entry->getKey() => $this->makeMovementData($delta)];
         })->all();
@@ -93,5 +162,17 @@ class LeaderboardTrendService
         }
 
         return 'seller:' . Str::lower(trim((string) ($entry->seller_name ?? '')));
+    }
+
+    private function normalizeDealership(?string $dealership): string
+    {
+        $dealership = trim((string) $dealership);
+
+        return $dealership !== '' ? $dealership : 'Sin delegacion asignada';
+    }
+
+    private function dealershipKey(string $dealership): string
+    {
+        return 'dealership:' . Str::lower($dealership);
     }
 }

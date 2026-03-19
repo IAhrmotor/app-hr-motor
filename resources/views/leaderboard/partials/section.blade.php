@@ -10,6 +10,9 @@
     $pageParam = $leaderboard['pageParam'];
     $routeName = $leaderboard['routeName'];
     $persistedQuery = request()->except([$searchParam, $pageParam]);
+    $entityLabelPlural = $entityLabelPlural ?? 'comerciales';
+    $searchPlaceholder = $searchPlaceholder ?? 'Buscar comercial, email o delegacion';
+    $aggregateByDealership = $aggregateByDealership ?? false;
 @endphp
 
 <section class="rounded-[1.85rem] border border-brand-secondary/10 bg-white/90 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-6">
@@ -35,7 +38,7 @@
                             d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <input type="text" name="{{ $searchParam }}" value="{{ $search }}"
-                        placeholder="Buscar comercial, email o delegación"
+                        placeholder="{{ $searchPlaceholder }}"
                         class="w-full rounded-2xl border border-brand-secondary/10 bg-slate-50 py-3 pl-12 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:bg-white">
                 </div>
                 <div class="flex gap-3">
@@ -63,7 +66,9 @@
         <div class="rounded-[2rem] border border-dashed border-brand-secondary/15 bg-slate-50 px-6 py-12 text-center text-brand-secondary/75">
             @if ($hasLeaderboardData && $search !== '')
                 <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu busqueda</p>
-                <p class="mt-2 text-sm">Prueba con otro nombre, email o delegación.</p>
+                <p class="mt-2 text-sm">
+                    {{ $aggregateByDealership ? 'Prueba con otra delegación.' : 'Prueba con otro nombre, email o delegación.' }}
+                </p>
             @else
                 <p class="text-lg font-semibold text-brand-secondary">{{ $emptyTitle }}</p>
                 <p class="mt-2 text-sm">{{ $emptyDescription }}</p>
@@ -128,7 +133,17 @@
                             @endif
                         </div>
                         <div class="flex items-center gap-4">
-                            @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
+                            @if ($aggregateByDealership)
+                                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-secondary text-lg font-semibold text-white ring-2 {{ $medalStyles['ring'] }}">
+                                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                </div>
+                                <div>
+                                    <p class="text-xl font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                    <p class="text-sm text-brand-secondary/60">
+                                        {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                    </p>
+                                </div>
+                            @elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
                                 <a href="{{ route('users.show', $entry->user) }}"
                                     class="flex items-center gap-4 rounded-2xl transition hover:opacity-90">
                                     <img src="{{ $entry->user->avatar_url }}"
@@ -163,10 +178,10 @@
         <div class="mt-6 overflow-hidden rounded-[1.75rem] border border-brand-secondary/10 bg-white">
             <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
                 <div class="hidden grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] gap-6 md:grid">
-                        <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
-                        <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Comercial</div>
-                        <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Delegación</div>
-                        <div class="text-right text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $metricLabel }}</div>
+                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
+                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $aggregateByDealership ? 'Delegación' : 'Comercial' }}</div>
+                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $aggregateByDealership ? 'Equipo' : 'Delegación' }}</div>
+                    <div class="text-right text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $metricLabel }}</div>
                 </div>
                 <div class="md:hidden text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $title }}</div>
             </div>
@@ -223,25 +238,43 @@
                             </div>
 
                             <div>
-                                <div class="flex items-center gap-3">
-                                    <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                        alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
-                                        class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                    @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
-                                        <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
-                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user->name }}</p>
-                                            <p class="text-xs text-brand-secondary/55">{{ $entry->user->email }}</p>
-                                        </a>
-                                    @else
-                                        <div>
-                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                            <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
+                                @if ($aggregateByDealership)
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-secondary text-sm font-semibold text-white ring-1 ring-brand-secondary/10">
+                                            {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
                                         </div>
-                                    @endif
-                                </div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                            <p class="text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="flex items-center gap-3">
+                                        <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                            alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
+                                            class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
+                                        @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
+                                            <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
+                                                <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user->name }}</p>
+                                                <p class="text-xs text-brand-secondary/55">{{ $entry->user->email }}</p>
+                                            </a>
+                                        @else
+                                            <div>
+                                                <p class="text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                                <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
 
-                            <div class="truncate text-sm text-brand-secondary/70">{{ $entry->user?->dealership ?: 'Sin delegación asignada' }}</div>
+                            <div class="truncate text-sm text-brand-secondary/70">
+                                @if ($aggregateByDealership)
+                                    {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                @else
+                                    {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
+                                @endif
+                            </div>
 
                             <div class="text-right text-sm font-semibold text-brand-primary">
                                 {{ number_format((float) $entry->{$metricField}, 0, ',', '.') }}
@@ -281,14 +314,25 @@
                             </div>
 
                             <div class="flex items-center gap-3">
-                                <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                    alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
-                                    class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                <div class="min-w-0">
-                                    <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                    <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
-                                    <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->dealership ?: 'Sin delegación asignada' }}</p>
-                                </div>
+                                @if ($aggregateByDealership)
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-secondary text-sm font-semibold text-white ring-1 ring-brand-secondary/10">
+                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                        <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}</p>
+                                        <p class="truncate text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                    </div>
+                                @else
+                                    <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                        alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
+                                        class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                        <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
+                                        <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->dealership ?: 'Sin delegación asignada' }}</p>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -299,7 +343,7 @@
         @if ($entries->hasPages())
             <div class="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <p class="text-sm text-brand-secondary/65">
-                    Mostrando del {{ $entries->firstItem() }} al {{ $entries->lastItem() }} de {{ $entries->total() }} comerciales.
+                    Mostrando del {{ $entries->firstItem() }} al {{ $entries->lastItem() }} de {{ $entries->total() }} {{ $entityLabelPlural }}.
                 </p>
 
                 <nav class="flex items-center gap-2" aria-label="Paginacion del ranking">
