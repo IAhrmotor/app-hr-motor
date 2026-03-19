@@ -50,6 +50,10 @@ return [
             'SALESFORCE_PURCHASE_LEADERBOARD_SOQL',
             'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity WHERE CreatedDate = THIS_MONTH AND StageName NOT IN (\'Cerrada ganada\', \'Cerrada perdida\') AND Gestion_de_venta__c = false AND RecordType.Name IN (\'Compra\') GROUP BY OwnerId, Owner.Name ORDER BY COUNT(Id) DESC, Owner.Name ASC'
         ),
+        'excluded_leaderboard_user_ids' => array_values(array_filter(array_map(
+            static fn (string $value): string => trim($value),
+            explode(',', (string) env('SALESFORCE_EXCLUDED_LEADERBOARD_USER_IDS', '0057R00000B2SGHQA3'))
+        ))),
     ],
 
 ];

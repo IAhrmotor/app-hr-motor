@@ -25,15 +25,13 @@
                                 </svg>
                             </button>
 
-                            <div class="absolute left-1/2 top-full h-3 w-60 -translate-x-1/2"></div>
-
                             <div x-show="rankingOpen" x-cloak x-transition:enter="transition ease-out duration-150"
                                 x-transition:enter-start="opacity-0 translate-y-1"
                                 x-transition:enter-end="opacity-100 translate-y-0"
                                 x-transition:leave="transition ease-in duration-100"
                                 x-transition:leave-start="opacity-100 translate-y-0"
                                 x-transition:leave-end="opacity-0 translate-y-1"
-                                class="absolute left-1/2 top-full mt-3 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
+                                class="absolute left-1/2 top-full mt-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
                                 <div class="p-2">
                                     @foreach ($item['children'] as $child)
                                         <a href="{{ route($child['route']) }}"
