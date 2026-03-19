@@ -32,7 +32,7 @@
                     @if ($dealership->reviews_url)
                         <a href="{{ $dealership->reviews_url }}" target="_blank" rel="noopener noreferrer"
                             class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
-                            Resenas
+                            Reseñas
                         </a>
                     @endif
 
@@ -67,7 +67,7 @@
                         @endif
                     </div>
                     <div>
-                        <dt class="text-brand-secondary/60">Resenas</dt>
+                        <dt class="text-brand-secondary/60">Reseñas</dt>
                         @if ($dealership->reviews_url)
                             <dd class="mt-1 font-semibold text-brand-secondary break-all">
                                 <a href="{{ $dealership->reviews_url }}" target="_blank" rel="noopener noreferrer" class="transition hover:text-brand-primary">
