@@ -66,7 +66,7 @@
             <label for="image" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Imagen</label>
             <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.webp" @if (! $dealership?->image_path) required @endif
                 @change="updateImagePreview($event)"
-                class="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition file:mr-4 file:rounded-xl file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-90 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                class="w-full cursor-pointer rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition file:mr-4 file:cursor-pointer file:rounded-xl file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-90 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
             <div class="mt-3 rounded-2xl border border-brand-secondary/10 bg-slate-50 px-4 py-3 text-sm text-brand-secondary/70">
                 <p class="font-medium text-brand-secondary">Archivo seleccionado</p>
                 <p class="mt-1 break-all" x-text="imageName || 'Todavía no has elegido una imagen nueva'"></p>
