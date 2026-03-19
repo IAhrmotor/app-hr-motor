@@ -14,6 +14,7 @@ class Dealership extends Model
         'name',
         'salesforce_id',
         'image_path',
+        'phone',
         'google_maps_url',
         'reviews_url',
     ];
