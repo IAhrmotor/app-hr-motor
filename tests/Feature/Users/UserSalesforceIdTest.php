@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Users;
 
+use App\Models\Dealership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -9,6 +10,13 @@ use Tests\TestCase;
 class UserSalesforceIdTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
 
     public function test_admin_can_create_non_commercial_user_without_salesforce_id(): void
     {
@@ -28,6 +36,7 @@ class UserSalesforceIdTest extends TestCase
         $this->assertNotNull($createdUser);
         $this->assertNull($createdUser->salesforce_user_id);
         $this->assertNull($createdUser->dealership);
+        $this->assertNull($createdUser->dealership_id);
     }
 
     public function test_commercial_user_requires_salesforce_id_when_created(): void
@@ -35,13 +44,16 @@ class UserSalesforceIdTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
         ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Torrejón',
+        ]);
 
         $response = $this->from(route('users.create'))->actingAs($admin)->post(route('users.store'), [
             'name' => 'Comercial Sin Salesforce',
             'email' => 'comercial-sf@example.com',
             'role' => 'comercial',
             'salesforce_user_id' => '',
-            'dealership' => 'Torrejón',
+            'dealership_id' => $dealership->id,
         ]);
 
         $response
@@ -58,10 +70,13 @@ class UserSalesforceIdTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
         ]);
+        $dealership = Dealership::factory()->create();
 
         $user = User::factory()->create([
             'role' => 'comercial',
             'salesforce_user_id' => 'SF-USER-003',
+            'dealership' => $dealership->name,
+            'dealership_id' => $dealership->id,
         ]);
 
         $response = $this->from(route('users.edit', $user))->actingAs($admin)->put(route('users.update', $user), [
@@ -69,6 +84,7 @@ class UserSalesforceIdTest extends TestCase
             'email' => $user->email,
             'role' => 'comercial',
             'salesforce_user_id' => '',
+            'dealership_id' => $dealership->id,
             'password' => '',
             'password_confirmation' => '',
         ]);
@@ -89,12 +105,12 @@ class UserSalesforceIdTest extends TestCase
             'email' => 'comercial-sin-delegacion@example.com',
             'role' => 'comercial',
             'salesforce_user_id' => 'SF-USER-004',
-            'dealership' => '',
+            'dealership_id' => '',
         ]);
 
         $response
             ->assertRedirect(route('users.create'))
-            ->assertSessionHasErrors('dealership');
+            ->assertSessionHasErrors('dealership_id');
     }
 
     public function test_commercial_user_requires_dealership_when_updated(): void
@@ -102,11 +118,15 @@ class UserSalesforceIdTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
         ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Pamplona',
+        ]);
 
         $user = User::factory()->create([
             'role' => 'comercial',
             'salesforce_user_id' => 'SF-USER-003',
             'dealership' => 'Pamplona',
+            'dealership_id' => $dealership->id,
         ]);
 
         $response = $this->from(route('users.edit', $user))->actingAs($admin)->put(route('users.update', $user), [
@@ -114,14 +134,14 @@ class UserSalesforceIdTest extends TestCase
             'email' => $user->email,
             'role' => 'comercial',
             'salesforce_user_id' => 'SF-USER-003',
-            'dealership' => '',
+            'dealership_id' => '',
             'password' => '',
             'password_confirmation' => '',
         ]);
 
         $response
             ->assertRedirect(route('users.edit', $user))
-            ->assertSessionHasErrors('dealership');
+            ->assertSessionHasErrors('dealership_id');
     }
 
     public function test_salesforce_id_is_cleared_when_user_stops_being_commercial(): void
@@ -129,10 +149,13 @@ class UserSalesforceIdTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
         ]);
+        $dealership = Dealership::factory()->create();
 
         $user = User::factory()->create([
             'role' => 'comercial',
             'salesforce_user_id' => 'SF-USER-002',
+            'dealership' => $dealership->name,
+            'dealership_id' => $dealership->id,
         ]);
 
         $response = $this->actingAs($admin)->put(route('users.update', $user), [
@@ -150,5 +173,6 @@ class UserSalesforceIdTest extends TestCase
         $this->assertSame('gestor', $user->role);
         $this->assertNull($user->salesforce_user_id);
         $this->assertNull($user->dealership);
+        $this->assertNull($user->dealership_id);
     }
 }
