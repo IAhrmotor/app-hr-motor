@@ -189,6 +189,23 @@ Route::middleware('auth')->group(function () {
     })->name('videos');
 
     Route::middleware('role:admin,gestor')->group(function () {
+        Route::get('/admin', function () {
+            $adminSections = [
+                [
+                    'label' => 'Gestión de usuarios',
+                    'description' => 'Altas, edición de perfiles, roles y seguimiento del equipo.',
+                    'route' => 'users.index',
+                ],
+                [
+                    'label' => 'Gestión de delegaciones',
+                    'description' => 'Consulta, crea y organiza las delegaciones disponibles.',
+                    'route' => 'dealerships.index',
+                ],
+            ];
+
+            return view('admin.index', compact('adminSections'));
+        })->name('admin.index');
+
         Route::get('/integraciones/salesforce/conectar', [SalesforceAuthController::class, 'redirect'])->name('salesforce.connect');
         Route::get('/integraciones/salesforce/callback', [SalesforceAuthController::class, 'callback'])->name('salesforce.callback');
         Route::post('/leaderboard/sync', SalesforceLeaderboardSyncController::class)->name('leaderboard.sync');
