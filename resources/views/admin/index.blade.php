@@ -39,7 +39,7 @@
             </div>
         @endif
 
-        <section class="rounded-[2rem] border border-brand-secondary/10 bg-slate-50 p-6 shadow-sm md:p-8">
+        <section class="rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
             <div class="max-w-3xl">
                 <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
                     Gestión interna
@@ -58,7 +58,7 @@
                 @foreach ($adminSections as $section)
                     <a
                         href="{{ route($section['route']) }}"
-                        class="group rounded-3xl border border-brand-secondary/10 bg-white p-8 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md"
+                        class="group rounded-3xl border border-brand-secondary/10 bg-slate-50 p-8 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md"
                     >
                         <div class="flex h-full flex-col">
                             <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
@@ -86,7 +86,7 @@
             </div>
         </section>
 
-        <section class="mt-8 rounded-[2rem] border border-brand-secondary/10 bg-slate-50 p-6 shadow-sm md:p-8">
+        <section class="mt-8 rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
             <div class="max-w-3xl">
                 <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
                     Acciones rápidas

@@ -17,7 +17,8 @@
     $dealershipFallbackClasses = 'flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-secondary text-lg font-semibold text-white ring-2';
     $dealershipRowImageClasses = 'h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10';
     $dealershipRowFallbackClasses = 'flex h-11 w-11 items-center justify-center rounded-xl bg-brand-secondary text-sm font-semibold text-white ring-1 ring-brand-secondary/10';
-    $movementPillBaseClasses = 'inline-flex h-8 min-w-[2.75rem] items-center justify-center gap-1 rounded-full px-2.5 text-xs font-semibold ring-1';
+    $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
+    $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
     $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
 @endphp
 
@@ -86,6 +87,12 @@
                 @foreach ($topEntries as $entry)
                     @php
                         $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
+                        $topEntryHref = null;
+                        if ($aggregateByDealership && $entry->dealership_id) {
+                            $topEntryHref = route('dealerships.show', $entry->dealership_id);
+                        } elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor'])) {
+                            $topEntryHref = route('users.show', $entry->user);
+                        }
                         $medalStyles = match ($entry->ranking_position) {
                             1 => [
                                 'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(217,167,34,0.18)]',
@@ -108,13 +115,17 @@
                         };
                     @endphp
 
-                    <article class="relative overflow-hidden rounded-[1.75rem] border p-6 {{ $medalStyles['card'] }}">
+                    @if ($topEntryHref)
+                        <a href="{{ $topEntryHref }}"
+                            class="group block rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
+                    @endif
+                    <article class="relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }} {{ $topEntryHref ? 'hover:shadow-[0_24px_44px_rgba(15,23,42,0.14)]' : '' }}">
                         <div class="absolute right-4 top-4 flex items-center gap-2">
                             <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
                                 #{{ $entry->ranking_position }}
                             </span>
                             @if ($movement['direction'] === 'up')
-                                <span class="{{ $movementPillBaseClasses }} bg-emerald-100 text-emerald-800 ring-emerald-200" title="{{ $movement['label'] }}">
+                                <span class="{{ $movementPillCompactClasses }} bg-emerald-100 text-emerald-800 ring-emerald-200" title="{{ $movement['label'] }}">
                                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
                                     </svg>
@@ -122,7 +133,7 @@
                                     <span class="sr-only">{{ $movement['label'] }}</span>
                                 </span>
                             @elseif ($movement['direction'] === 'down')
-                                <span class="{{ $movementPillBaseClasses }} bg-red-100 text-red-700 ring-red-200" title="{{ $movement['label'] }}">
+                                <span class="{{ $movementPillCompactClasses }} bg-red-100 text-red-700 ring-red-200" title="{{ $movement['label'] }}">
                                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
                                     </svg>
@@ -130,7 +141,7 @@
                                     <span class="sr-only">{{ $movement['label'] }}</span>
                                 </span>
                             @else
-                                <span class="{{ $movementPillBaseClasses }} bg-slate-200 text-slate-600 ring-slate-300" title="{{ $movement['label'] }}">
+                                <span class="{{ $movementPillCompactClasses }} bg-slate-200 text-slate-600 ring-slate-300" title="{{ $movement['label'] }}">
                                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
                                     </svg>
@@ -139,63 +150,37 @@
                                 </span>
                             @endif
                         </div>
-                        <div class="flex items-start gap-4 pr-24">
+                        <div class="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24">
                             @if ($aggregateByDealership)
-                                @php
-                                    $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
-                                @endphp
-                                @if ($dealershipHref)
-                                    <a href="{{ $dealershipHref }}" class="flex min-w-0 items-start gap-4 rounded-2xl transition hover:opacity-90">
-                                        @if ($entry->dealership_image_url)
-                                            <img src="{{ $entry->dealership_image_url }}"
-                                                alt="Imagen de {{ $entry->dealership_name }}"
-                                                class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
-                                        @else
-                                            <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
-                                                {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
-                                            </div>
-                                        @endif
-                                        <div class="min-w-0 flex-1">
-                                            <p class="text-xl font-semibold leading-tight text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
-                                            <p class="text-sm text-brand-secondary/60">
-                                                {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
-                                            </p>
-                                        </div>
-                                    </a>
+                                @if ($entry->dealership_image_url)
+                                    <img src="{{ $entry->dealership_image_url }}"
+                                        alt="Imagen de {{ $entry->dealership_name }}"
+                                        class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
                                 @else
-                                    @if ($entry->dealership_image_url)
-                                        <img src="{{ $entry->dealership_image_url }}"
-                                            alt="Imagen de {{ $entry->dealership_name }}"
-                                            class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
-                                    @else
-                                        <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
-                                            {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
-                                        </div>
-                                    @endif
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-xl font-semibold leading-tight text-brand-secondary">{{ $entry->dealership_name }}</p>
-                                        <p class="text-sm text-brand-secondary/60">
-                                            {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
-                                        </p>
+                                    <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
+                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
                                     </div>
                                 @endif
+                                <div class="min-w-0 max-w-full">
+                                    <p class="text-xl font-semibold leading-tight break-words text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->dealership_name }}</p>
+                                    <p class="text-sm text-brand-secondary/60">
+                                        {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                    </p>
+                                </div>
                             @elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
-                                <a href="{{ route('users.show', $entry->user) }}"
-                                    class="flex min-w-0 items-start gap-4 rounded-2xl transition hover:opacity-90">
                                     <img src="{{ $entry->user->avatar_url }}"
                                         alt="Avatar de {{ $entry->user->name }}"
                                         class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-xl font-semibold leading-tight text-brand-secondary hover:text-brand-primary">{{ $entry->user->name }}</p>
+                                    <div class="min-w-0 max-w-full">
+                                        <p class="text-xl font-semibold leading-tight break-words text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user->name }}</p>
                                         <p class="text-sm text-brand-secondary/60">{{ $entry->user->dealership ?: 'Sin delegación asignada' }}</p>
                                     </div>
-                                </a>
                             @else
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-xl font-semibold leading-tight text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                <div class="min-w-0 max-w-full">
+                                    <p class="text-xl font-semibold leading-tight break-words text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="text-sm text-brand-secondary/60">
                                         {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
                                     </p>
@@ -207,6 +192,9 @@
                             {{ number_format((float) $entry->{$metricField}, 0, ',', '.') }}
                         </p>
                     </article>
+                    @if ($topEntryHref)
+                        </a>
+                    @endif
                 @endforeach
             </div>
         @endif
@@ -350,21 +338,21 @@
                                 <div class="flex items-center gap-3 text-sm font-semibold text-brand-secondary">
                                     <span>#{{ $entry->ranking_position }}</span>
                                     @if ($movement['direction'] === 'up')
-                                        <span class="{{ $movementPillBaseClasses }} bg-emerald-100 text-emerald-800 ring-emerald-200">
+                                        <span class="{{ $movementPillCompactClasses }} bg-emerald-100 text-emerald-800 ring-emerald-200">
                                             <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
                                             </svg>
                                             <span>{{ $movement['amount'] }}</span>
                                         </span>
                                     @elseif ($movement['direction'] === 'down')
-                                        <span class="{{ $movementPillBaseClasses }} bg-red-100 text-red-700 ring-red-200">
+                                        <span class="{{ $movementPillCompactClasses }} bg-red-100 text-red-700 ring-red-200">
                                             <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
                                             </svg>
                                             <span>{{ $movement['amount'] }}</span>
                                         </span>
                                     @else
-                                        <span class="{{ $movementPillBaseClasses }} bg-slate-200 text-slate-600 ring-slate-300">
+                                        <span class="{{ $movementPillCompactClasses }} bg-slate-200 text-slate-600 ring-slate-300">
                                             <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
                                             </svg>
