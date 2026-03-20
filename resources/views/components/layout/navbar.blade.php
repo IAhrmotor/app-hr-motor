@@ -42,7 +42,7 @@
                                     @foreach ($item['children'] as $child)
                                         @php $isChildActive = request()->routeIs($child['route']); @endphp
                                         <a href="{{ route($child['route']) }}"
-                                            class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isChildActive ? 'bg-brand-secondary/5 text-brand-primary' : 'text-brand-secondary transition hover:bg-brand-secondary/5 hover:text-brand-primary' }}">
+                                            class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
                                             {{ $child['label'] }}
                                         </a>
                                     @endforeach
@@ -87,11 +87,11 @@
                                 class="absolute left-1/2 top-full mt-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
                                 <div class="p-2">
                                     <a href="{{ route('users.index') }}"
-                                        class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isUsersActive ? 'bg-brand-secondary/5 text-brand-primary' : 'text-brand-secondary transition hover:bg-brand-secondary/5 hover:text-brand-primary' }}">
+                                        class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isUsersActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
                                         Usuarios
                                     </a>
                                     <a href="{{ route('dealerships.index') }}"
-                                        class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isDealershipsActive ? 'bg-brand-secondary/5 text-brand-primary' : 'text-brand-secondary transition hover:bg-brand-secondary/5 hover:text-brand-primary' }}">
+                                        class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isDealershipsActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
                                         Delegaciones
                                     </a>
                                 </div>
@@ -205,7 +205,7 @@
                             @foreach ($item['children'] as $child)
                                 @php $isChildActive = request()->routeIs($child['route']); @endphp
                                 <a href="{{ route($child['route']) }}" @click="open = false"
-                                    class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isChildActive ? 'bg-white text-brand-primary' : 'text-gray-700 transition hover:bg-white hover:text-brand-primary' }}">
+                                    class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-gray-700 transition hover:text-brand-primary' }}">
                                     {{ $child['label'] }}
                                 </a>
                             @endforeach
@@ -230,11 +230,11 @@
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-brand-secondary/45' }}">Admin</p>
                         <div class="mt-2 space-y-1">
                             <a href="{{ route('users.index') }}" @click="open = false"
-                                class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isUsersActive ? 'bg-white text-brand-primary' : 'text-gray-700 transition hover:bg-white hover:text-brand-primary' }}">
+                                class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isUsersActive ? 'text-brand-primary' : 'text-gray-700 transition hover:text-brand-primary' }}">
                                 Usuarios
                             </a>
                             <a href="{{ route('dealerships.index') }}" @click="open = false"
-                                class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isDealershipsActive ? 'bg-white text-brand-primary' : 'text-gray-700 transition hover:bg-white hover:text-brand-primary' }}">
+                                class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 transition hover:text-brand-primary' }}">
                                 Delegaciones
                             </a>
                         </div>
