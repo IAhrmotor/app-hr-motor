@@ -213,6 +213,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
         Route::get('/usuarios/crear', [UserController::class, 'create'])->name('users.create');
         Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
+        Route::post('/usuarios/{user}/reenviar-invitacion', [UserController::class, 'resendInvitation'])->name('users.resend-invitation');
         Route::get('/usuarios/{user}', [UserController::class, 'show'])->name('users.show');
         Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');

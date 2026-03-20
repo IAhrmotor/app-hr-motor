@@ -93,7 +93,7 @@
                 </span>
 
                 <h2 class="mt-3 text-2xl font-semibold text-brand-secondary md:text-3xl">
-                    Sincornización rankings manual
+                    Sincronización rankings manual
                 </h2>
 
                 <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
