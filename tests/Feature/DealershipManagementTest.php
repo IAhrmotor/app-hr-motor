@@ -130,6 +130,62 @@ class DealershipManagementTest extends TestCase
         $this->assertFileExists(public_path($dealership->image_path));
     }
 
+    public function test_manager_can_manage_dealership_crud(): void
+    {
+        $manager = User::factory()->create([
+            'role' => 'gestor',
+        ]);
+
+        $createResponse = $this->actingAs($manager)->post(route('dealerships.store'), [
+            'name' => 'Malaga Centro',
+            'salesforce_id' => 'DLR-MAL-001',
+            'phone' => '952000444',
+            'google_maps_url' => 'https://maps.google.com/?q=malaga+centro',
+            'reviews_url' => 'https://example.com/resenas/malaga',
+            'image' => UploadedFile::fake()->image('malaga.png', 400, 400),
+        ]);
+
+        $createResponse
+            ->assertRedirect(route('dealerships.index'))
+            ->assertSessionHas('success');
+
+        $dealership = Dealership::query()->where('name', 'Malaga Centro')->firstOrFail();
+        $this->createdImages[] = $dealership->image_path;
+
+        $this->actingAs($manager)->get(route('dealerships.create'))->assertOk();
+        $this->actingAs($manager)->get(route('dealerships.show', $dealership))->assertOk();
+        $this->actingAs($manager)->get(route('dealerships.edit', $dealership))->assertOk();
+
+        $updateResponse = $this->actingAs($manager)->put(route('dealerships.update', $dealership), [
+            'name' => 'Malaga Norte',
+            'salesforce_id' => 'DLR-MAL-002',
+            'phone' => '952000555',
+            'google_maps_url' => 'https://maps.google.com/?q=malaga+norte',
+            'reviews_url' => 'https://example.com/resenas/malaga-norte',
+        ]);
+
+        $updateResponse
+            ->assertRedirect(route('dealerships.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('dealerships', [
+            'id' => $dealership->id,
+            'name' => 'Malaga Norte',
+            'salesforce_id' => 'DLR-MAL-002',
+            'phone' => '952000555',
+        ]);
+
+        $deleteResponse = $this->actingAs($manager)->delete(route('dealerships.destroy', $dealership));
+
+        $deleteResponse
+            ->assertRedirect(route('dealerships.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('dealerships', [
+            'id' => $dealership->id,
+        ]);
+    }
+
     public function test_dealership_show_hides_salesforce_id_and_displays_clickable_links(): void
     {
         $user = User::factory()->create([
