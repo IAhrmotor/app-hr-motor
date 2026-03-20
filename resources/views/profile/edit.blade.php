@@ -44,7 +44,28 @@
                 @csrf
                 @method('PATCH')
 
-                <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                <div
+                    x-data="{
+                        avatarPreview: @js(auth()->user()->avatar_url),
+                        avatarName: null,
+                        updateAvatarPreview(event) {
+                            const [file] = event.target.files || [];
+                            this.avatarName = file ? file.name : null;
+
+                            if (!file) {
+                                this.avatarPreview = @js(auth()->user()->avatar_url);
+                                return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = (loadEvent) => {
+                                this.avatarPreview = loadEvent.target?.result || null;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    }"
+                    class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]"
+                >
                     <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6">
                         <h2 class="text-lg font-semibold text-brand-secondary">Foto de perfil</h2>
                         <p class="mt-2 text-sm text-brand-secondary/70">
@@ -52,14 +73,19 @@
                         </p>
 
                         <div class="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center">
-                            <img src="{{ auth()->user()->avatar_url }}" alt="Avatar actual de {{ auth()->user()->name }}"
+                            <img :src="avatarPreview" alt="Vista previa del avatar"
                                 class="h-28 w-28 rounded-full object-cover ring-2 ring-brand-primary/10">
 
                             <div class="flex-1">
                                 <label for="avatar"
                                     class="mb-2 block text-sm font-semibold text-brand-secondary/80">Nueva foto</label>
                                 <input id="avatar" name="avatar" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                    class="block w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary file:mr-4 file:cursor-pointer file:rounded-xl file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:font-semibold file:text-white hover:file:opacity-90">
+                                    @change="updateAvatarPreview($event)"
+                                    class="block w-full cursor-pointer rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary file:mr-4 file:cursor-pointer file:rounded-xl file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:font-semibold file:text-white hover:file:opacity-90">
+                                <div class="mt-3 rounded-2xl border border-brand-secondary/10 bg-slate-50 px-4 py-3 text-sm text-brand-secondary/70">
+                                    <p class="font-medium text-brand-secondary">Archivo seleccionado</p>
+                                    <p class="mt-1 break-all" x-text="avatarName || 'Todavia no has elegido una imagen nueva'"></p>
+                                </div>
                                 @error('avatar')
                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                 @enderror

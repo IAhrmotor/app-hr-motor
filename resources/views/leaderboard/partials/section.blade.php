@@ -13,6 +13,10 @@
     $entityLabelPlural = $entityLabelPlural ?? 'comerciales';
     $searchPlaceholder = $searchPlaceholder ?? 'Buscar comercial, email o delegacion';
     $aggregateByDealership = $aggregateByDealership ?? false;
+    $dealershipImageClasses = 'h-16 w-16 rounded-2xl object-cover ring-2';
+    $dealershipFallbackClasses = 'flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-secondary text-lg font-semibold text-white ring-2';
+    $dealershipRowImageClasses = 'h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10';
+    $dealershipRowFallbackClasses = 'flex h-11 w-11 items-center justify-center rounded-xl bg-brand-secondary text-sm font-semibold text-white ring-1 ring-brand-secondary/10';
 @endphp
 
 <section class="rounded-[1.85rem] border border-brand-secondary/10 bg-white/90 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-6">
@@ -134,15 +138,44 @@
                         </div>
                         <div class="flex items-center gap-4">
                             @if ($aggregateByDealership)
-                                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-secondary text-lg font-semibold text-white ring-2 {{ $medalStyles['ring'] }}">
-                                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
-                                </div>
-                                <div>
-                                    <p class="text-xl font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
-                                    <p class="text-sm text-brand-secondary/60">
-                                        {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
-                                    </p>
-                                </div>
+                                @php
+                                    $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
+                                @endphp
+                                @if ($dealershipHref)
+                                    <a href="{{ $dealershipHref }}" class="flex items-center gap-4 rounded-2xl transition hover:opacity-90">
+                                        @if ($entry->dealership_image_url)
+                                            <img src="{{ $entry->dealership_image_url }}"
+                                                alt="Imagen de {{ $entry->dealership_name }}"
+                                                class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
+                                        @else
+                                            <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
+                                                {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                            </div>
+                                        @endif
+                                        <div>
+                                            <p class="text-xl font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
+                                            <p class="text-sm text-brand-secondary/60">
+                                                {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                            </p>
+                                        </div>
+                                    </a>
+                                @else
+                                    @if ($entry->dealership_image_url)
+                                        <img src="{{ $entry->dealership_image_url }}"
+                                            alt="Imagen de {{ $entry->dealership_name }}"
+                                            class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
+                                    @else
+                                        <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
+                                            {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <p class="text-xl font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                        <p class="text-sm text-brand-secondary/60">
+                                            {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                        </p>
+                                    </div>
+                                @endif
                             @elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
                                 <a href="{{ route('users.show', $entry->user) }}"
                                     class="flex items-center gap-4 rounded-2xl transition hover:opacity-90">
@@ -239,15 +272,42 @@
 
                             <div>
                                 @if ($aggregateByDealership)
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-secondary text-sm font-semibold text-white ring-1 ring-brand-secondary/10">
-                                            {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                    @php
+                                        $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
+                                    @endphp
+                                    @if ($dealershipHref)
+                                        <a href="{{ $dealershipHref }}" class="flex items-center gap-3 rounded-2xl transition hover:opacity-90">
+                                            @if ($entry->dealership_image_url)
+                                                <img src="{{ $entry->dealership_image_url }}"
+                                                    alt="Imagen de {{ $entry->dealership_name }}"
+                                                    class="{{ $dealershipRowImageClasses }}">
+                                            @else
+                                                <div class="{{ $dealershipRowFallbackClasses }}">
+                                                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <p class="text-sm font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
+                                                <p class="text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                            </div>
+                                        </a>
+                                    @else
+                                        <div class="flex items-center gap-3">
+                                            @if ($entry->dealership_image_url)
+                                                <img src="{{ $entry->dealership_image_url }}"
+                                                    alt="Imagen de {{ $entry->dealership_name }}"
+                                                    class="{{ $dealershipRowImageClasses }}">
+                                            @else
+                                                <div class="{{ $dealershipRowFallbackClasses }}">
+                                                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <p class="text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                                <p class="text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p class="text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
-                                            <p class="text-xs text-brand-secondary/55">Ranking por delegación</p>
-                                        </div>
-                                    </div>
+                                    @endif
                                 @else
                                     <div class="flex items-center gap-3">
                                         <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
@@ -315,14 +375,42 @@
 
                             <div class="flex items-center gap-3">
                                 @if ($aggregateByDealership)
-                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-secondary text-sm font-semibold text-white ring-1 ring-brand-secondary/10">
-                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
-                                    </div>
-                                    <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
-                                        <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}</p>
-                                        <p class="truncate text-xs text-brand-secondary/55">Ranking por delegación</p>
-                                    </div>
+                                    @php
+                                        $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
+                                    @endphp
+                                    @if ($dealershipHref)
+                                        <a href="{{ $dealershipHref }}" class="flex min-w-0 items-center gap-3 rounded-2xl transition hover:opacity-90">
+                                            @if ($entry->dealership_image_url)
+                                                <img src="{{ $entry->dealership_image_url }}"
+                                                    alt="Imagen de {{ $entry->dealership_name }}"
+                                                    class="{{ $dealershipRowImageClasses }}">
+                                            @else
+                                                <div class="{{ $dealershipRowFallbackClasses }}">
+                                                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                                </div>
+                                            @endif
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
+                                                <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}</p>
+                                                <p class="truncate text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                            </div>
+                                        </a>
+                                    @else
+                                        @if ($entry->dealership_image_url)
+                                            <img src="{{ $entry->dealership_image_url }}"
+                                                alt="Imagen de {{ $entry->dealership_name }}"
+                                                class="{{ $dealershipRowImageClasses }}">
+                                        @else
+                                            <div class="{{ $dealershipRowFallbackClasses }}">
+                                                {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                            </div>
+                                        @endif
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                            <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}</p>
+                                            <p class="truncate text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                        </div>
+                                    @endif
                                 @else
                                     <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                         alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"

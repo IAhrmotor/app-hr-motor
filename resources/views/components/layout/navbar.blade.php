@@ -2,7 +2,7 @@
     $navItems = config('navigation.main', []);
 @endphp
 
-<nav x-data="{ open: false, profileOpen: false, rankingOpen: false }" @keydown.escape.window="profileOpen = false; rankingOpen = false"
+<nav x-data="{ open: false, profileOpen: false, activeDropdown: null }" @keydown.escape.window="profileOpen = false; activeDropdown = null"
     class="sticky top-0 z-50 border-b border-gray-200 bg-white">
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
         <a href="{{ route('home') }}" class="flex items-center">
@@ -13,21 +13,25 @@
             <div class="hidden items-center gap-8 md:flex">
                 @foreach ($navItems as $item)
                     @if (! empty($item['children']))
-                        <div class="relative" @mouseenter="rankingOpen = true" @mouseleave="rankingOpen = false">
+                        @php
+                            $dropdownKey = 'nav-' . \Illuminate\Support\Str::slug($item['label']);
+                            $isParentActive = collect($item['children'])->contains(fn ($child) => request()->routeIs($child['route']));
+                        @endphp
+                        <div class="relative" @mouseenter="activeDropdown = '{{ $dropdownKey }}'" @mouseleave="activeDropdown = null">
                             <button type="button"
-                                class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 transition hover:text-gray-900"
-                                :aria-expanded="rankingOpen.toString()">
+                                class="inline-flex items-center gap-2 text-sm font-medium transition {{ $isParentActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}"
+                                :aria-expanded="(activeDropdown === '{{ $dropdownKey }}').toString()">
                                 <span>{{ $item['label'] }}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition"
-                                    :class="{ 'rotate-180': rankingOpen }" fill="none" viewBox="0 0 24 24"
+                                    :class="{ 'rotate-180': activeDropdown === '{{ $dropdownKey }}' }" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                 </svg>
                             </button>
 
-                            <div x-show="rankingOpen" x-cloak class="absolute left-0 top-full h-3 w-full"></div>
+                            <div x-show="activeDropdown === '{{ $dropdownKey }}'" x-cloak class="absolute left-0 top-full h-3 w-full"></div>
 
-                            <div x-show="rankingOpen" x-cloak x-transition:enter="transition ease-out duration-150"
+                            <div x-show="activeDropdown === '{{ $dropdownKey }}'" x-cloak x-transition:enter="transition ease-out duration-150"
                                 x-transition:enter-start="opacity-0 translate-y-1"
                                 x-transition:enter-end="opacity-100 translate-y-0"
                                 x-transition:leave="transition ease-in duration-100"
@@ -36,8 +40,9 @@
                                 class="absolute left-1/2 top-full mt-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
                                 <div class="p-2">
                                     @foreach ($item['children'] as $child)
+                                        @php $isChildActive = request()->routeIs($child['route']); @endphp
                                         <a href="{{ route($child['route']) }}"
-                                            class="block rounded-xl px-4 py-3 text-sm font-medium text-brand-secondary transition hover:bg-brand-secondary/5 hover:text-brand-primary">
+                                            class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
                                             {{ $child['label'] }}
                                         </a>
                                     @endforeach
@@ -45,8 +50,9 @@
                             </div>
                         </div>
                     @else
+                        @php $isItemActive = request()->routeIs($item['route']); @endphp
                         <a href="{{ route($item['route']) }}"
-                            class="text-sm font-medium text-gray-700 transition hover:text-gray-900">
+                            class="text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
                             {{ $item['label'] }}
                         </a>
                     @endif
@@ -55,15 +61,42 @@
                     @if (in_array(auth()->user()->role, ['admin', 'gestor']))
                         @php
                             $isUsersActive = request()->routeIs('users.*');
+                            $isDealershipsActive = request()->routeIs('dealerships.*');
+                            $adminDropdownKey = 'nav-admin';
                         @endphp
-                        <a href="{{ route('users.index') }}"
-                            @class([
-                                'inline-flex items-center px-1 py-2 text-sm font-semibold transition',
-                                'text-brand-primary' => $isUsersActive,
-                                'text-gray-700 hover:text-gray-900' => ! $isUsersActive,
-                            ])>
-                            Usuarios
-                        </a>
+                        <div class="relative" @mouseenter="activeDropdown = '{{ $adminDropdownKey }}'" @mouseleave="activeDropdown = null">
+                            <button type="button"
+                                class="inline-flex items-center gap-2 px-1 py-2 text-sm font-semibold transition {{ $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}"
+                                :aria-expanded="(activeDropdown === '{{ $adminDropdownKey }}').toString()">
+                                <span>Admin</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition"
+                                    :class="{ 'rotate-180': activeDropdown === '{{ $adminDropdownKey }}' }" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+
+                            <div x-show="activeDropdown === '{{ $adminDropdownKey }}'" x-cloak class="absolute left-0 top-full h-3 w-full"></div>
+
+                            <div x-show="activeDropdown === '{{ $adminDropdownKey }}'" x-cloak x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-start="opacity-100 translate-y-0"
+                                x-transition:leave-end="opacity-0 translate-y-1"
+                                class="absolute left-1/2 top-full mt-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
+                                <div class="p-2">
+                                    <a href="{{ route('users.index') }}"
+                                        class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isUsersActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
+                                        Usuarios
+                                    </a>
+                                    <a href="{{ route('dealerships.index') }}"
+                                        class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isDealershipsActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
+                                        Delegaciones
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     @endif
                 @endauth
             </div>
@@ -165,20 +198,23 @@
 
             @foreach ($navItems as $item)
                 @if (! empty($item['children']))
+                    @php $isParentActive = collect($item['children'])->contains(fn ($child) => request()->routeIs($child['route'])); @endphp
                     <div class="mt-2 rounded-2xl border border-brand-secondary/10 bg-slate-50 px-3 py-3">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">{{ $item['label'] }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $isParentActive ? 'text-brand-primary' : 'text-brand-secondary/45' }}">{{ $item['label'] }}</p>
                         <div class="mt-2 space-y-1">
                             @foreach ($item['children'] as $child)
+                                @php $isChildActive = request()->routeIs($child['route']); @endphp
                                 <a href="{{ route($child['route']) }}" @click="open = false"
-                                    class="block rounded-xl px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-white hover:text-brand-primary">
+                                    class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-gray-700 transition hover:text-brand-primary' }}">
                                     {{ $child['label'] }}
                                 </a>
                             @endforeach
                         </div>
                     </div>
                 @else
+                    @php $isItemActive = request()->routeIs($item['route']); @endphp
                     <a href="{{ route($item['route']) }}" @click="open = false"
-                        class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
+                        class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         {{ $item['label'] }}
                     </a>
                 @endif
@@ -188,15 +224,21 @@
                 @if (in_array(auth()->user()->role, ['admin', 'gestor']))
                     @php
                         $isUsersActive = request()->routeIs('users.*');
+                        $isDealershipsActive = request()->routeIs('dealerships.*');
                     @endphp
-                    <a href="{{ route('users.index') }}" @click="open = false"
-                        @class([
-                            'block rounded-lg px-3 py-2 text-sm font-semibold transition',
-                            'text-brand-primary' => $isUsersActive,
-                            'text-gray-700 hover:bg-gray-100 hover:text-gray-900' => ! $isUsersActive,
-                        ])>
-                        Usuarios
-                    </a>
+                    <div class="mt-2 rounded-2xl border border-brand-secondary/10 bg-slate-50 px-3 py-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-brand-secondary/45' }}">Admin</p>
+                        <div class="mt-2 space-y-1">
+                            <a href="{{ route('users.index') }}" @click="open = false"
+                                class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isUsersActive ? 'text-brand-primary' : 'text-gray-700 transition hover:text-brand-primary' }}">
+                                Usuarios
+                            </a>
+                            <a href="{{ route('dealerships.index') }}" @click="open = false"
+                                class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 transition hover:text-brand-primary' }}">
+                                Delegaciones
+                            </a>
+                        </div>
+                    </div>
                 @endif
             @endauth
 

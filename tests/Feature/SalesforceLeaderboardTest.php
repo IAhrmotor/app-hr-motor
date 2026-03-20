@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Dealership;
 use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardDailySnapshot;
@@ -89,15 +90,22 @@ class SalesforceLeaderboardTest extends TestCase
             'role' => 'admin',
         ]);
 
+        $sevillaDealership = Dealership::factory()->create([
+            'name' => 'Sevilla',
+            'image_path' => 'images/dealerships/sevilla.png',
+        ]);
+
         $sevillaA = User::factory()->create([
             'name' => 'Laura Sevilla',
             'dealership' => 'Sevilla',
+            'dealership_id' => $sevillaDealership->id,
             'salesforce_user_id' => 'SF-SEV-1',
         ]);
 
         $sevillaB = User::factory()->create([
             'name' => 'Pablo Sevilla',
             'dealership' => 'Sevilla',
+            'dealership_id' => $sevillaDealership->id,
             'salesforce_user_id' => 'SF-SEV-2',
         ]);
 
@@ -143,7 +151,9 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('Ranking por delegaciones')
             ->assertSee('Sevilla')
             ->assertSee('11')
-            ->assertSee('2 comerciales');
+            ->assertSee('2 comerciales')
+            ->assertSee(route('dealerships.show', $sevillaDealership))
+            ->assertSee(asset('images/dealerships/sevilla.png'));
     }
 
     public function test_purchase_leaderboard_keeps_commercial_ranking_and_adds_dealership_ranking_below(): void

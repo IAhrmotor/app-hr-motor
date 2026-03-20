@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
@@ -199,5 +200,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('/delegaciones', [DealershipController::class, 'index'])->name('dealerships.index');
+        Route::get('/delegaciones/crear', [DealershipController::class, 'create'])->name('dealerships.create');
+        Route::post('/delegaciones', [DealershipController::class, 'store'])->name('dealerships.store');
+        Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])->name('dealerships.show');
+        Route::get('/delegaciones/{dealership}/editar', [DealershipController::class, 'edit'])->name('dealerships.edit');
+        Route::put('/delegaciones/{dealership}', [DealershipController::class, 'update'])->name('dealerships.update');
+        Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])->name('dealerships.destroy');
     });
 });

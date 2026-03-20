@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Users;
 
+use App\Models\Dealership;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,6 +13,13 @@ class UserInvitationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
     public function test_admin_can_create_an_inactive_user_and_send_invitation_email(): void
     {
         Notification::fake();
@@ -19,13 +27,16 @@ class UserInvitationTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
         ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Torrejón',
+        ]);
 
         $response = $this->actingAs($admin)->post(route('users.store'), [
             'name' => 'Usuario Invitado',
             'email' => 'invitado@example.com',
             'role' => 'comercial',
             'salesforce_user_id' => 'SF-USER-001',
-            'dealership' => 'Torrejón',
+            'dealership_id' => $dealership->id,
         ]);
 
         $createdUser = User::where('email', 'invitado@example.com')->first();
@@ -40,6 +51,7 @@ class UserInvitationTest extends TestCase
         $this->assertNull($createdUser->activated_at);
         $this->assertSame('SF-USER-001', $createdUser->salesforce_user_id);
         $this->assertSame('Torrejón', $createdUser->dealership);
+        $this->assertSame($dealership->id, $createdUser->dealership_id);
         $this->assertSame(User::DEFAULT_AVATAR_PATH, $createdUser->avatar_path);
 
         Notification::assertSentTo($createdUser, ResetPassword::class);
@@ -69,10 +81,14 @@ class UserInvitationTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
         ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Pamplona',
+        ]);
 
         User::factory()->create([
             'role' => 'comercial',
             'dealership' => 'Pamplona',
+            'dealership_id' => $dealership->id,
             'salesforce_user_id' => 'SF-PAM-001',
         ]);
 
