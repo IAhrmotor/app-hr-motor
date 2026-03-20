@@ -3,6 +3,7 @@
 @section('content')
     @php
         $authUser = auth()->user();
+        $invitationExpiresInMinutes = (int) config('auth.passwords.users.expire', 60);
 
         $sortDirection = function ($column, $sort, $direction) {
             if ($sort !== $column) {
@@ -108,8 +109,16 @@
                             @forelse ($users as $user)
                                 @php
                                     $canManageUser = $authUser->role === 'admin' || ($authUser->role === 'gestor' && $authUser->id !== $user->id && $user->role === 'comercial');
+                                    $isInvitationExpired = ! $user->is_active
+                                        && $user->must_change_password
+                                        && $user->created_at?->lt(now()->subMinutes($invitationExpiresInMinutes));
+                                    $rowClasses = $user->is_active
+                                        ? 'transition hover:bg-brand-secondary/5'
+                                        : ($isInvitationExpired
+                                            ? 'bg-red-50/70 transition hover:bg-red-100/70'
+                                            : 'bg-amber-50/70 transition hover:bg-amber-100/70');
                                 @endphp
-                                <tr class="{{ $user->is_active ? 'transition hover:bg-brand-secondary/5' : 'bg-amber-50/70 transition hover:bg-amber-100/70' }}">
+                                <tr class="{{ $rowClasses }}">
                                     <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
                                         <a href="{{ route('users.show', $user) }}" class="flex items-center gap-3 transition hover:opacity-80">
                                             <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
@@ -124,6 +133,8 @@
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
                                         @if ($user->is_active)
                                             <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-700">Activo</span>
+                                        @elseif ($isInvitationExpired)
+                                            <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700">Caducado</span>
                                         @else
                                             <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Pendiente</span>
                                         @endif
@@ -132,6 +143,16 @@
                                     <td class="px-6 py-4">
                                         @if ($canManageUser)
                                             <div class="flex justify-end gap-2">
+                                                @if (! $user->is_active || $user->must_change_password)
+                                                    <form method="POST" action="{{ route('users.resend-invitation', $user) }}">
+                                                        @csrf
+                                                        <button type="submit" class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-700 transition hover:bg-amber-100 hover:text-amber-800" title="Reenviar correo de activación" aria-label="Reenviar correo de activación">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 7.5v9A2.25 2.25 0 0119.5 18.75h-15A2.25 2.25 0 012.25 16.5v-9m19.5 0A2.25 2.25 0 0019.5 5.25h-15A2.25 2.25 0 002.25 7.5m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0l-7.5-4.615A2.25 2.25 0 012.25 7.743V7.5" />
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                                 <a href="{{ route('users.edit', $user) }}" class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-brand-secondary/15 bg-white text-brand-secondary transition hover:bg-brand-secondary/5" title="Editar usuario" aria-label="Editar usuario">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.25 2.25 0 113.182 3.182L8.25 18.462 3 20l1.538-5.25L16.862 3.487z" />
