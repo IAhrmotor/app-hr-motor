@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Dealership;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -62,12 +63,8 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        $authUser = request()->user();
-
-        if ($authUser->role === 'gestor' && $user->role !== 'comercial') {
-            return redirect()
-                ->route('users.index')
-                ->with('error', 'No tienes permisos para ver este usuario.');
+        if ($response = $this->ensureCanManageListedUser(request()->user(), $user, 'ver')) {
+            return $response;
         }
 
         return view('users.show', compact('user'));
@@ -100,13 +97,13 @@ class UserController extends Controller
             ],
         ]);
 
-        DB::transaction(function () use ($validated): void {
+        $status = DB::transaction(function () use ($validated) {
             $isCommercial = $validated['role'] === 'comercial';
             $dealership = $isCommercial
                 ? Dealership::query()->find($validated['dealership_id'])
                 : null;
 
-            User::create([
+            $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'role' => $validated['role'],
@@ -119,10 +116,14 @@ class UserController extends Controller
                 'activated_at' => null,
             ]);
 
-            Password::broker()->sendResetLink([
-                'email' => $validated['email'],
-            ]);
+            return $this->sendInvitationLink($user);
         });
+
+        if ($status !== Password::RESET_LINK_SENT) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', $this->invitationErrorMessage($status));
+        }
 
         return redirect()
             ->route('users.index')
@@ -131,18 +132,8 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        $authUser = request()->user();
-
-        if ($authUser->id === $user->id) {
-            return redirect()
-                ->route('users.index')
-                ->with('error', 'No puedes eliminar tu propio usuario.');
-        }
-
-        if ($authUser->role === 'gestor' && $user->role !== 'comercial') {
-            return redirect()
-                ->route('users.index')
-                ->with('error', 'No tienes permisos para eliminar este usuario.');
+        if ($response = $this->ensureCanManageListedUser(request()->user(), $user, 'eliminar', preventSelf: true)) {
+            return $response;
         }
 
         $user->delete();
@@ -156,12 +147,8 @@ class UserController extends Controller
     {
         $authUser = request()->user();
 
-        if ($authUser->role === 'gestor') {
-            if ($authUser->id === $user->id || $user->role !== 'comercial') {
-                return redirect()
-                    ->route('users.index')
-                    ->with('error', 'No tienes permisos para editar este usuario.');
-            }
+        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'editar', preventSelf: $authUser->role === 'gestor')) {
+            return $response;
         }
 
         $availableRoles = $authUser->role === 'admin'
@@ -176,12 +163,8 @@ class UserController extends Controller
     {
         $authUser = $request->user();
 
-        if ($authUser->role === 'gestor') {
-            if ($authUser->id === $user->id || $user->role !== 'comercial') {
-                return redirect()
-                    ->route('users.index')
-                    ->with('error', 'No tienes permisos para editar este usuario.');
-            }
+        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'editar', preventSelf: $authUser->role === 'gestor')) {
+            return $response;
         }
 
         $allowedRoles = $authUser->role === 'admin'
@@ -230,5 +213,63 @@ class UserController extends Controller
         return redirect()
             ->route('users.index')
             ->with('success', 'Usuario actualizado correctamente.');
+    }
+
+    public function resendInvitation(Request $request, User $user)
+    {
+        if ($response = $this->ensureCanManageListedUser($request->user(), $user, 'reenviar la invitación', preventSelf: true)) {
+            return $response;
+        }
+
+        if ($user->is_active && ! $user->must_change_password) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'Solo puedes reenviar la invitación a usuarios pendientes de activación.');
+        }
+
+        $status = $this->sendInvitationLink($user);
+
+        if ($status !== Password::RESET_LINK_SENT) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', $this->invitationErrorMessage($status));
+        }
+
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'Correo de activación reenviado correctamente.');
+    }
+
+    protected function ensureCanManageListedUser(User $authUser, User $targetUser, string $action, bool $preventSelf = false): ?RedirectResponse
+    {
+        if ($preventSelf && $authUser->id === $targetUser->id) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', "No puedes {$action} tu propio usuario.");
+        }
+
+        if ($authUser->role === 'gestor' && $targetUser->role !== 'comercial') {
+            return redirect()
+                ->route('users.index')
+                ->with('error', "No tienes permisos para {$action} este usuario.");
+        }
+
+        return null;
+    }
+
+    protected function sendInvitationLink(User $user): string
+    {
+        return Password::broker()->sendResetLink([
+            'email' => $user->email,
+        ]);
+    }
+
+    protected function invitationErrorMessage(string $status): string
+    {
+        return match ($status) {
+            Password::RESET_THROTTLED => 'Espera un momento antes de volver a enviar el correo de activación.',
+            Password::INVALID_USER => 'No se ha encontrado un usuario válido para enviar el correo de activación.',
+            default => 'No se ha podido enviar el correo de activación. Inténtalo de nuevo en unos minutos.',
+        };
     }
 }
