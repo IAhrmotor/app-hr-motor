@@ -87,6 +87,12 @@
                 @foreach ($topEntries as $entry)
                     @php
                         $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
+                        $topEntryHref = null;
+                        if ($aggregateByDealership && $entry->dealership_id) {
+                            $topEntryHref = route('dealerships.show', $entry->dealership_id);
+                        } elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor'])) {
+                            $topEntryHref = route('users.show', $entry->user);
+                        }
                         $medalStyles = match ($entry->ranking_position) {
                             1 => [
                                 'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(217,167,34,0.18)]',
@@ -109,7 +115,11 @@
                         };
                     @endphp
 
-                    <article class="relative overflow-hidden rounded-[1.75rem] border p-6 {{ $medalStyles['card'] }}">
+                    @if ($topEntryHref)
+                        <a href="{{ $topEntryHref }}"
+                            class="group block overflow-hidden rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
+                    @endif
+                    <article class="relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }} {{ $topEntryHref ? 'hover:shadow-[0_24px_44px_rgba(15,23,42,0.14)]' : '' }}">
                         <div class="absolute right-4 top-4 flex items-center gap-2">
                             <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
                                 #{{ $entry->ranking_position }}
@@ -142,55 +152,29 @@
                         </div>
                         <div class="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24">
                             @if ($aggregateByDealership)
-                                @php
-                                    $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
-                                @endphp
-                                @if ($dealershipHref)
-                                    <a href="{{ $dealershipHref }}" class="contents">
-                                        @if ($entry->dealership_image_url)
-                                            <img src="{{ $entry->dealership_image_url }}"
-                                                alt="Imagen de {{ $entry->dealership_name }}"
-                                                class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
-                                        @else
-                                            <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
-                                                {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
-                                            </div>
-                                        @endif
-                                        <div class="min-w-0 max-w-full">
-                                            <p class="text-xl font-semibold leading-tight break-words text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
-                                            <p class="text-sm text-brand-secondary/60">
-                                                {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
-                                            </p>
-                                        </div>
-                                    </a>
+                                @if ($entry->dealership_image_url)
+                                    <img src="{{ $entry->dealership_image_url }}"
+                                        alt="Imagen de {{ $entry->dealership_name }}"
+                                        class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
                                 @else
-                                    @if ($entry->dealership_image_url)
-                                        <img src="{{ $entry->dealership_image_url }}"
-                                            alt="Imagen de {{ $entry->dealership_name }}"
-                                            class="{{ $dealershipImageClasses }} {{ $medalStyles['ring'] }}">
-                                    @else
-                                        <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
-                                            {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
-                                        </div>
-                                    @endif
-                                    <div class="min-w-0 max-w-full">
-                                        <p class="text-xl font-semibold leading-tight break-words text-brand-secondary">{{ $entry->dealership_name }}</p>
-                                        <p class="text-sm text-brand-secondary/60">
-                                            {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
-                                        </p>
+                                    <div class="{{ $dealershipFallbackClasses }} {{ $medalStyles['ring'] }}">
+                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
                                     </div>
                                 @endif
+                                <div class="min-w-0 max-w-full">
+                                    <p class="text-xl font-semibold leading-tight break-words text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->dealership_name }}</p>
+                                    <p class="text-sm text-brand-secondary/60">
+                                        {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                    </p>
+                                </div>
                             @elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
-                                <a href="{{ route('users.show', $entry->user) }}"
-                                    class="contents">
                                     <img src="{{ $entry->user->avatar_url }}"
                                         alt="Avatar de {{ $entry->user->name }}"
                                         class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                     <div class="min-w-0 max-w-full">
-                                        <p class="text-xl font-semibold leading-tight break-words text-brand-secondary hover:text-brand-primary">{{ $entry->user->name }}</p>
+                                        <p class="text-xl font-semibold leading-tight break-words text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user->name }}</p>
                                         <p class="text-sm text-brand-secondary/60">{{ $entry->user->dealership ?: 'Sin delegación asignada' }}</p>
                                     </div>
-                                </a>
                             @else
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
@@ -208,6 +192,9 @@
                             {{ number_format((float) $entry->{$metricField}, 0, ',', '.') }}
                         </p>
                     </article>
+                    @if ($topEntryHref)
+                        </a>
+                    @endif
                 @endforeach
             </div>
         @endif
