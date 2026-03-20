@@ -18,18 +18,18 @@
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-end">
                         @if ($dealershipLeaderboard)
                             <a href="#ranking-delegaciones"
-                                class="inline-flex min-w-[220px] items-center gap-3 rounded-2xl border border-brand-primary/15 bg-brand-primary/[0.04] px-4 py-3 text-left text-sm text-brand-secondary transition hover:-translate-y-0.5 hover:bg-brand-primary/[0.07]">
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm">
+                                class="inline-flex w-fit max-w-[210px] items-center gap-3 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-left text-sm text-brand-secondary transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:bg-brand-primary/[0.03]">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                         stroke="currentColor" stroke-width="1.8">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 6.75h15m-15 5.25h10.5m-10.5 5.25h6" />
                                     </svg>
                                 </span>
                                 <span class="min-w-0">
-                                    <span class="block text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
+                                    <span class="block text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">
                                         Ir a
                                     </span>
-                                    <span class="mt-1 block font-semibold text-brand-secondary">
+                                    <span class="mt-0.5 block font-semibold text-brand-secondary">
                                         Ranking por delegaciones
                                     </span>
                                 </span>
