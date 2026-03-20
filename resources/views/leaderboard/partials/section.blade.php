@@ -117,7 +117,7 @@
 
                     @if ($topEntryHref)
                         <a href="{{ $topEntryHref }}"
-                            class="group block overflow-hidden rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
+                            class="group block rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
                     @endif
                     <article class="relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }} {{ $topEntryHref ? 'hover:shadow-[0_24px_44px_rgba(15,23,42,0.14)]' : '' }}">
                         <div class="absolute right-4 top-4 flex items-center gap-2">
