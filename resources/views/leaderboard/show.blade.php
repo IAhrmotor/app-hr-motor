@@ -15,26 +15,49 @@
                         </p>
                     </div>
 
-                    <div class="rounded-2xl border border-brand-secondary/10 bg-slate-50 px-4 py-3 text-sm text-brand-secondary/80">
-                        <p class="font-semibold">Estado</p>
-                        <p class="mt-1">
-                            @if ($connection)
-                                Conectado con Salesforce
-                            @elseif ($salesforceConfigReady)
-                                Pendiente de autorizar la conexion en Salesforce
-                            @else
-                                Configuracion de Salesforce pendiente
-                            @endif
-                        </p>
-                        <p class="mt-1 text-xs text-brand-secondary/60">
-                            @if ($connection?->last_synced_at)
-                                Ultima sincronizacion: {{ $connection->last_synced_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
-                            @elseif ($salesforceConfigReady)
-                                La app esta preparada, pero aun no se ha completado el OAuth.
-                            @else
-                                Faltan credenciales o la URL de callback en este entorno.
-                            @endif
-                        </p>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-end">
+                        @if ($dealershipLeaderboard)
+                            <a href="#ranking-delegaciones"
+                                class="inline-flex min-w-[220px] items-center gap-3 rounded-2xl border border-brand-primary/15 bg-brand-primary/[0.04] px-4 py-3 text-left text-sm text-brand-secondary transition hover:-translate-y-0.5 hover:bg-brand-primary/[0.07]">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 6.75h15m-15 5.25h10.5m-10.5 5.25h6" />
+                                    </svg>
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
+                                        Ir a
+                                    </span>
+                                    <span class="mt-1 block font-semibold text-brand-secondary">
+                                        Ranking por delegaciones
+                                    </span>
+                                </span>
+                            </a>
+                        @endif
+
+                        <div class="rounded-2xl border border-brand-secondary/10 bg-slate-50 px-4 py-3 text-sm text-brand-secondary/80">
+                            <p class="font-semibold">Estado</p>
+                            <p class="mt-1">
+                                @if ($connection)
+                                    Conectado con Salesforce
+                                @elseif ($salesforceConfigReady)
+                                    Pendiente de autorizar la conexion en Salesforce
+                                @else
+                                    Configuracion de Salesforce pendiente
+                                @endif
+                            </p>
+                            <p class="mt-1 text-xs text-brand-secondary/60">
+                                @if ($connection?->last_synced_at)
+                                    Ultima sincronizacion: {{ $connection->last_synced_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
+                                @elseif ($salesforceConfigReady)
+                                    La app esta preparada, pero aun no se ha completado el OAuth.
+                                @else
+                                    Faltan credenciales o la URL de callback en este entorno.
+                                @endif
+                            </p>
+                        </div>
+
                     </div>
                 </div>
 
@@ -120,23 +143,40 @@
                 ])
 
                 @if ($dealershipLeaderboard)
-                    @include('leaderboard.partials.section', [
-                        'leaderboard' => $dealershipLeaderboard,
-                        'eyebrow' => $eyebrow,
-                        'title' => $dealershipTitle,
-                        'description' => $dealershipDescription,
-                        'metricLabel' => $metricLabel,
-                        'metricField' => $metricField,
-                        'emptyTitle' => $dealershipEmptyTitle,
-                        'emptyDescription' => $emptyDescription,
-                        'entityLabelPlural' => 'delegaciones',
-                        'searchPlaceholder' => 'Buscar delegacion',
-                        'aggregateByDealership' => true,
-                    ])
+                    <div id="ranking-delegaciones" class="scroll-mt-28">
+                        @include('leaderboard.partials.section', [
+                            'leaderboard' => $dealershipLeaderboard,
+                            'eyebrow' => $eyebrow,
+                            'title' => $dealershipTitle,
+                            'description' => $dealershipDescription,
+                            'metricLabel' => $metricLabel,
+                            'metricField' => $metricField,
+                            'emptyTitle' => $dealershipEmptyTitle,
+                            'emptyDescription' => $emptyDescription,
+                            'entityLabelPlural' => 'delegaciones',
+                            'searchPlaceholder' => 'Buscar delegacion',
+                            'aggregateByDealership' => true,
+                        ])
+                    </div>
                 @endif
             </div>
         </div>
     </section>
+
+    <script>
+        document.querySelectorAll('a[href="#ranking-delegaciones"]').forEach((link) => {
+            link.addEventListener('click', (event) => {
+                const target = document.querySelector('#ranking-delegaciones');
+
+                if (!target) {
+                    return;
+                }
+
+                event.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    </script>
 
     <script>
         window.setTimeout(() => window.location.reload(), 600000);
