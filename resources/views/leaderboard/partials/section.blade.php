@@ -17,6 +17,8 @@
     $dealershipFallbackClasses = 'flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-secondary text-lg font-semibold text-white ring-2';
     $dealershipRowImageClasses = 'h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10';
     $dealershipRowFallbackClasses = 'flex h-11 w-11 items-center justify-center rounded-xl bg-brand-secondary text-sm font-semibold text-white ring-1 ring-brand-secondary/10';
+    $movementPillBaseClasses = 'inline-flex h-8 min-w-[2.75rem] items-center justify-center gap-1 rounded-full px-2.5 text-xs font-semibold ring-1';
+    $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
 @endphp
 
 <section class="rounded-[1.85rem] border border-brand-secondary/10 bg-white/90 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-6">
@@ -112,37 +114,38 @@
                                 #{{ $entry->ranking_position }}
                             </span>
                             @if ($movement['direction'] === 'up')
-                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200" title="{{ $movement['label'] }}">
-                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                <span class="{{ $movementPillBaseClasses }} bg-emerald-100 text-emerald-800 ring-emerald-200" title="{{ $movement['label'] }}">
+                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
                                     </svg>
                                     <span>{{ $movement['amount'] }}</span>
                                     <span class="sr-only">{{ $movement['label'] }}</span>
                                 </span>
                             @elseif ($movement['direction'] === 'down')
-                                <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200" title="{{ $movement['label'] }}">
-                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                <span class="{{ $movementPillBaseClasses }} bg-red-100 text-red-700 ring-red-200" title="{{ $movement['label'] }}">
+                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
                                     </svg>
                                     <span>{{ $movement['amount'] }}</span>
                                     <span class="sr-only">{{ $movement['label'] }}</span>
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-300" title="{{ $movement['label'] }}">
-                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                <span class="{{ $movementPillBaseClasses }} bg-slate-200 text-slate-600 ring-slate-300" title="{{ $movement['label'] }}">
+                                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
                                     </svg>
+                                    <span aria-hidden="true" class="invisible">0</span>
                                     <span class="sr-only">{{ $movement['label'] }}</span>
                                 </span>
                             @endif
                         </div>
-                        <div class="flex items-center gap-4">
+                        <div class="flex items-start gap-4 pr-24">
                             @if ($aggregateByDealership)
                                 @php
                                     $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
                                 @endphp
                                 @if ($dealershipHref)
-                                    <a href="{{ $dealershipHref }}" class="flex items-center gap-4 rounded-2xl transition hover:opacity-90">
+                                    <a href="{{ $dealershipHref }}" class="flex min-w-0 items-start gap-4 rounded-2xl transition hover:opacity-90">
                                         @if ($entry->dealership_image_url)
                                             <img src="{{ $entry->dealership_image_url }}"
                                                 alt="Imagen de {{ $entry->dealership_name }}"
@@ -152,8 +155,8 @@
                                                 {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
                                             </div>
                                         @endif
-                                        <div>
-                                            <p class="text-xl font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-xl font-semibold leading-tight text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
                                             <p class="text-sm text-brand-secondary/60">
                                                 {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
                                             </p>
@@ -169,8 +172,8 @@
                                             {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
                                         </div>
                                     @endif
-                                    <div>
-                                        <p class="text-xl font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xl font-semibold leading-tight text-brand-secondary">{{ $entry->dealership_name }}</p>
                                         <p class="text-sm text-brand-secondary/60">
                                             {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
                                         </p>
@@ -178,12 +181,12 @@
                                 @endif
                             @elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
                                 <a href="{{ route('users.show', $entry->user) }}"
-                                    class="flex items-center gap-4 rounded-2xl transition hover:opacity-90">
+                                    class="flex min-w-0 items-start gap-4 rounded-2xl transition hover:opacity-90">
                                     <img src="{{ $entry->user->avatar_url }}"
                                         alt="Avatar de {{ $entry->user->name }}"
                                         class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
-                                    <div>
-                                        <p class="text-xl font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->user->name }}</p>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xl font-semibold leading-tight text-brand-secondary hover:text-brand-primary">{{ $entry->user->name }}</p>
                                         <p class="text-sm text-brand-secondary/60">{{ $entry->user->dealership ?: 'Sin delegación asignada' }}</p>
                                     </div>
                                 </a>
@@ -191,8 +194,8 @@
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
-                                <div>
-                                    <p class="text-xl font-semibold text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xl font-semibold leading-tight text-brand-secondary">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="text-sm text-brand-secondary/60">
                                         {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
                                     </p>
@@ -244,26 +247,27 @@
                                         <span>#{{ $entry->ranking_position }}</span>
                                     @endif
                                     @if ($movement['direction'] === 'up')
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200" title="{{ $movement['label'] }}">
-                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                        <span class="{{ $movementPillBaseClasses }} bg-emerald-100 text-emerald-800 ring-emerald-200" title="{{ $movement['label'] }}">
+                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
                                             </svg>
                                             <span>{{ $movement['amount'] }}</span>
                                             <span class="sr-only">{{ $movement['label'] }}</span>
                                         </span>
                                     @elseif ($movement['direction'] === 'down')
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200" title="{{ $movement['label'] }}">
-                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                        <span class="{{ $movementPillBaseClasses }} bg-red-100 text-red-700 ring-red-200" title="{{ $movement['label'] }}">
+                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
                                             </svg>
                                             <span>{{ $movement['amount'] }}</span>
                                             <span class="sr-only">{{ $movement['label'] }}</span>
                                         </span>
                                     @else
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-300" title="{{ $movement['label'] }}">
-                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                        <span class="{{ $movementPillBaseClasses }} bg-slate-200 text-slate-600 ring-slate-300" title="{{ $movement['label'] }}">
+                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
                                             </svg>
+                                            <span aria-hidden="true" class="invisible">0</span>
                                             <span class="sr-only">{{ $movement['label'] }}</span>
                                         </span>
                                     @endif
@@ -346,24 +350,25 @@
                                 <div class="flex items-center gap-3 text-sm font-semibold text-brand-secondary">
                                     <span>#{{ $entry->ranking_position }}</span>
                                     @if ($movement['direction'] === 'up')
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                        <span class="{{ $movementPillBaseClasses }} bg-emerald-100 text-emerald-800 ring-emerald-200">
+                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 18V6m0 0-5 5m5-5 5 5" />
                                             </svg>
                                             <span>{{ $movement['amount'] }}</span>
                                         </span>
                                     @elseif ($movement['direction'] === 'down')
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
-                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                        <span class="{{ $movementPillBaseClasses }} bg-red-100 text-red-700 ring-red-200">
+                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-5-5m5 5 5-5" />
                                             </svg>
                                             <span>{{ $movement['amount'] }}</span>
                                         </span>
                                     @else
-                                        <span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-300">
-                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                        <span class="{{ $movementPillBaseClasses }} bg-slate-200 text-slate-600 ring-slate-300">
+                                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="{{ $movementIconClasses }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 12h10" />
                                             </svg>
+                                            <span aria-hidden="true" class="invisible">0</span>
                                         </span>
                                     @endif
                                 </div>
