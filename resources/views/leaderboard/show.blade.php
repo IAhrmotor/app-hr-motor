@@ -173,7 +173,15 @@
                 }
 
                 event.preventDefault();
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const navbar = document.querySelector('nav.sticky');
+                const navbarHeight = navbar ? navbar.offsetHeight : 0;
+                const extraOffset = 24;
+                const targetTop = target.getBoundingClientRect().top + window.scrollY - navbarHeight - extraOffset;
+
+                window.scrollTo({
+                    top: Math.max(targetTop, 0),
+                    behavior: 'smooth',
+                });
             });
         });
     </script>
