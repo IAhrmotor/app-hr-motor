@@ -1,6 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $allSections = collect($managementSections ?? $adminSections ?? []);
+        $logs = collect($logSections ?? [])->when(
+            empty($logSections ?? []),
+            fn ($collection) => $collection->merge(
+                $allSections->filter(fn ($section) => str_contains($section['route'], 'logs'))
+            )
+        );
+        $management = collect($managementSections ?? [])->when(
+            empty($managementSections ?? []),
+            fn ($collection) => $collection->merge(
+                $allSections->reject(fn ($section) => str_contains($section['route'], 'logs'))
+            )
+        );
+    @endphp
+
     <section
         class="relative overflow-hidden"
         style="background-image: url('{{ asset('images/hero/hero-admin.jpg') }}'); background-size: cover; background-position: center;"
@@ -16,11 +32,11 @@
                 </span>
 
                 <h1 class="mt-3 text-2xl font-bold tracking-tight text-white md:text-3xl lg:text-4xl">
-                    Administración
+                    {{ html_entity_decode('Administraci&oacute;n') }}
                 </h1>
 
                 <p class="mt-3 max-w-2xl text-sm leading-6 text-white/85 md:text-base">
-                    Centraliza desde aquí los accesos administrativos del portal y entra rápidamente en cada área de gestión.
+                    {{ html_entity_decode('Centraliza desde aqu&iacute; los accesos administrativos del portal y entra r&aacute;pidamente en cada &aacute;rea de gesti&oacute;n.') }}
                 </p>
             </div>
         </div>
@@ -42,63 +58,127 @@
         <section class="rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
             <div class="max-w-3xl">
                 <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
-                    Gestión interna
+                    {{ html_entity_decode('Gesti&oacute;n interna') }}
                 </span>
 
                 <h2 class="mt-3 text-2xl font-semibold text-brand-secondary md:text-3xl">
-                    Herramientas de administración
+                    {{ html_entity_decode('Panel de administraci&oacute;n') }}
                 </h2>
 
                 <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                    Este bloque agrupa los accesos de gestión del portal.
+                    {{ html_entity_decode('Hemos separado las acciones operativas del portal de la parte de auditor&iacute;a para que todo quede m&aacute;s claro, ordenado y coherente.') }}
                 </p>
             </div>
 
-            <div class="mt-8 grid gap-6 md:grid-cols-2">
-                @foreach ($adminSections as $section)
-                    <a
-                        href="{{ route($section['route']) }}"
-                        class="group rounded-3xl border border-brand-secondary/10 bg-slate-50 p-8 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md"
-                    >
-                        <div class="flex h-full flex-col">
-                            <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
-                                Acceso directo
-                            </span>
+            <div class="mt-8 grid gap-6">
+                <section class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50 p-6 shadow-sm">
+                    <div class="max-w-2xl">
+                        <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
+                            Operativa
+                        </span>
 
-                            <h3 class="mt-3 text-2xl font-semibold text-brand-secondary">
-                                {{ $section['label'] }}
-                            </h3>
+                        <h3 class="mt-3 text-2xl font-semibold text-brand-secondary">
+                            {{ html_entity_decode('Herramientas de gesti&oacute;n') }}
+                        </h3>
 
-                            <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                                {{ $section['description'] }}
-                            </p>
+                        <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
+                            Accesos para crear, editar y mantener la estructura interna del portal.
+                        </p>
+                    </div>
 
-                            <span class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">
-                                Ir a la sección
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition group-hover:translate-x-1" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                                </svg>
-                            </span>
-                        </div>
-                    </a>
-                @endforeach
+                    <div class="mt-6 grid gap-5 md:grid-cols-2">
+                        @foreach ($management as $section)
+                            <a
+                                href="{{ route($section['route']) }}"
+                                class="group rounded-3xl border border-brand-secondary/10 bg-white p-7 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md"
+                            >
+                                <div class="flex h-full flex-col">
+                                    <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
+                                        {{ html_entity_decode('Gesti&oacute;n') }}
+                                    </span>
+
+                                    <h3 class="mt-3 text-2xl font-semibold text-brand-secondary">
+                                        {{ $section['label'] }}
+                                    </h3>
+
+                                    <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
+                                        {{ $section['description'] }}
+                                    </p>
+
+                                    <span class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">
+                                        {{ html_entity_decode('Ir a la secci&oacute;n') }}
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition group-hover:translate-x-1" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+
+                <section class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50 p-6 shadow-sm">
+                    <div class="max-w-2xl">
+                        <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary">
+                            {{ html_entity_decode('Auditor&iacute;a') }}
+                        </span>
+
+                        <h3 class="mt-3 text-2xl font-semibold text-brand-secondary">
+                            Logs y trazabilidad
+                        </h3>
+
+                        <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
+                            {{ html_entity_decode('Consulta el historial de cambios para entender qui&eacute;n hizo cada gesti&oacute;n y cu&aacute;ndo ocurri&oacute;.') }}
+                        </p>
+                    </div>
+
+                    <div class="mt-6 grid gap-5 md:grid-cols-2">
+                        @foreach ($logs as $section)
+                            <a
+                                href="{{ route($section['route']) }}"
+                                class="group rounded-3xl border border-brand-secondary/10 bg-white p-7 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md"
+                            >
+                                <div class="flex h-full flex-col">
+                                    <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
+                                        Log
+                                    </span>
+
+                                    <h3 class="mt-3 text-2xl font-semibold text-brand-secondary">
+                                        {{ $section['label'] }}
+                                    </h3>
+
+                                    <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
+                                        {{ str_contains($section['route'], 'dealership') ? 'Altas, cambios y bajas de delegaciones.' : 'Altas, cambios y bajas de usuarios.' }}
+                                    </p>
+
+                                    <span class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">
+                                        Ver historial
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition group-hover:translate-x-1" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
             </div>
         </section>
 
         <section class="mt-8 rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
             <div class="max-w-3xl">
                 <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
-                    Acciones rápidas
+                    {{ html_entity_decode('Acciones r&aacute;pidas') }}
                 </span>
 
                 <h2 class="mt-3 text-2xl font-semibold text-brand-secondary md:text-3xl">
-                    Sincronización rankings manual
+                    {{ html_entity_decode('Sincronizaci&oacute;n rankings manual') }}
                 </h2>
 
                 <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                    Lanza una sincronización inmediata para refrescar los rankings de ventas y compras sin esperar al
-                    siguiente ciclo automático.
+                    {{ html_entity_decode('Lanza una sincronizaci&oacute;n inmediata para refrescar los rankings de ventas y compras sin esperar al siguiente ciclo autom&aacute;tico.') }}
                 </p>
             </div>
 

@@ -52,7 +52,8 @@ class DealershipManagementTest extends TestCase
         $adminPageResponse
             ->assertOk()
             ->assertSee(route('users.index'), false)
-            ->assertSee(route('dealerships.index'), false);
+            ->assertSee(route('dealerships.index'), false)
+            ->assertSee(route('admin.dealership-logs.index'), false);
     }
 
     public function test_admin_can_create_dealership(): void
