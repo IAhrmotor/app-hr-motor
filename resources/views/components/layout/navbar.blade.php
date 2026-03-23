@@ -61,11 +61,12 @@
                     @if (in_array(auth()->user()->role, ['admin', 'gestor']))
                         @php
                             $isAdminActive = request()->routeIs('admin.index');
+                            $isAdminLogsActive = request()->routeIs('admin.logs.*');
                             $isUsersActive = request()->routeIs('users.*');
                             $isDealershipsActive = request()->routeIs('dealerships.*');
                         @endphp
                         <a href="{{ route('admin.index') }}"
-                            class="px-1 py-2 text-sm font-semibold transition {{ $isAdminActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
+                            class="px-1 py-2 text-sm font-semibold transition {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
                             Admin
                         </a>
                     @endif
@@ -195,11 +196,12 @@
                 @if (in_array(auth()->user()->role, ['admin', 'gestor']))
                     @php
                         $isAdminActive = request()->routeIs('admin.index');
+                        $isAdminLogsActive = request()->routeIs('admin.logs.*');
                         $isUsersActive = request()->routeIs('users.*');
                         $isDealershipsActive = request()->routeIs('dealerships.*');
                     @endphp
                     <a href="{{ route('admin.index') }}" @click="open = false"
-                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         Admin
                     </a>
                 @endif
