@@ -95,19 +95,19 @@
                         }
                         $medalStyles = match ($entry->ranking_position) {
                             1 => [
-                                'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_12px_0_0_rgba(217,167,34,0.24)]',
+                                'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_7px_0_0_rgba(217,167,34,0.24)]',
                                 'badge' => 'bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-300 text-amber-950',
                                 'ring' => 'ring-yellow-300/70',
                                 'accent' => 'text-amber-600',
                             ],
                             2 => [
-                                'card' => 'border-slate-300/80 bg-[linear-gradient(180deg,rgba(241,245,249,0.98),rgba(255,255,255,1))] shadow-[0_12px_0_0_rgba(100,116,139,0.22)]',
+                                'card' => 'border-slate-300/80 bg-[linear-gradient(180deg,rgba(241,245,249,0.98),rgba(255,255,255,1))] shadow-[0_7px_0_0_rgba(100,116,139,0.22)]',
                                 'badge' => 'border border-slate-300/80 bg-[linear-gradient(135deg,#64748b_0%,#e2e8f0_50%,#94a3b8_100%)] text-slate-900',
                                 'ring' => 'ring-slate-300/80',
                                 'accent' => 'text-slate-500',
                             ],
                             default => [
-                                'card' => 'border-orange-300/80 bg-[linear-gradient(180deg,rgba(255,237,213,0.98),rgba(255,255,255,1))] shadow-[0_12px_0_0_rgba(180,83,9,0.22)]',
+                                'card' => 'border-orange-300/80 bg-[linear-gradient(180deg,rgba(255,237,213,0.98),rgba(255,255,255,1))] shadow-[0_7px_0_0_rgba(180,83,9,0.22)]',
                                 'badge' => 'bg-gradient-to-r from-orange-700 via-amber-700 to-orange-300 text-white',
                                 'ring' => 'ring-orange-300/80',
                                 'accent' => 'text-orange-600',
