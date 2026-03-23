@@ -35,7 +35,7 @@ class DealershipManagementTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_admin_sees_admin_menu_with_users_and_dealerships_links(): void
+    public function test_admin_sees_admin_menu_and_admin_page_lists_sections(): void
     {
         $admin = User::factory()->create([
             'role' => 'admin',
@@ -45,9 +45,15 @@ class DealershipManagementTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Admin')
+            ->assertSee('Admin');
+
+        $adminPageResponse = $this->actingAs($admin)->get(route('admin.index'));
+
+        $adminPageResponse
+            ->assertOk()
             ->assertSee(route('users.index'), false)
-            ->assertSee(route('dealerships.index'), false);
+            ->assertSee(route('dealerships.index'), false)
+            ->assertSee(route('admin.dealership-logs.index'), false);
     }
 
     public function test_admin_can_create_dealership(): void

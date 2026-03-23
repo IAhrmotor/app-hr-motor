@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Dealership;
 use App\Models\User;
+use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,9 +12,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class UserController extends Controller
 {
+    protected const INVITATION_DELIVERY_FAILED = 'invitation_delivery_failed';
+
     public function index(Request $request)
     {
         $search = $request->query('search');
@@ -97,27 +101,41 @@ class UserController extends Controller
             ],
         ]);
 
-        $status = DB::transaction(function () use ($validated) {
-            $isCommercial = $validated['role'] === 'comercial';
-            $dealership = $isCommercial
-                ? Dealership::query()->find($validated['dealership_id'])
-                : null;
+        try {
+            [$user, $status] = DB::transaction(function () use ($validated) {
+                $isCommercial = $validated['role'] === 'comercial';
+                $dealership = $isCommercial
+                    ? Dealership::query()->find($validated['dealership_id'])
+                    : null;
 
-            $user = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'role' => $validated['role'],
-                'salesforce_user_id' => $isCommercial ? $validated['salesforce_user_id'] : null,
-                'dealership' => $dealership?->name,
-                'dealership_id' => $dealership?->id,
-                'password' => Hash::make(Str::password(32)),
-                'is_active' => false,
-                'must_change_password' => true,
-                'activated_at' => null,
-            ]);
+                $user = User::create([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'role' => $validated['role'],
+                    'salesforce_user_id' => $isCommercial ? $validated['salesforce_user_id'] : null,
+                    'dealership' => $dealership?->name,
+                    'dealership_id' => $dealership?->id,
+                    'password' => Hash::make(Str::password(32)),
+                    'is_active' => false,
+                    'must_change_password' => true,
+                    'activated_at' => null,
+                ]);
 
-            return $this->sendInvitationLink($user);
-        });
+                return [$user, $this->sendInvitationLink($user)];
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()
+                ->withInput()
+                ->with('error', $this->invitationErrorMessage(self::INVITATION_DELIVERY_FAILED));
+        }
+
+        $this->storeActivityLog(
+            actor: $authUser,
+            targetUser: $user,
+            action: UserActivityLog::ACTION_CREATED,
+        );
 
         if ($status !== Password::RESET_LINK_SENT) {
             return redirect()
@@ -127,14 +145,22 @@ class UserController extends Controller
 
         return redirect()
             ->route('users.index')
-            ->with('success', 'Usuario creado correctamente. Le hemos enviado un correo para que establezca su contraseña y active la cuenta.');
+            ->with('success', 'Usuario creado correctamente. Le hemos enviado un correo para que establezca su contrasena y active la cuenta.');
     }
 
     public function destroy(User $user)
     {
-        if ($response = $this->ensureCanManageListedUser(request()->user(), $user, 'eliminar', preventSelf: true)) {
+        $authUser = request()->user();
+
+        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'eliminar', preventSelf: true)) {
             return $response;
         }
+
+        $this->storeActivityLog(
+            actor: $authUser,
+            targetUser: $user,
+            action: UserActivityLog::ACTION_DELETED,
+        );
 
         $user->delete();
 
@@ -195,6 +221,14 @@ class UserController extends Controller
             ? Dealership::query()->find($validated['dealership_id'])
             : null;
 
+        $changes = $this->buildChangeSet($user, [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $authUser->role === 'admin' ? $validated['role'] : 'comercial',
+            'salesforce_user_id' => $validated['role'] === 'comercial' ? $validated['salesforce_user_id'] : null,
+            'dealership' => $dealership?->name,
+        ]);
+
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->role = $authUser->role === 'admin' ? $validated['role'] : 'comercial';
@@ -206,9 +240,22 @@ class UserController extends Controller
 
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
+            $changes['Contrasena'] = [
+                'from' => 'Oculta',
+                'to' => 'Actualizada',
+            ];
         }
 
         $user->save();
+
+        if ($changes !== []) {
+            $this->storeActivityLog(
+                actor: $authUser,
+                targetUser: $user,
+                action: UserActivityLog::ACTION_UPDATED,
+                changes: $changes,
+            );
+        }
 
         return redirect()
             ->route('users.index')
@@ -217,17 +264,25 @@ class UserController extends Controller
 
     public function resendInvitation(Request $request, User $user)
     {
-        if ($response = $this->ensureCanManageListedUser($request->user(), $user, 'reenviar la invitación', preventSelf: true)) {
+        if ($response = $this->ensureCanManageListedUser($request->user(), $user, 'reenviar la invitacion', preventSelf: true)) {
             return $response;
         }
 
         if ($user->is_active && ! $user->must_change_password) {
             return redirect()
                 ->route('users.index')
-                ->with('error', 'Solo puedes reenviar la invitación a usuarios pendientes de activación.');
+                ->with('error', 'Solo puedes reenviar la invitacion a usuarios pendientes de activacion.');
         }
 
-        $status = $this->sendInvitationLink($user);
+        try {
+            $status = $this->sendInvitationLink($user);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('users.index')
+                ->with('error', $this->invitationErrorMessage(self::INVITATION_DELIVERY_FAILED));
+        }
 
         if ($status !== Password::RESET_LINK_SENT) {
             return redirect()
@@ -237,7 +292,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('users.index')
-            ->with('success', 'Correo de activación reenviado correctamente.');
+            ->with('success', 'Correo de activacion reenviado correctamente.');
     }
 
     protected function ensureCanManageListedUser(User $authUser, User $targetUser, string $action, bool $preventSelf = false): ?RedirectResponse
@@ -266,10 +321,52 @@ class UserController extends Controller
 
     protected function invitationErrorMessage(string $status): string
     {
+        if ($status === self::INVITATION_DELIVERY_FAILED) {
+            return 'No se ha podido enviar el correo de activacion. Revisa que el email sea correcto y que el dominio exista.';
+        }
+
         return match ($status) {
-            Password::RESET_THROTTLED => 'Espera un momento antes de volver a enviar el correo de activación.',
-            Password::INVALID_USER => 'No se ha encontrado un usuario válido para enviar el correo de activación.',
-            default => 'No se ha podido enviar el correo de activación. Inténtalo de nuevo en unos minutos.',
+            Password::RESET_THROTTLED => 'Espera un momento antes de volver a enviar el correo de activacion.',
+            Password::INVALID_USER => 'No se ha encontrado un usuario valido para enviar el correo de activacion.',
+            default => 'No se ha podido enviar el correo de activacion. Intentalo de nuevo en unos minutos.',
         };
+    }
+
+    protected function storeActivityLog(User $actor, User $targetUser, string $action, array $changes = []): void
+    {
+        UserActivityLog::query()->create([
+            'action' => $action,
+            'actor_user_id' => $actor->id,
+            'actor_name' => $actor->name,
+            'actor_email' => $actor->email,
+            'target_user_id' => $targetUser->id,
+            'target_name' => $targetUser->name,
+            'target_email' => $targetUser->email,
+            'target_role' => $targetUser->role,
+            'target_dealership' => $targetUser->dealership,
+            'changes' => $changes === [] ? null : $changes,
+            'created_at' => now(),
+        ]);
+    }
+
+    protected function buildChangeSet(User $user, array $newValues): array
+    {
+        $labels = [
+            'name' => 'Nombre',
+            'email' => 'Email',
+            'role' => 'Rol',
+            'salesforce_user_id' => 'ID Salesforce',
+            'dealership' => 'Delegacion',
+        ];
+
+        return collect($newValues)
+            ->filter(fn ($value, $field) => $user->{$field} !== $value)
+            ->mapWithKeys(fn ($value, $field) => [
+                $labels[$field] ?? $field => [
+                    'from' => $user->{$field},
+                    'to' => $value,
+                ],
+            ])
+            ->all();
     }
 }

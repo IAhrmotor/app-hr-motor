@@ -8,6 +8,8 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
+use RuntimeException;
 use Tests\TestCase;
 
 class UserInvitationTest extends TestCase
@@ -29,7 +31,7 @@ class UserInvitationTest extends TestCase
             'role' => 'admin',
         ]);
         $dealership = Dealership::factory()->create([
-            'name' => 'Torrejón',
+            'name' => 'Torrejon',
         ]);
 
         $response = $this->actingAs($admin)->post(route('users.store'), [
@@ -51,7 +53,7 @@ class UserInvitationTest extends TestCase
         $this->assertTrue($createdUser->must_change_password);
         $this->assertNull($createdUser->activated_at);
         $this->assertSame('SF-USER-001', $createdUser->salesforce_user_id);
-        $this->assertSame('Torrejón', $createdUser->dealership);
+        $this->assertSame('Torrejon', $createdUser->dealership);
         $this->assertSame($dealership->id, $createdUser->dealership_id);
         $this->assertSame(User::DEFAULT_AVATAR_PATH, $createdUser->avatar_path);
 
@@ -76,7 +78,7 @@ class UserInvitationTest extends TestCase
 
         $response
             ->assertRedirect(route('users.index'))
-            ->assertSessionHas('success', 'Correo de activación reenviado correctamente.');
+            ->assertSessionHas('success', 'Correo de activacion reenviado correctamente.');
 
         Notification::assertSentTo($pendingUser, ResetPassword::class);
     }
@@ -98,9 +100,59 @@ class UserInvitationTest extends TestCase
 
         $response
             ->assertRedirect(route('users.index'))
-            ->assertSessionHas('error', 'Solo puedes reenviar la invitación a usuarios pendientes de activación.');
+            ->assertSessionHas('error', 'Solo puedes reenviar la invitacion a usuarios pendientes de activacion.');
 
         Notification::assertNothingSent();
+    }
+
+    public function test_admin_sees_a_controlled_error_when_invitation_email_cannot_be_sent_on_user_creation(): void
+    {
+        Password::shouldReceive('broker->sendResetLink')
+            ->once()
+            ->andThrow(new RuntimeException('SMTP recipient rejected'));
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $response = $this->from(route('users.create'))
+            ->actingAs($admin)
+            ->post(route('users.store'), [
+                'name' => 'Usuario Fallido',
+                'email' => 'test@tesstgsetgeatghaethaethbt.com',
+                'role' => 'gestor',
+            ]);
+
+        $response
+            ->assertRedirect(route('users.create'))
+            ->assertSessionHas('error', 'No se ha podido enviar el correo de activacion. Revisa que el email sea correcto y que el dominio exista.');
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'test@tesstgsetgeatghaethaethbt.com',
+        ]);
+    }
+
+    public function test_admin_sees_a_controlled_error_when_resending_invitation_email_fails(): void
+    {
+        Password::shouldReceive('broker->sendResetLink')
+            ->once()
+            ->andThrow(new RuntimeException('SMTP recipient rejected'));
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $pendingUser = User::factory()->create([
+            'is_active' => false,
+            'must_change_password' => true,
+            'activated_at' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('users.resend-invitation', $pendingUser));
+
+        $response
+            ->assertRedirect(route('users.index'))
+            ->assertSessionHas('error', 'No se ha podido enviar el correo de activacion. Revisa que el email sea correcto y que el dominio exista.');
     }
 
     public function test_users_index_displays_the_user_avatar_next_to_the_name(): void
@@ -142,7 +194,7 @@ class UserInvitationTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Delegación')
+            ->assertSee('Delegaci')
             ->assertSee('Pamplona')
             ->assertSee('SF-PAM-001');
     }

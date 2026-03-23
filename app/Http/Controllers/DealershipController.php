@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dealership;
+use App\Models\DealershipActivityLog;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -66,9 +68,15 @@ class DealershipController extends Controller
         $dealership->image_path = $this->storeImage($request, $dealership);
         $dealership->save();
 
+        $this->storeActivityLog(
+            actor: $request->user(),
+            dealership: $dealership,
+            action: DealershipActivityLog::ACTION_CREATED,
+        );
+
         return redirect()
             ->route('dealerships.index')
-            ->with('success', 'Delegación creada correctamente.');
+            ->with('success', 'Delegacion creada correctamente.');
     }
 
     public function show(Dealership $dealership): View
@@ -94,6 +102,14 @@ class DealershipController extends Controller
             'reviews_url' => ['required', 'url', 'max:255'],
         ]);
 
+        $changes = $this->buildChangeSet($dealership, [
+            'name' => $validated['name'],
+            'salesforce_id' => $validated['salesforce_id'],
+            'phone' => $validated['phone'],
+            'google_maps_url' => $validated['google_maps_url'],
+            'reviews_url' => $validated['reviews_url'],
+        ]);
+
         $dealership->fill([
             'name' => $validated['name'],
             'salesforce_id' => $validated['salesforce_id'],
@@ -104,6 +120,10 @@ class DealershipController extends Controller
 
         if ($request->hasFile('image')) {
             $dealership->image_path = $this->storeImage($request, $dealership);
+            $changes['Imagen'] = [
+                'from' => 'Anterior',
+                'to' => 'Actualizada',
+            ];
         }
 
         $dealership->save();
@@ -112,9 +132,18 @@ class DealershipController extends Controller
             'dealership' => $dealership->name,
         ]);
 
+        if ($changes !== []) {
+            $this->storeActivityLog(
+                actor: $request->user(),
+                dealership: $dealership,
+                action: DealershipActivityLog::ACTION_UPDATED,
+                changes: $changes,
+            );
+        }
+
         return redirect()
             ->route('dealerships.index')
-            ->with('success', 'Delegación actualizada correctamente.');
+            ->with('success', 'Delegacion actualizada correctamente.');
     }
 
     public function destroy(Dealership $dealership): RedirectResponse
@@ -122,15 +151,21 @@ class DealershipController extends Controller
         if ($dealership->users()->exists()) {
             return redirect()
                 ->route('dealerships.index')
-                ->with('error', 'No puedes eliminar una delegación con usuarios asignados.');
+                ->with('error', 'No puedes eliminar una delegacion con usuarios asignados.');
         }
+
+        $this->storeActivityLog(
+            actor: request()->user(),
+            dealership: $dealership,
+            action: DealershipActivityLog::ACTION_DELETED,
+        );
 
         $this->deleteImage($dealership);
         $dealership->delete();
 
         return redirect()
             ->route('dealerships.index')
-            ->with('success', 'Delegación eliminada correctamente.');
+            ->with('success', 'Delegacion eliminada correctamente.');
     }
 
     private function storeImage(Request $request, Dealership $dealership): string
@@ -159,5 +194,42 @@ class DealershipController extends Controller
         if (File::exists($path)) {
             File::delete($path);
         }
+    }
+
+    private function storeActivityLog(User $actor, Dealership $dealership, string $action, array $changes = []): void
+    {
+        DealershipActivityLog::query()->create([
+            'action' => $action,
+            'actor_user_id' => $actor->id,
+            'actor_name' => $actor->name,
+            'actor_email' => $actor->email,
+            'target_dealership_id' => $dealership->id,
+            'target_name' => $dealership->name,
+            'target_salesforce_id' => $dealership->salesforce_id,
+            'target_phone' => $dealership->phone,
+            'changes' => $changes === [] ? null : $changes,
+            'created_at' => now(),
+        ]);
+    }
+
+    private function buildChangeSet(Dealership $dealership, array $newValues): array
+    {
+        $labels = [
+            'name' => 'Nombre',
+            'salesforce_id' => 'ID Salesforce',
+            'phone' => 'Telefono',
+            'google_maps_url' => 'Google Maps',
+            'reviews_url' => 'Resenas',
+        ];
+
+        return collect($newValues)
+            ->filter(fn ($value, $field) => $dealership->{$field} !== $value)
+            ->mapWithKeys(fn ($value, $field) => [
+                $labels[$field] ?? $field => [
+                    'from' => $dealership->{$field},
+                    'to' => $value,
+                ],
+            ])
+            ->all();
     }
 }

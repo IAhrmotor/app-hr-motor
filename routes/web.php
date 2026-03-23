@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AdminDealershipLogController;
+use App\Http\Controllers\AdminLogController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ProfileController;
@@ -201,6 +203,16 @@ Route::middleware('auth')->group(function () {
                     'description' => 'Consulta, crea y organiza las delegaciones disponibles.',
                     'route' => 'dealerships.index',
                 ],
+                [
+                    'label' => 'Logs de usuarios',
+                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de usuarios.',
+                    'route' => 'admin.logs.index',
+                ],
+                [
+                    'label' => 'Logs de delegaciones',
+                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de delegaciones.',
+                    'route' => 'admin.dealership-logs.index',
+                ],
             ];
 
             return view('admin.index', compact('adminSections'));
@@ -226,5 +238,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/delegaciones/{dealership}/editar', [DealershipController::class, 'edit'])->name('dealerships.edit');
         Route::put('/delegaciones/{dealership}', [DealershipController::class, 'update'])->name('dealerships.update');
         Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])->name('dealerships.destroy');
+        Route::redirect('/admin/logs', '/admin/logs/usuarios');
+        Route::get('/admin/logs/usuarios', [AdminLogController::class, 'index'])->name('admin.logs.index');
+        Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');
+        Route::get('/admin/logs/delegaciones', [AdminDealershipLogController::class, 'index'])->name('admin.dealership-logs.index');
+        Route::get('/admin/logs/delegaciones/descargar', [AdminDealershipLogController::class, 'export'])->name('admin.dealership-logs.export');
     });
 });
