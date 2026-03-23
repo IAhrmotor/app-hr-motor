@@ -10,14 +10,26 @@
 
 <section id="admin-logs-view" class="rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
     <div class="flex flex-col gap-4">
-        <div>
-            <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
-                Historial
-            </span>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="max-w-3xl">
+                <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">
+                    Historial
+                </span>
 
-            <h2 class="mt-3 text-2xl font-semibold text-brand-secondary">
-                Registro de actividad
-            </h2>
+                <h1 class="mt-3 text-3xl font-semibold text-brand-secondary md:text-4xl">
+                    Logs de delegaciones
+                </h1>
+
+                <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
+                    Aqui puedes revisar las altas, ediciones y eliminaciones de delegaciones con su fecha, hora y la persona que realizo la gestion.
+                </p>
+            </div>
+
+            <a href="{{ route('admin.dealership-logs.export', request()->only(['action', 'date_from', 'date_to', 'actor'])) }}"
+                data-logs-export-link
+                class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                Descargar CSV
+            </a>
         </div>
 
         <form method="GET" action="{{ route('admin.dealership-logs.index') }}" data-logs-filter-form
