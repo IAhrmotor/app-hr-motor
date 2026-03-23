@@ -218,19 +218,19 @@
                             $movement = $homeLeaderboardMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                             $medalStyles = match ($entry->ranking_position) {
                                 1 => [
-                                    'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(217,167,34,0.18)]',
+                                    'card' => 'border-yellow-300/80 bg-[linear-gradient(180deg,rgba(255,248,214,0.98),rgba(255,255,255,1))] shadow-[0_12px_28px_rgba(217,167,34,0.18),0_28px_56px_rgba(217,167,34,0.16)]',
                                     'badge' => 'bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-300 text-amber-950',
                                     'ring' => 'ring-yellow-300/70',
                                     'accent' => 'text-amber-600',
                                 ],
                                 2 => [
-                                    'card' => 'border-slate-300/80 bg-[linear-gradient(180deg,rgba(241,245,249,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(100,116,139,0.15)]',
+                                    'card' => 'border-slate-300/80 bg-[linear-gradient(180deg,rgba(241,245,249,0.98),rgba(255,255,255,1))] shadow-[0_12px_28px_rgba(100,116,139,0.16),0_28px_56px_rgba(100,116,139,0.14)]',
                                     'badge' => 'border border-slate-300/80 bg-[linear-gradient(135deg,#64748b_0%,#e2e8f0_50%,#94a3b8_100%)] text-slate-900',
                                     'ring' => 'ring-slate-300/80',
                                     'accent' => 'text-slate-500',
                                 ],
                                 default => [
-                                    'card' => 'border-orange-300/80 bg-[linear-gradient(180deg,rgba(255,237,213,0.98),rgba(255,255,255,1))] shadow-[0_20px_40px_rgba(180,83,9,0.14)]',
+                                    'card' => 'border-orange-300/80 bg-[linear-gradient(180deg,rgba(255,237,213,0.98),rgba(255,255,255,1))] shadow-[0_12px_28px_rgba(180,83,9,0.16),0_28px_56px_rgba(180,83,9,0.14)]',
                                     'badge' => 'bg-gradient-to-r from-orange-700 via-amber-700 to-orange-300 text-white',
                                     'ring' => 'ring-orange-300/80',
                                     'accent' => 'text-orange-600',
@@ -240,9 +240,9 @@
 
                         @if ($canOpenProfile)
                             <a href="{{ route('users.show', $entry->user) }}"
-                                class="group block overflow-hidden rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
+                                class="group block h-full overflow-hidden rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
                         @endif
-                        <article class="relative overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }} {{ $canOpenProfile ? 'hover:shadow-[0_24px_44px_rgba(15,23,42,0.14)]' : '' }}">
+                        <article class="relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }} {{ $canOpenProfile ? 'hover:shadow-[0_18px_32px_rgba(15,23,42,0.12),0_32px_60px_rgba(15,23,42,0.14)]' : '' }}">
                             <div class="absolute right-4 top-4 flex items-center gap-2">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
                                     #{{ $entry->ranking_position }}
@@ -273,7 +273,7 @@
                                     </span>
                                 @endif
                             </div>
-                            <div class="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24">
+                            <div class="grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24">
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
