@@ -6,6 +6,8 @@ use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
+use App\Models\VehicleLeaderboardDailySnapshot;
+use App\Models\VehicleLeaderboardEntry;
 use App\Services\LeaderboardTrendService;
 use App\Services\SalesforceLeaderboardService;
 use Illuminate\Database\Eloquent\Model;
@@ -90,6 +92,54 @@ class LeaderboardController extends Controller
             ],
             leaderboardTablesReady: $leaderboardTablesReady
         );
+    }
+
+    public function vehicles(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
+    {
+        $leaderboardTablesReady = Schema::hasTable('vehicle_leaderboard_entries')
+            && Schema::hasTable('vehicle_leaderboard_daily_snapshots')
+            && Schema::hasTable('salesforce_connections');
+
+        $salesforceConfigReady = filled(config('services.salesforce.client_id'))
+            && filled(config('services.salesforce.client_secret'))
+            && filled(config('services.salesforce.redirect_uri'));
+
+        $emptyDescription = ! $leaderboardTablesReady
+            ? 'Ejecuta primero las migraciones para activar el almacenamiento del ranking.'
+            : ($service->getConnection()
+                ? 'Ejecuta una sincronizacion para llenar el ranking.'
+                : ($salesforceConfigReady
+                    ? 'Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.'
+                    : 'Completa la configuracion de Salesforce y despues autoriza la conexion.'));
+
+        return view('leaderboard.vehicles', [
+            'connection' => $service->getConnection(),
+            'salesforceConfigReady' => $salesforceConfigReady,
+            'leaderboardTablesReady' => $leaderboardTablesReady,
+            'emptyDescription' => $emptyDescription,
+            'hotLeaderboard' => $this->buildVehicleLeaderboardViewData($request, $trendService, [
+                'temperature' => 'hot',
+                'title' => 'Coches calientes',
+                'description' => 'Los vehiculos disponibles y en garantia que concentran mas interes comercial ahora mismo.',
+                'search_param' => 'hot_search',
+                'page_param' => 'hot_page',
+                'route_name' => 'leaderboard.vehicles',
+                'theme' => 'hot',
+                'empty_title' => 'Aun no hay coches calientes',
+                'search_placeholder' => 'Buscar coche caliente',
+            ]),
+            'coldLeaderboard' => $this->buildVehicleLeaderboardViewData($request, $trendService, [
+                'temperature' => 'cold',
+                'title' => 'Coches frios',
+                'description' => 'Los vehiculos disponibles y en garantia con menos leads asociados en el ranking actual.',
+                'search_param' => 'cold_search',
+                'page_param' => 'cold_page',
+                'route_name' => 'leaderboard.vehicles',
+                'theme' => 'cold',
+                'empty_title' => 'Aun no hay coches frios',
+                'search_placeholder' => 'Buscar coche frio',
+            ]),
+        ]);
     }
 
     private function renderPage(
@@ -266,6 +316,73 @@ class LeaderboardController extends Controller
             'searchParam' => 'dealership_search',
             'pageParam' => 'dealership_page',
             'routeName' => $config['route_name'],
+        ];
+    }
+
+    private function buildVehicleLeaderboardViewData(Request $request, LeaderboardTrendService $trendService, array $config): array
+    {
+        $search = trim((string) $request->query($config['search_param'], ''));
+        $entries = new LengthAwarePaginator(
+            [],
+            0,
+            10,
+            1,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => $config['page_param'],
+            ]
+        );
+        $entryItems = new Collection();
+        $topEntries = new Collection();
+        $hasLeaderboardData = false;
+
+        if (Schema::hasTable('vehicle_leaderboard_entries')) {
+            $allEntries = VehicleLeaderboardEntry::query()
+                ->where('temperature', $config['temperature'])
+                ->orderBy('ranking_position')
+                ->get();
+
+            $topEntries = $allEntries->take(3)->values();
+
+            $entriesQuery = VehicleLeaderboardEntry::query()
+                ->where('temperature', $config['temperature'])
+                ->orderBy('ranking_position');
+
+            if ($search !== '') {
+                $entriesQuery->where('vehicle_name', 'like', "%{$search}%");
+            }
+
+            $entries = $entriesQuery
+                ->paginate(10, ['*'], $config['page_param'])
+                ->withQueryString();
+            $entryItems = collect($entries->items());
+            $hasLeaderboardData = $allEntries->isNotEmpty();
+        }
+
+        return [
+            'title' => $config['title'],
+            'description' => $config['description'],
+            'theme' => $config['theme'],
+            'entries' => $entries,
+            'entryItems' => $entryItems,
+            'topEntries' => $topEntries,
+            'entryMovements' => $trendService->buildMovementMap(
+                $entryItems,
+                VehicleLeaderboardDailySnapshot::class,
+                'vehicle_leaderboard_daily_snapshots'
+            ),
+            'topEntryMovements' => $trendService->buildMovementMap(
+                $topEntries,
+                VehicleLeaderboardDailySnapshot::class,
+                'vehicle_leaderboard_daily_snapshots'
+            ),
+            'search' => $search,
+            'hasLeaderboardData' => $hasLeaderboardData,
+            'searchParam' => $config['search_param'],
+            'pageParam' => $config['page_param'],
+            'routeName' => $config['route_name'],
+            'emptyTitle' => $config['empty_title'],
+            'searchPlaceholder' => $config['search_placeholder'],
         ];
     }
 

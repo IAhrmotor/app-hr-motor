@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Services\PurchaseLeaderboardService;
 use App\Services\SalesforceLeaderboardService;
+use App\Services\VehicleLeaderboardService;
 use Throwable;
 
 class SalesforceLeaderboardSyncController extends Controller
 {
-    public function __invoke(SalesforceLeaderboardService $service, PurchaseLeaderboardService $purchaseService)
+    public function __invoke(
+        SalesforceLeaderboardService $service,
+        PurchaseLeaderboardService $purchaseService,
+        VehicleLeaderboardService $vehicleService
+    )
     {
         $redirect = redirect()->back();
 
@@ -20,6 +25,7 @@ class SalesforceLeaderboardSyncController extends Controller
         try {
             $service->sync();
             $purchaseService->sync();
+            $vehicleService->sync();
         } catch (Throwable $exception) {
             report($exception);
 
@@ -28,6 +34,6 @@ class SalesforceLeaderboardSyncController extends Controller
         }
 
         return $redirect
-            ->with('success', 'Rankings de ventas y compras actualizados correctamente.');
+            ->with('success', 'Rankings de ventas, compras y coches actualizados correctamente.');
     }
 }

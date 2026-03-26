@@ -8,6 +8,8 @@ use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
+use App\Models\VehicleLeaderboardDailySnapshot;
+use App\Models\VehicleLeaderboardEntry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -52,6 +54,19 @@ class SalesforceLeaderboardTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Ranking de compras');
+    }
+
+    public function test_authenticated_user_can_open_vehicle_leaderboard_page(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('leaderboard.vehicles'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Ranking de coches calientes y frios')
+            ->assertSee('Coches calientes')
+            ->assertSee('Coches frios');
     }
 
     public function test_sales_leaderboard_shows_dealership_instead_of_salesforce_id(): void
@@ -252,6 +267,14 @@ class SalesforceLeaderboardTest extends TestCase
             'services.salesforce.purchase_leaderboard_soql',
             'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
         );
+        config()->set(
+            'services.salesforce.vehicle_hot_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) DESC'
+        );
+        config()->set(
+            'services.salesforce.vehicle_cold_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) ASC'
+        );
 
         $admin = User::factory()->create([
             'role' => 'admin',
@@ -272,20 +295,63 @@ class SalesforceLeaderboardTest extends TestCase
                     'token_type' => 'Bearer',
                     'scope' => 'api refresh_token',
                 ], 200),
-            'https://example.my.salesforce.com/*' => Http::response([
-                'records' => [
-                    [
-                        'ownerId' => '005xx0000000001AAA',
-                        'ownerName' => 'Laura Ventas',
-                        'totalSales' => 25000.75,
+            'https://example.my.salesforce.com/*' => Http::sequence()
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => '005xx0000000001AAA',
+                            'ownerName' => 'Laura Ventas',
+                            'totalSales' => 25000.75,
+                        ],
+                        [
+                            'ownerId' => '005xx0000000002AAA',
+                            'ownerName' => 'Carlos Cierre',
+                            'totalSales' => 18000,
+                        ],
                     ],
-                    [
-                        'ownerId' => '005xx0000000002AAA',
-                        'ownerName' => 'Carlos Cierre',
-                        'totalSales' => 18000,
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => '005xx0000000001AAA',
+                            'ownerName' => 'Laura Ventas',
+                            'totalPurchases' => 4,
+                        ],
+                        [
+                            'ownerId' => '005xx0000000002AAA',
+                            'ownerName' => 'Carlos Cierre',
+                            'totalPurchases' => 2,
+                        ],
                     ],
-                ],
-            ], 200),
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000001AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Audi A3'],
+                            'totalLeads' => 12,
+                        ],
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000002AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Cupra Formentor'],
+                            'totalLeads' => 8,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000003AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Seat Leon'],
+                            'totalLeads' => 1,
+                        ],
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000004AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Volkswagen T-Cross'],
+                            'totalLeads' => 2,
+                        ],
+                    ],
+                ], 200),
         ]);
 
         $response = $this
@@ -329,7 +395,7 @@ class SalesforceLeaderboardTest extends TestCase
             'user_id' => $commercial->id,
             'salesforce_user_id' => '005xx0000000001AAA',
             'seller_name' => 'Laura Ventas',
-            'total_purchases' => 25000.75,
+            'total_purchases' => 4,
         ]);
 
         $this->assertDatabaseHas('purchase_leaderboard_daily_snapshots', [
@@ -337,6 +403,83 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'salesforce_user_id' => '005xx0000000001AAA',
         ]);
+
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'hot',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'a0Axx0000000001AAA',
+            'vehicle_name' => 'Audi A3',
+            'total_leads' => 12,
+        ]);
+
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'cold',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'a0Axx0000000003AAA',
+            'vehicle_name' => 'Seat Leon',
+            'total_leads' => 1,
+        ]);
+
+        $this->assertDatabaseHas('vehicle_leaderboard_daily_snapshots', [
+            'snapshot_date' => now()->toDateString(),
+            'temperature' => 'hot',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'a0Axx0000000001AAA',
+        ]);
+    }
+
+    public function test_vehicle_leaderboard_shows_hot_and_cold_rankings(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        VehicleLeaderboardEntry::query()->create([
+            'temperature' => 'hot',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'VEH-HOT-1',
+            'vehicle_name' => 'BMW X1',
+            'total_leads' => 9,
+            'synced_at' => now(),
+        ]);
+
+        VehicleLeaderboardEntry::query()->create([
+            'temperature' => 'cold',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'VEH-COLD-1',
+            'vehicle_name' => 'Ford Puma',
+            'total_leads' => 1,
+            'synced_at' => now(),
+        ]);
+
+        VehicleLeaderboardDailySnapshot::query()->create([
+            'snapshot_date' => now()->subDay()->toDateString(),
+            'temperature' => 'hot',
+            'ranking_position' => 2,
+            'vehicle_salesforce_id' => 'VEH-HOT-1',
+            'vehicle_name' => 'BMW X1',
+            'total_leads' => 8,
+            'captured_at' => now()->subDay(),
+        ]);
+
+        VehicleLeaderboardDailySnapshot::query()->create([
+            'snapshot_date' => now()->subDay()->toDateString(),
+            'temperature' => 'cold',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'VEH-COLD-1',
+            'vehicle_name' => 'Ford Puma',
+            'total_leads' => 1,
+            'captured_at' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.vehicles'));
+
+        $response
+            ->assertOk()
+            ->assertSee('BMW X1')
+            ->assertSee('Ford Puma')
+            ->assertSee('Caja caliente')
+            ->assertSee('Caja fria');
     }
 
     public function test_leaderboard_shows_rank_movement_against_previous_day(): void

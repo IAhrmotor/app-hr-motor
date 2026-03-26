@@ -1,0 +1,256 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\SalesforceConnection;
+use App\Models\VehicleLeaderboardDailySnapshot;
+use App\Models\VehicleLeaderboardEntry;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
+use RuntimeException;
+
+class VehicleLeaderboardService
+{
+    private const PROVIDER = 'salesforce';
+
+    private const API_VERSION = 'v61.0';
+
+    public function getConnection(): ?SalesforceConnection
+    {
+        if (! Schema::hasTable('salesforce_connections')) {
+            return null;
+        }
+
+        return SalesforceConnection::query()
+            ->where('provider', self::PROVIDER)
+            ->first();
+    }
+
+    public function sync(): Collection
+    {
+        $this->ensureRequiredTablesExist();
+
+        $connection = $this->getConnection();
+
+        if (! $connection) {
+            throw new RuntimeException('No hay ninguna conexion de Salesforce configurada.');
+        }
+
+        $syncedAt = now();
+
+        $temperatureQueries = [
+            'hot' => config('services.salesforce.vehicle_hot_leaderboard_soql'),
+            'cold' => config('services.salesforce.vehicle_cold_leaderboard_soql'),
+        ];
+
+        $entriesByTemperature = collect($temperatureQueries)->mapWithKeys(
+            fn (?string $query, string $temperature): array => [
+                $temperature => $this->mapEntries(
+                    $this->runLeaderboardQuery($connection, (string) $query),
+                    $temperature,
+                    $syncedAt
+                ),
+            ]
+        );
+
+        DB::transaction(function () use ($entriesByTemperature, $connection, $syncedAt): void {
+            VehicleLeaderboardEntry::query()->delete();
+
+            foreach ($entriesByTemperature as $entries) {
+                if ($entries->isNotEmpty()) {
+                    VehicleLeaderboardEntry::query()->insert($entries->all());
+                }
+            }
+
+            VehicleLeaderboardDailySnapshot::query()
+                ->whereDate('snapshot_date', $syncedAt->toDateString())
+                ->delete();
+
+            foreach ($entriesByTemperature as $entries) {
+                if ($entries->isEmpty()) {
+                    continue;
+                }
+
+                VehicleLeaderboardDailySnapshot::query()->insert(
+                    $entries->map(fn (array $entry): array => [
+                        'snapshot_date' => $syncedAt->toDateString(),
+                        'temperature' => $entry['temperature'],
+                        'ranking_position' => $entry['ranking_position'],
+                        'vehicle_salesforce_id' => $entry['vehicle_salesforce_id'],
+                        'vehicle_name' => $entry['vehicle_name'],
+                        'total_leads' => $entry['total_leads'],
+                        'captured_at' => $syncedAt,
+                        'created_at' => $syncedAt,
+                        'updated_at' => $syncedAt,
+                    ])->all()
+                );
+            }
+
+            $connection->forceFill([
+                'last_synced_at' => $syncedAt,
+            ])->save();
+        });
+
+        return VehicleLeaderboardEntry::query()
+            ->orderBy('temperature')
+            ->orderBy('ranking_position')
+            ->get();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function runLeaderboardQuery(SalesforceConnection $connection, string $query): array
+    {
+        $records = [];
+        $nextUrl = sprintf(
+            '%s/services/data/%s/query',
+            rtrim($connection->instance_url, '/'),
+            self::API_VERSION
+        );
+
+        do {
+            $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($nextUrl, $query) {
+                $request = Http::withToken($accessToken);
+
+                return str_contains($nextUrl, '/query/')
+                    ? $request->get($nextUrl)
+                    : $request->get($nextUrl, ['q' => $query]);
+            });
+
+            $payload = $response->throw()->json();
+            $records = [...$records, ...($payload['records'] ?? [])];
+            $nextRecordsUrl = $payload['nextRecordsUrl'] ?? null;
+            $nextUrl = $nextRecordsUrl
+                ? rtrim($connection->instance_url, '/') . $nextRecordsUrl
+                : null;
+        } while ($nextUrl);
+
+        return $records;
+    }
+
+    private function requestWithAutoRefresh(SalesforceConnection $connection, callable $request)
+    {
+        $accessToken = $connection->access_token;
+
+        if (blank($accessToken) && filled($connection->refresh_token)) {
+            $connection = $this->refreshAccessToken($connection);
+            $accessToken = $connection->access_token;
+        }
+
+        if (blank($accessToken)) {
+            throw new RuntimeException('La conexion de Salesforce no tiene un access token valido.');
+        }
+
+        $response = $request($accessToken);
+
+        if ($response->status() !== 401 || blank($connection->refresh_token)) {
+            return $response;
+        }
+
+        $connection = $this->refreshAccessToken($connection);
+
+        return $request($connection->access_token);
+    }
+
+    private function refreshAccessToken(SalesforceConnection $connection): SalesforceConnection
+    {
+        $response = Http::asForm()
+            ->post(config('services.salesforce.token_url'), [
+                'grant_type' => 'refresh_token',
+                'client_id' => config('services.salesforce.client_id'),
+                'client_secret' => config('services.salesforce.client_secret'),
+                'refresh_token' => $connection->refresh_token,
+            ])
+            ->throw()
+            ->json();
+
+        $metadata = $connection->metadata ?? [];
+        $metadata['identity_url'] = $response['id'] ?? ($metadata['identity_url'] ?? null);
+        $metadata['issued_at'] = $response['issued_at'] ?? ($metadata['issued_at'] ?? null);
+        $metadata['signature'] = $response['signature'] ?? ($metadata['signature'] ?? null);
+
+        $connection->forceFill([
+            'provider' => self::PROVIDER,
+            'instance_url' => $response['instance_url'] ?? $connection->instance_url,
+            'access_token' => $response['access_token'] ?? $connection->access_token,
+            'refresh_token' => $response['refresh_token'] ?? $connection->refresh_token,
+            'token_type' => $response['token_type'] ?? $connection->token_type,
+            'scope' => $response['scope'] ?? $connection->scope,
+            'metadata' => $metadata,
+        ])->save();
+
+        return $connection->fresh();
+    }
+
+    private function mapEntries(array $records, string $temperature, $syncedAt): Collection
+    {
+        return collect($records)
+            ->values()
+            ->map(function (array $record, int $index) use ($temperature, $syncedAt): array {
+                return [
+                    'temperature' => $temperature,
+                    'ranking_position' => $index + 1,
+                    'vehicle_salesforce_id' => $this->extractVehicleSalesforceId($record),
+                    'vehicle_name' => $this->extractVehicleName($record),
+                    'total_leads' => $this->extractTotalLeads($record),
+                    'synced_at' => $syncedAt,
+                    'created_at' => $syncedAt,
+                    'updated_at' => $syncedAt,
+                ];
+            });
+    }
+
+    private function extractVehicleSalesforceId(array $record): ?string
+    {
+        return $this->stringOrNull(
+            $record['vehicleId']
+                ?? $record['VehicleId']
+                ?? $record['LEA_BUS_Vehiculo_de_interes__c']
+        );
+    }
+
+    private function extractVehicleName(array $record): string
+    {
+        return $this->stringOrNull(
+            $record['vehicleName']
+                ?? $record['VehicleName']
+                ?? data_get($record, 'LEA_BUS_Vehiculo_de_interes__r.Name')
+                ?? $record['Name']
+        ) ?? 'Vehiculo sin nombre';
+    }
+
+    private function extractTotalLeads(array $record): int
+    {
+        return (int) (
+            $record['totalLeads']
+            ?? $record['TotalLeads']
+            ?? $record['expr0']
+            ?? 0
+        );
+    }
+
+    private function stringOrNull(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function ensureRequiredTablesExist(): void
+    {
+        if (
+            ! Schema::hasTable('salesforce_connections')
+            || ! Schema::hasTable('vehicle_leaderboard_entries')
+            || ! Schema::hasTable('vehicle_leaderboard_daily_snapshots')
+        ) {
+            throw new RuntimeException('Faltan las tablas del leaderboard de vehiculos. Ejecuta las migraciones antes de conectar Salesforce.');
+        }
+    }
+}
