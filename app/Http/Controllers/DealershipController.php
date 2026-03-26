@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Dealership;
 use App\Models\DealershipActivityLog;
+use App\Models\PurchaseLeaderboardEntry;
+use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -83,7 +87,13 @@ class DealershipController extends Controller
     {
         $dealership->load(['users' => fn ($query) => $query->orderBy('name')]);
 
-        return view('dealerships.show', compact('dealership'));
+        $monthlyPerformance = $this->buildMonthlyPerformanceData($dealership);
+
+        return view('dealerships.show', [
+            'dealership' => $dealership,
+            'userMonthlyStats' => $monthlyPerformance['user_stats'],
+            'dealershipMonthlyRankings' => $monthlyPerformance['dealership_rankings'],
+        ]);
     }
 
     public function edit(Dealership $dealership): View
@@ -231,5 +241,111 @@ class DealershipController extends Controller
                 ],
             ])
             ->all();
+    }
+
+    private function buildMonthlyPerformanceData(Dealership $dealership): array
+    {
+        $userStats = $dealership->users
+            ->mapWithKeys(fn (User $user) => [$user->id => ['sales' => 0, 'purchases' => 0]])
+            ->all();
+
+        $dealershipRankings = [
+            'sales' => null,
+            'purchases' => null,
+        ];
+
+        if (! Schema::hasTable('sales_leaderboard_entries') || ! Schema::hasTable('purchase_leaderboard_entries')) {
+            return [
+                'user_stats' => $userStats,
+                'dealership_rankings' => $dealershipRankings,
+            ];
+        }
+
+        $salesEntries = SalesLeaderboardEntry::query()
+            ->with(['user.assignedDealership'])
+            ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+            })
+            ->get();
+
+        $purchaseEntries = PurchaseLeaderboardEntry::query()
+            ->with(['user.assignedDealership'])
+            ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+            })
+            ->get();
+
+        foreach ($salesEntries as $entry) {
+            if ($entry->user_id && array_key_exists($entry->user_id, $userStats)) {
+                $userStats[$entry->user_id]['sales'] = (int) round((float) $entry->total_sales);
+            }
+        }
+
+        foreach ($purchaseEntries as $entry) {
+            if ($entry->user_id && array_key_exists($entry->user_id, $userStats)) {
+                $userStats[$entry->user_id]['purchases'] = (int) round((float) $entry->total_purchases);
+            }
+        }
+
+        $dealershipRankings['sales'] = $this->resolveDealershipRankingPosition(
+            dealership: $dealership,
+            entries: $salesEntries,
+            metricField: 'total_sales'
+        );
+
+        $dealershipRankings['purchases'] = $this->resolveDealershipRankingPosition(
+            dealership: $dealership,
+            entries: $purchaseEntries,
+            metricField: 'total_purchases'
+        );
+
+        return [
+            'user_stats' => $userStats,
+            'dealership_rankings' => $dealershipRankings,
+        ];
+    }
+
+    private function resolveDealershipRankingPosition(Dealership $dealership, Collection $entries, string $metricField): ?int
+    {
+        $position = $entries
+            ->groupBy(function ($entry): string {
+                $dealershipId = $entry->user?->assignedDealership?->getKey();
+
+                if ($dealershipId !== null) {
+                    return 'id:' . $dealershipId;
+                }
+
+                $dealershipName = trim((string) ($entry->user?->resolved_dealership_name ?? ''));
+
+                return 'name:' . ($dealershipName !== '' ? Str::lower($dealershipName) : 'sin-delegacion-asignada');
+            })
+            ->map(function (Collection $dealershipEntries, string $groupKey) use ($metricField) {
+                $representative = $dealershipEntries->first();
+                $dealershipName = trim((string) ($representative->user?->resolved_dealership_name ?? ''));
+
+                return [
+                    'group_key' => $groupKey,
+                    'metric_total' => (float) $dealershipEntries->sum($metricField),
+                    'name' => $dealershipName !== '' ? $dealershipName : 'Sin delegacion asignada',
+                ];
+            })
+            ->sort(function (array $left, array $right) {
+                $metricComparison = $right['metric_total'] <=> $left['metric_total'];
+
+                if ($metricComparison !== 0) {
+                    return $metricComparison;
+                }
+
+                return strcmp($left['name'], $right['name']);
+            })
+            ->values()
+            ->search(fn (array $entry): bool => $entry['group_key'] === 'id:' . $dealership->id);
+
+        return $position === false ? null : $position + 1;
+    }
+
+    private function excludedLeaderboardUserIds(): array
+    {
+        return config('services.salesforce.excluded_leaderboard_user_ids', []);
     }
 }
