@@ -80,11 +80,8 @@
                             <dd class="mt-2">
                                 @if ($user->assignedDealership)
                                     <a href="{{ route('dealerships.show', $user->assignedDealership) }}"
-                                        class="inline-flex items-center gap-2 rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 hover:text-brand-primary">
-                                        <span>{{ $user->resolved_dealership_name }}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                                        </svg>
+                                        class="font-semibold text-brand-secondary transition hover:text-brand-primary">
+                                        {{ $user->resolved_dealership_name }}
                                     </a>
                                 @else
                                     <span class="font-semibold text-brand-secondary">{{ $user->resolved_dealership_name }}</span>
