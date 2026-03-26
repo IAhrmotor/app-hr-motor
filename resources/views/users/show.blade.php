@@ -80,7 +80,7 @@
                             <dd class="mt-2">
                                 @if ($user->assignedDealership)
                                     <a href="{{ route('dealerships.show', $user->assignedDealership) }}"
-                                        class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                        class="font-semibold text-brand-secondary transition hover:text-brand-primary">
                                         {{ $user->resolved_dealership_name }}
                                     </a>
                                 @else
