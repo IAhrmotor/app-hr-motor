@@ -50,6 +50,14 @@ return [
             'SALESFORCE_PURCHASE_LEADERBOARD_SOQL',
             'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity WHERE CreatedDate = THIS_MONTH AND StageName NOT IN (\'Cerrada ganada\', \'Cerrada perdida\') AND Gestion_de_venta__c = false AND RecordType.Name IN (\'Compra\') GROUP BY OwnerId, Owner.Name ORDER BY COUNT(Id) DESC, Owner.Name ASC'
         ),
+        'vehicle_hot_leaderboard_soql' => env(
+            'SALESFORCE_VEHICLE_HOT_LEADERBOARD_SOQL',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead WHERE LEA_BUS_Vehiculo_de_interes__c != null AND LEA_BUS_Vehiculo_de_interes__r.PRO_SEL_Estado__c = \'Disponible\' AND LEA_BUS_Vehiculo_de_interes__r.PRO_CAS_Garantia__c = true GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) DESC, LEA_BUS_Vehiculo_de_interes__r.Name ASC LIMIT 10'
+        ),
+        'vehicle_cold_leaderboard_soql' => env(
+            'SALESFORCE_VEHICLE_COLD_LEADERBOARD_SOQL',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead WHERE LEA_BUS_Vehiculo_de_interes__c != null AND LEA_BUS_Vehiculo_de_interes__r.PRO_SEL_Estado__c = \'Disponible\' AND LEA_BUS_Vehiculo_de_interes__r.PRO_CAS_Garantia__c = true GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) ASC, LEA_BUS_Vehiculo_de_interes__r.Name ASC LIMIT 10'
+        ),
         'excluded_leaderboard_user_ids' => array_values(array_filter(array_map(
             static fn (string $value): string => trim($value),
             explode(',', (string) env('SALESFORCE_EXCLUDED_LEADERBOARD_USER_IDS', '0057R00000B2SGHQA3'))

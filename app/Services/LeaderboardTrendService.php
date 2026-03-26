@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardDailySnapshot;
+use App\Models\VehicleLeaderboardDailySnapshot;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -20,7 +21,9 @@ class LeaderboardTrendService
     {
         $snapshotTable ??= $snapshotModelClass === PurchaseLeaderboardDailySnapshot::class
             ? 'purchase_leaderboard_daily_snapshots'
-            : 'sales_leaderboard_daily_snapshots';
+            : ($snapshotModelClass === VehicleLeaderboardDailySnapshot::class
+                ? 'vehicle_leaderboard_daily_snapshots'
+                : 'sales_leaderboard_daily_snapshots');
 
         if ($entries->isEmpty() || ! Schema::hasTable($snapshotTable)) {
             return $this->flatMovementMap($entries);
@@ -28,6 +31,10 @@ class LeaderboardTrendService
 
         $yesterdaySnapshots = $snapshotModelClass::query()
             ->whereDate('snapshot_date', today()->subDay())
+            ->when(
+                $entries->first()?->getAttribute('temperature'),
+                fn ($query, string $temperature) => $query->where('temperature', $temperature)
+            )
             ->get();
 
         if ($yesterdaySnapshots->isEmpty()) {
@@ -58,7 +65,9 @@ class LeaderboardTrendService
     {
         $snapshotTable ??= $snapshotModelClass === PurchaseLeaderboardDailySnapshot::class
             ? 'purchase_leaderboard_daily_snapshots'
-            : 'sales_leaderboard_daily_snapshots';
+            : ($snapshotModelClass === VehicleLeaderboardDailySnapshot::class
+                ? 'vehicle_leaderboard_daily_snapshots'
+                : 'sales_leaderboard_daily_snapshots');
 
         if ($entries->isEmpty() || ! Schema::hasTable($snapshotTable)) {
             return $this->flatMovementMap($entries);
@@ -155,10 +164,22 @@ class LeaderboardTrendService
             return 'sf:' . $salesforceUserId;
         }
 
+        $vehicleSalesforceId = trim((string) ($entry->vehicle_salesforce_id ?? ''));
+
+        if ($vehicleSalesforceId !== '') {
+            return 'vehicle:' . $vehicleSalesforceId;
+        }
+
         $userId = $entry->user_id ?? null;
 
         if ($userId !== null) {
             return 'user:' . $userId;
+        }
+
+        $vehicleName = trim((string) ($entry->vehicle_name ?? ''));
+
+        if ($vehicleName !== '') {
+            return 'vehicle-name:' . Str::lower($vehicleName);
         }
 
         return 'seller:' . Str::lower(trim((string) ($entry->seller_name ?? '')));

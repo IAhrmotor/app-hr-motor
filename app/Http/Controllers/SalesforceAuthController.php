@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\PurchaseLeaderboardService;
 use App\Services\SalesforceLeaderboardService;
+use App\Services\VehicleLeaderboardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -38,7 +39,8 @@ class SalesforceAuthController extends Controller
     public function callback(
         Request $request,
         SalesforceLeaderboardService $service,
-        PurchaseLeaderboardService $purchaseService
+        PurchaseLeaderboardService $purchaseService,
+        VehicleLeaderboardService $vehicleService
     )
     {
         $expectedState = (string) $request->session()->pull('salesforce_oauth_state');
@@ -68,6 +70,7 @@ class SalesforceAuthController extends Controller
         try {
             $service->sync();
             $purchaseService->sync();
+            $vehicleService->sync();
         } catch (Throwable $exception) {
             Log::warning('Initial Salesforce leaderboard sync failed after OAuth.', [
                 'message' => $exception->getMessage(),

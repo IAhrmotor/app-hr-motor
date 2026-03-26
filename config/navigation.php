@@ -17,6 +17,10 @@ return [
                     'label' => 'Ranking de compras',
                     'route' => 'leaderboard.purchases',
                 ],
+                [
+                    'label' => 'Coches calientes y frios',
+                    'route' => 'leaderboard.vehicles',
+                ],
             ],
         ],
     ],
@@ -38,6 +42,10 @@ return [
             [
                 'label' => 'Ranking compras',
                 'route' => 'leaderboard.purchases',
+            ],
+            [
+                'label' => 'Ranking coches',
+                'route' => 'leaderboard.vehicles',
             ],
         ],
     ],
