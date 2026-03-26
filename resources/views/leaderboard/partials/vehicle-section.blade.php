@@ -127,12 +127,12 @@
             </div>
         @else
             @if ($topEntries->isNotEmpty())
-                <div class="mt-6 grid gap-4 lg:grid-cols-3">
+                <div class="mt-6 grid auto-rows-fr gap-4 lg:grid-cols-3">
                     @foreach ($topEntries as $entry)
                         @php
                             $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         @endphp
-                        <article class="relative flex h-full flex-col overflow-hidden rounded-[1.7rem] border p-5 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }}">
+                        <article class="relative flex h-full min-h-[20rem] flex-col overflow-hidden rounded-[1.7rem] border p-5 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }}">
                             <div class="absolute right-4 top-4 flex items-center gap-2">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $themeStyles['rankBadge'] }}">
                                     #{{ $entry->ranking_position }}
@@ -167,9 +167,6 @@
                                     </div>
                                     <p class="mt-4 text-xl font-semibold leading-tight text-brand-secondary">
                                         {{ $entry->vehicle_name }}
-                                    </p>
-                                    <p class="mt-2 text-sm text-brand-secondary/55">
-                                        {{ $isHot ? 'Mayor volumen de leads asociados' : 'Menor volumen de leads asociados' }}
                                     </p>
                                 </div>
 
@@ -235,9 +232,6 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->vehicle_name }}</p>
-                                        <p class="truncate text-xs text-brand-secondary/55">
-                                            {{ $isHot ? 'Caja caliente' : 'Caja fria' }}
-                                        </p>
                                     </div>
                                 </div>
 
@@ -284,9 +278,6 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->vehicle_name }}</p>
-                                        <p class="truncate text-xs text-brand-secondary/55">
-                                            {{ $isHot ? 'Caja caliente' : 'Caja fria' }}
-                                        </p>
                                     </div>
                                 </div>
                             </div>
