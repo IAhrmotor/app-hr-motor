@@ -3,8 +3,10 @@
 @section('content')
     @php
         $isOwnProfile = auth()->id() === $user->id;
-        $salesRankingPosition = $rankingPositions['sales'] ?? null;
-        $purchaseRankingPosition = $rankingPositions['purchases'] ?? null;
+        $salesRankingPosition = $rankingPositions['sales']['position'] ?? null;
+        $salesTotal = $rankingPositions['sales']['total'] ?? 0;
+        $purchaseRankingPosition = $rankingPositions['purchases']['position'] ?? null;
+        $purchaseTotal = $rankingPositions['purchases']['total'] ?? 0;
     @endphp
 
     <main
@@ -111,7 +113,10 @@
                             <p class="mt-3 text-3xl font-bold text-amber-800">
                                 {{ $salesRankingPosition ? 'Top ' . $salesRankingPosition : 'Sin posicion' }}
                             </p>
-                            <p class="mt-2 text-sm text-amber-800/75">Segun el ranking mensual de ventas.</p>
+                            <p class="mt-2 text-sm font-semibold text-amber-800/85">
+                                {{ number_format((float) $salesTotal, 0, ',', '.') }} ventas este mes
+                            </p>
+                            <p class="mt-1 text-sm text-amber-800/75">Segun el ranking mensual de ventas.</p>
                         </div>
 
                         <div class="rounded-3xl border border-sky-200/70 bg-sky-50/80 p-5">
@@ -119,7 +124,10 @@
                             <p class="mt-3 text-3xl font-bold text-sky-800">
                                 {{ $purchaseRankingPosition ? 'Top ' . $purchaseRankingPosition : 'Sin posicion' }}
                             </p>
-                            <p class="mt-2 text-sm text-sky-800/75">Segun el ranking mensual de compras.</p>
+                            <p class="mt-2 text-sm font-semibold text-sky-800/85">
+                                {{ number_format((float) $purchaseTotal, 0, ',', '.') }} compras este mes
+                            </p>
+                            <p class="mt-1 text-sm text-sky-800/75">Segun el ranking mensual de compras.</p>
                         </div>
                     </div>
                 </section>

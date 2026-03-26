@@ -379,8 +379,14 @@ class UserController extends Controller
     protected function buildRankingPositions(User $user): array
     {
         $positions = [
-            'sales' => null,
-            'purchases' => null,
+            'sales' => [
+                'position' => null,
+                'total' => 0,
+            ],
+            'purchases' => [
+                'position' => null,
+                'total' => 0,
+            ],
         ];
 
         if ($user->role !== 'comercial') {
@@ -402,7 +408,10 @@ class UserController extends Controller
                 ->orderBy('ranking_position')
                 ->first();
 
-            $positions['sales'] = $salesEntry?->ranking_position;
+            $positions['sales'] = [
+                'position' => $salesEntry?->ranking_position,
+                'total' => (int) round((float) ($salesEntry?->total_sales ?? 0)),
+            ];
         }
 
         if (Schema::hasTable('purchase_leaderboard_entries')) {
@@ -420,7 +429,10 @@ class UserController extends Controller
                 ->orderBy('ranking_position')
                 ->first();
 
-            $positions['purchases'] = $purchaseEntry?->ranking_position;
+            $positions['purchases'] = [
+                'position' => $purchaseEntry?->ranking_position,
+                'total' => (int) round((float) ($purchaseEntry?->total_purchases ?? 0)),
+            ];
         }
 
         return $positions;
