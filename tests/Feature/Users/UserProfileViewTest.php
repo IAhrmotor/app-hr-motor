@@ -94,6 +94,8 @@ class UserProfileViewTest extends TestCase
             ->assertSee('Posicion en rankings')
             ->assertSee('Top 3')
             ->assertSee('Top 2')
+            ->assertSee('7 ventas este mes')
+            ->assertSee('5 compras este mes')
             ->assertSee('Ranking ventas')
             ->assertSee('Ranking compras');
     }
