@@ -17,7 +17,7 @@
                         <button
                             type="button"
                             @click="isImageOpen = true"
-                            class="group relative overflow-hidden rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            class="group relative cursor-pointer overflow-hidden rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                             aria-label="Ampliar imagen de {{ $dealership->name }}"
                         >
                             <img src="{{ $dealership->image_url }}" alt="Imagen de {{ $dealership->name }}"
