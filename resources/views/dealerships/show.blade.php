@@ -5,13 +5,27 @@
         $salesRank = $dealershipMonthlyRankings['sales'] ?? null;
         $purchasesRank = $dealershipMonthlyRankings['purchases'] ?? null;
     @endphp
-    <main class="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-8">
+    <main
+        x-data="{ isImageOpen: false }"
+        @keydown.escape.window="isImageOpen = false"
+        class="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-8"
+    >
         <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
             <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
                 <div class="flex items-center gap-5">
                     @if ($dealership->image_url)
-                        <img src="{{ $dealership->image_url }}" alt="Imagen de {{ $dealership->name }}"
-                            class="h-24 w-24 rounded-3xl object-cover ring-2 ring-brand-primary/10">
+                        <button
+                            type="button"
+                            @click="isImageOpen = true"
+                            class="group relative cursor-pointer overflow-hidden rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            aria-label="Ampliar imagen de {{ $dealership->name }}"
+                        >
+                            <img src="{{ $dealership->image_url }}" alt="Imagen de {{ $dealership->name }}"
+                                class="h-24 w-24 rounded-3xl object-cover ring-2 ring-brand-primary/10 transition duration-300 group-hover:scale-105 group-hover:brightness-75">
+                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-3xl bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                Ver
+                            </span>
+                        </button>
                     @else
                         <div class="flex h-24 w-24 items-center justify-center rounded-3xl bg-brand-secondary text-3xl font-semibold text-white">
                             {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($dealership->name, 0, 2)) }}
@@ -140,5 +154,40 @@
                 @endif
             </section>
         </section>
+
+        @if ($dealership->image_url)
+            <div
+                x-cloak
+                x-show="isImageOpen"
+                x-transition.opacity
+                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-6 py-8 backdrop-blur-sm"
+                @click.self="isImageOpen = false"
+            >
+                <div class="relative w-full max-w-4xl">
+                    <button
+                        type="button"
+                        @click="isImageOpen = false"
+                        class="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-brand-secondary shadow-lg transition hover:bg-white"
+                        aria-label="Cerrar imagen ampliada"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <div class="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl">
+                        <img
+                            src="{{ $dealership->image_url }}"
+                            alt="Imagen ampliada de {{ $dealership->name }}"
+                            class="max-h-[80vh] w-full object-contain bg-slate-900"
+                        >
+                    </div>
+
+                    <p class="mt-4 text-center text-sm font-medium text-white/80">
+                        {{ $dealership->name }}
+                    </p>
+                </div>
+            </div>
+        @endif
     </main>
 @endsection
