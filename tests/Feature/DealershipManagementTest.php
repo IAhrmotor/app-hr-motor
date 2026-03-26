@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Dealership;
+use App\Models\PurchaseLeaderboardEntry;
+use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -216,6 +218,81 @@ class DealershipManagementTest extends TestCase
             ->assertDontSee('ID de Salesforce')
             ->assertSee($dealership->google_maps_url, false)
             ->assertSee($dealership->reviews_url, false);
+    }
+
+    public function test_dealership_show_displays_monthly_user_stats_and_dealership_rank_badges(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $dealership = Dealership::factory()->create([
+            'name' => 'Sevilla',
+        ]);
+
+        $topDealership = Dealership::factory()->create([
+            'name' => 'Valencia',
+        ]);
+
+        $sevillaCommercial = User::factory()->create([
+            'name' => 'Laura Sevilla',
+            'dealership' => 'Sevilla',
+            'dealership_id' => $dealership->id,
+            'salesforce_user_id' => 'SF-SEV-001',
+        ]);
+
+        $valenciaCommercial = User::factory()->create([
+            'name' => 'Ana Valencia',
+            'dealership' => 'Valencia',
+            'dealership_id' => $topDealership->id,
+            'salesforce_user_id' => 'SF-VAL-001',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $valenciaCommercial->id,
+            'salesforce_user_id' => 'SF-VAL-001',
+            'seller_name' => 'Ana Valencia',
+            'total_sales' => 12,
+            'synced_at' => now(),
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 2,
+            'user_id' => $sevillaCommercial->id,
+            'salesforce_user_id' => 'SF-SEV-001',
+            'seller_name' => 'Laura Sevilla',
+            'total_sales' => 8,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $valenciaCommercial->id,
+            'salesforce_user_id' => 'SF-VAL-001',
+            'seller_name' => 'Ana Valencia',
+            'total_purchases' => 9,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 2,
+            'user_id' => $sevillaCommercial->id,
+            'salesforce_user_id' => 'SF-SEV-001',
+            'seller_name' => 'Laura Sevilla',
+            'total_purchases' => 4,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('dealerships.show', $dealership));
+
+        $response
+            ->assertOk()
+            ->assertSee('Laura Sevilla')
+            ->assertSee('8 V')
+            ->assertSee('4 C')
+            ->assertSee('Top 2 en ventas')
+            ->assertSee('Top 2 en compras');
     }
 
     public function test_admin_cannot_delete_dealership_with_users_assigned(): void
