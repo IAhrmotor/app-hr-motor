@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dealership;
+use App\Models\PurchaseLeaderboardEntry;
+use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Throwable;
@@ -71,7 +74,10 @@ class UserController extends Controller
             return $response;
         }
 
-        return view('users.show', compact('user'));
+        return view('users.show', [
+            'user' => $user,
+            'rankingPositions' => $this->buildRankingPositions($user),
+        ]);
     }
 
     public function store(Request $request)
@@ -368,5 +374,60 @@ class UserController extends Controller
                 ],
             ])
             ->all();
+    }
+
+    protected function buildRankingPositions(User $user): array
+    {
+        $positions = [
+            'sales' => null,
+            'purchases' => null,
+        ];
+
+        if ($user->role !== 'comercial') {
+            return $positions;
+        }
+
+        if (Schema::hasTable('sales_leaderboard_entries')) {
+            $salesEntry = SalesLeaderboardEntry::query()
+                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                })
+                ->where(function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+
+                    if ($user->salesforce_user_id) {
+                        $query->orWhere('salesforce_user_id', $user->salesforce_user_id);
+                    }
+                })
+                ->orderBy('ranking_position')
+                ->first();
+
+            $positions['sales'] = $salesEntry?->ranking_position;
+        }
+
+        if (Schema::hasTable('purchase_leaderboard_entries')) {
+            $purchaseEntry = PurchaseLeaderboardEntry::query()
+                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                })
+                ->where(function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+
+                    if ($user->salesforce_user_id) {
+                        $query->orWhere('salesforce_user_id', $user->salesforce_user_id);
+                    }
+                })
+                ->orderBy('ranking_position')
+                ->first();
+
+            $positions['purchases'] = $purchaseEntry?->ranking_position;
+        }
+
+        return $positions;
+    }
+
+    protected function excludedLeaderboardUserIds(): array
+    {
+        return config('services.salesforce.excluded_leaderboard_user_ids', []);
     }
 }
