@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $salesRank = $dealershipMonthlyRankings['sales'] ?? null;
+        $purchasesRank = $dealershipMonthlyRankings['purchases'] ?? null;
+    @endphp
     <main class="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-8">
         <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
             <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -18,6 +22,20 @@
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Delegacion</p>
                         <h1 class="mt-2 text-3xl font-bold tracking-tight text-brand-secondary">{{ $dealership->name }}</h1>
                         <p class="mt-2 text-sm text-brand-secondary/65">{{ $dealership->phone }}</p>
+                        @if ($salesRank || $purchasesRank)
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                @if ($salesRank)
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800 ring-1 ring-amber-200">
+                                        Top {{ $salesRank }} en ventas
+                                    </span>
+                                @endif
+                                @if ($purchasesRank)
+                                    <span class="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800 ring-1 ring-sky-200">
+                                        Top {{ $purchasesRank }} en compras
+                                    </span>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -94,11 +112,27 @@
                 @else
                     <div class="mt-4 grid gap-3">
                         @foreach ($dealership->users as $user)
-                            <a href="{{ route('users.show', $user) }}" class="flex items-center gap-3 rounded-2xl border border-brand-secondary/10 px-4 py-3 transition hover:bg-brand-secondary/5">
-                                <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
-                                <div>
-                                    <p class="text-sm font-semibold text-brand-secondary">{{ $user->name }}</p>
-                                    <p class="text-xs text-brand-secondary/60">{{ $user->email }}</p>
+                            @php
+                                $monthlyStats = $userMonthlyStats[$user->id] ?? ['sales' => 0, 'purchases' => 0];
+                            @endphp
+                            <a href="{{ route('users.show', $user) }}" class="flex items-center justify-between gap-4 rounded-2xl border border-brand-secondary/10 px-4 py-3 transition hover:bg-brand-secondary/5">
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $user->name }}</p>
+                                        <p class="truncate text-xs text-brand-secondary/60">{{ $user->email }}</p>
+                                    </div>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Este mes</p>
+                                    <div class="mt-1 flex items-center justify-end gap-2">
+                                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                                            {{ number_format((float) $monthlyStats['sales'], 0, ',', '.') }} V
+                                        </span>
+                                        <span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                                            {{ number_format((float) $monthlyStats['purchases'], 0, ',', '.') }} C
+                                        </span>
+                                    </div>
                                 </div>
                             </a>
                         @endforeach
