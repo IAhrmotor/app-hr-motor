@@ -169,9 +169,9 @@
                                     @else
                                         <div class="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M3.75 14.25h16.5m-14.25 0-.94-2.82A2.25 2.25 0 0 1 7.2 8.25h9.6a2.25 2.25 0 0 1 2.14 1.58l.94 2.82M6 14.25V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 8.25 16.5v-2.25m7.5 0V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 18 16.5v-2.25M6.75 11.25h.008v.008H6.75v-.008Zm10.5 0h.008v.008h-.008v-.008Z" />
+                                                    d="M3 8L5.72187 10.2682C5.90158 10.418 6.12811 10.5 6.36205 10.5H17.6379C17.8719 10.5 18.0984 10.418 18.2781 10.2682L21 8M6.5 14H6.51M17.5 14H17.51M8.16065 4.5H15.8394C16.5571 4.5 17.2198 4.88457 17.5758 5.50772L20.473 10.5777C20.8183 11.1821 21 11.8661 21 12.5623V18.5C21 19.0523 20.5523 19.5 20 19.5H19C18.4477 19.5 18 19.0523 18 18.5V17.5H6V18.5C6 19.0523 5.55228 19.5 5 19.5H4C3.44772 19.5 3 19.0523 3 18.5V12.5623C3 11.8661 3.18166 11.1821 3.52703 10.5777L6.42416 5.50772C6.78024 4.88457 7.44293 4.5 8.16065 4.5Z" />
                                             </svg>
                                         </div>
                                     @endif
@@ -244,9 +244,9 @@
                                     @else
                                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M3.75 14.25h16.5m-14.25 0-.94-2.82A2.25 2.25 0 0 1 7.2 8.25h9.6a2.25 2.25 0 0 1 2.14 1.58l.94 2.82M6 14.25V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 8.25 16.5v-2.25m7.5 0V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 18 16.5v-2.25M6.75 11.25h.008v.008H6.75v-.008Zm10.5 0h.008v.008h-.008v-.008Z" />
+                                                    d="M3 8L5.72187 10.2682C5.90158 10.418 6.12811 10.5 6.36205 10.5H17.6379C17.8719 10.5 18.0984 10.418 18.2781 10.2682L21 8M6.5 14H6.51M17.5 14H17.51M8.16065 4.5H15.8394C16.5571 4.5 17.2198 4.88457 17.5758 5.50772L20.473 10.5777C20.8183 11.1821 21 11.8661 21 12.5623V18.5C21 19.0523 20.5523 19.5 20 19.5H19C18.4477 19.5 18 19.0523 18 18.5V17.5H6V18.5C6 19.0523 5.55228 19.5 5 19.5H4C3.44772 19.5 3 19.0523 3 18.5V12.5623C3 11.8661 3.18166 11.1821 3.52703 10.5777L6.42416 5.50772C6.78024 4.88457 7.44293 4.5 8.16065 4.5Z" />
                                             </svg>
                                         </div>
                                     @endif
@@ -302,9 +302,9 @@
                                     @else
                                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M3.75 14.25h16.5m-14.25 0-.94-2.82A2.25 2.25 0 0 1 7.2 8.25h9.6a2.25 2.25 0 0 1 2.14 1.58l.94 2.82M6 14.25V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 8.25 16.5v-2.25m7.5 0V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 18 16.5v-2.25M6.75 11.25h.008v.008H6.75v-.008Zm10.5 0h.008v.008h-.008v-.008Z" />
+                                                    d="M3 8L5.72187 10.2682C5.90158 10.418 6.12811 10.5 6.36205 10.5H17.6379C17.8719 10.5 18.0984 10.418 18.2781 10.2682L21 8M6.5 14H6.51M17.5 14H17.51M8.16065 4.5H15.8394C16.5571 4.5 17.2198 4.88457 17.5758 5.50772L20.473 10.5777C20.8183 11.1821 21 11.8661 21 12.5623V18.5C21 19.0523 20.5523 19.5 20 19.5H19C18.4477 19.5 18 19.0523 18 18.5V17.5H6V18.5C6 19.0523 5.55228 19.5 5 19.5H4C3.44772 19.5 3 19.0523 3 18.5V12.5623C3 11.8661 3.18166 11.1821 3.52703 10.5777L6.42416 5.50772C6.78024 4.88457 7.44293 4.5 8.16065 4.5Z" />
                                             </svg>
                                         </div>
                                     @endif
