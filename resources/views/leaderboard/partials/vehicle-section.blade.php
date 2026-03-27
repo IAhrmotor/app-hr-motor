@@ -52,6 +52,9 @@
     $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
     $vehicleTitle = static fn ($entry) => $entry->vehicle_commercial_name ?: $entry->vehicle_name;
     $vehicleImageAlt = static fn ($entry) => 'Imagen de '.$vehicleTitle($entry);
+    $tableEntries = $topEntries->isNotEmpty()
+        ? $entryItems->reject(fn ($entry) => $topEntries->contains('id', $entry->id))->values()
+        : $entryItems;
 @endphp
 
 <section class="rounded-[1.85rem] border p-5 sm:p-6 {{ $themeStyles['section'] }}">
@@ -204,6 +207,7 @@
                 </div>
             @endif
 
+            @if ($tableEntries->isNotEmpty())
             <div class="mt-6 overflow-hidden rounded-[1.6rem] border border-brand-secondary/10 bg-white/92">
                 <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
                     <div class="hidden grid-cols-[110px_minmax(0,1fr)_110px] gap-6 md:grid">
@@ -215,7 +219,7 @@
                 </div>
 
                 <div>
-                    @foreach ($entryItems as $entry)
+                    @foreach ($tableEntries as $entry)
                         @php
                             $movement = $entryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         @endphp
@@ -351,6 +355,7 @@
                     @endforeach
                 </div>
             </div>
+            @endif
 
             @if ($entries->hasPages())
                 <div class="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
