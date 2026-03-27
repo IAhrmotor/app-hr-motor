@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class VehicleLeaderboardService
@@ -45,12 +46,29 @@ class VehicleLeaderboardService
             'cold' => config('services.salesforce.vehicle_cold_leaderboard_soql'),
         ];
 
+        $recordsByTemperature = collect($temperatureQueries)->mapWithKeys(
+            fn (?string $query, string $temperature): array => [
+                $temperature => $this->runLeaderboardQuery($connection, (string) $query),
+            ]
+        );
+
+        $vehicleImageMap = $this->resolveVehicleImageMap(
+            $connection,
+            $recordsByTemperature
+                ->flatten(1)
+                ->map(fn (array $record): ?string => $this->extractVehicleSalesforceId($record))
+                ->filter()
+                ->values()
+                ->unique()
+        );
+
         $entriesByTemperature = collect($temperatureQueries)->mapWithKeys(
             fn (?string $query, string $temperature): array => [
                 $temperature => $this->mapEntries(
-                    $this->runLeaderboardQuery($connection, (string) $query),
+                    $recordsByTemperature[$temperature],
                     $temperature,
-                    $syncedAt
+                    $syncedAt,
+                    $vehicleImageMap
                 ),
             ]
         );
@@ -80,6 +98,7 @@ class VehicleLeaderboardService
                         'ranking_position' => $entry['ranking_position'],
                         'vehicle_salesforce_id' => $entry['vehicle_salesforce_id'],
                         'vehicle_name' => $entry['vehicle_name'],
+                        'vehicle_image_url' => $entry['vehicle_image_url'],
                         'total_leads' => $entry['total_leads'],
                         'captured_at' => $syncedAt,
                         'created_at' => $syncedAt,
@@ -185,16 +204,19 @@ class VehicleLeaderboardService
         return $connection->fresh();
     }
 
-    private function mapEntries(array $records, string $temperature, $syncedAt): Collection
+    private function mapEntries(array $records, string $temperature, $syncedAt, Collection $vehicleImageMap): Collection
     {
         return collect($records)
             ->values()
-            ->map(function (array $record, int $index) use ($temperature, $syncedAt): array {
+            ->map(function (array $record, int $index) use ($temperature, $syncedAt, $vehicleImageMap): array {
+                $vehicleSalesforceId = $this->extractVehicleSalesforceId($record);
+
                 return [
                     'temperature' => $temperature,
                     'ranking_position' => $index + 1,
-                    'vehicle_salesforce_id' => $this->extractVehicleSalesforceId($record),
+                    'vehicle_salesforce_id' => $vehicleSalesforceId,
                     'vehicle_name' => $this->extractVehicleName($record),
+                    'vehicle_image_url' => $vehicleSalesforceId ? $vehicleImageMap->get($vehicleSalesforceId) : null,
                     'total_leads' => $this->extractTotalLeads($record),
                     'synced_at' => $syncedAt,
                     'created_at' => $syncedAt,
@@ -241,6 +263,79 @@ class VehicleLeaderboardService
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function resolveVehicleImageMap(SalesforceConnection $connection, Collection $vehicleIds): Collection
+    {
+        if ($vehicleIds->isEmpty()) {
+            return collect();
+        }
+
+        $quotedVehicleIds = $vehicleIds
+            ->map(fn (string $id): string => "'" . str_replace("'", "\\'", $id) . "'")
+            ->implode(', ');
+
+        $documentLinks = $this->runLeaderboardQuery(
+            $connection,
+            "SELECT LinkedEntityId, ContentDocumentId, ContentDocument.CreatedDate
+             FROM ContentDocumentLink
+             WHERE LinkedEntityId IN ({$quotedVehicleIds})
+             ORDER BY LinkedEntityId ASC, ContentDocument.CreatedDate ASC"
+        );
+
+        $firstDocumentByVehicle = collect($documentLinks)
+            ->filter(fn (array $record): bool => filled($this->stringOrNull($record['LinkedEntityId'] ?? null)))
+            ->groupBy(fn (array $record): string => (string) $record['LinkedEntityId'])
+            ->map(fn (Collection $records): ?string => $this->stringOrNull($records->first()['ContentDocumentId'] ?? null))
+            ->filter();
+
+        if ($firstDocumentByVehicle->isEmpty()) {
+            return collect();
+        }
+
+        $quotedDocumentIds = $firstDocumentByVehicle
+            ->values()
+            ->unique()
+            ->map(fn (string $id): string => "'" . str_replace("'", "\\'", $id) . "'")
+            ->implode(', ');
+
+        $contentVersions = $this->runLeaderboardQuery(
+            $connection,
+            "SELECT ContentDocumentId, VersionDataUrl, FileType
+             FROM ContentVersion
+             WHERE ContentDocumentId IN ({$quotedDocumentIds})
+             AND IsLatest = true"
+        );
+
+        $versionMap = collect($contentVersions)
+            ->filter(function (array $record): bool {
+                $fileType = Str::upper((string) ($record['FileType'] ?? ''));
+
+                return in_array($fileType, ['JPG', 'JPEG', 'PNG', 'WEBP'], true);
+            })
+            ->mapWithKeys(function (array $record): array {
+                $documentId = (string) ($record['ContentDocumentId'] ?? '');
+                $versionUrl = $this->stringOrNull($record['VersionDataUrl'] ?? null);
+
+                return $documentId !== '' && $versionUrl
+                    ? [$documentId => $this->makeAbsoluteSalesforceUrl($versionUrl)]
+                    : [];
+            });
+
+        return $firstDocumentByVehicle->map(
+            fn (string $documentId): ?string => $versionMap->get($documentId)
+        )->filter();
+    }
+
+    private function makeAbsoluteSalesforceUrl(string $path): string
+    {
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        $instanceUrl = rtrim((string) optional($this->getConnection())->instance_url, '/');
+
+        return $instanceUrl . '/' . ltrim($path, '/');
     }
 
     private function ensureRequiredTablesExist(): void

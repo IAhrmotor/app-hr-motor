@@ -11,6 +11,7 @@ class VehicleLeaderboardEntry extends Model
         'ranking_position',
         'vehicle_salesforce_id',
         'vehicle_name',
+        'vehicle_image_url',
         'total_leads',
         'synced_at',
     ];

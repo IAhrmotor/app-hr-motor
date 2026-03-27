@@ -351,6 +351,50 @@ class SalesforceLeaderboardTest extends TestCase
                             'totalLeads' => 2,
                         ],
                     ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000001AAA',
+                            'ContentDocumentId' => '069xx0000000001AAA',
+                        ],
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000002AAA',
+                            'ContentDocumentId' => '069xx0000000002AAA',
+                        ],
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000003AAA',
+                            'ContentDocumentId' => '069xx0000000003AAA',
+                        ],
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000004AAA',
+                            'ContentDocumentId' => '069xx0000000004AAA',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ContentDocumentId' => '069xx0000000001AAA',
+                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000001AAA',
+                            'FileType' => 'JPG',
+                        ],
+                        [
+                            'ContentDocumentId' => '069xx0000000002AAA',
+                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000002AAA',
+                            'FileType' => 'PNG',
+                        ],
+                        [
+                            'ContentDocumentId' => '069xx0000000003AAA',
+                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000003AAA',
+                            'FileType' => 'JPEG',
+                        ],
+                        [
+                            'ContentDocumentId' => '069xx0000000004AAA',
+                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000004AAA',
+                            'FileType' => 'WEBP',
+                        ],
+                    ],
                 ], 200),
         ]);
 
@@ -409,6 +453,7 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'a0Axx0000000001AAA',
             'vehicle_name' => 'Audi A3',
+            'vehicle_image_url' => 'https://example.my.salesforce.com/sfc/servlet.shepherd/version/download/068xx0000000001AAA',
             'total_leads' => 12,
         ]);
 
@@ -417,6 +462,7 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'a0Axx0000000003AAA',
             'vehicle_name' => 'Seat Leon',
+            'vehicle_image_url' => 'https://example.my.salesforce.com/sfc/servlet.shepherd/version/download/068xx0000000003AAA',
             'total_leads' => 1,
         ]);
 
@@ -439,6 +485,7 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'VEH-HOT-1',
             'vehicle_name' => 'BMW X1',
+            'vehicle_image_url' => 'https://example.com/bmw-x1.jpg',
             'total_leads' => 9,
             'synced_at' => now(),
         ]);
@@ -448,6 +495,7 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'VEH-COLD-1',
             'vehicle_name' => 'Ford Puma',
+            'vehicle_image_url' => 'https://example.com/ford-puma.jpg',
             'total_leads' => 1,
             'synced_at' => now(),
         ]);
@@ -458,6 +506,7 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 2,
             'vehicle_salesforce_id' => 'VEH-HOT-1',
             'vehicle_name' => 'BMW X1',
+            'vehicle_image_url' => 'https://example.com/bmw-x1.jpg',
             'total_leads' => 8,
             'captured_at' => now()->subDay(),
         ]);
@@ -468,6 +517,7 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'VEH-COLD-1',
             'vehicle_name' => 'Ford Puma',
+            'vehicle_image_url' => 'https://example.com/ford-puma.jpg',
             'total_leads' => 1,
             'captured_at' => now()->subDay(),
         ]);
@@ -478,8 +528,8 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertOk()
             ->assertSee('BMW X1')
             ->assertSee('Ford Puma')
-            ->assertSee('Caja caliente')
-            ->assertSee('Caja fria');
+            ->assertSee('https://example.com/bmw-x1.jpg')
+            ->assertSee('https://example.com/ford-puma.jpg');
     }
 
     public function test_leaderboard_shows_rank_movement_against_previous_day(): void
