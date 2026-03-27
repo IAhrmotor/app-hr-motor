@@ -74,6 +74,8 @@ class VehicleLeaderboardService
             ]
         );
 
+        $this->syncVehicleImageFilesystem($entriesByTemperature);
+
         DB::transaction(function () use ($entriesByTemperature, $connection, $syncedAt): void {
             VehicleLeaderboardEntry::query()->delete();
 
@@ -442,6 +444,8 @@ class VehicleLeaderboardService
             default => 'jpg',
         };
 
+        $this->deleteVehicleImageFiles($vehicleId);
+
         $path = "vehicle-leaderboard/{$vehicleId}.{$extension}";
 
         Storage::disk('public')->put($path, $response->body());
@@ -456,6 +460,56 @@ class VehicleLeaderboardService
         }
 
         return rtrim($connection->instance_url, '/') . '/' . ltrim($path, '/');
+    }
+
+    private function syncVehicleImageFilesystem(Collection $entriesByTemperature): void
+    {
+        $entries = $entriesByTemperature->flatten(1);
+
+        $activeVehicleIds = $entries
+            ->pluck('vehicle_salesforce_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $vehicleIdsWithoutImage = $entries
+            ->filter(fn (array $entry): bool => filled($entry['vehicle_salesforce_id']) && blank($entry['vehicle_image_url']))
+            ->pluck('vehicle_salesforce_id')
+            ->unique();
+
+        foreach ($vehicleIdsWithoutImage as $vehicleId) {
+            $this->deleteVehicleImageFiles((string) $vehicleId);
+        }
+
+        $this->deleteStaleVehicleImageFiles($activeVehicleIds);
+    }
+
+    private function deleteStaleVehicleImageFiles(Collection $activeVehicleIds): void
+    {
+        $activeLookup = $activeVehicleIds
+            ->mapWithKeys(fn (string $vehicleId): array => [$vehicleId => true]);
+
+        foreach (Storage::disk('public')->files('vehicle-leaderboard') as $filePath) {
+            $storedVehicleId = pathinfo($filePath, PATHINFO_FILENAME);
+
+            if (! $activeLookup->has($storedVehicleId)) {
+                Storage::disk('public')->delete($filePath);
+            }
+        }
+    }
+
+    private function deleteVehicleImageFiles(string $vehicleId): void
+    {
+        $prefix = "vehicle-leaderboard/{$vehicleId}.";
+
+        $filesToDelete = collect(Storage::disk('public')->files('vehicle-leaderboard'))
+            ->filter(fn (string $filePath): bool => Str::startsWith($filePath, $prefix))
+            ->values()
+            ->all();
+
+        if ($filesToDelete !== []) {
+            Storage::disk('public')->delete($filesToDelete);
+        }
     }
 
     private function ensureRequiredTablesExist(): void

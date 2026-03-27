@@ -7,11 +7,14 @@ use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
+use App\Models\SalesforceConnection;
 use App\Models\User;
 use App\Models\VehicleLeaderboardDailySnapshot;
 use App\Models\VehicleLeaderboardEntry;
+use App\Services\VehicleLeaderboardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SalesforceLeaderboardTest extends TestCase
@@ -569,6 +572,128 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('2222CCC')
             ->assertSee('https://example.com/bmw-x1.jpg')
             ->assertSee('https://example.com/ford-puma.jpg');
+    }
+
+    public function test_vehicle_sync_refreshes_current_images_and_deletes_stale_files(): void
+    {
+        Storage::fake('public');
+
+        config()->set(
+            'services.salesforce.vehicle_hot_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c vehicleId, LEA_BUS_Vehiculo_de_interes__r.Name vehicleName, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c vehicleCommercialName, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c vehiclePlate, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) DESC'
+        );
+        config()->set(
+            'services.salesforce.vehicle_cold_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c vehicleId, LEA_BUS_Vehiculo_de_interes__r.Name vehicleName, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c vehicleCommercialName, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c vehiclePlate, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) ASC'
+        );
+
+        SalesforceConnection::query()->create([
+            'provider' => 'salesforce',
+            'instance_url' => 'https://example.my.salesforce.com',
+            'access_token' => 'access-token',
+            'refresh_token' => 'refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'api',
+        ]);
+
+        Storage::disk('public')->put('vehicle-leaderboard/VEH-HOT-1.png', 'old-hot-image');
+        Storage::disk('public')->put('vehicle-leaderboard/VEH-COLD-1.jpg', 'old-cold-image');
+        Storage::disk('public')->put('vehicle-leaderboard/VEH-OLD-9.jpg', 'stale-image');
+
+        Http::fake([
+            'https://example.my.salesforce.com/*' => Http::sequence()
+                ->push([
+                    'records' => [
+                        [
+                            'vehicleId' => 'VEH-HOT-1',
+                            'vehicleName' => '0074MLB Audi Q3',
+                            'vehicleCommercialName' => 'Audi Q3 35 TDI Advanced',
+                            'vehiclePlate' => '0074MLB',
+                            'totalLeads' => 12,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'vehicleId' => 'VEH-COLD-1',
+                            'vehicleName' => '0116MHT Opel Mokka',
+                            'vehicleCommercialName' => 'Opel Mokka GS',
+                            'vehiclePlate' => '0116MHT',
+                            'totalLeads' => 1,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LinkedEntityId' => 'VEH-HOT-1',
+                            'ContentDocumentId' => 'DOC-HOT-A',
+                        ],
+                        [
+                            'LinkedEntityId' => 'VEH-HOT-1',
+                            'ContentDocumentId' => 'DOC-HOT-B',
+                        ],
+                        [
+                            'LinkedEntityId' => 'VEH-COLD-1',
+                            'ContentDocumentId' => 'DOC-COLD-B',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'Id' => 'VER-HOT-B',
+                            'ContentDocumentId' => 'DOC-HOT-B',
+                            'FileType' => 'PNG',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.png',
+                        ],
+                        [
+                            'Id' => 'VER-HOT-A',
+                            'ContentDocumentId' => 'DOC-HOT-A',
+                            'FileType' => 'JPG',
+                            'Title' => 'a',
+                            'PathOnClient' => 'a.jpg',
+                        ],
+                        [
+                            'Id' => 'VER-COLD-B',
+                            'ContentDocumentId' => 'DOC-COLD-B',
+                            'FileType' => 'JPG',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.jpg',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ContentVersionId' => 'VER-HOT-A',
+                            'ContentDownloadUrl' => 'https://cdn.example.com/hot-a/download',
+                        ],
+                    ],
+                ], 200),
+            'https://cdn.example.com/hot-a/download' => Http::response('new-hot-image', 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $entries = app(VehicleLeaderboardService::class)->sync();
+
+        $this->assertCount(2, $entries);
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'hot',
+            'vehicle_salesforce_id' => 'VEH-HOT-1',
+            'vehicle_image_url' => '/storage/vehicle-leaderboard/VEH-HOT-1.jpg',
+        ]);
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'cold',
+            'vehicle_salesforce_id' => 'VEH-COLD-1',
+            'vehicle_image_url' => null,
+        ]);
+
+        Storage::disk('public')->assertExists('vehicle-leaderboard/VEH-HOT-1.jpg');
+        Storage::disk('public')->assertMissing('vehicle-leaderboard/VEH-HOT-1.png');
+        Storage::disk('public')->assertMissing('vehicle-leaderboard/VEH-COLD-1.jpg');
+        Storage::disk('public')->assertMissing('vehicle-leaderboard/VEH-OLD-9.jpg');
     }
 
     public function test_leaderboard_shows_rank_movement_against_previous_day(): void
