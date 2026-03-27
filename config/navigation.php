@@ -19,6 +19,10 @@ return [
                 ],
             ],
         ],
+        [
+            'label' => 'Hot & Cold',
+            'route' => 'leaderboard.vehicles',
+        ],
     ],
 
     'footer' => [
@@ -38,6 +42,10 @@ return [
             [
                 'label' => 'Ranking compras',
                 'route' => 'leaderboard.purchases',
+            ],
+            [
+                'label' => 'Ranking coches',
+                'route' => 'leaderboard.vehicles',
             ],
         ],
     ],

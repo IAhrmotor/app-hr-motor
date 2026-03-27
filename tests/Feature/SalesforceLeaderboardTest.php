@@ -7,9 +7,14 @@ use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
+use App\Models\SalesforceConnection;
 use App\Models\User;
+use App\Models\VehicleLeaderboardDailySnapshot;
+use App\Models\VehicleLeaderboardEntry;
+use App\Services\VehicleLeaderboardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SalesforceLeaderboardTest extends TestCase
@@ -52,6 +57,20 @@ class SalesforceLeaderboardTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Ranking de compras');
+    }
+
+    public function test_authenticated_user_can_open_vehicle_leaderboard_page(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('leaderboard.vehicles'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Ranking de coches calientes y fríos')
+            ->assertSee('Coches calientes')
+            ->assertSee('Coches fríos')
+            ->assertSee('open-vehicle-image');
     }
 
     public function test_sales_leaderboard_shows_dealership_instead_of_salesforce_id(): void
@@ -252,6 +271,14 @@ class SalesforceLeaderboardTest extends TestCase
             'services.salesforce.purchase_leaderboard_soql',
             'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
         );
+        config()->set(
+            'services.salesforce.vehicle_hot_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) DESC'
+        );
+        config()->set(
+            'services.salesforce.vehicle_cold_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) ASC'
+        );
 
         $admin = User::factory()->create([
             'role' => 'admin',
@@ -272,20 +299,131 @@ class SalesforceLeaderboardTest extends TestCase
                     'token_type' => 'Bearer',
                     'scope' => 'api refresh_token',
                 ], 200),
-            'https://example.my.salesforce.com/*' => Http::response([
-                'records' => [
-                    [
-                        'ownerId' => '005xx0000000001AAA',
-                        'ownerName' => 'Laura Ventas',
-                        'totalSales' => 25000.75,
+            'https://example.my.salesforce.com/*' => Http::sequence()
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => '005xx0000000001AAA',
+                            'ownerName' => 'Laura Ventas',
+                            'totalSales' => 25000.75,
+                        ],
+                        [
+                            'ownerId' => '005xx0000000002AAA',
+                            'ownerName' => 'Carlos Cierre',
+                            'totalSales' => 18000,
+                        ],
                     ],
-                    [
-                        'ownerId' => '005xx0000000002AAA',
-                        'ownerName' => 'Carlos Cierre',
-                        'totalSales' => 18000,
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => '005xx0000000001AAA',
+                            'ownerName' => 'Laura Ventas',
+                            'totalPurchases' => 4,
+                        ],
+                        [
+                            'ownerId' => '005xx0000000002AAA',
+                            'ownerName' => 'Carlos Cierre',
+                            'totalPurchases' => 2,
+                        ],
                     ],
-                ],
-            ], 200),
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000001AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '0074MLB Audi Q3', 'NombreComercial__c' => 'Audi Q3 35 TDI Advanced', 'PRO_TEX_Matricula__c' => '0074MLB'],
+                            'totalLeads' => 12,
+                        ],
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000002AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '1234ABC Cupra Formentor', 'NombreComercial__c' => 'Cupra Formentor 1.5 TSI', 'PRO_TEX_Matricula__c' => '1234ABC'],
+                            'totalLeads' => 8,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000003AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '5678DEF Seat Leon', 'NombreComercial__c' => 'Seat Leon 1.5 eTSI', 'PRO_TEX_Matricula__c' => '5678DEF'],
+                            'totalLeads' => 1,
+                        ],
+                        [
+                            'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000004AAA',
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '9012GHI Volkswagen T-Cross', 'NombreComercial__c' => 'Volkswagen T-Cross Advance', 'PRO_TEX_Matricula__c' => '9012GHI'],
+                            'totalLeads' => 2,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000001AAA',
+                            'ContentDocumentId' => '069xx0000000001AAA',
+                        ],
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000002AAA',
+                            'ContentDocumentId' => '069xx0000000002AAA',
+                        ],
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000003AAA',
+                            'ContentDocumentId' => '069xx0000000003AAA',
+                        ],
+                        [
+                            'LinkedEntityId' => 'a0Axx0000000004AAA',
+                            'ContentDocumentId' => '069xx0000000004AAA',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'Id' => '068xx0000000001AAA',
+                            'ContentDocumentId' => '069xx0000000001AAA',
+                            'FileType' => 'JPG',
+                            'Title' => 'a',
+                            'PathOnClient' => 'a.jpg',
+                        ],
+                        [
+                            'Id' => '068xx0000000002AAA',
+                            'ContentDocumentId' => '069xx0000000002AAA',
+                            'FileType' => 'PNG',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.png',
+                        ],
+                        [
+                            'Id' => '068xx0000000003AAA',
+                            'ContentDocumentId' => '069xx0000000003AAA',
+                            'FileType' => 'JPEG',
+                            'Title' => 'a',
+                            'PathOnClient' => 'a.jpeg',
+                        ],
+                        [
+                            'Id' => '068xx0000000004AAA',
+                            'ContentDocumentId' => '069xx0000000004AAA',
+                            'FileType' => 'WEBP',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.webp',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ContentVersionId' => '068xx0000000001AAA',
+                            'DistributionPublicUrl' => 'https://cdn.example.com/audi-q3',
+                            'ContentDownloadUrl' => 'https://cdn.example.com/audi-q3/download',
+                        ],
+                        [
+                            'ContentVersionId' => '068xx0000000003AAA',
+                            'DistributionPublicUrl' => 'https://cdn.example.com/seat-leon',
+                            'ContentDownloadUrl' => 'https://cdn.example.com/seat-leon/download',
+                        ],
+                    ],
+                ], 200),
+            'https://cdn.example.com/audi-q3/download' => Http::response('fake-jpeg-image', 200, ['Content-Type' => 'image/jpeg']),
+            'https://cdn.example.com/seat-leon/download' => Http::response('fake-webp-image', 200, ['Content-Type' => 'image/webp']),
         ]);
 
         $response = $this
@@ -329,7 +467,7 @@ class SalesforceLeaderboardTest extends TestCase
             'user_id' => $commercial->id,
             'salesforce_user_id' => '005xx0000000001AAA',
             'seller_name' => 'Laura Ventas',
-            'total_purchases' => 25000.75,
+            'total_purchases' => 4,
         ]);
 
         $this->assertDatabaseHas('purchase_leaderboard_daily_snapshots', [
@@ -337,6 +475,225 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'salesforce_user_id' => '005xx0000000001AAA',
         ]);
+
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'hot',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'a0Axx0000000001AAA',
+            'vehicle_name' => '0074MLB Audi Q3',
+            'vehicle_commercial_name' => 'Audi Q3 35 TDI Advanced',
+            'vehicle_plate' => '0074MLB',
+            'vehicle_image_url' => 'http://localhost/storage/vehicle-leaderboard/a0Axx0000000001AAA.jpg',
+            'total_leads' => 12,
+        ]);
+
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'cold',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'a0Axx0000000003AAA',
+            'vehicle_name' => '5678DEF Seat Leon',
+            'vehicle_commercial_name' => 'Seat Leon 1.5 eTSI',
+            'vehicle_plate' => '5678DEF',
+            'vehicle_image_url' => 'http://localhost/storage/vehicle-leaderboard/a0Axx0000000003AAA.webp',
+            'total_leads' => 1,
+        ]);
+
+        $this->assertDatabaseHas('vehicle_leaderboard_daily_snapshots', [
+            'snapshot_date' => now()->toDateString(),
+            'temperature' => 'hot',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'a0Axx0000000001AAA',
+        ]);
+    }
+
+    public function test_vehicle_leaderboard_shows_hot_and_cold_rankings(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        VehicleLeaderboardEntry::query()->create([
+            'temperature' => 'hot',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'VEH-HOT-1',
+            'vehicle_name' => 'BMW X1',
+            'vehicle_commercial_name' => 'BMW X1 sDrive',
+            'vehicle_plate' => '1111BBB',
+            'vehicle_image_url' => 'https://example.com/bmw-x1.jpg',
+            'total_leads' => 9,
+            'synced_at' => now(),
+        ]);
+
+        VehicleLeaderboardEntry::query()->create([
+            'temperature' => 'cold',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'VEH-COLD-1',
+            'vehicle_name' => 'Ford Puma',
+            'vehicle_commercial_name' => 'Ford Puma Titanium',
+            'vehicle_plate' => '2222CCC',
+            'vehicle_image_url' => 'https://example.com/ford-puma.jpg',
+            'total_leads' => 1,
+            'synced_at' => now(),
+        ]);
+
+        VehicleLeaderboardDailySnapshot::query()->create([
+            'snapshot_date' => now()->subDay()->toDateString(),
+            'temperature' => 'hot',
+            'ranking_position' => 2,
+            'vehicle_salesforce_id' => 'VEH-HOT-1',
+            'vehicle_name' => 'BMW X1',
+            'vehicle_commercial_name' => 'BMW X1 sDrive',
+            'vehicle_plate' => '1111BBB',
+            'vehicle_image_url' => 'https://example.com/bmw-x1.jpg',
+            'total_leads' => 8,
+            'captured_at' => now()->subDay(),
+        ]);
+
+        VehicleLeaderboardDailySnapshot::query()->create([
+            'snapshot_date' => now()->subDay()->toDateString(),
+            'temperature' => 'cold',
+            'ranking_position' => 1,
+            'vehicle_salesforce_id' => 'VEH-COLD-1',
+            'vehicle_name' => 'Ford Puma',
+            'vehicle_commercial_name' => 'Ford Puma Titanium',
+            'vehicle_plate' => '2222CCC',
+            'vehicle_image_url' => 'https://example.com/ford-puma.jpg',
+            'total_leads' => 1,
+            'captured_at' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.vehicles'));
+
+        $response
+            ->assertOk()
+            ->assertSee('BMW X1 sDrive')
+            ->assertSee('1111BBB')
+            ->assertSee('Ford Puma Titanium')
+            ->assertSee('2222CCC')
+            ->assertSee('https://example.com/bmw-x1.jpg')
+            ->assertSee('https://example.com/ford-puma.jpg');
+    }
+
+    public function test_vehicle_sync_refreshes_current_images_and_deletes_stale_files(): void
+    {
+        Storage::fake('public');
+
+        config()->set(
+            'services.salesforce.vehicle_hot_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c vehicleId, LEA_BUS_Vehiculo_de_interes__r.Name vehicleName, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c vehicleCommercialName, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c vehiclePlate, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) DESC'
+        );
+        config()->set(
+            'services.salesforce.vehicle_cold_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c vehicleId, LEA_BUS_Vehiculo_de_interes__r.Name vehicleName, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c vehicleCommercialName, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c vehiclePlate, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) ASC'
+        );
+
+        SalesforceConnection::query()->create([
+            'provider' => 'salesforce',
+            'instance_url' => 'https://example.my.salesforce.com',
+            'access_token' => 'access-token',
+            'refresh_token' => 'refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'api',
+        ]);
+
+        Storage::disk('public')->put('vehicle-leaderboard/VEH-HOT-1.png', 'old-hot-image');
+        Storage::disk('public')->put('vehicle-leaderboard/VEH-COLD-1.jpg', 'old-cold-image');
+        Storage::disk('public')->put('vehicle-leaderboard/VEH-OLD-9.jpg', 'stale-image');
+
+        Http::fake([
+            'https://example.my.salesforce.com/*' => Http::sequence()
+                ->push([
+                    'records' => [
+                        [
+                            'vehicleId' => 'VEH-HOT-1',
+                            'vehicleName' => '0074MLB Audi Q3',
+                            'vehicleCommercialName' => 'Audi Q3 35 TDI Advanced',
+                            'vehiclePlate' => '0074MLB',
+                            'totalLeads' => 12,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'vehicleId' => 'VEH-COLD-1',
+                            'vehicleName' => '0116MHT Opel Mokka',
+                            'vehicleCommercialName' => 'Opel Mokka GS',
+                            'vehiclePlate' => '0116MHT',
+                            'totalLeads' => 1,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'LinkedEntityId' => 'VEH-HOT-1',
+                            'ContentDocumentId' => 'DOC-HOT-A',
+                        ],
+                        [
+                            'LinkedEntityId' => 'VEH-HOT-1',
+                            'ContentDocumentId' => 'DOC-HOT-B',
+                        ],
+                        [
+                            'LinkedEntityId' => 'VEH-COLD-1',
+                            'ContentDocumentId' => 'DOC-COLD-B',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'Id' => 'VER-HOT-B',
+                            'ContentDocumentId' => 'DOC-HOT-B',
+                            'FileType' => 'PNG',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.png',
+                        ],
+                        [
+                            'Id' => 'VER-HOT-A',
+                            'ContentDocumentId' => 'DOC-HOT-A',
+                            'FileType' => 'JPG',
+                            'Title' => 'a',
+                            'PathOnClient' => 'a.jpg',
+                        ],
+                        [
+                            'Id' => 'VER-COLD-B',
+                            'ContentDocumentId' => 'DOC-COLD-B',
+                            'FileType' => 'JPG',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.jpg',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ContentVersionId' => 'VER-HOT-A',
+                            'ContentDownloadUrl' => 'https://cdn.example.com/hot-a/download',
+                        ],
+                    ],
+                ], 200),
+            'https://cdn.example.com/hot-a/download' => Http::response('new-hot-image', 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $entries = app(VehicleLeaderboardService::class)->sync();
+
+        $this->assertCount(2, $entries);
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'hot',
+            'vehicle_salesforce_id' => 'VEH-HOT-1',
+            'vehicle_image_url' => '/storage/vehicle-leaderboard/VEH-HOT-1.jpg',
+        ]);
+        $this->assertDatabaseHas('vehicle_leaderboard_entries', [
+            'temperature' => 'cold',
+            'vehicle_salesforce_id' => 'VEH-COLD-1',
+            'vehicle_image_url' => null,
+        ]);
+
+        Storage::disk('public')->assertExists('vehicle-leaderboard/VEH-HOT-1.jpg');
+        Storage::disk('public')->assertMissing('vehicle-leaderboard/VEH-HOT-1.png');
+        Storage::disk('public')->assertMissing('vehicle-leaderboard/VEH-COLD-1.jpg');
+        Storage::disk('public')->assertMissing('vehicle-leaderboard/VEH-OLD-9.jpg');
     }
 
     public function test_leaderboard_shows_rank_movement_against_previous_day(): void

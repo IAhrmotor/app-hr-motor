@@ -56,7 +56,7 @@
             </div>
 
             <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-slate-50 p-6">
-                <h2 class="text-lg font-semibold text-brand-secondary">Informacion general</h2>
+                <h2 class="text-lg font-semibold text-brand-secondary">Información general</h2>
 
                 <dl class="mt-5 grid gap-5 text-sm md:grid-cols-3">
                     <div>
@@ -76,7 +76,7 @@
 
                     @if ($user->resolved_dealership_name)
                         <div>
-                            <dt class="text-brand-secondary/60">Delegacion</dt>
+                            <dt class="text-brand-secondary/60">Delegación</dt>
                             <dd class="mt-2">
                                 @if ($user->assignedDealership)
                                     <a href="{{ route('dealerships.show', $user->assignedDealership) }}"
