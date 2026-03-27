@@ -50,6 +50,7 @@
     $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
     $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
     $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
+    $vehicleTitle = static fn ($entry) => $entry->vehicle_commercial_name ?: $entry->vehicle_name;
 @endphp
 
 <section class="rounded-[1.85rem] border p-5 sm:p-6 {{ $themeStyles['section'] }}">
@@ -163,10 +164,10 @@
                             <div class="flex flex-1 flex-col justify-between">
                                 <div class="pr-24">
                                     @if ($entry->vehicle_image_url)
-                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $entry->vehicle_name }}"
-                                            class="h-14 w-14 rounded-2xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $vehicleTitle($entry) }}"
+                                            class="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
                                     @else
-                                        <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
+                                        <div class="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -174,9 +175,10 @@
                                             </svg>
                                         </div>
                                     @endif
-                                    <p class="mt-4 text-xl font-semibold leading-tight text-brand-secondary">
-                                        {{ $entry->vehicle_name }}
-                                    </p>
+                                    <p class="mt-4 text-xl font-semibold leading-tight text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
+                                    @if ($entry->vehicle_plate)
+                                        <p class="mt-1 text-sm font-medium text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
+                                    @endif
                                 </div>
 
                                 <div class="mt-6">
@@ -237,10 +239,10 @@
 
                                 <div class="flex min-w-0 items-center gap-3">
                                     @if ($entry->vehicle_image_url)
-                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $entry->vehicle_name }}"
-                                            class="h-11 w-11 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $vehicleTitle($entry) }}"
+                                            class="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
                                     @else
-                                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
+                                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -249,7 +251,10 @@
                                         </div>
                                     @endif
                                     <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->vehicle_name }}</p>
+                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
+                                        @if ($entry->vehicle_plate)
+                                            <p class="truncate text-xs text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -292,10 +297,10 @@
 
                                 <div class="flex items-center gap-3">
                                     @if ($entry->vehicle_image_url)
-                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $entry->vehicle_name }}"
-                                            class="h-11 w-11 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $vehicleTitle($entry) }}"
+                                            class="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
                                     @else
-                                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
+                                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -304,7 +309,10 @@
                                         </div>
                                     @endif
                                     <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->vehicle_name }}</p>
+                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
+                                        @if ($entry->vehicle_plate)
+                                            <p class="truncate text-xs text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

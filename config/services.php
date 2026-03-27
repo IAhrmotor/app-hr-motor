@@ -52,11 +52,11 @@ return [
         ),
         'vehicle_hot_leaderboard_soql' => env(
             'SALESFORCE_VEHICLE_HOT_LEADERBOARD_SOQL',
-            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead WHERE LEA_BUS_Vehiculo_de_interes__c != null AND LEA_BUS_Vehiculo_de_interes__r.PRO_SEL_Estado__c = \'Disponible\' AND LEA_BUS_Vehiculo_de_interes__r.PRO_CAS_Garantia__c = true GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) DESC, LEA_BUS_Vehiculo_de_interes__r.Name ASC LIMIT 10'
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c, COUNT(Id) totalLeads FROM Lead WHERE LEA_BUS_Vehiculo_de_interes__c != null AND LEA_BUS_Vehiculo_de_interes__r.PRO_SEL_Estado__c = \'Disponible\' AND LEA_BUS_Vehiculo_de_interes__r.PRO_CAS_Garantia__c = true GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) DESC, LEA_BUS_Vehiculo_de_interes__r.Name ASC LIMIT 10'
         ),
         'vehicle_cold_leaderboard_soql' => env(
             'SALESFORCE_VEHICLE_COLD_LEADERBOARD_SOQL',
-            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead WHERE LEA_BUS_Vehiculo_de_interes__c != null AND LEA_BUS_Vehiculo_de_interes__r.PRO_SEL_Estado__c = \'Disponible\' AND LEA_BUS_Vehiculo_de_interes__r.PRO_CAS_Garantia__c = true GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) ASC, LEA_BUS_Vehiculo_de_interes__r.Name ASC LIMIT 10'
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c, COUNT(Id) totalLeads FROM Lead WHERE LEA_BUS_Vehiculo_de_interes__c != null AND LEA_BUS_Vehiculo_de_interes__r.PRO_SEL_Estado__c = \'Disponible\' AND LEA_BUS_Vehiculo_de_interes__r.PRO_CAS_Garantia__c = true GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) ASC, LEA_BUS_Vehiculo_de_interes__r.Name ASC LIMIT 10'
         ),
         'excluded_leaderboard_user_ids' => array_values(array_filter(array_map(
             static fn (string $value): string => trim($value),

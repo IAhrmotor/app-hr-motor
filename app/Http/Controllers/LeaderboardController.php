@@ -349,7 +349,11 @@ class LeaderboardController extends Controller
                 ->orderBy('ranking_position');
 
             if ($search !== '') {
-                $entriesQuery->where('vehicle_name', 'like', "%{$search}%");
+                $entriesQuery->where(function ($query) use ($search) {
+                    $query->where('vehicle_name', 'like', "%{$search}%")
+                        ->orWhere('vehicle_commercial_name', 'like', "%{$search}%")
+                        ->orWhere('vehicle_plate', 'like', "%{$search}%");
+                });
             }
 
             $entries = $entriesQuery
