@@ -1,7 +1,23 @@
 @extends('layouts.app')
 
 @section('content')
-    <section class="py-10 sm:py-14">
+    <section
+        x-data="{
+            isVehicleImageOpen: false,
+            vehicleImageSrc: null,
+            vehicleImageAlt: '',
+            vehicleImageTitle: '',
+            openVehicleImage(payload) {
+                this.vehicleImageSrc = payload.src;
+                this.vehicleImageAlt = payload.alt ?? '';
+                this.vehicleImageTitle = payload.title ?? '';
+                this.isVehicleImageOpen = true;
+            },
+        }"
+        @open-vehicle-image.window="openVehicleImage($event.detail)"
+        @keydown.escape.window="isVehicleImageOpen = false"
+        class="py-10 sm:py-14"
+    >
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
             <div class="flex flex-col gap-6 rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -110,6 +126,37 @@
                     @include('leaderboard.partials.vehicle-section', ['leaderboard' => $hotLeaderboard, 'emptyDescription' => $emptyDescription])
                     @include('leaderboard.partials.vehicle-section', ['leaderboard' => $coldLeaderboard, 'emptyDescription' => $emptyDescription])
                 </div>
+            </div>
+        </div>
+
+        <div
+            x-cloak
+            x-show="isVehicleImageOpen && vehicleImageSrc"
+            x-transition.opacity
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-6 py-8 backdrop-blur-sm"
+            @click.self="isVehicleImageOpen = false"
+        >
+            <div class="relative w-full max-w-5xl">
+                <button
+                    type="button"
+                    @click="isVehicleImageOpen = false"
+                    class="absolute right-3 top-3 z-10 inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/90 text-brand-secondary shadow-lg transition hover:bg-white"
+                    aria-label="Cerrar imagen ampliada"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <div class="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl">
+                    <img
+                        :src="vehicleImageSrc"
+                        :alt="vehicleImageAlt"
+                        class="max-h-[80vh] w-full object-contain bg-slate-900"
+                    >
+                </div>
+
+                <p x-show="vehicleImageTitle" class="mt-4 text-center text-sm font-medium text-white/80" x-text="vehicleImageTitle"></p>
             </div>
         </div>
     </section>

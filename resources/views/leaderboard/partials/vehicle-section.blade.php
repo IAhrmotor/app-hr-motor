@@ -23,7 +23,7 @@
             'metric' => 'text-amber-700',
             'tableMetric' => 'text-amber-700',
             'headerLine' => 'from-amber-300/60 via-orange-300/50 to-transparent',
-            'topAura' => 'shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_22px_44px_rgba(180,83,9,0.10)]',
+            'topAura' => 'shadow-[0_7px_0_0_rgba(217,167,34,0.24)]',
             'topCard' => 'border-amber-200/70 bg-[linear-gradient(180deg,rgba(255,251,235,0.98),rgba(255,255,255,1))]',
             'rankBadge' => 'bg-gradient-to-r from-amber-500 via-orange-400 to-amber-300 text-amber-950',
             'avatar' => 'from-amber-500/20 to-orange-500/10 text-amber-800 ring-amber-300/50',
@@ -39,7 +39,7 @@
             'metric' => 'text-sky-700',
             'tableMetric' => 'text-sky-700',
             'headerLine' => 'from-sky-300/60 via-cyan-300/50 to-transparent',
-            'topAura' => 'shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_22px_44px_rgba(14,116,144,0.10)]',
+            'topAura' => 'shadow-[0_7px_0_0_rgba(14,116,144,0.22)]',
             'topCard' => 'border-sky-200/70 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(255,255,255,1))]',
             'rankBadge' => 'bg-gradient-to-r from-sky-600 via-cyan-500 to-sky-300 text-white',
             'avatar' => 'from-sky-500/20 to-cyan-500/10 text-sky-800 ring-sky-300/50',
@@ -51,6 +51,7 @@
     $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
     $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
     $vehicleTitle = static fn ($entry) => $entry->vehicle_commercial_name ?: $entry->vehicle_name;
+    $vehicleImageAlt = static fn ($entry) => 'Imagen de '.$vehicleTitle($entry);
 @endphp
 
 <section class="rounded-[1.85rem] border p-5 sm:p-6 {{ $themeStyles['section'] }}">
@@ -164,8 +165,18 @@
                             <div class="flex flex-1 flex-col justify-between">
                                 <div class="pr-24">
                                     @if ($entry->vehicle_image_url)
-                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $vehicleTitle($entry) }}"
-                                            class="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                        <button
+                                            type="button"
+                                            @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
+                                            class="group relative block overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                            aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
+                                        >
+                                            <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
+                                                class="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 transition duration-300 group-hover:scale-105 group-hover:brightness-75 {{ $themeStyles['avatar'] }}">
+                                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                                Ver
+                                            </span>
+                                        </button>
                                     @else
                                         <div class="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
@@ -239,8 +250,18 @@
 
                                 <div class="flex min-w-0 items-center gap-3">
                                     @if ($entry->vehicle_image_url)
-                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $vehicleTitle($entry) }}"
-                                            class="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                        <button
+                                            type="button"
+                                            @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
+                                            class="group relative block shrink-0 overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                            aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
+                                        >
+                                            <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
+                                                class="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 transition duration-300 group-hover:scale-105 group-hover:brightness-75 {{ $themeStyles['avatar'] }}">
+                                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-brand-secondary/0 text-[9px] font-semibold uppercase tracking-[0.16em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                                Ver
+                                            </span>
+                                        </button>
                                     @else
                                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -297,8 +318,18 @@
 
                                 <div class="flex items-center gap-3">
                                     @if ($entry->vehicle_image_url)
-                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $vehicleTitle($entry) }}"
-                                            class="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                        <button
+                                            type="button"
+                                            @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
+                                            class="group relative block shrink-0 overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                            aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
+                                        >
+                                            <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
+                                                class="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 transition duration-300 group-hover:scale-105 group-hover:brightness-75 {{ $themeStyles['avatar'] }}">
+                                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-brand-secondary/0 text-[9px] font-semibold uppercase tracking-[0.16em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                                Ver
+                                            </span>
+                                        </button>
                                     @else
                                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
