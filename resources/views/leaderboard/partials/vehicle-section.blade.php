@@ -168,7 +168,7 @@
                                         <button
                                             type="button"
                                             @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
-                                            class="group relative block overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                            class="group relative block cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                                             aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
                                         >
                                             <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
@@ -253,7 +253,7 @@
                                         <button
                                             type="button"
                                             @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
-                                            class="group relative block shrink-0 overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                            class="group relative block shrink-0 cursor-pointer overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                                             aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
                                         >
                                             <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
@@ -321,7 +321,7 @@
                                         <button
                                             type="button"
                                             @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
-                                            class="group relative block shrink-0 overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                            class="group relative block shrink-0 cursor-pointer overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                                             aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
                                         >
                                             <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
