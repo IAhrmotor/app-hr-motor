@@ -106,7 +106,7 @@
                     @endif
                 @endauth
 
-                <div class="grid gap-6 xl:grid-cols-2">
+                <div class="flex flex-col gap-6">
                     @include('leaderboard.partials.vehicle-section', ['leaderboard' => $hotLeaderboard, 'emptyDescription' => $emptyDescription])
                     @include('leaderboard.partials.vehicle-section', ['leaderboard' => $coldLeaderboard, 'emptyDescription' => $emptyDescription])
                 </div>

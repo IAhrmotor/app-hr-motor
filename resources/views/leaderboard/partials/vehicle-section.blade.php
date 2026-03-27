@@ -128,12 +128,12 @@
             </div>
         @else
             @if ($topEntries->isNotEmpty())
-                <div class="mt-6 grid auto-rows-fr gap-4 lg:grid-cols-3">
+                <div class="mt-6 grid auto-rows-fr gap-4">
                     @foreach ($topEntries as $entry)
                         @php
                             $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         @endphp
-                        <article class="relative flex h-full min-h-[20rem] flex-col overflow-hidden rounded-[1.7rem] border p-5 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }}">
+                        <article class="relative flex h-full min-h-[15.5rem] flex-col overflow-hidden rounded-[1.7rem] border p-5 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }}">
                             <div class="absolute right-4 top-4 flex items-center gap-2">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $themeStyles['rankBadge'] }}">
                                     #{{ $entry->ranking_position }}
@@ -175,7 +175,7 @@
                                             </svg>
                                         </div>
                                     @endif
-                                    <p class="mt-4 text-xl font-semibold leading-tight text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
+                                    <p class="mt-4 max-w-xl text-xl font-semibold leading-tight text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
                                     @if ($entry->vehicle_plate)
                                         <p class="mt-1 text-sm font-medium text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
                                     @endif
