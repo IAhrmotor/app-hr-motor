@@ -34,8 +34,9 @@
 
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-end">
                         <a href="#coches-frios"
+                            @click.prevent="document.getElementById('coches-frios')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                             class="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-200/80 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800 transition hover:bg-sky-100">
-                            <x-icons.ice class="h-4 w-4 shrink-0" />
+                            <x-icons.ice class="h-5 w-5 shrink-0 text-sky-600" />
                             <span>Ir a coches fríos</span>
                         </a>
 
