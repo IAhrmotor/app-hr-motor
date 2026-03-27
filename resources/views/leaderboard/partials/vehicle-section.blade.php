@@ -60,7 +60,7 @@
         <div class="flex items-start justify-between gap-4">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.32em] {{ $themeStyles['eyebrow'] }}">
-                    {{ $isHot ? 'Alta traccion' : 'Baja traccion' }}
+                    {{ $isHot ? 'Alta tracción' : 'Baja tracción' }}
                 </p>
                 <h2 class="mt-2 text-2xl font-semibold tracking-tight text-brand-secondary">
                     {{ $leaderboard['title'] }}
@@ -119,8 +119,8 @@
         @if ($entryItems->isEmpty())
             <div class="mt-5 rounded-[1.6rem] border border-dashed border-brand-secondary/15 bg-white/60 px-6 py-12 text-center text-brand-secondary/75">
                 @if ($hasLeaderboardData && $search !== '')
-                    <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu busqueda</p>
-                    <p class="mt-2 text-sm">Prueba con otro modelo o version.</p>
+                    <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu búsqueda</p>
+                    <p class="mt-2 text-sm">Prueba con otro modelo o versión.</p>
                 @else
                     <p class="text-lg font-semibold text-brand-secondary">{{ $leaderboard['emptyTitle'] }}</p>
                     <p class="mt-2 text-sm">{{ $emptyDescription }}</p>
