@@ -162,9 +162,18 @@
 
                             <div class="flex flex-1 flex-col justify-between">
                                 <div class="pr-24">
-                                    <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br font-semibold ring-1 {{ $themeStyles['avatar'] }}">
-                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->vehicle_name, 0, 2)) }}
-                                    </div>
+                                    @if ($entry->vehicle_image_url)
+                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $entry->vehicle_name }}"
+                                            class="h-14 w-14 rounded-2xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                    @else
+                                        <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M3.75 14.25h16.5m-14.25 0-.94-2.82A2.25 2.25 0 0 1 7.2 8.25h9.6a2.25 2.25 0 0 1 2.14 1.58l.94 2.82M6 14.25V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 8.25 16.5v-2.25m7.5 0V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 18 16.5v-2.25M6.75 11.25h.008v.008H6.75v-.008Zm10.5 0h.008v.008h-.008v-.008Z" />
+                                            </svg>
+                                        </div>
+                                    @endif
                                     <p class="mt-4 text-xl font-semibold leading-tight text-brand-secondary">
                                         {{ $entry->vehicle_name }}
                                     </p>
@@ -227,9 +236,18 @@
                                 </div>
 
                                 <div class="flex min-w-0 items-center gap-3">
-                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br font-semibold ring-1 {{ $themeStyles['avatar'] }}">
-                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->vehicle_name, 0, 2)) }}
-                                    </div>
+                                    @if ($entry->vehicle_image_url)
+                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $entry->vehicle_name }}"
+                                            class="h-11 w-11 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                    @else
+                                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M3.75 14.25h16.5m-14.25 0-.94-2.82A2.25 2.25 0 0 1 7.2 8.25h9.6a2.25 2.25 0 0 1 2.14 1.58l.94 2.82M6 14.25V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 8.25 16.5v-2.25m7.5 0V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 18 16.5v-2.25M6.75 11.25h.008v.008H6.75v-.008Zm10.5 0h.008v.008h-.008v-.008Z" />
+                                            </svg>
+                                        </div>
+                                    @endif
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->vehicle_name }}</p>
                                     </div>
@@ -273,9 +291,18 @@
                                 </div>
 
                                 <div class="flex items-center gap-3">
-                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br font-semibold ring-1 {{ $themeStyles['avatar'] }}">
-                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->vehicle_name, 0, 2)) }}
-                                    </div>
+                                    @if ($entry->vehicle_image_url)
+                                        <img src="{{ $entry->vehicle_image_url }}" alt="Imagen de {{ $entry->vehicle_name }}"
+                                            class="h-11 w-11 rounded-xl object-cover ring-1 {{ $themeStyles['avatar'] }}">
+                                    @else
+                                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M3.75 14.25h16.5m-14.25 0-.94-2.82A2.25 2.25 0 0 1 7.2 8.25h9.6a2.25 2.25 0 0 1 2.14 1.58l.94 2.82M6 14.25V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 8.25 16.5v-2.25m7.5 0V16.5a.75.75 0 0 0 .75.75h.75A.75.75 0 0 0 18 16.5v-2.25M6.75 11.25h.008v.008H6.75v-.008Zm10.5 0h.008v.008h-.008v-.008Z" />
+                                            </svg>
+                                        </div>
+                                    @endif
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->vehicle_name }}</p>
                                     </div>
