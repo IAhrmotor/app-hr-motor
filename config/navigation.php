@@ -17,11 +17,11 @@ return [
                     'label' => 'Ranking de compras',
                     'route' => 'leaderboard.purchases',
                 ],
-                [
-                    'label' => 'Coches calientes y fríos',
-                    'route' => 'leaderboard.vehicles',
-                ],
             ],
+        ],
+        [
+            'label' => 'Hot & Cold',
+            'route' => 'leaderboard.vehicles',
         ],
     ],
 
