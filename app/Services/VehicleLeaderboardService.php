@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -299,10 +300,10 @@ class VehicleLeaderboardService
 
         $documentLinks = $this->runLeaderboardQuery(
             $connection,
-            "SELECT LinkedEntityId, ContentDocumentId, ContentDocument.CreatedDate
+            "SELECT LinkedEntityId, ContentDocumentId, ShareType, Visibility, SystemModstamp
              FROM ContentDocumentLink
              WHERE LinkedEntityId IN ({$quotedVehicleIds})
-             ORDER BY LinkedEntityId ASC, ContentDocument.CreatedDate ASC"
+             ORDER BY LinkedEntityId ASC, SystemModstamp DESC"
         );
 
         $firstDocumentByVehicle = collect($documentLinks)
@@ -364,19 +365,65 @@ class VehicleLeaderboardService
         $distributionMap = collect($contentDistributions)
             ->mapWithKeys(function (array $record): array {
                 $versionId = $this->stringOrNull($record['ContentVersionId'] ?? null);
-                $url = $this->stringOrNull($record['DistributionPublicUrl'] ?? null)
-                    ?? $this->stringOrNull($record['ContentDownloadUrl'] ?? null);
+                $url = $this->stringOrNull($record['ContentDownloadUrl'] ?? null)
+                    ?? $this->stringOrNull($record['DistributionPublicUrl'] ?? null);
 
                 return $versionId && $url ? [$versionId => $url] : [];
             });
 
         return $firstDocumentByVehicle
-            ->map(function (string $documentId) use ($versionMap, $distributionMap): ?string {
+            ->map(function (string $documentId, string $vehicleId) use ($connection, $versionMap, $distributionMap): ?string {
                 $versionId = $versionMap->get($documentId);
 
-                return $versionId ? $distributionMap->get($versionId) : null;
+                if (! $versionId) {
+                    return null;
+                }
+
+                $downloadUrl = $distributionMap->get($versionId);
+
+                return $downloadUrl
+                    ? $this->downloadVehicleImage($connection, $vehicleId, $downloadUrl)
+                    : null;
             })
             ->filter();
+    }
+
+    private function downloadVehicleImage(SalesforceConnection $connection, string $vehicleId, string $downloadUrl): ?string
+    {
+        $absoluteUrl = $this->makeAbsoluteSalesforceUrl($connection, $downloadUrl);
+        $response = Http::timeout(20)->get($absoluteUrl);
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $contentType = Str::lower(trim(strtok((string) $response->header('Content-Type'), ';')));
+
+        if (! Str::startsWith($contentType, 'image/')) {
+            return null;
+        }
+
+        $extension = match ($contentType) {
+            'image/jpeg', 'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
+
+        $path = "vehicle-leaderboard/{$vehicleId}.{$extension}";
+
+        Storage::disk('public')->put($path, $response->body());
+
+        return Storage::disk('public')->url($path);
+    }
+
+    private function makeAbsoluteSalesforceUrl(SalesforceConnection $connection, string $path): string
+    {
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        return rtrim($connection->instance_url, '/') . '/' . ltrim($path, '/');
     }
 
     private function ensureRequiredTablesExist(): void

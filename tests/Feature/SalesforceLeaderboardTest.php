@@ -410,6 +410,8 @@ class SalesforceLeaderboardTest extends TestCase
                         ],
                     ],
                 ], 200),
+            'https://cdn.example.com/audi-q3/download' => Http::response('fake-jpeg-image', 200, ['Content-Type' => 'image/jpeg']),
+            'https://cdn.example.com/seat-leon/download' => Http::response('fake-webp-image', 200, ['Content-Type' => 'image/webp']),
         ]);
 
         $response = $this
@@ -469,7 +471,7 @@ class SalesforceLeaderboardTest extends TestCase
             'vehicle_name' => '0074MLB Audi Q3',
             'vehicle_commercial_name' => 'Audi Q3 35 TDI Advanced',
             'vehicle_plate' => '0074MLB',
-            'vehicle_image_url' => 'https://cdn.example.com/audi-q3',
+            'vehicle_image_url' => 'http://localhost/storage/vehicle-leaderboard/a0Axx0000000001AAA.jpg',
             'total_leads' => 12,
         ]);
 
@@ -480,7 +482,7 @@ class SalesforceLeaderboardTest extends TestCase
             'vehicle_name' => '5678DEF Seat Leon',
             'vehicle_commercial_name' => 'Seat Leon 1.5 eTSI',
             'vehicle_plate' => '5678DEF',
-            'vehicle_image_url' => 'https://cdn.example.com/seat-leon',
+            'vehicle_image_url' => 'http://localhost/storage/vehicle-leaderboard/a0Axx0000000003AAA.webp',
             'total_leads' => 1,
         ]);
 
