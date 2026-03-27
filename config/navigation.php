@@ -18,7 +18,7 @@ return [
                     'route' => 'leaderboard.purchases',
                 ],
                 [
-                    'label' => 'Coches calientes y frios',
+                    'label' => 'Coches calientes y fríos',
                     'route' => 'leaderboard.vehicles',
                 ],
             ],

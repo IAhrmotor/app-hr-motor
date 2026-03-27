@@ -306,25 +306,28 @@ class VehicleLeaderboardService
              ORDER BY LinkedEntityId ASC, SystemModstamp DESC"
         );
 
-        $firstDocumentByVehicle = collect($documentLinks)
+        $documentIdsByVehicle = collect($documentLinks)
             ->filter(fn (array $record): bool => filled($this->stringOrNull($record['LinkedEntityId'] ?? null)))
             ->groupBy(fn (array $record): string => (string) $record['LinkedEntityId'])
-            ->map(fn (Collection $records): ?string => $this->stringOrNull($records->first()['ContentDocumentId'] ?? null))
+            ->map(fn (Collection $records): Collection => $records
+                ->map(fn (array $record): ?string => $this->stringOrNull($record['ContentDocumentId'] ?? null))
+                ->filter()
+                ->values()
+                ->unique())
             ->filter();
 
-        if ($firstDocumentByVehicle->isEmpty()) {
+        if ($documentIdsByVehicle->isEmpty()) {
             return collect();
         }
 
-        $quotedDocumentIds = $firstDocumentByVehicle
-            ->values()
-            ->unique()
+        $quotedDocumentIds = $documentIdsByVehicle
+            ->flatten()
             ->map(fn (string $id): string => "'" . str_replace("'", "\\'", $id) . "'")
             ->implode(', ');
 
         $contentVersions = $this->runLeaderboardQuery(
             $connection,
-            "SELECT Id, ContentDocumentId, FileType
+            "SELECT Id, ContentDocumentId, FileType, Title, PathOnClient
              FROM ContentVersion
              WHERE ContentDocumentId IN ({$quotedDocumentIds})
              AND IsLatest = true"
@@ -336,16 +339,36 @@ class VehicleLeaderboardService
 
                 return in_array($fileType, ['JPG', 'JPEG', 'PNG', 'WEBP'], true);
             })
-            ->mapWithKeys(function (array $record): array {
-                $documentId = (string) ($record['ContentDocumentId'] ?? '');
-                $versionId = $this->stringOrNull($record['Id'] ?? null);
+            ->keyBy(fn (array $record): string => (string) ($record['ContentDocumentId'] ?? ''))
+            ->filter(fn (array $record, string $documentId): bool => $documentId !== '');
 
-                return $documentId !== '' && $versionId
-                    ? [$documentId => $versionId]
-                    : [];
-            });
+        $selectedVersionsByVehicle = $documentIdsByVehicle
+            ->map(function (Collection $documentIds) use ($versionMap): ?array {
+                $matchingVersion = $documentIds
+                    ->map(fn (string $documentId): ?array => $versionMap->get($documentId))
+                    ->filter()
+                    ->sortByDesc(fn (array $record): int => $this->isPrimaryVehicleImage($record) ? 1 : 0)
+                    ->first();
 
-        $versionIds = $versionMap->values()->unique();
+                if (! is_array($matchingVersion)) {
+                    return null;
+                }
+
+                $versionId = $this->stringOrNull($matchingVersion['Id'] ?? null);
+
+                return $versionId
+                    ? [
+                        'version_id' => $versionId,
+                        'file_type' => Str::upper((string) ($matchingVersion['FileType'] ?? '')),
+                    ]
+                    : null;
+            })
+            ->filter();
+
+        $versionIds = $selectedVersionsByVehicle
+            ->pluck('version_id')
+            ->unique()
+            ->values();
 
         if ($versionIds->isEmpty()) {
             return collect();
@@ -371,11 +394,11 @@ class VehicleLeaderboardService
                 return $versionId && $url ? [$versionId => $url] : [];
             });
 
-        return $firstDocumentByVehicle
-            ->map(function (string $documentId, string $vehicleId) use ($connection, $versionMap, $distributionMap): ?string {
-                $versionId = $versionMap->get($documentId);
+        return $selectedVersionsByVehicle
+            ->map(function (array $selectedVersion, string $vehicleId) use ($connection, $distributionMap): ?string {
+                $versionId = $selectedVersion['version_id'] ?? null;
 
-                if (! $versionId) {
+                if (! is_string($versionId) || $versionId === '') {
                     return null;
                 }
 
@@ -386,6 +409,15 @@ class VehicleLeaderboardService
                     : null;
             })
             ->filter();
+    }
+
+    private function isPrimaryVehicleImage(array $record): bool
+    {
+        $title = Str::lower(trim((string) ($record['Title'] ?? '')));
+        $pathOnClient = trim((string) ($record['PathOnClient'] ?? ''));
+        $fileName = Str::lower(pathinfo($pathOnClient, PATHINFO_FILENAME));
+
+        return $title === 'a' || $fileName === 'a';
     }
 
     private function downloadVehicleImage(SalesforceConnection $connection, string $vehicleId, string $downloadUrl): ?string

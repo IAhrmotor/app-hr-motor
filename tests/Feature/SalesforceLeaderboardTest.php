@@ -64,9 +64,10 @@ class SalesforceLeaderboardTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Ranking de coches calientes y frios')
+            ->assertSee('Ranking de coches calientes y fríos')
             ->assertSee('Coches calientes')
-            ->assertSee('Coches frios');
+            ->assertSee('Coches fríos')
+            ->assertSee('open-vehicle-image');
     }
 
     public function test_sales_leaderboard_shows_dealership_instead_of_salesforce_id(): void
@@ -378,21 +379,29 @@ class SalesforceLeaderboardTest extends TestCase
                             'Id' => '068xx0000000001AAA',
                             'ContentDocumentId' => '069xx0000000001AAA',
                             'FileType' => 'JPG',
+                            'Title' => 'a',
+                            'PathOnClient' => 'a.jpg',
                         ],
                         [
                             'Id' => '068xx0000000002AAA',
                             'ContentDocumentId' => '069xx0000000002AAA',
                             'FileType' => 'PNG',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.png',
                         ],
                         [
                             'Id' => '068xx0000000003AAA',
                             'ContentDocumentId' => '069xx0000000003AAA',
                             'FileType' => 'JPEG',
+                            'Title' => 'a',
+                            'PathOnClient' => 'a.jpeg',
                         ],
                         [
                             'Id' => '068xx0000000004AAA',
                             'ContentDocumentId' => '069xx0000000004AAA',
                             'FileType' => 'WEBP',
+                            'Title' => 'b',
+                            'PathOnClient' => 'b.webp',
                         ],
                     ],
                 ], 200)
