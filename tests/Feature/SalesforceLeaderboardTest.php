@@ -269,11 +269,11 @@ class SalesforceLeaderboardTest extends TestCase
         );
         config()->set(
             'services.salesforce.vehicle_hot_leaderboard_soql',
-            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) DESC'
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) DESC'
         );
         config()->set(
             'services.salesforce.vehicle_cold_leaderboard_soql',
-            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name ORDER BY COUNT(Id) ASC'
+            'SELECT LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) ASC'
         );
 
         $admin = User::factory()->create([
@@ -328,12 +328,12 @@ class SalesforceLeaderboardTest extends TestCase
                     'records' => [
                         [
                             'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000001AAA',
-                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Audi A3'],
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '0074MLB Audi Q3', 'NombreComercial__c' => 'Audi Q3 35 TDI Advanced', 'PRO_TEX_Matricula__c' => '0074MLB'],
                             'totalLeads' => 12,
                         ],
                         [
                             'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000002AAA',
-                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Cupra Formentor'],
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '1234ABC Cupra Formentor', 'NombreComercial__c' => 'Cupra Formentor 1.5 TSI', 'PRO_TEX_Matricula__c' => '1234ABC'],
                             'totalLeads' => 8,
                         ],
                     ],
@@ -342,12 +342,12 @@ class SalesforceLeaderboardTest extends TestCase
                     'records' => [
                         [
                             'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000003AAA',
-                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Seat Leon'],
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '5678DEF Seat Leon', 'NombreComercial__c' => 'Seat Leon 1.5 eTSI', 'PRO_TEX_Matricula__c' => '5678DEF'],
                             'totalLeads' => 1,
                         ],
                         [
                             'LEA_BUS_Vehiculo_de_interes__c' => 'a0Axx0000000004AAA',
-                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => 'Volkswagen T-Cross'],
+                            'LEA_BUS_Vehiculo_de_interes__r' => ['Name' => '9012GHI Volkswagen T-Cross', 'NombreComercial__c' => 'Volkswagen T-Cross Advance', 'PRO_TEX_Matricula__c' => '9012GHI'],
                             'totalLeads' => 2,
                         ],
                     ],
@@ -375,24 +375,38 @@ class SalesforceLeaderboardTest extends TestCase
                 ->push([
                     'records' => [
                         [
+                            'Id' => '068xx0000000001AAA',
                             'ContentDocumentId' => '069xx0000000001AAA',
-                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000001AAA',
                             'FileType' => 'JPG',
                         ],
                         [
+                            'Id' => '068xx0000000002AAA',
                             'ContentDocumentId' => '069xx0000000002AAA',
-                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000002AAA',
                             'FileType' => 'PNG',
                         ],
                         [
+                            'Id' => '068xx0000000003AAA',
                             'ContentDocumentId' => '069xx0000000003AAA',
-                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000003AAA',
                             'FileType' => 'JPEG',
                         ],
                         [
+                            'Id' => '068xx0000000004AAA',
                             'ContentDocumentId' => '069xx0000000004AAA',
-                            'VersionDataUrl' => '/sfc/servlet.shepherd/version/download/068xx0000000004AAA',
                             'FileType' => 'WEBP',
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ContentVersionId' => '068xx0000000001AAA',
+                            'DistributionPublicUrl' => 'https://cdn.example.com/audi-q3',
+                            'ContentDownloadUrl' => 'https://cdn.example.com/audi-q3/download',
+                        ],
+                        [
+                            'ContentVersionId' => '068xx0000000003AAA',
+                            'DistributionPublicUrl' => 'https://cdn.example.com/seat-leon',
+                            'ContentDownloadUrl' => 'https://cdn.example.com/seat-leon/download',
                         ],
                     ],
                 ], 200),
@@ -452,8 +466,10 @@ class SalesforceLeaderboardTest extends TestCase
             'temperature' => 'hot',
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'a0Axx0000000001AAA',
-            'vehicle_name' => 'Audi A3',
-            'vehicle_image_url' => 'https://example.my.salesforce.com/sfc/servlet.shepherd/version/download/068xx0000000001AAA',
+            'vehicle_name' => '0074MLB Audi Q3',
+            'vehicle_commercial_name' => 'Audi Q3 35 TDI Advanced',
+            'vehicle_plate' => '0074MLB',
+            'vehicle_image_url' => 'https://cdn.example.com/audi-q3',
             'total_leads' => 12,
         ]);
 
@@ -461,8 +477,10 @@ class SalesforceLeaderboardTest extends TestCase
             'temperature' => 'cold',
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'a0Axx0000000003AAA',
-            'vehicle_name' => 'Seat Leon',
-            'vehicle_image_url' => 'https://example.my.salesforce.com/sfc/servlet.shepherd/version/download/068xx0000000003AAA',
+            'vehicle_name' => '5678DEF Seat Leon',
+            'vehicle_commercial_name' => 'Seat Leon 1.5 eTSI',
+            'vehicle_plate' => '5678DEF',
+            'vehicle_image_url' => 'https://cdn.example.com/seat-leon',
             'total_leads' => 1,
         ]);
 
@@ -485,6 +503,8 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'VEH-HOT-1',
             'vehicle_name' => 'BMW X1',
+            'vehicle_commercial_name' => 'BMW X1 sDrive',
+            'vehicle_plate' => '1111BBB',
             'vehicle_image_url' => 'https://example.com/bmw-x1.jpg',
             'total_leads' => 9,
             'synced_at' => now(),
@@ -495,6 +515,8 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'VEH-COLD-1',
             'vehicle_name' => 'Ford Puma',
+            'vehicle_commercial_name' => 'Ford Puma Titanium',
+            'vehicle_plate' => '2222CCC',
             'vehicle_image_url' => 'https://example.com/ford-puma.jpg',
             'total_leads' => 1,
             'synced_at' => now(),
@@ -506,6 +528,8 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 2,
             'vehicle_salesforce_id' => 'VEH-HOT-1',
             'vehicle_name' => 'BMW X1',
+            'vehicle_commercial_name' => 'BMW X1 sDrive',
+            'vehicle_plate' => '1111BBB',
             'vehicle_image_url' => 'https://example.com/bmw-x1.jpg',
             'total_leads' => 8,
             'captured_at' => now()->subDay(),
@@ -517,6 +541,8 @@ class SalesforceLeaderboardTest extends TestCase
             'ranking_position' => 1,
             'vehicle_salesforce_id' => 'VEH-COLD-1',
             'vehicle_name' => 'Ford Puma',
+            'vehicle_commercial_name' => 'Ford Puma Titanium',
+            'vehicle_plate' => '2222CCC',
             'vehicle_image_url' => 'https://example.com/ford-puma.jpg',
             'total_leads' => 1,
             'captured_at' => now()->subDay(),
@@ -526,8 +552,10 @@ class SalesforceLeaderboardTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('BMW X1')
-            ->assertSee('Ford Puma')
+            ->assertSee('BMW X1 sDrive')
+            ->assertSee('1111BBB')
+            ->assertSee('Ford Puma Titanium')
+            ->assertSee('2222CCC')
             ->assertSee('https://example.com/bmw-x1.jpg')
             ->assertSee('https://example.com/ford-puma.jpg');
     }

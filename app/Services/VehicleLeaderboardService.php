@@ -98,6 +98,8 @@ class VehicleLeaderboardService
                         'ranking_position' => $entry['ranking_position'],
                         'vehicle_salesforce_id' => $entry['vehicle_salesforce_id'],
                         'vehicle_name' => $entry['vehicle_name'],
+                        'vehicle_commercial_name' => $entry['vehicle_commercial_name'],
+                        'vehicle_plate' => $entry['vehicle_plate'],
                         'vehicle_image_url' => $entry['vehicle_image_url'],
                         'total_leads' => $entry['total_leads'],
                         'captured_at' => $syncedAt,
@@ -216,6 +218,8 @@ class VehicleLeaderboardService
                     'ranking_position' => $index + 1,
                     'vehicle_salesforce_id' => $vehicleSalesforceId,
                     'vehicle_name' => $this->extractVehicleName($record),
+                    'vehicle_commercial_name' => $this->extractVehicleCommercialName($record),
+                    'vehicle_plate' => $this->extractVehiclePlate($record),
                     'vehicle_image_url' => $vehicleSalesforceId ? $vehicleImageMap->get($vehicleSalesforceId) : null,
                     'total_leads' => $this->extractTotalLeads($record),
                     'synced_at' => $syncedAt,
@@ -242,6 +246,24 @@ class VehicleLeaderboardService
                 ?? data_get($record, 'LEA_BUS_Vehiculo_de_interes__r.Name')
                 ?? $record['Name']
         ) ?? 'Vehiculo sin nombre';
+    }
+
+    private function extractVehicleCommercialName(array $record): ?string
+    {
+        return $this->stringOrNull(
+            $record['vehicleCommercialName']
+                ?? $record['VehicleCommercialName']
+                ?? data_get($record, 'LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c')
+        );
+    }
+
+    private function extractVehiclePlate(array $record): ?string
+    {
+        return $this->stringOrNull(
+            $record['vehiclePlate']
+                ?? $record['VehiclePlate']
+                ?? data_get($record, 'LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c')
+        );
     }
 
     private function extractTotalLeads(array $record): int
@@ -301,7 +323,7 @@ class VehicleLeaderboardService
 
         $contentVersions = $this->runLeaderboardQuery(
             $connection,
-            "SELECT ContentDocumentId, VersionDataUrl, FileType
+            "SELECT Id, ContentDocumentId, FileType
              FROM ContentVersion
              WHERE ContentDocumentId IN ({$quotedDocumentIds})
              AND IsLatest = true"
@@ -315,27 +337,46 @@ class VehicleLeaderboardService
             })
             ->mapWithKeys(function (array $record): array {
                 $documentId = (string) ($record['ContentDocumentId'] ?? '');
-                $versionUrl = $this->stringOrNull($record['VersionDataUrl'] ?? null);
+                $versionId = $this->stringOrNull($record['Id'] ?? null);
 
-                return $documentId !== '' && $versionUrl
-                    ? [$documentId => $this->makeAbsoluteSalesforceUrl($versionUrl)]
+                return $documentId !== '' && $versionId
+                    ? [$documentId => $versionId]
                     : [];
             });
 
-        return $firstDocumentByVehicle->map(
-            fn (string $documentId): ?string => $versionMap->get($documentId)
-        )->filter();
-    }
+        $versionIds = $versionMap->values()->unique();
 
-    private function makeAbsoluteSalesforceUrl(string $path): string
-    {
-        if (Str::startsWith($path, ['http://', 'https://'])) {
-            return $path;
+        if ($versionIds->isEmpty()) {
+            return collect();
         }
 
-        $instanceUrl = rtrim((string) optional($this->getConnection())->instance_url, '/');
+        $quotedVersionIds = $versionIds
+            ->map(fn (string $id): string => "'" . str_replace("'", "\\'", $id) . "'")
+            ->implode(', ');
 
-        return $instanceUrl . '/' . ltrim($path, '/');
+        $contentDistributions = $this->runLeaderboardQuery(
+            $connection,
+            "SELECT ContentVersionId, DistributionPublicUrl, ContentDownloadUrl
+             FROM ContentDistribution
+             WHERE ContentVersionId IN ({$quotedVersionIds})"
+        );
+
+        $distributionMap = collect($contentDistributions)
+            ->mapWithKeys(function (array $record): array {
+                $versionId = $this->stringOrNull($record['ContentVersionId'] ?? null);
+                $url = $this->stringOrNull($record['DistributionPublicUrl'] ?? null)
+                    ?? $this->stringOrNull($record['ContentDownloadUrl'] ?? null);
+
+                return $versionId && $url ? [$versionId => $url] : [];
+            });
+
+        return $firstDocumentByVehicle
+            ->map(function (string $documentId) use ($versionMap, $distributionMap): ?string {
+                $versionId = $versionMap->get($documentId);
+
+                return $versionId ? $distributionMap->get($versionId) : null;
+            })
+            ->filter();
     }
 
     private function ensureRequiredTablesExist(): void
