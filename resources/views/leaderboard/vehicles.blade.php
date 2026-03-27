@@ -8,11 +8,11 @@
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">Salesforce</p>
                         <h1 class="mt-3 text-3xl font-semibold tracking-tight text-brand-secondary sm:text-4xl">
-                            Ranking de coches calientes y frios
+                            Ranking de coches calientes y fríos
                         </h1>
                         <p class="mt-3 max-w-3xl text-sm leading-6 text-brand-secondary/70 sm:text-base">
-                            Vista doble del parque disponible con garantia: arriba los coches con mas leads asociados y, justo al lado,
-                            los que menos traccion estan generando para detectar oportunidades.
+                            Vista doble del parque disponible con garantía: arriba los coches con más leads asociados y, justo al lado,
+                            los que menos tracción están generando para detectar oportunidades.
                         </p>
                     </div>
 
@@ -22,16 +22,16 @@
                             @if ($connection)
                                 Conectado con Salesforce
                             @elseif ($salesforceConfigReady)
-                                Pendiente de autorizar la conexion en Salesforce
+                                Pendiente de autorizar la conexión en Salesforce
                             @else
-                                Configuracion de Salesforce pendiente
+                                Configuración de Salesforce pendiente
                             @endif
                         </p>
                         <p class="mt-1 text-xs text-brand-secondary/60">
                             @if ($connection?->last_synced_at)
-                                Ultima sincronizacion: {{ $connection->last_synced_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
+                                Última sincronización: {{ $connection->last_synced_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
                             @elseif ($salesforceConfigReady)
-                                La app esta preparada, pero aun no se ha completado el OAuth.
+                                La app está preparada, pero aún no se ha completado el OAuth.
                             @else
                                 Faltan credenciales o la URL de callback en este entorno.
                             @endif
@@ -53,7 +53,7 @@
 
                 @if (! $leaderboardTablesReady)
                     <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-900">
-                        El ranking esta en modo preparacion. La pagina ya no falla aunque falten tablas, pero todavia necesitas ejecutar las migraciones para guardar la conexion y los datos de este ranking.
+                        El ranking está en modo preparación. La página ya no falla aunque falten tablas, pero todavía necesitas ejecutar las migraciones para guardar la conexión y los datos de este ranking.
                     </div>
                 @endif
 
@@ -69,7 +69,7 @@
                                 @else
                                     <span
                                         class="inline-flex items-center justify-center rounded-2xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-500">
-                                        Configuracion pendiente
+                                        Configuración pendiente
                                     </span>
                                 @endif
 
@@ -90,7 +90,7 @@
                             </div>
                         @elseif (! $salesforceConfigReady)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-                                La integracion esta en modo espera. La app no falla, pero no intentara conectar ni sincronizar hasta que completes
+                                La integración está en modo espera. La app no falla, pero no intentará conectar ni sincronizar hasta que completes
                                 <code class="rounded bg-white/80 px-1.5 py-0.5 text-xs">SALESFORCE_CLIENT_ID</code>,
                                 <code class="rounded bg-white/80 px-1.5 py-0.5 text-xs">SALESFORCE_CLIENT_SECRET</code>
                                 y
@@ -98,9 +98,9 @@
                             </div>
                         @elseif (! $connection)
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-                                En Salesforce Connected App debes autorizar exactamente la misma callback URL que uses aqui en
+                                En Salesforce Connected App debes autorizar exactamente la misma callback URL que uses aquí en
                                 <code class="rounded bg-white/80 px-1.5 py-0.5 text-xs">{{ config('services.salesforce.redirect_uri') }}</code>.
-                                Hasta que eso ocurra, la web seguira funcionando y este ranking quedara pendiente de conexion.
+                                Hasta que eso ocurra, la web seguirá funcionando y este ranking quedará pendiente de conexión.
                             </div>
                         @endif
                     @endif

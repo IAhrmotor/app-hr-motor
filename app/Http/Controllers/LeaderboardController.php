@@ -107,10 +107,10 @@ class LeaderboardController extends Controller
         $emptyDescription = ! $leaderboardTablesReady
             ? 'Ejecuta primero las migraciones para activar el almacenamiento del ranking.'
             : ($service->getConnection()
-                ? 'Ejecuta una sincronizacion para llenar el ranking.'
+                ? 'Ejecuta una sincronización para llenar el ranking.'
                 : ($salesforceConfigReady
-                    ? 'Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.'
-                    : 'Completa la configuracion de Salesforce y despues autoriza la conexion.'));
+                    ? 'Completa la autorización OAuth en Salesforce y después ejecuta la primera sincronización.'
+                    : 'Completa la configuración de Salesforce y después autoriza la conexión.'));
 
         return view('leaderboard.vehicles', [
             'connection' => $service->getConnection(),
@@ -120,24 +120,24 @@ class LeaderboardController extends Controller
             'hotLeaderboard' => $this->buildVehicleLeaderboardViewData($request, $trendService, [
                 'temperature' => 'hot',
                 'title' => 'Coches calientes',
-                'description' => 'Los vehiculos disponibles y en garantia que concentran mas interes comercial ahora mismo.',
+                'description' => 'Los vehículos disponibles y en garantía que concentran más interés comercial ahora mismo.',
                 'search_param' => 'hot_search',
                 'page_param' => 'hot_page',
                 'route_name' => 'leaderboard.vehicles',
                 'theme' => 'hot',
-                'empty_title' => 'Aun no hay coches calientes',
+                'empty_title' => 'Aún no hay coches calientes',
                 'search_placeholder' => 'Buscar coche caliente',
             ]),
             'coldLeaderboard' => $this->buildVehicleLeaderboardViewData($request, $trendService, [
                 'temperature' => 'cold',
-                'title' => 'Coches frios',
-                'description' => 'Los vehiculos disponibles y en garantia con menos leads asociados en el ranking actual.',
+                'title' => 'Coches fríos',
+                'description' => 'Los vehículos disponibles y en garantía con menos leads asociados en el ranking actual.',
                 'search_param' => 'cold_search',
                 'page_param' => 'cold_page',
                 'route_name' => 'leaderboard.vehicles',
                 'theme' => 'cold',
-                'empty_title' => 'Aun no hay coches frios',
-                'search_placeholder' => 'Buscar coche frio',
+                'empty_title' => 'Aún no hay coches fríos',
+                'search_placeholder' => 'Buscar coche frío',
             ]),
         ]);
     }
@@ -160,10 +160,10 @@ class LeaderboardController extends Controller
         $emptyDescription = ! $leaderboardTablesReady
             ? 'Ejecuta primero las migraciones para activar el almacenamiento del ranking.'
             : ($service->getConnection()
-                ? 'Ejecuta una sincronizacion para llenar el ranking.'
+                ? 'Ejecuta una sincronización para llenar el ranking.'
                 : ($salesforceConfigReady
-                    ? 'Completa la autorizacion OAuth en Salesforce y despues ejecuta la primera sincronizacion.'
-                    : 'Completa la configuracion de Salesforce y despues autoriza la conexion.'));
+                    ? 'Completa la autorización OAuth en Salesforce y después ejecuta la primera sincronización.'
+                    : 'Completa la configuración de Salesforce y después autoriza la conexión.'));
 
         return view('leaderboard.show', [
             'leaderboard' => $leaderboard,
