@@ -302,7 +302,7 @@
                         Mostrando del {{ $entries->firstItem() }} al {{ $entries->lastItem() }} de {{ $entries->total() }} coches.
                     </p>
 
-                    <nav class="flex items-center gap-2" aria-label="Paginacion del ranking">
+                    <nav class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start" aria-label="Paginacion del ranking">
                         @if ($entries->onFirstPage())
                             <span class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-brand-secondary/35">Anterior</span>
                         @else
@@ -313,7 +313,9 @@
                         @endif
 
                         <span class="inline-flex items-center justify-center rounded-2xl bg-brand-secondary px-4 py-2 text-sm font-semibold text-white">
-                            Pagina {{ $entries->currentPage() }} de {{ $entries->lastPage() }}
+                            <span class="sm:hidden">{{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
+                            <span class="hidden sm:inline">Página {{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
+                            <span class="sr-only">Pagina {{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
                         </span>
 
                         @if ($entries->hasMorePages())

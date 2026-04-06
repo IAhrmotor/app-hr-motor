@@ -22,14 +22,14 @@
             <div class="grid gap-8 lg:grid-cols-2 lg:items-stretch">
                 <div class="flex h-full flex-col gap-8">
                     @if ($communicationSection)
-                        <section class="rounded-3xl border border-brand-primary/20 bg-brand-primary/5 p-6 shadow-sm">
-                            <div class="relative mb-5">
+                        <section class="rounded-3xl border border-brand-primary/20 bg-brand-primary/5 p-5 shadow-sm sm:p-6">
+                            <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
                                 <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                                     {{ $communicationSection['title'] }}
                                 </h2>
 
                                 <div
-                                    class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
+                                    class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
                                     Destacado
                                 </div>
                             </div>
@@ -193,7 +193,7 @@
         </div>
 
         @if ($homeLeaderboardEntries->isNotEmpty())
-            <section class="mt-8 overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm">
+            <section class="mt-8 overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.28em] text-brand-primary">Ranking</p>
@@ -310,9 +310,9 @@
                                 <a href="{{ route('users.show', $entry->user) }}"
                                     class="group block rounded-[1.5rem] transition duration-200 hover:-translate-y-1 hover:shadow-md">
                             @endif
-                            <article class="flex items-center gap-4 rounded-[1.5rem] border px-4 py-4 shadow-sm transition duration-200 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
-                                <div class="flex items-center gap-2">
-                                    <div class="flex h-11 min-w-11 items-center justify-center rounded-full bg-brand-secondary text-sm font-semibold text-white">
+                            <article class="grid min-h-[8.2rem] grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_1fr] gap-x-3 gap-y-2 rounded-[1.5rem] border px-3 py-3 shadow-sm transition duration-200 sm:flex sm:min-h-0 sm:items-center sm:gap-4 sm:px-4 sm:py-4 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
+                                <div class="flex items-center gap-2 self-start">
+                                    <div class="flex h-10 min-w-10 items-center justify-center rounded-full bg-brand-secondary text-xs font-semibold text-white sm:h-11 sm:min-w-11 sm:text-sm">
                                         #{{ $entry->ranking_position }}
                                     </div>
                                     @if ($movement['direction'] === 'up')
@@ -340,14 +340,25 @@
                                         </span>
                                     @endif
                                 </div>
-                                <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
-                                    alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
-                                    class="h-12 w-12 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-semibold text-brand-secondary {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                <div class="row-span-2 flex flex-col items-end justify-between gap-2 self-stretch sm:hidden">
+                                    <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                        alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
+                                        class="h-12 w-12 rounded-xl object-cover ring-1 ring-brand-secondary/10">
+                                    <div class="text-right">
+                                        <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Ventas</p>
+                                        <p class="mt-1 text-xl font-semibold text-brand-primary">
+                                            {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="row-start-2 min-w-0 self-end sm:row-start-auto sm:flex-1">
+                                    <p class="line-clamp-2 text-sm font-semibold leading-snug text-brand-secondary sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="truncate text-xs text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
                                 </div>
-                                <div class="text-right">
+                                <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                    alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
+                                    class="hidden h-12 w-12 rounded-xl object-cover ring-1 ring-brand-secondary/10 sm:block">
+                                <div class="hidden text-right sm:block">
                                     <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Ventas</p>
                                     <p class="mt-1 text-2xl font-semibold text-brand-primary">
                                         {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
@@ -363,27 +374,27 @@
             </section>
         @endif
 
-        <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
-            <div class="relative mb-5">
+        <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+            <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
                 <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                     Revista mensual
                 </h2>
 
                 <div
-                    class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
+                    class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
                     Marzo
                 </div>
 
-                <p class="mt-2 text-center text-sm text-brand-secondary/70">
+                <p class="text-center text-sm text-brand-secondary/70 sm:mt-2">
                     Consulta la última edición de la revista interna.
                 </p>
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-brand-secondary/10">
-                <iframe src="{{ $magazineEmbedUrl }}" class="h-110 w-full" frameborder="0" allowfullscreen></iframe>
+                <iframe src="{{ $magazineEmbedUrl }}" class="h-96 w-full sm:h-110" frameborder="0" allowfullscreen></iframe>
             </div>
 
-            <div class="mt-4 text-right">
+            <div class="mt-4 text-center sm:text-right">
                 <a href="{{ $magazineUrl }}" target="_blank" rel="noopener noreferrer"
                     class="text-sm font-medium text-brand-primary hover:underline">
                     Abrir revista en una nueva pestaña

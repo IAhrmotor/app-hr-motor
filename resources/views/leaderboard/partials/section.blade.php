@@ -48,14 +48,14 @@
                         placeholder="{{ $searchPlaceholder }}"
                         class="w-full rounded-2xl border border-brand-secondary/10 bg-slate-50 py-3 pl-12 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:bg-white">
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-col gap-3 sm:flex-row">
                     <button type="submit"
-                        class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-secondary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110">
+                        class="inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-secondary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 sm:w-auto">
                         Buscar
                     </button>
                     @if ($search !== '')
                         <a href="{{ route($routeName, $persistedQuery) }}"
-                            class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                            class="inline-flex w-full items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:w-auto">
                             Limpiar
                         </a>
                     @endif
@@ -119,9 +119,9 @@
                         <a href="{{ $topEntryHref }}"
                             class="group block h-full rounded-[1.75rem] transition duration-200 hover:-translate-y-1">
                     @endif
-                    <article class="relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border p-6 transition duration-200 {{ $medalStyles['card'] }}">
-                        <div class="absolute right-4 top-4 flex items-center gap-2">
-                            <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $medalStyles['badge'] }}">
+                    <article class="grid min-h-[11rem] grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_1fr] gap-x-3 gap-y-3 overflow-hidden rounded-[1.75rem] border p-4 transition duration-200 sm:relative sm:flex sm:h-full sm:min-h-0 sm:flex-col sm:p-6 {{ $medalStyles['card'] }}">
+                        <div class="flex items-center gap-2 self-start sm:absolute sm:right-4 sm:top-4">
+                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold sm:px-3 {{ $medalStyles['badge'] }}">
                                 #{{ $entry->ranking_position }}
                             </span>
                             @if ($movement['direction'] === 'up')
@@ -149,7 +149,46 @@
                                 </span>
                             @endif
                         </div>
-                        <div class="grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24">
+                        <div class="justify-self-end self-start sm:hidden">
+                            @if ($aggregateByDealership)
+                                @if ($entry->dealership_image_url)
+                                    <img src="{{ $entry->dealership_image_url }}"
+                                        alt="Imagen de {{ $entry->dealership_name }}"
+                                        class="h-14 w-14 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
+                                @else
+                                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-secondary text-sm font-semibold text-white ring-2 {{ $medalStyles['ring'] }}">
+                                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
+                                    </div>
+                                @endif
+                            @else
+                                <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
+                                    alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
+                                    class="h-14 w-14 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
+                            @endif
+                        </div>
+
+                        <div class="min-w-0 self-end sm:hidden">
+                            @if ($aggregateByDealership)
+                                <p class="line-clamp-2 text-lg font-semibold leading-tight text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->dealership_name }}</p>
+                                <p class="truncate text-sm text-brand-secondary/60">
+                                    {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                </p>
+                            @else
+                                <p class="line-clamp-2 text-lg font-semibold leading-tight text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                <p class="truncate text-sm text-brand-secondary/60">
+                                    {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
+                                </p>
+                            @endif
+                        </div>
+
+                        <div class="text-right self-end sm:hidden">
+                            <p class="text-[10px] font-semibold uppercase tracking-[0.28em] text-brand-secondary/50">{{ $metricLabel }}</p>
+                            <p class="mt-1 text-2xl font-semibold {{ $medalStyles['accent'] }}">
+                                {{ number_format((float) $entry->{$metricField}, 0, ',', '.') }}
+                            </p>
+                        </div>
+
+                        <div class="hidden grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24 sm:grid">
                             @if ($aggregateByDealership)
                                 @if ($entry->dealership_image_url)
                                     <img src="{{ $entry->dealership_image_url }}"
@@ -186,8 +225,8 @@
                                 </div>
                             @endif
                         </div>
-                        <p class="mt-6 text-sm uppercase tracking-[0.3em] text-brand-secondary/50">{{ $metricLabel }}</p>
-                        <p class="mt-2 text-3xl font-semibold {{ $medalStyles['accent'] }}">
+                        <p class="hidden mt-6 text-sm uppercase tracking-[0.3em] text-brand-secondary/50 sm:block">{{ $metricLabel }}</p>
+                        <p class="hidden mt-2 text-3xl font-semibold sm:block {{ $medalStyles['accent'] }}">
                             {{ number_format((float) $entry->{$metricField}, 0, ',', '.') }}
                         </p>
                     </article>
@@ -424,7 +463,7 @@
                     Mostrando del {{ $entries->firstItem() }} al {{ $entries->lastItem() }} de {{ $entries->total() }} {{ $entityLabelPlural }}.
                 </p>
 
-                <nav class="flex items-center gap-2" aria-label="Paginacion del ranking">
+                <nav class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start" aria-label="Paginacion del ranking">
                     @if ($entries->onFirstPage())
                         <span class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-brand-secondary/35">Anterior</span>
                     @else
@@ -435,7 +474,9 @@
                     @endif
 
                     <span class="inline-flex items-center justify-center rounded-2xl bg-brand-secondary px-4 py-2 text-sm font-semibold text-white">
-                        Pagina {{ $entries->currentPage() }} de {{ $entries->lastPage() }}
+                        <span class="sm:hidden">{{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
+                        <span class="hidden sm:inline">Página {{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
+                        <span class="sr-only">Pagina {{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
                     </span>
 
                     @if ($entries->hasMorePages())
