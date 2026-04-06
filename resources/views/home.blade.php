@@ -310,7 +310,7 @@
                                 <a href="{{ route('users.show', $entry->user) }}"
                                     class="group block rounded-[1.5rem] transition duration-200 hover:-translate-y-1 hover:shadow-md">
                             @endif
-                            <article class="grid min-h-[9.75rem] grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-3 rounded-[1.5rem] border px-3 py-3 shadow-sm transition duration-200 sm:flex sm:min-h-0 sm:items-center sm:gap-4 sm:px-4 sm:py-4 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
+                            <article class="grid min-h-[8.6rem] grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-[1.5rem] border px-3 py-3 shadow-sm transition duration-200 sm:flex sm:min-h-0 sm:items-center sm:gap-4 sm:px-4 sm:py-4 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
                                 <div class="flex items-center gap-2 self-start">
                                     <div class="flex h-10 min-w-10 items-center justify-center rounded-full bg-brand-secondary text-xs font-semibold text-white sm:h-11 sm:min-w-11 sm:text-sm">
                                         #{{ $entry->ranking_position }}
@@ -345,7 +345,7 @@
                                         alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                         class="h-12 w-12 rounded-xl object-cover ring-1 ring-brand-secondary/10">
                                 </div>
-                                <div class="col-span-2 min-w-0 pr-16 sm:col-span-1 sm:pr-0 sm:flex-1">
+                                <div class="col-span-2 min-w-0 self-end pr-16 sm:col-span-1 sm:self-auto sm:pr-0 sm:flex-1">
                                     <p class="line-clamp-2 text-sm font-semibold leading-snug text-brand-secondary sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
                                     <p class="truncate text-xs text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
                                 </div>
