@@ -70,56 +70,10 @@
             </span>
         </div>
 
-        @if ($hasLeaderboardData)
-            <form method="GET" action="{{ route($routeName) }}"
-                class="mt-5 rounded-[1.4rem] border border-brand-secondary/10 bg-white/90 p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)] sm:p-4">
-                @foreach ($persistedQuery as $queryKey => $queryValue)
-                    @if (is_array($queryValue))
-                        @foreach ($queryValue as $nestedValue)
-                            <input type="hidden" name="{{ $queryKey }}[]" value="{{ $nestedValue }}">
-                        @endforeach
-                    @else
-                        <input type="hidden" name="{{ $queryKey }}" value="{{ $queryValue }}">
-                    @endif
-                @endforeach
-
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div class="relative flex-1">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                            class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-secondary/35"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input type="text" name="{{ $searchParam }}" value="{{ $search }}"
-                            placeholder="{{ $leaderboard['searchPlaceholder'] }}"
-                            class="w-full rounded-2xl border border-brand-secondary/10 bg-slate-50 py-3 pl-12 pr-4 text-sm text-brand-secondary outline-none transition {{ $themeStyles['search'] }}">
-                    </div>
-                    <div class="flex flex-col gap-3 sm:flex-row">
-                        <button type="submit"
-                            class="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition sm:w-auto {{ $themeStyles['button'] }}">
-                            Buscar
-                        </button>
-                        @if ($search !== '')
-                            <a href="{{ route($routeName, $persistedQuery) }}"
-                                class="inline-flex w-full items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:w-auto">
-                                Limpiar
-                            </a>
-                        @endif
-                    </div>
-                </div>
-            </form>
-        @endif
-
         @if ($entryItems->isEmpty())
             <div class="mt-5 rounded-[1.6rem] border border-dashed border-brand-secondary/15 bg-white/60 px-6 py-12 text-center text-brand-secondary/75">
-                @if ($hasLeaderboardData && $search !== '')
-                    <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu búsqueda</p>
-                    <p class="mt-2 text-sm">Prueba con otro modelo o versión.</p>
-                @else
-                    <p class="text-lg font-semibold text-brand-secondary">{{ $leaderboard['emptyTitle'] }}</p>
-                    <p class="mt-2 text-sm">{{ $emptyDescription }}</p>
-                @endif
+                <p class="text-lg font-semibold text-brand-secondary">{{ $leaderboard['emptyTitle'] }}</p>
+                <p class="mt-2 text-sm">{{ $emptyDescription }}</p>
             </div>
         @else
             @if ($topEntries->isNotEmpty())
