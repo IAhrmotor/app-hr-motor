@@ -313,7 +313,9 @@
                         @endif
 
                         <span class="inline-flex items-center justify-center rounded-2xl bg-brand-secondary px-4 py-2 text-sm font-semibold text-white">
-                            Pagina {{ $entries->currentPage() }} de {{ $entries->lastPage() }}
+                            <span class="sm:hidden">{{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
+                            <span class="hidden sm:inline">Página {{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
+                            <span class="sr-only">Pagina {{ $entries->currentPage() }} de {{ $entries->lastPage() }}</span>
                         </span>
 
                         @if ($entries->hasMorePages())
