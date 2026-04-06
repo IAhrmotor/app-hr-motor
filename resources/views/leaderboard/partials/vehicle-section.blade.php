@@ -57,12 +57,12 @@
         : $entryItems;
 @endphp
 
-<section class="rounded-[1.85rem] border p-5 sm:p-6 {{ $themeStyles['section'] }}">
-    <div class="relative overflow-hidden rounded-[1.6rem] border border-white/70 bg-white/80 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.05)]">
+<section class="rounded-[1.85rem] border p-4 sm:p-6 {{ $themeStyles['section'] }}">
+    <div class="relative overflow-hidden rounded-[1.6rem] border border-white/70 bg-white/80 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.05)] sm:p-5">
         <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r {{ $themeStyles['headerLine'] }}"></div>
 
-        <div class="flex items-start justify-between gap-4">
-            <div>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div class="min-w-0">
                 <p class="text-xs font-semibold uppercase tracking-[0.32em] {{ $themeStyles['eyebrow'] }}">
                     {{ $isHot ? 'Alta tracción' : 'Baja tracción' }}
                 </p>
@@ -74,14 +74,14 @@
                 </p>
             </div>
 
-            <span class="hidden shrink-0 rounded-full border px-3 py-1 text-xs font-semibold lg:inline-flex {{ $themeStyles['pill'] }}">
+            <span class="inline-flex w-fit shrink-0 rounded-full border px-3 py-1 text-xs font-semibold sm:self-start lg:inline-flex {{ $themeStyles['pill'] }}">
                 Top 10
             </span>
         </div>
 
         @if ($hasLeaderboardData)
             <form method="GET" action="{{ route($routeName) }}"
-                class="mt-5 rounded-[1.4rem] border border-brand-secondary/10 bg-white/90 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                class="mt-5 rounded-[1.4rem] border border-brand-secondary/10 bg-white/90 p-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)] sm:p-4">
                 @foreach ($persistedQuery as $queryKey => $queryValue)
                     @if (is_array($queryValue))
                         @foreach ($queryValue as $nestedValue)
@@ -104,14 +104,14 @@
                             placeholder="{{ $leaderboard['searchPlaceholder'] }}"
                             class="w-full rounded-2xl border border-brand-secondary/10 bg-slate-50 py-3 pl-12 pr-4 text-sm text-brand-secondary outline-none transition {{ $themeStyles['search'] }}">
                     </div>
-                    <div class="flex gap-3">
+                    <div class="flex flex-col gap-3 sm:flex-row">
                         <button type="submit"
-                            class="inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition {{ $themeStyles['button'] }}">
+                            class="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition sm:w-auto {{ $themeStyles['button'] }}">
                             Buscar
                         </button>
                         @if ($search !== '')
                             <a href="{{ route($routeName, $persistedQuery) }}"
-                                class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                class="inline-flex w-full items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:w-auto">
                                 Limpiar
                             </a>
                         @endif
@@ -137,8 +137,8 @@
                         @php
                             $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         @endphp
-                        <article class="relative flex h-full min-h-[15.5rem] flex-col overflow-hidden rounded-[1.7rem] border p-5 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }}">
-                            <div class="absolute right-4 top-4 flex items-center gap-2">
+                        <article class="relative flex h-full flex-col overflow-hidden rounded-[1.7rem] border p-4 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }} sm:min-h-[15.5rem] sm:p-5">
+                            <div class="flex items-start justify-between gap-3 sm:absolute sm:right-4 sm:top-4 sm:justify-start">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $themeStyles['rankBadge'] }}">
                                     #{{ $entry->ranking_position }}
                                 </span>
@@ -165,33 +165,39 @@
                                 @endif
                             </div>
 
-                            <div class="flex flex-1 flex-col justify-between">
-                                <div class="pr-24">
-                                    @if ($entry->vehicle_image_url)
-                                        <button
-                                            type="button"
-                                            @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
-                                            class="group relative block cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                                            aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
-                                        >
-                                            <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
-                                                class="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 transition duration-300 group-hover:scale-105 group-hover:brightness-75 {{ $themeStyles['avatar'] }}">
-                                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
-                                                Ver
-                                            </span>
-                                        </button>
-                                    @else
-                                        <div class="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
-                                            <x-icons.car class="h-7 w-7" />
+                            <div class="flex flex-1 flex-col justify-between gap-5">
+                                <div class="min-w-0 sm:pr-24">
+                                    <div class="flex items-start gap-3 sm:block">
+                                        @if ($entry->vehicle_image_url)
+                                            <button
+                                                type="button"
+                                                @click="$dispatch('open-vehicle-image', { src: @js($entry->vehicle_image_url), alt: @js($vehicleImageAlt($entry)), title: @js($vehicleTitle($entry)) })"
+                                                class="group relative block shrink-0 cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                                aria-label="Abrir imagen de {{ $vehicleTitle($entry) }}"
+                                            >
+                                                <img src="{{ $entry->vehicle_image_url }}" alt="{{ $vehicleImageAlt($entry) }}"
+                                                    class="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 transition duration-300 group-hover:scale-105 group-hover:brightness-75 {{ $themeStyles['avatar'] }}">
+                                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                                    Ver
+                                                </span>
+                                            </button>
+                                        @else
+                                            <div class="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 {{ $themeStyles['avatar'] }}">
+                                                <x-icons.car class="h-7 w-7" />
+                                            </div>
+                                        @endif
+                                        <div class="min-w-0">
+                                            <p class="text-lg font-semibold leading-tight text-brand-secondary sm:mt-4 sm:max-w-xl sm:text-xl">
+                                                {{ $vehicleTitle($entry) }}
+                                            </p>
+                                            @if ($entry->vehicle_plate)
+                                                <p class="mt-1 text-sm font-medium text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
+                                            @endif
                                         </div>
-                                    @endif
-                                    <p class="mt-4 max-w-xl text-xl font-semibold leading-tight text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
-                                    @if ($entry->vehicle_plate)
-                                        <p class="mt-1 text-sm font-medium text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
-                                    @endif
+                                    </div>
                                 </div>
 
-                                <div class="mt-6">
+                                <div>
                                     <p class="text-xs uppercase tracking-[0.28em] text-brand-secondary/45">Leads</p>
                                     <p class="mt-2 text-3xl font-semibold {{ $themeStyles['metric'] }}">
                                         {{ number_format((int) $entry->total_leads, 0, ',', '.') }}
@@ -205,7 +211,7 @@
 
             @if ($tableEntries->isNotEmpty())
             <div class="mt-6 overflow-hidden rounded-[1.6rem] border border-brand-secondary/10 bg-white/92">
-                <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
+                <div class="border-b border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
                     <div class="hidden grid-cols-[110px_minmax(0,1fr)_110px] gap-6 md:grid">
                         <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
                         <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Vehículo</div>
@@ -219,7 +225,7 @@
                         @php
                             $movement = $entryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         @endphp
-                        <div class="border-b border-slate-100 px-6 py-4 transition last:border-b-0 {{ $themeStyles['tableRow'] }}">
+                        <div class="border-b border-slate-100 px-4 py-4 transition last:border-b-0 sm:px-6 {{ $themeStyles['tableRow'] }}">
                             <div class="hidden grid-cols-[110px_minmax(0,1fr)_110px] items-center gap-6 md:grid">
                                 <div class="flex items-center gap-3 text-sm font-semibold text-brand-secondary">
                                     <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold {{ $themeStyles['miniBadge'] }}">
@@ -312,7 +318,7 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-start gap-3">
                                     @if ($entry->vehicle_image_url)
                                         <button
                                             type="button"
@@ -331,10 +337,10 @@
                                             <x-icons.car class="h-5 w-5" />
                                         </div>
                                     @endif
-                                    <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-semibold leading-snug text-brand-secondary">{{ $vehicleTitle($entry) }}</p>
                                         @if ($entry->vehicle_plate)
-                                            <p class="truncate text-xs text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
+                                            <p class="mt-1 text-xs text-brand-secondary/55">{{ $entry->vehicle_plate }}</p>
                                         @endif
                                     </div>
                                 </div>
