@@ -4,12 +4,7 @@
     $topEntries = $leaderboard['topEntries'];
     $entryMovements = $leaderboard['entryMovements'];
     $topEntryMovements = $leaderboard['topEntryMovements'];
-    $search = $leaderboard['search'];
     $hasLeaderboardData = $leaderboard['hasLeaderboardData'];
-    $searchParam = $leaderboard['searchParam'];
-    $pageParam = $leaderboard['pageParam'];
-    $routeName = $leaderboard['routeName'];
-    $persistedQuery = request()->except([$searchParam, $pageParam]);
     $theme = $leaderboard['theme'];
     $isHot = $theme === 'hot';
 
@@ -17,8 +12,6 @@
         ? [
             'section' => 'border-amber-200/70 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.12),transparent_34%),linear-gradient(180deg,rgba(255,251,235,0.9),rgba(255,255,255,0.96))]',
             'eyebrow' => 'text-amber-700',
-            'search' => 'focus:border-amber-400 focus:bg-white',
-            'button' => 'bg-brand-secondary text-white hover:brightness-110',
             'pill' => 'border-amber-300/60 bg-amber-100/80 text-amber-800',
             'metric' => 'text-amber-700',
             'tableMetric' => 'text-amber-700',
@@ -33,8 +26,6 @@
         : [
             'section' => 'border-sky-200/70 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.11),transparent_34%),linear-gradient(180deg,rgba(240,249,255,0.92),rgba(255,255,255,0.96))]',
             'eyebrow' => 'text-sky-700',
-            'search' => 'focus:border-sky-400 focus:bg-white',
-            'button' => 'bg-brand-secondary text-white hover:brightness-110',
             'pill' => 'border-sky-300/60 bg-sky-100/80 text-sky-800',
             'metric' => 'text-sky-700',
             'tableMetric' => 'text-sky-700',
