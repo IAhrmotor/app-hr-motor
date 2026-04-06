@@ -183,21 +183,86 @@
             </div>
 
             <div class="mt-8">
-                <form method="POST" action="{{ route('leaderboard.sync') }}">
+                <form method="POST" action="{{ route('leaderboard.sync') }}" data-sync-loader-form>
                     @csrf
                     <button
                         type="submit"
+                        data-sync-loader-button
+                        data-sync-loader-default="Actualizar rankings ahora"
+                        data-sync-loader-loading="Actualizando rankings..."
                         class="inline-flex cursor-pointer items-center gap-3 rounded-2xl bg-brand-primary px-6 py-4 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        <svg data-sync-loader-icon xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M16.023 9.348h4.992V4.356m-1.636 10.26a9 9 0 11-2.867-9.668L21 9.348" />
                         </svg>
-                        Actualizar rankings ahora
+                        <span data-sync-loader-label>Actualizar rankings ahora</span>
                     </button>
                 </form>
             </div>
         </section>
     </main>
+
+    <div
+        id="leaderboard-sync-loader"
+        class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/45 px-6 py-8 opacity-0 backdrop-blur-sm transition-opacity duration-200"
+    >
+        <div class="w-full max-w-md rounded-[2rem] border border-white/60 bg-white/95 p-7 text-center shadow-[0_30px_80px_rgba(15,23,42,0.22)]">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.18),rgba(255,255,255,0.95))] ring-1 ring-brand-primary/10">
+                <div class="h-8 w-8 animate-spin rounded-full border-[3px] border-brand-primary/20 border-t-brand-primary"></div>
+            </div>
+            <h2 class="mt-5 text-xl font-semibold text-brand-secondary">Recargando rankings</h2>
+            <p class="mt-2 text-sm leading-6 text-brand-secondary/70">
+                Estamos sincronizando Salesforce y actualizando los datos. Esta pantalla se cerrará sola al terminar.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const overlay = document.getElementById('leaderboard-sync-loader');
+
+            document.querySelectorAll('[data-sync-loader-form]').forEach((form) => {
+                let submitted = false;
+
+                form.addEventListener('submit', (event) => {
+                    if (submitted) {
+                        return;
+                    }
+
+                    submitted = true;
+                    event.preventDefault();
+
+                    const button = form.querySelector('[data-sync-loader-button]');
+                    const label = form.querySelector('[data-sync-loader-label]');
+                    const icon = form.querySelector('[data-sync-loader-icon]');
+
+                    if (button) {
+                        button.disabled = true;
+                        button.classList.add('opacity-90');
+                    }
+
+                    if (label && button?.dataset.syncLoaderLoading) {
+                        label.textContent = button.dataset.syncLoaderLoading;
+                    }
+
+                    if (icon) {
+                        icon.classList.add('animate-spin');
+                    }
+
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+
+                        requestAnimationFrame(() => {
+                            overlay.classList.remove('pointer-events-none', 'opacity-0');
+                            overlay.classList.add('flex', 'opacity-100');
+                        });
+                    }
+
+                    window.setTimeout(() => form.submit(), 80);
+                });
+            });
+        })();
+    </script>
 @endsection
