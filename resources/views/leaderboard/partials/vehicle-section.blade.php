@@ -138,7 +138,7 @@
                             $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         @endphp
                         <article class="relative flex h-full flex-col overflow-hidden rounded-[1.7rem] border p-4 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }} sm:min-h-[15.5rem] sm:p-5">
-                            <div class="flex items-start justify-between gap-3 sm:absolute sm:right-4 sm:top-4 sm:justify-start">
+                            <div class="mb-1.5 flex items-start justify-between gap-3 sm:absolute sm:right-4 sm:top-4 sm:mb-0 sm:justify-start">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $themeStyles['rankBadge'] }}">
                                     #{{ $entry->ranking_position }}
                                 </span>
@@ -165,7 +165,7 @@
                                 @endif
                             </div>
 
-                            <div class="flex flex-1 flex-col justify-between gap-5">
+                            <div class="flex flex-1 flex-col justify-between gap-4 sm:gap-5">
                                 <div class="min-w-0 sm:pr-24">
                                     <div class="flex items-start gap-3 sm:block">
                                         @if ($entry->vehicle_image_url)
