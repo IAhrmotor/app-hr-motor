@@ -18,7 +18,7 @@
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-end">
                         @if ($dealershipLeaderboard)
                             <a href="#ranking-delegaciones"
-                                class="inline-flex w-fit max-w-[210px] items-center gap-3 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-left text-sm text-brand-secondary transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:bg-brand-primary/[0.03]">
+                                class="inline-flex w-full items-center gap-3 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-left text-sm text-brand-secondary transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:bg-brand-primary/[0.03] sm:w-fit sm:max-w-[210px]">
                                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                         stroke="currentColor" stroke-width="1.8">
