@@ -310,7 +310,7 @@
                                 <a href="{{ route('users.show', $entry->user) }}"
                                     class="group block rounded-[1.5rem] transition duration-200 hover:-translate-y-1 hover:shadow-md">
                             @endif
-                            <article class="grid min-h-[8.2rem] grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_1fr_auto] gap-x-3 gap-y-2 rounded-[1.5rem] border px-3 py-3 shadow-sm transition duration-200 sm:flex sm:min-h-0 sm:items-center sm:gap-4 sm:px-4 sm:py-4 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
+                            <article class="grid min-h-[8.2rem] grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_1fr] gap-x-3 gap-y-2 rounded-[1.5rem] border px-3 py-3 shadow-sm transition duration-200 sm:flex sm:min-h-0 sm:items-center sm:gap-4 sm:px-4 sm:py-4 {{ $rankStyles }} {{ $canOpenProfile ? 'hover:shadow-md' : '' }}">
                                 <div class="flex items-center gap-2 self-start">
                                     <div class="flex h-10 min-w-10 items-center justify-center rounded-full bg-brand-secondary text-xs font-semibold text-white sm:h-11 sm:min-w-11 sm:text-sm">
                                         #{{ $entry->ranking_position }}
@@ -340,22 +340,20 @@
                                         </span>
                                     @endif
                                 </div>
-                                <div class="justify-self-end self-start sm:hidden">
+                                <div class="row-span-2 flex flex-col items-end justify-between gap-2 self-stretch sm:hidden">
                                     <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                         alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                         class="h-12 w-12 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                </div>
-                                <div class="row-start-2 min-w-0 self-end sm:row-start-auto sm:flex-1">
-                                    <p class="line-clamp-2 text-sm font-semibold leading-snug text-brand-secondary sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                    <p class="truncate text-xs text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
-                                </div>
-                                <div class="row-start-3 flex justify-end self-end sm:hidden">
                                     <div class="text-right">
                                         <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Ventas</p>
                                         <p class="mt-1 text-xl font-semibold text-brand-primary">
                                             {{ number_format((float) $entry->total_sales, 0, ',', '.') }}
                                         </p>
                                     </div>
+                                </div>
+                                <div class="row-start-2 min-w-0 self-end sm:row-start-auto sm:flex-1">
+                                    <p class="line-clamp-2 text-sm font-semibold leading-snug text-brand-secondary sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                    <p class="truncate text-xs text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
                                 </div>
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
