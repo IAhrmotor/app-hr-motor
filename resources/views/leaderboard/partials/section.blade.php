@@ -48,14 +48,14 @@
                         placeholder="{{ $searchPlaceholder }}"
                         class="w-full rounded-2xl border border-brand-secondary/10 bg-slate-50 py-3 pl-12 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:bg-white">
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-col gap-3 sm:flex-row">
                     <button type="submit"
-                        class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-secondary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110">
+                        class="inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-secondary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 sm:w-auto">
                         Buscar
                     </button>
                     @if ($search !== '')
                         <a href="{{ route($routeName, $persistedQuery) }}"
-                            class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                            class="inline-flex w-full items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:w-auto">
                             Limpiar
                         </a>
                     @endif
@@ -463,7 +463,7 @@
                     Mostrando del {{ $entries->firstItem() }} al {{ $entries->lastItem() }} de {{ $entries->total() }} {{ $entityLabelPlural }}.
                 </p>
 
-                <nav class="flex items-center gap-2" aria-label="Paginacion del ranking">
+                <nav class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start" aria-label="Paginacion del ranking">
                     @if ($entries->onFirstPage())
                         <span class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-brand-secondary/35">Anterior</span>
                     @else
