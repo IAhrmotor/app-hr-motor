@@ -4,7 +4,6 @@
     <section
         x-data="{
             isVehicleImageOpen: false,
-            isSyncing: false,
             vehicleImageSrc: null,
             vehicleImageAlt: '',
             vehicleImageTitle: '',
@@ -99,17 +98,19 @@
                                     </span>
                                 @endif
 
-                                <form method="POST" action="{{ route('leaderboard.sync') }}" @submit="isSyncing = true">
+                                <form method="POST" action="{{ route('leaderboard.sync') }}" data-sync-loader-form>
                                     @csrf
                                     <button type="submit"
                                         @disabled(! $connection || ! $leaderboardTablesReady)
-                                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                                        :disabled="isSyncing || {{ (! $connection || ! $leaderboardTablesReady) ? 'true' : 'false' }}">
-                                        <svg x-cloak x-show="isSyncing" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        data-sync-loader-button
+                                        data-sync-loader-default="Sincronizar ahora"
+                                        data-sync-loader-loading="Sincronizando..."
+                                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-secondary/15 bg-white px-5 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
+                                        <svg data-sync-loader-icon xmlns="http://www.w3.org/2000/svg" class="hidden h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"></path>
                                         </svg>
-                                        <span x-text="isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'"></span>
+                                        <span data-sync-loader-label>Sincronizar ahora</span>
                                     </button>
                                 </form>
                             </div>
@@ -147,10 +148,8 @@
         </div>
 
         <div
-            x-cloak
-            x-show="isSyncing"
-            x-transition.opacity
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 py-8 backdrop-blur-sm"
+            id="leaderboard-sync-loader"
+            class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/45 px-6 py-8 opacity-0 backdrop-blur-sm transition-opacity duration-200"
         >
             <div class="w-full max-w-md rounded-[2rem] border border-white/60 bg-white/95 p-7 text-center shadow-[0_30px_80px_rgba(15,23,42,0.22)]">
                 <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.18),rgba(255,255,255,0.95))] ring-1 ring-brand-primary/10">
@@ -196,6 +195,50 @@
     </section>
 
     <script>
+        (() => {
+            const overlay = document.getElementById('leaderboard-sync-loader');
+
+            document.querySelectorAll('[data-sync-loader-form]').forEach((form) => {
+                let submitted = false;
+
+                form.addEventListener('submit', (event) => {
+                    if (submitted) {
+                        return;
+                    }
+
+                    submitted = true;
+                    event.preventDefault();
+
+                    const button = form.querySelector('[data-sync-loader-button]');
+                    const label = form.querySelector('[data-sync-loader-label]');
+                    const icon = form.querySelector('[data-sync-loader-icon]');
+
+                    if (button) {
+                        button.disabled = true;
+                    }
+
+                    if (label && button?.dataset.syncLoaderLoading) {
+                        label.textContent = button.dataset.syncLoaderLoading;
+                    }
+
+                    if (icon) {
+                        icon.classList.remove('hidden');
+                    }
+
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+
+                        requestAnimationFrame(() => {
+                            overlay.classList.remove('pointer-events-none', 'opacity-0');
+                            overlay.classList.add('flex', 'opacity-100');
+                        });
+                    }
+
+                    window.setTimeout(() => form.submit(), 80);
+                });
+            });
+        })();
+
         window.setTimeout(() => window.location.reload(), 600000);
     </script>
 @endsection
