@@ -170,19 +170,13 @@
 
             @foreach ($navItems as $item)
                 @if (! empty($item['children']))
-                    @php $isParentActive = collect($item['children'])->contains(fn ($child) => request()->routeIs($child['route'])); @endphp
-                    <div class="mt-2 rounded-2xl border border-brand-secondary/10 bg-slate-50 px-3 py-3">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $isParentActive ? 'text-brand-primary' : 'text-brand-secondary/45' }}">{{ $item['label'] }}</p>
-                        <div class="mt-2 space-y-1">
-                            @foreach ($item['children'] as $child)
-                                @php $isChildActive = request()->routeIs($child['route']); @endphp
-                                <a href="{{ route($child['route']) }}" @click="open = false"
-                                    class="block rounded-xl px-3 py-2 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-gray-700 transition hover:text-brand-primary' }}">
-                                    {{ $child['label'] }}
-                                </a>
-                            @endforeach
-                        </div>
-                    </div>
+                    @foreach ($item['children'] as $child)
+                        @php $isChildActive = request()->routeIs($child['route']); @endphp
+                        <a href="{{ route($child['route']) }}" @click="open = false"
+                            class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isChildActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            {{ $child['label'] }}
+                        </a>
+                    @endforeach
                 @else
                     @php $isItemActive = request()->routeIs($item['route']); @endphp
                     <a href="{{ route($item['route']) }}" @click="open = false"
