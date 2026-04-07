@@ -60,6 +60,41 @@ class UserInvitationTest extends TestCase
         Notification::assertSentTo($createdUser, ResetPassword::class);
     }
 
+    public function test_admin_can_create_a_store_manager_user_from_the_commercial_form(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Bilbao',
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Jefe Tienda',
+            'email' => 'jefe.tienda@example.com',
+            'role' => 'comercial',
+            'is_store_manager' => '1',
+            'salesforce_user_id' => 'SF-STORE-001',
+            'dealership_id' => $dealership->id,
+        ]);
+
+        $createdUser = User::where('email', 'jefe.tienda@example.com')->first();
+
+        $response
+            ->assertRedirect(route('users.index'))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($createdUser);
+        $this->assertSame(User::ROLE_STORE_MANAGER, $createdUser->role);
+        $this->assertSame('SF-STORE-001', $createdUser->salesforce_user_id);
+        $this->assertSame('Bilbao', $createdUser->dealership);
+        $this->assertSame($dealership->id, $createdUser->dealership_id);
+
+        Notification::assertSentTo($createdUser, ResetPassword::class);
+    }
+
     public function test_admin_can_resend_invitation_email_to_pending_user(): void
     {
         Notification::fake();

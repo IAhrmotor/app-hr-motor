@@ -65,6 +65,29 @@ class UserSalesforceIdTest extends TestCase
         ]);
     }
 
+    public function test_store_manager_user_requires_salesforce_id_when_created(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Torrejon',
+        ]);
+
+        $response = $this->from(route('users.create'))->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Jefe Tienda Sin Salesforce',
+            'email' => 'jefe-tienda-sf@example.com',
+            'role' => 'comercial',
+            'is_store_manager' => '1',
+            'salesforce_user_id' => '',
+            'dealership_id' => $dealership->id,
+        ]);
+
+        $response
+            ->assertRedirect(route('users.create'))
+            ->assertSessionHasErrors('salesforce_user_id');
+    }
+
     public function test_commercial_user_requires_salesforce_id_when_updated(): void
     {
         $admin = User::factory()->create([
@@ -174,5 +197,42 @@ class UserSalesforceIdTest extends TestCase
         $this->assertNull($user->salesforce_user_id);
         $this->assertNull($user->dealership);
         $this->assertNull($user->dealership_id);
+    }
+
+    public function test_user_can_be_promoted_to_store_manager_while_keeping_commercial_data(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+        $dealership = Dealership::factory()->create([
+            'name' => 'Bilbao',
+        ]);
+
+        $user = User::factory()->create([
+            'role' => 'comercial',
+            'salesforce_user_id' => 'SF-USER-STORE-001',
+            'dealership' => 'Bilbao',
+            'dealership_id' => $dealership->id,
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('users.update', $user), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => 'comercial',
+            'is_store_manager' => '1',
+            'salesforce_user_id' => 'SF-USER-STORE-001',
+            'dealership_id' => $dealership->id,
+            'password' => '',
+            'password_confirmation' => '',
+        ]);
+
+        $response->assertRedirect(route('users.index'));
+
+        $user->refresh();
+
+        $this->assertSame(User::ROLE_STORE_MANAGER, $user->role);
+        $this->assertSame('SF-USER-STORE-001', $user->salesforce_user_id);
+        $this->assertSame('Bilbao', $user->dealership);
+        $this->assertSame($dealership->id, $user->dealership_id);
     }
 }

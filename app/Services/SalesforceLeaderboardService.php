@@ -273,7 +273,7 @@ class SalesforceLeaderboardService
             ->all();
 
         $missingCommercials = User::query()
-            ->where('role', 'comercial')
+            ->whereIn('role', [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER])
             ->where(function ($query): void {
                 $query->whereNull('salesforce_user_id');
 
