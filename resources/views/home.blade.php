@@ -15,7 +15,7 @@
         $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
         $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
         $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
-        $storeManagerTooltipClasses = 'pointer-events-none absolute left-0 top-full z-10 mt-2 inline-flex whitespace-nowrap rounded-xl bg-brand-secondary px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100';
+        $storeManagerTooltipClasses = 'pointer-events-none absolute left-full top-1/2 z-10 ml-3 inline-flex -translate-y-1/2 whitespace-nowrap rounded-xl bg-brand-secondary px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100';
     @endphp
 
     <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-6">
