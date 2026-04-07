@@ -20,7 +20,7 @@
     $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
     $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
     $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
-    $storeManagerBadgeClasses = 'inline-flex items-center rounded-full border border-amber-300/70 bg-amber-100/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800';
+    $storeManagerTooltipClasses = 'pointer-events-none absolute left-0 top-full z-10 mt-2 inline-flex whitespace-nowrap rounded-xl bg-brand-secondary px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100';
 @endphp
 
 <section class="rounded-[1.85rem] border border-brand-secondary/10 bg-white/90 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-6">
@@ -176,10 +176,12 @@
                                 </p>
                             @else
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <p class="line-clamp-2 text-lg font-semibold leading-tight {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                    @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
-                                        <span class="{{ $storeManagerBadgeClasses }}">Jefe de tienda</span>
-                                    @endif
+                                    <span class="group relative inline-flex max-w-full">
+                                        <p class="line-clamp-2 text-lg font-semibold leading-tight {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                            <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                        @endif
+                                    </span>
                                 </div>
                                 <p class="truncate text-sm text-brand-secondary/60">
                                     {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
@@ -217,10 +219,12 @@
                                         class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                     <div class="min-w-0 max-w-full">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <p class="text-xl font-semibold leading-tight break-words {{ $entry->user->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user->name }}</p>
-                                            @if ($entry->user->role === \App\Models\User::ROLE_STORE_MANAGER)
-                                                <span class="{{ $storeManagerBadgeClasses }}">Jefe de tienda</span>
-                                            @endif
+                                            <span class="group relative inline-flex max-w-full">
+                                                <p class="text-xl font-semibold leading-tight break-words {{ $entry->user->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user->name }}</p>
+                                                @if ($entry->user->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                    <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                                @endif
+                                            </span>
                                         </div>
                                         <p class="text-sm text-brand-secondary/60">{{ $entry->user->dealership ?: 'Sin delegación asignada' }}</p>
                                     </div>
@@ -230,10 +234,12 @@
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                 <div class="min-w-0 max-w-full">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <p class="text-xl font-semibold leading-tight break-words {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
-                                            <span class="{{ $storeManagerBadgeClasses }}">Jefe de tienda</span>
-                                        @endif
+                                        <span class="group relative inline-flex max-w-full">
+                                            <p class="text-xl font-semibold leading-tight break-words {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                            @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                            @endif
+                                        </span>
                                     </div>
                                     <p class="text-sm text-brand-secondary/60">
                                         {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
@@ -361,20 +367,24 @@
                                         @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
                                             <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
                                                 <div class="flex flex-wrap items-center gap-2">
-                                                    <p class="text-sm font-semibold {{ $entry->user->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user->name }}</p>
-                                                    @if ($entry->user->role === \App\Models\User::ROLE_STORE_MANAGER)
-                                                        <span class="{{ $storeManagerBadgeClasses }}">Jefe de tienda</span>
-                                                    @endif
+                                                    <span class="group relative inline-flex max-w-full">
+                                                        <p class="text-sm font-semibold {{ $entry->user->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user->name }}</p>
+                                                        @if ($entry->user->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                            <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                                        @endif
+                                                    </span>
                                                 </div>
                                                 <p class="text-xs text-brand-secondary/55">{{ $entry->user->email }}</p>
                                             </a>
                                         @else
                                             <div>
                                                 <div class="flex flex-wrap items-center gap-2">
-                                                    <p class="text-sm font-semibold {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                                    @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
-                                                        <span class="{{ $storeManagerBadgeClasses }}">Jefe de tienda</span>
-                                                    @endif
+                                                    <span class="group relative inline-flex max-w-full">
+                                                        <p class="text-sm font-semibold {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                            <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                                        @endif
+                                                    </span>
                                                 </div>
                                                 <p class="text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
                                             </div>
@@ -472,10 +482,12 @@
                                         class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <p class="truncate text-sm font-semibold {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                            @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
-                                                <span class="{{ $storeManagerBadgeClasses }}">Jefe de tienda</span>
-                                            @endif
+                                            <span class="group relative inline-flex max-w-full">
+                                                <p class="truncate text-sm font-semibold {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                                @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                    <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                                @endif
+                                            </span>
                                         </div>
                                         <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->email ?? 'Sin usuario interno enlazado' }}</p>
                                         <p class="truncate text-xs text-brand-secondary/55">{{ $entry->user?->dealership ?: 'Sin delegación asignada' }}</p>
