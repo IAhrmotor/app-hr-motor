@@ -92,7 +92,6 @@
                                     'role' => 'Rol',
                                     'dealership' => 'Delegación',
                                     'is_active' => 'Estado',
-                                    'salesforce_user_id' => 'ID Salesforce',
                                 ] as $column => $label)
                                     <th class="px-6 py-4 text-left">
                                         <a href="{{ route('users.index', array_merge(request()->query(), ['sort' => $column, 'direction' => $sortDirection($column, $sort, $direction)])) }}"
@@ -142,7 +141,6 @@
                                             <span class="inline-flex min-w-[6.75rem] justify-center rounded-full bg-amber-100 px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide text-amber-700">Pendiente</span>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $user->salesforce_user_id ?: 'No aplica' }}</td>
                                     <td class="px-6 py-4">
                                         @if ($canManageUser)
                                             <div class="flex justify-end gap-2">
@@ -176,7 +174,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-6 py-8 text-center text-sm text-brand-secondary/70">No hay usuarios registrados.</td>
+                                    <td colspan="6" class="px-6 py-8 text-center text-sm text-brand-secondary/70">No hay usuarios registrados.</td>
                                 </tr>
                             @endforelse
                         </tbody>
