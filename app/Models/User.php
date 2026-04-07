@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -122,6 +123,16 @@ class User extends Authenticatable
     public function assignedDealership(): BelongsTo
     {
         return $this->belongsTo(Dealership::class, 'dealership_id');
+    }
+
+    public function forumThreads(): HasMany
+    {
+        return $this->hasMany(ForumThread::class);
+    }
+
+    public function forumReplies(): HasMany
+    {
+        return $this->hasMany(ForumReply::class);
     }
 
     public function getResolvedDealershipNameAttribute(): ?string

@@ -1,5 +1,6 @@
 @php
     $footerPlatformItems = config('navigation.footer.platform', []);
+    $footerPlatformColumns = collect($footerPlatformItems)->chunk((int) ceil(max(count($footerPlatformItems), 1) / 2));
 @endphp
 
 <footer class="mt-16 bg-brand-secondary text-white">
@@ -15,21 +16,25 @@
                 </p>
             </div>
 
-            <div class="grid gap-8 sm:grid-cols-2">
+            <div class="grid gap-8 sm:grid-cols-2 lg:gap-16 xl:gap-24">
                 <div>
                     <h2 class="text-sm font-semibold uppercase tracking-[0.12em] text-white/90">
                         Plataforma
                     </h2>
 
-                    <ul class="mt-4 space-y-3 text-sm text-white/75">
-                        @foreach ($footerPlatformItems as $item)
-                            <li>
-                                <a href="{{ route($item['route']) }}" class="transition hover:text-white">
-                                    {{ $item['label'] }}
-                                </a>
-                            </li>
+                    <div class="mt-4 grid gap-3 text-sm text-white/75 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-3">
+                        @foreach ($footerPlatformColumns as $column)
+                            <ul class="space-y-3">
+                                @foreach ($column as $item)
+                                    <li>
+                                        <a href="{{ route($item['route']) }}" class="transition hover:text-white">
+                                            {{ $item['label'] }}
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
                         @endforeach
-                    </ul>
+                    </div>
                 </div>
 
                 <div>
