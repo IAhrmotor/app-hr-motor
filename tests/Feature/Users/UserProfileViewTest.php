@@ -44,7 +44,7 @@ class UserProfileViewTest extends TestCase
             ->assertSee('aria-label="Ver LinkedIn"', false)
             ->assertSee('href="' . $user->linkedin_url . '"', false)
             ->assertDontSeeText($user->linkedin_url)
-            ->assertSee('Delegacion')
+            ->assertSee('Delegación')
             ->assertSee('Bilbao')
             ->assertSee(route('dealerships.show', $dealership), false)
             ->assertDontSee('Estado')
@@ -98,6 +98,53 @@ class UserProfileViewTest extends TestCase
             ->assertSee('5 compras este mes')
             ->assertSee('Ranking ventas')
             ->assertSee('Ranking compras');
+    }
+
+    public function test_store_manager_profile_uses_the_new_role_label_and_shows_rankings(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $dealership = Dealership::factory()->create([
+            'name' => 'Sevilla',
+        ]);
+
+        $storeManager = User::factory()->create([
+            'role' => User::ROLE_STORE_MANAGER,
+            'name' => 'Marta Jefa',
+            'dealership' => 'Sevilla',
+            'dealership_id' => $dealership->id,
+            'salesforce_user_id' => 'SF-STORE-002',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 4,
+            'user_id' => $storeManager->id,
+            'salesforce_user_id' => 'SF-STORE-002',
+            'seller_name' => 'Marta Jefa',
+            'total_sales' => 6,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $storeManager->id,
+            'salesforce_user_id' => 'SF-STORE-002',
+            'seller_name' => 'Marta Jefa',
+            'total_purchases' => 8,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.show', $storeManager));
+
+        $response
+            ->assertOk()
+            ->assertSee('Jefe de tienda')
+            ->assertSee('Top 4')
+            ->assertSee('Top 1')
+            ->assertSee('6 ventas este mes')
+            ->assertSee('8 compras este mes');
     }
 
     public function test_users_index_links_avatar_and_name_to_profile_view(): void

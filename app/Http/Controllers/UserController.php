@@ -60,9 +60,9 @@ class UserController extends Controller
     {
         $authUser = request()->user();
 
-        $availableRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'comercial']
-            : ['comercial'];
+        $availableRoles = $authUser->role === User::ROLE_ADMIN
+            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
+            : [User::ROLE_COMMERCIAL];
         $availableDealerships = Dealership::query()->orderBy('name')->get();
 
         return view('users.create', compact('availableRoles', 'availableDealerships'));
@@ -84,23 +84,26 @@ class UserController extends Controller
     {
         $authUser = $request->user();
 
-        $allowedRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'comercial']
-            : ['comercial'];
+        $allowedRoles = $authUser->role === User::ROLE_ADMIN
+            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
+            : [User::ROLE_COMMERCIAL];
+        $submittedRole = $this->resolveSubmittedRole($request, $authUser);
+        $isCommercialLike = $this->isCommercialLikeRole($submittedRole);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'role' => ['required', 'string', Rule::in($allowedRoles)],
+            'is_store_manager' => ['nullable', 'boolean'],
             'salesforce_user_id' => [
-                Rule::requiredIf(fn () => $request->input('role') === 'comercial'),
+                Rule::requiredIf($isCommercialLike),
                 'nullable',
                 'string',
                 'max:255',
                 Rule::unique('users', 'salesforce_user_id'),
             ],
             'dealership_id' => [
-                Rule::requiredIf(fn () => $request->input('role') === 'comercial'),
+                Rule::requiredIf($isCommercialLike),
                 'nullable',
                 'integer',
                 Rule::exists('dealerships', 'id'),
@@ -108,17 +111,17 @@ class UserController extends Controller
         ]);
 
         try {
-            [$user, $status] = DB::transaction(function () use ($validated) {
-                $isCommercial = $validated['role'] === 'comercial';
-                $dealership = $isCommercial
+            [$user, $status] = DB::transaction(function () use ($validated, $submittedRole) {
+                $isCommercialLike = $this->isCommercialLikeRole($submittedRole);
+                $dealership = $isCommercialLike
                     ? Dealership::query()->find($validated['dealership_id'])
                     : null;
 
                 $user = User::create([
                     'name' => $validated['name'],
                     'email' => $validated['email'],
-                    'role' => $validated['role'],
-                    'salesforce_user_id' => $isCommercial ? $validated['salesforce_user_id'] : null,
+                    'role' => $submittedRole,
+                    'salesforce_user_id' => $isCommercialLike ? $validated['salesforce_user_id'] : null,
                     'dealership' => $dealership?->name,
                     'dealership_id' => $dealership?->id,
                     'password' => Hash::make(Str::password(32)),
@@ -183,9 +186,9 @@ class UserController extends Controller
             return $response;
         }
 
-        $availableRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'comercial']
-            : ['comercial'];
+        $availableRoles = $authUser->role === User::ROLE_ADMIN
+            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
+            : [User::ROLE_COMMERCIAL];
         $availableDealerships = Dealership::query()->orderBy('name')->get();
 
         return view('users.edit', compact('user', 'availableRoles', 'availableDealerships'));
@@ -199,23 +202,26 @@ class UserController extends Controller
             return $response;
         }
 
-        $allowedRoles = $authUser->role === 'admin'
-            ? ['admin', 'gestor', 'comercial']
-            : ['comercial'];
+        $allowedRoles = $authUser->role === User::ROLE_ADMIN
+            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
+            : [User::ROLE_COMMERCIAL];
+        $submittedRole = $this->resolveSubmittedRole($request, $authUser);
+        $isCommercialLike = $this->isCommercialLikeRole($submittedRole);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'role' => ['required', 'string', Rule::in($allowedRoles)],
+            'is_store_manager' => ['nullable', 'boolean'],
             'salesforce_user_id' => [
-                Rule::requiredIf(fn () => $request->input('role') === 'comercial'),
+                Rule::requiredIf($isCommercialLike),
                 'nullable',
                 'string',
                 'max:255',
                 Rule::unique('users', 'salesforce_user_id')->ignore($user->id),
             ],
             'dealership_id' => [
-                Rule::requiredIf(fn () => $request->input('role') === 'comercial'),
+                Rule::requiredIf($isCommercialLike),
                 'nullable',
                 'integer',
                 Rule::exists('dealerships', 'id'),
@@ -223,22 +229,22 @@ class UserController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $dealership = $validated['role'] === 'comercial'
+        $dealership = $isCommercialLike
             ? Dealership::query()->find($validated['dealership_id'])
             : null;
 
         $changes = $this->buildChangeSet($user, [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $authUser->role === 'admin' ? $validated['role'] : 'comercial',
-            'salesforce_user_id' => $validated['role'] === 'comercial' ? $validated['salesforce_user_id'] : null,
+            'role' => $submittedRole,
+            'salesforce_user_id' => $isCommercialLike ? $validated['salesforce_user_id'] : null,
             'dealership' => $dealership?->name,
         ]);
 
         $user->name = $validated['name'];
         $user->email = $validated['email'];
-        $user->role = $authUser->role === 'admin' ? $validated['role'] : 'comercial';
-        $user->salesforce_user_id = $user->role === 'comercial'
+        $user->role = $submittedRole;
+        $user->salesforce_user_id = $this->isCommercialLikeRole($user->role)
             ? $validated['salesforce_user_id']
             : null;
         $user->dealership = $dealership?->name;
@@ -309,7 +315,7 @@ class UserController extends Controller
                 ->with('error', "No puedes {$action} tu propio usuario.");
         }
 
-        if ($authUser->role === 'gestor' && $targetUser->role !== 'comercial') {
+        if ($authUser->role === User::ROLE_MANAGER && ! $this->isCommercialLikeRole($targetUser->role)) {
             return redirect()
                 ->route('users.index')
                 ->with('error', "No tienes permisos para {$action} este usuario.");
@@ -389,7 +395,7 @@ class UserController extends Controller
             ],
         ];
 
-        if ($user->role !== 'comercial') {
+        if (! $user->isCommercialLike()) {
             return $positions;
         }
 
@@ -441,5 +447,23 @@ class UserController extends Controller
     protected function excludedLeaderboardUserIds(): array
     {
         return config('services.salesforce.excluded_leaderboard_user_ids', []);
+    }
+
+    protected function isCommercialLikeRole(?string $role): bool
+    {
+        return in_array($role, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER], true);
+    }
+
+    protected function resolveSubmittedRole(Request $request, User $authUser): string
+    {
+        $baseRole = $authUser->role === User::ROLE_ADMIN
+            ? $request->input('role')
+            : User::ROLE_COMMERCIAL;
+
+        if ($baseRole === User::ROLE_COMMERCIAL && $request->boolean('is_store_manager')) {
+            return User::ROLE_STORE_MANAGER;
+        }
+
+        return $baseRole;
     }
 }

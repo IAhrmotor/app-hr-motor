@@ -108,7 +108,10 @@
                         <tbody class="divide-y divide-brand-secondary/10 bg-white">
                             @forelse ($users as $user)
                                 @php
-                                    $canManageUser = $authUser->role === 'admin' || ($authUser->role === 'gestor' && $authUser->id !== $user->id && $user->role === 'comercial');
+                                    $canManageUser = $authUser->role === \App\Models\User::ROLE_ADMIN
+                                        || ($authUser->role === \App\Models\User::ROLE_MANAGER
+                                            && $authUser->id !== $user->id
+                                            && $user->isCommercialLike());
                                     $isInvitationExpired = ! $user->is_active
                                         && $user->must_change_password
                                         && $user->created_at?->lt(now()->subMinutes($invitationExpiresInMinutes));
@@ -127,16 +130,16 @@
                                     </td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $user->email }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
-                                        <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ ucfirst($user->role) }}</span>
+                                        <span class="inline-flex min-w-[7.25rem] justify-center rounded-full bg-brand-primary/10 px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ $user->role_label }}</span>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $user->resolved_dealership_name ?: 'No aplica' }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
                                         @if ($user->is_active)
-                                            <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-700">Activo</span>
+                                            <span class="inline-flex min-w-[6.75rem] justify-center rounded-full bg-green-100 px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide text-green-700">Activo</span>
                                         @elseif ($isInvitationExpired)
-                                            <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700">Caducado</span>
+                                            <span class="inline-flex min-w-[6.75rem] justify-center rounded-full bg-red-100 px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide text-red-700">Caducado</span>
                                         @else
-                                            <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Pendiente</span>
+                                            <span class="inline-flex min-w-[6.75rem] justify-center rounded-full bg-amber-100 px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide text-amber-700">Pendiente</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $user->salesforce_user_id ?: 'No aplica' }}</td>

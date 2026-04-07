@@ -13,6 +13,14 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_MANAGER = 'gestor';
+
+    public const ROLE_COMMERCIAL = 'comercial';
+
+    public const ROLE_STORE_MANAGER = 'jefe_tienda';
+
     public const DEFAULT_AVATAR_PATH = 'images/users/hrmotor-default-user-avatar.png';
 
     public const DEALERSHIPS = [
@@ -119,5 +127,20 @@ class User extends Authenticatable
     public function getResolvedDealershipNameAttribute(): ?string
     {
         return $this->assignedDealership?->name ?: $this->dealership;
+    }
+
+    public function isCommercialLike(): bool
+    {
+        return in_array($this->role, [self::ROLE_COMMERCIAL, self::ROLE_STORE_MANAGER], true);
+    }
+
+    public function getRoleLabelAttribute(): string
+    {
+        return match ($this->role) {
+            self::ROLE_ADMIN => 'Admin',
+            self::ROLE_MANAGER => 'Gestor',
+            self::ROLE_STORE_MANAGER => 'Jefe de tienda',
+            default => 'Comercial',
+        };
     }
 }

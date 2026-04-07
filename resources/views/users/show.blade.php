@@ -70,7 +70,7 @@
                     <div>
                         <dt class="text-brand-secondary/60">Rol</dt>
                         <dd class="mt-1">
-                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ ucfirst($user->role) }}</span>
+                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ $user->role_label }}</span>
                         </dd>
                     </div>
 
@@ -92,7 +92,7 @@
                 </dl>
             </section>
 
-            @if ($user->role === 'comercial' && ($salesRankingPosition || $purchaseRankingPosition))
+            @if ($user->isCommercialLike() && ($salesRankingPosition || $purchaseRankingPosition))
                 <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -100,7 +100,7 @@
                             <p class="mt-1 text-sm text-brand-secondary/65">Puesto actual del mes en ventas y compras.</p>
                         </div>
                         <span class="inline-flex w-fit rounded-full bg-brand-secondary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary/70">
-                            Comercial
+                            {{ $user->role_label }}
                         </span>
                     </div>
 
