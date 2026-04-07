@@ -9,6 +9,7 @@ use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
 use App\Http\Controllers\UserController;
 use App\Models\SalesLeaderboardEntry;
+use App\Models\User;
 use App\Services\LeaderboardTrendService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboard/coches', [LeaderboardController::class, 'vehicles'])->name('leaderboard.vehicles');
 
     Route::get('/', function (LeaderboardTrendService $trendService) {
+        $authUser = auth()->user();
+        $isStoreManager = $authUser?->role === User::ROLE_STORE_MANAGER;
+        $salesforceUrl = $isStoreManager
+            ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
+            : config('portal.links.tools.salesforce_comunidad');
+        $salesforceLabel = $isStoreManager ? 'Salesforce' : 'Salesforce comunidad';
+        $itSupportUrl = $isStoreManager
+            ? 'https://hrmotor.lightning.force.com/lightning/o/Tareas_Departamento_Informatico__c/list?filterName=__Recent'
+            : config('portal.links.it_support');
+
         $buttonSections = [
             [
                 'title' => 'Herramientas generales',
@@ -53,8 +64,8 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/woffu.png'),
                     ],
                     [
-                        'label' => 'Salesforce comunidad',
-                        'url' => config('portal.links.tools.salesforce_comunidad'),
+                        'label' => $salesforceLabel,
+                        'url' => $salesforceUrl,
                         'image' => asset('images/tools/salesforce.png'),
                     ],
                     [
@@ -129,7 +140,7 @@ Route::middleware('auth')->group(function () {
 
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements'));
+        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl'));
     })->name('home');
 
     Route::get('/videos', function () {

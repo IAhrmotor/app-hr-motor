@@ -15,6 +15,7 @@
         $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
         $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
         $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
+        $storeManagerTooltipClasses = 'pointer-events-none absolute left-full top-1/2 z-10 ml-3 inline-flex -translate-y-1/2 whitespace-nowrap rounded-xl bg-brand-secondary px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100';
     @endphp
 
     <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-6">
@@ -65,7 +66,7 @@
                         </div>
 
                         <div class="flex flex-1 items-center justify-center">
-                            <a href="{{ config('portal.links.it_support') }}" target="_blank" rel="noopener noreferrer"
+                            <a href="{{ $itSupportUrl }}" target="_blank" rel="noopener noreferrer"
                                 class="group relative flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-brand-primary/15 bg-white shadow-sm ring-1 ring-brand-primary/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
                                 <div class="absolute right-5 top-5 rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary ring-1 ring-brand-primary/10">
                                     Soporte
@@ -277,7 +278,12 @@
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                 <div class="min-w-0 max-w-full">
-                                    <p class="text-xl font-semibold leading-tight break-words text-brand-secondary {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                    <span class="group relative inline-flex max-w-full">
+                                        <p class="text-xl font-semibold leading-tight break-words {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                            <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                        @endif
+                                    </span>
                                     <p class="text-sm text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
                                 </div>
                             </div>
@@ -352,7 +358,12 @@
                                     </div>
                                 </div>
                                 <div class="row-start-2 min-w-0 self-end sm:row-start-auto sm:flex-1">
-                                    <p class="line-clamp-2 text-sm font-semibold leading-snug text-brand-secondary sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                    <span class="group relative inline-flex max-w-full">
+                                        <p class="line-clamp-2 text-sm font-semibold leading-snug {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                            <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                        @endif
+                                    </span>
                                     <p class="truncate text-xs text-brand-secondary/60">{{ $homeLeaderboardSubtitle($entry) }}</p>
                                 </div>
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"

@@ -70,7 +70,7 @@
                     <div>
                         <dt class="text-brand-secondary/60">Rol</dt>
                         <dd class="mt-1">
-                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ ucfirst($user->role) }}</span>
+                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ $user->role_label }}</span>
                         </dd>
                     </div>
 
@@ -92,7 +92,7 @@
                 </dl>
             </section>
 
-            @if ($user->role === 'comercial' && ($salesRankingPosition || $purchaseRankingPosition))
+            @if ($user->isCommercialLike() && ($salesRankingPosition || $purchaseRankingPosition))
                 <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -100,11 +100,12 @@
                             <p class="mt-1 text-sm text-brand-secondary/65">Puesto actual del mes en ventas y compras.</p>
                         </div>
                         <span class="inline-flex w-fit rounded-full bg-brand-secondary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary/70">
-                            Comercial
+                            {{ $user->role_label }}
                         </span>
                     </div>
 
                     <div class="mt-5 grid gap-4 md:grid-cols-2">
+                        <a href="{{ route('leaderboard.sales') }}" class="block rounded-3xl transition hover:-translate-y-1 hover:shadow-md">
                         <div class="rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700/80">Ranking ventas</p>
                             <p class="mt-3 text-3xl font-bold text-amber-800">
@@ -115,7 +116,9 @@
                             </p>
                             <p class="mt-1 text-sm text-amber-800/75">Segun el ranking mensual de ventas.</p>
                         </div>
+                        </a>
 
+                        <a href="{{ route('leaderboard.purchases') }}" class="block rounded-3xl transition hover:-translate-y-1 hover:shadow-md">
                         <div class="rounded-3xl border border-sky-200/70 bg-sky-50/80 p-5">
                             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700/80">Ranking compras</p>
                             <p class="mt-3 text-3xl font-bold text-sky-800">
@@ -126,6 +129,7 @@
                             </p>
                             <p class="mt-1 text-sm text-sky-800/75">Segun el ranking mensual de compras.</p>
                         </div>
+                        </a>
                     </div>
                 </section>
             @endif
