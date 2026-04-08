@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $selectedTags = collect(old('tags', []))->map(fn ($tagId) => (int) $tagId)->all();
+    @endphp
+
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
         <section class="overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white shadow-sm">
             <div class="border-b border-brand-secondary/10 bg-brand-secondary px-6 py-8 text-white sm:px-8">
@@ -42,6 +46,36 @@
                             placeholder="Explica qué estabas intentando hacer, dónde te bloqueas, qué mensaje aparece y qué has probado ya."
                             class="w-full rounded-2xl border border-brand-secondary/15 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">{{ old('content') }}</textarea>
                         @error('content')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50/80 p-5">
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="block text-sm font-semibold text-brand-secondary">Tags del hilo</label>
+                            <span class="text-xs font-medium uppercase tracking-[0.18em] text-brand-secondary/45">Opcional</span>
+                        </div>
+
+                        <p class="mt-2 text-sm text-brand-secondary/60">Puedes seleccionar tantos tags como quieras para clasificar la duda.</p>
+
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            @forelse ($tags as $tag)
+                                <label class="group flex cursor-pointer items-center gap-3 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 transition hover:border-brand-primary/20 hover:bg-brand-primary/5">
+                                    <input type="checkbox" name="tags[]" value="{{ $tag->id }}"
+                                        @checked(in_array($tag->id, $selectedTags, true)) class="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/30">
+                                    <span class="h-3.5 w-3.5 rounded-full ring-2 ring-white" style="background-color: {{ $tag->color }}"></span>
+                                    <span class="text-sm font-semibold text-brand-secondary">{{ $tag->name }}</span>
+                                </label>
+                            @empty
+                                <div class="rounded-2xl border border-dashed border-brand-secondary/15 bg-white px-4 py-6 text-sm text-brand-secondary/60">
+                                    Todavía no hay tags creados. Un gestor o administrador debe crearlos primero.
+                                </div>
+                            @endforelse
+                        </div>
+                        @error('tags')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        @error('tags.*')
                             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>

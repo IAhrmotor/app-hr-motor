@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ForumReply;
+use App\Models\ForumTag;
 use App\Models\ForumThread;
 use App\Models\User;
 use App\Notifications\ForumActivityNotification;
@@ -22,7 +23,7 @@ class ForumThreadController extends Controller
         $status = in_array($status, [ForumThread::STATUS_OPEN, ForumThread::STATUS_RESOLVED], true) ? $status : null;
 
         $threads = ForumThread::query()
-            ->with(['creator', 'latestReply.author', 'resolver'])
+            ->with(['creator', 'latestReply.author', 'resolver', 'tags'])
             ->withCount('replies')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subquery) use ($search) {
@@ -31,6 +32,9 @@ class ForumThreadController extends Controller
                         ->orWhereHas('creator', function ($userQuery) use ($search) {
                             $userQuery->where('name', 'like', "%{$search}%")
                                 ->orWhere('dealership', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('tags', function ($tagQuery) use ($search) {
+                            $tagQuery->where('name', 'like', "%{$search}%");
                         });
                 });
             })
@@ -50,6 +54,7 @@ class ForumThreadController extends Controller
             'threadStats' => $threadStats,
             'search' => $search,
             'status' => $status,
+            'tags' => ForumTag::query()->ordered()->get(),
             'canCreateThreads' => $this->canCreateThreads($request->user()),
         ]);
     }
@@ -58,7 +63,9 @@ class ForumThreadController extends Controller
     {
         abort_unless($this->canCreateThreads($request->user()), 403);
 
-        return view('forum.create');
+        return view('forum.create', [
+            'tags' => ForumTag::query()->ordered()->get(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -68,6 +75,8 @@ class ForumThreadController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:140'],
             'content' => ['required', 'string', 'min:12', 'max:5000'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['integer', 'exists:forum_tags,id'],
             'attachments' => ['nullable', 'array', 'max:4'],
             'attachments.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
@@ -80,6 +89,7 @@ class ForumThreadController extends Controller
         ]);
 
         $this->storeThreadAttachments($request, $thread);
+        $thread->tags()->sync($validated['tags'] ?? []);
         $this->notifyThreadCreated($thread, $request->user());
 
         return redirect()
@@ -93,6 +103,7 @@ class ForumThreadController extends Controller
             'creator',
             'resolver',
             'attachments',
+            'tags',
             'replies.author',
             'replies.attachments',
         ]);

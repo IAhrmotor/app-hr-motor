@@ -60,7 +60,7 @@
                                 </svg>
                             </div>
                             <input type="text" name="search" value="{{ $search }}"
-                                placeholder="Buscar por título, contenido, autor o delegación"
+                                placeholder="Buscar por título, contenido, autor, delegación o tag"
                                 class="w-full rounded-2xl border border-gray-300 py-3 pl-11 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                         </div>
 
@@ -100,7 +100,7 @@
 
                         <article class="group overflow-hidden rounded-[1.75rem] border {{ $isOpen ? 'border-brand-primary/15 bg-[linear-gradient(180deg,rgba(229,26,46,0.04),rgba(255,255,255,1))]' : 'border-brand-secondary/10 bg-slate-50/80' }} p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                             <div class="flex flex-col gap-4">
-                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                                     <div class="min-w-0 flex-1">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $isOpen ? 'bg-brand-primary/10 text-brand-primary' : 'bg-emerald-100 text-emerald-700' }}">
@@ -110,6 +110,19 @@
                                                 {{ $thread->replies_count }} {{ $thread->replies_count === 1 ? 'respuesta' : 'respuestas' }}
                                             </span>
                                         </div>
+
+                                        @if ($thread->tags->isNotEmpty())
+                                            <div class="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
+                                                @foreach ($thread->tags as $tag)
+                                                    <a href="{{ route('forum.index', ['search' => $tag->name]) }}"
+                                                        class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:opacity-90 sm:px-3 sm:py-1 sm:text-xs"
+                                                        style="background-color: {{ $tag->color }}">
+                                                        <span class="h-2 w-2 rounded-full bg-white/80"></span>
+                                                        {{ $tag->name }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @endif
 
                                         <h2 class="mt-3 text-xl font-bold tracking-tight text-brand-secondary">
                                             <a href="{{ route('forum.show', $thread) }}" class="transition group-hover:text-brand-primary">{{ $thread->title }}</a>
@@ -121,7 +134,7 @@
                                     </div>
 
                                     <a href="{{ route('forum.show', $thread) }}"
-                                        class="inline-flex items-center gap-2 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-2 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                        class="inline-flex self-start items-center gap-2 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-2 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:self-auto">
                                         Ver hilo
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5l6 6m0 0-6 6m6-6h-15" />
