@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <main class="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-6">
+    <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
         <section class="overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white shadow-sm">
             <div class="border-b border-brand-secondary/10 bg-brand-secondary px-6 py-8 text-white sm:px-8">
                 <a href="{{ route('forum.index') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition hover:text-white">
