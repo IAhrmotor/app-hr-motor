@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminLogController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ForumThreadController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
@@ -31,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/foro/{thread}/respuestas', [ForumThreadController::class, 'reply'])->name('forum.reply');
     Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->name('forum.status.update');
     Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->name('forum.destroy');
+    Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');

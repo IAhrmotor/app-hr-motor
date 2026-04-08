@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\ForumReply;
 use App\Models\ForumThread;
 use App\Models\User;
+use App\Notifications\ForumActivityNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -78,6 +80,7 @@ class ForumThreadController extends Controller
         ]);
 
         $this->storeThreadAttachments($request, $thread);
+        $this->notifyThreadCreated($thread, $request->user());
 
         return redirect()
             ->route('forum.show', $thread)
@@ -115,6 +118,7 @@ class ForumThreadController extends Controller
         ]);
 
         $this->storeReplyAttachments($request, $reply);
+        $this->notifyReplyCreated($thread, $request->user());
 
         return redirect()
             ->route('forum.show', $thread)
@@ -210,5 +214,36 @@ class ForumThreadController extends Controller
                 'image_path' => 'images/forum/replies/' . $filename,
             ]);
         }
+    }
+
+    private function notifyThreadCreated(ForumThread $thread, User $actor): void
+    {
+        $recipients = User::query()
+            ->where('is_active', true)
+            ->whereIn('role', [
+                User::ROLE_ADMIN,
+                User::ROLE_MANAGER,
+                User::ROLE_COMMERCIAL,
+                User::ROLE_STORE_MANAGER,
+            ])
+            ->where('id', '!=', $actor->id)
+            ->get();
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::send($recipients, ForumActivityNotification::threadCreated($thread, $actor));
+    }
+
+    private function notifyReplyCreated(ForumThread $thread, User $actor): void
+    {
+        $recipient = $thread->creator;
+
+        if (! $recipient || ! $recipient->is_active || $recipient->id === $actor->id) {
+            return;
+        }
+
+        $recipient->notify(ForumActivityNotification::replyCreated($thread, $actor));
     }
 }

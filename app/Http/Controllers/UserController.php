@@ -70,10 +70,6 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        if ($response = $this->ensureCanManageListedUser(request()->user(), $user, 'ver')) {
-            return $response;
-        }
-
         return view('users.show', [
             'user' => $user,
             'rankingPositions' => $this->buildRankingPositions($user),
