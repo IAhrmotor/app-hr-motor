@@ -24,9 +24,9 @@
                         @endphp
                         <div class="relative" @mouseenter="activeDropdown = '{{ $dropdownKey }}'" @mouseleave="activeDropdown = null">
                             <button type="button"
-                                class="inline-flex items-center gap-2 text-sm font-medium transition {{ $isParentActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}"
+                                class="inline-flex h-10 items-center gap-2 text-sm font-medium leading-none transition {{ $isParentActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}"
                                 :aria-expanded="(activeDropdown === '{{ $dropdownKey }}').toString()">
-                                <span>{{ $item['label'] }}</span>
+                                <span class="block translate-y-px">{{ $item['label'] }}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition"
                                     :class="{ 'rotate-180': activeDropdown === '{{ $dropdownKey }}' }" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor" stroke-width="1.8">
@@ -57,7 +57,7 @@
                     @else
                         @php $isItemActive = request()->routeIs($item['route']); @endphp
                         <a href="{{ route($item['route']) }}"
-                            class="text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
+                            class="inline-flex h-10 items-center text-sm font-medium leading-none transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
                             {{ $item['label'] }}
                         </a>
                     @endif
@@ -71,7 +71,7 @@
                             $isDealershipsActive = request()->routeIs('dealerships.*');
                         @endphp
                         <a href="{{ route('admin.index') }}"
-                            class="px-1 py-2 text-sm font-semibold transition {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
+                            class="inline-flex h-10 items-center px-1 text-sm font-semibold leading-none transition {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
                             Admin
                         </a>
                     @endif
