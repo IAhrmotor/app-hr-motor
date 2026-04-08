@@ -6,6 +6,11 @@
         : collect();
     $forumUnreadNotificationCount = $authUser ? $authUser->unreadNotifications()->count() : 0;
 @endphp
+@php
+    $navItemClass = 'inline-flex h-10 items-center whitespace-nowrap px-2 text-sm font-medium leading-none transition';
+    $navItemActiveClass = 'text-brand-primary';
+    $navItemInactiveClass = 'text-gray-700 hover:text-gray-900';
+@endphp
 
 <nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, activeDropdown: null }" @keydown.escape.window="profileOpen = false; notificationsOpen = false; activeDropdown = null"
     class="sticky top-0 z-50 border-b border-gray-200 bg-white">
@@ -24,9 +29,9 @@
                         @endphp
                         <div class="relative" @mouseenter="activeDropdown = '{{ $dropdownKey }}'" @mouseleave="activeDropdown = null">
                             <button type="button"
-                                class="inline-flex h-10 items-center gap-2 text-sm font-medium leading-none transition {{ $isParentActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}"
+                                class="{{ $navItemClass }} gap-1.5 {{ $isParentActive ? $navItemActiveClass : $navItemInactiveClass }}"
                                 :aria-expanded="(activeDropdown === '{{ $dropdownKey }}').toString()">
-                                <span class="block translate-y-px">{{ $item['label'] }}</span>
+                                <span>{{ $item['label'] }}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition"
                                     :class="{ 'rotate-180': activeDropdown === '{{ $dropdownKey }}' }" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor" stroke-width="1.8">
@@ -57,7 +62,7 @@
                     @else
                         @php $isItemActive = request()->routeIs($item['route']); @endphp
                         <a href="{{ route($item['route']) }}"
-                            class="inline-flex h-10 items-center text-sm font-medium leading-none transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
+                            class="{{ $navItemClass }} {{ $isItemActive ? $navItemActiveClass : $navItemInactiveClass }}">
                             {{ $item['label'] }}
                         </a>
                     @endif
@@ -71,7 +76,7 @@
                             $isDealershipsActive = request()->routeIs('dealerships.*');
                         @endphp
                         <a href="{{ route('admin.index') }}"
-                            class="inline-flex h-10 items-center px-1 text-sm font-semibold leading-none transition {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:text-gray-900' }}">
+                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? $navItemActiveClass : $navItemInactiveClass }}">
                             Admin
                         </a>
                     @endif
