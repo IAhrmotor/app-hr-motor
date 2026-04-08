@@ -149,7 +149,13 @@
                                     </h3>
 
                                     <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                                        {{ str_contains($section['route'], 'dealership') ? 'Altas, cambios y bajas de delegaciones.' : 'Altas, cambios y bajas de usuarios.' }}
+                                        @if (str_contains($section['route'], 'forum-tag'))
+                                            Altas, cambios y bajas de tags del foro.
+                                        @elseif (str_contains($section['route'], 'dealership'))
+                                            Altas, cambios y bajas de delegaciones.
+                                        @else
+                                            Altas, cambios y bajas de usuarios.
+                                        @endif
                                     </p>
 
                                     <span class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">
