@@ -130,12 +130,16 @@
                                 </div>
 
                                 <div class="grid gap-3 rounded-[1.5rem] border border-brand-secondary/10 bg-white/90 px-4 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-                                    <img src="{{ $thread->creator->avatar_url }}" alt="Avatar de {{ $thread->creator->name }}"
-                                        class="h-12 w-12 rounded-2xl object-cover ring-1 ring-brand-secondary/10">
+                                    <a href="{{ route('users.show', $thread->creator) }}" class="shrink-0">
+                                        <img src="{{ $thread->creator->avatar_url }}" alt="Avatar de {{ $thread->creator->name }}"
+                                            class="h-12 w-12 rounded-2xl object-cover ring-1 ring-brand-secondary/10 transition hover:opacity-90">
+                                    </a>
 
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <p class="text-sm font-semibold {{ $isStoreManager ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $thread->creator->name }}</p>
+                                            <a href="{{ route('users.show', $thread->creator) }}" class="text-sm font-semibold {{ $isStoreManager ? 'text-amber-700' : 'text-brand-secondary' }} transition hover:text-brand-primary">
+                                                {{ $thread->creator->name }}
+                                            </a>
                                             @if ($isStoreManager)
                                                 <span class="inline-flex rounded-full border border-amber-300/80 bg-[linear-gradient(135deg,#f59e0b_0%,#facc15_55%,#fde68a_100%)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-950">
                                                     Jefe de tienda
