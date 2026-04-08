@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminDealershipLogController;
 use App\Http\Controllers\AdminLogController;
+use App\Http\Controllers\AdminForumTagLogController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ForumThreadController;
@@ -241,6 +242,11 @@ Route::middleware('auth')->group(function () {
                     'description' => 'Consulta el historial de altas, ediciones y eliminaciones de delegaciones.',
                     'route' => 'admin.dealership-logs.index',
                 ],
+                [
+                    'label' => 'Logs de tags',
+                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de tags del foro.',
+                    'route' => 'admin.forum-tag-logs.index',
+                ],
             ];
 
             return view('admin.index', compact('adminSections'));
@@ -272,6 +278,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/foro/tags/{forumTag}/editar', [ForumTagController::class, 'edit'])->name('admin.forum-tags.edit');
         Route::put('/foro/tags/{forumTag}', [ForumTagController::class, 'update'])->name('admin.forum-tags.update');
         Route::delete('/foro/tags/{forumTag}', [ForumTagController::class, 'destroy'])->name('admin.forum-tags.destroy');
+        Route::get('/admin/logs/tags', [AdminForumTagLogController::class, 'index'])->name('admin.forum-tag-logs.index');
+        Route::get('/admin/logs/tags/descargar', [AdminForumTagLogController::class, 'export'])->name('admin.forum-tag-logs.export');
         Route::redirect('/admin/logs', '/admin/logs/usuarios');
         Route::get('/admin/logs/usuarios', [AdminLogController::class, 'index'])->name('admin.logs.index');
         Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');
