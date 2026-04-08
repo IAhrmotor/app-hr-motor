@@ -292,7 +292,7 @@ class LeaderboardController extends Controller
             $topEntries = $aggregatedEntries->take(3)->values();
             $entries = $this->paginateCollection($aggregatedEntries, 'dealership_page');
             $entryItems = collect($entries->items());
-            $hasLeaderboardData = $aggregatedEntries->isNotEmpty();
+            $hasLeaderboardData = $allEntries->isNotEmpty();
         }
 
         return [
@@ -456,7 +456,7 @@ class LeaderboardController extends Controller
         $currentPage = LengthAwarePaginator::resolveCurrentPage($pageParam);
         $perPage = 10;
 
-        return new LengthAwarePaginator(
+        return (new LengthAwarePaginator(
             $entries->forPage($currentPage, $perPage)->values(),
             $entries->count(),
             $perPage,
@@ -465,7 +465,7 @@ class LeaderboardController extends Controller
                 'path' => LengthAwarePaginator::resolveCurrentPath(),
                 'pageName' => $pageParam,
             ]
-        );
+        ))->withQueryString();
     }
 
     private function resolveDealershipName(Model $entry): string
