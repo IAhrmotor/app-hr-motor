@@ -7,6 +7,10 @@ return [
             'route' => 'videos',
         ],
         [
+            'label' => 'Foro',
+            'route' => 'forum.index',
+        ],
+        [
             'label' => 'Ranking',
             'children' => [
                 [
@@ -34,6 +38,10 @@ return [
             [
                 'label' => 'Vídeos',
                 'route' => 'videos',
+            ],
+            [
+                'label' => 'Foro',
+                'route' => 'forum.index',
             ],
             [
                 'label' => 'Ranking ventas',

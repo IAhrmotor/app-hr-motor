@@ -1,8 +1,13 @@
 @php
     $navItems = config('navigation.main', []);
+    $authUser = auth()->user();
+    $forumUnreadNotifications = $authUser
+        ? $authUser->unreadNotifications()->latest()->limit(8)->get()
+        : collect();
+    $forumUnreadNotificationCount = $authUser ? $authUser->unreadNotifications()->count() : 0;
 @endphp
 
-<nav x-data="{ open: false, profileOpen: false, activeDropdown: null }" @keydown.escape.window="profileOpen = false; activeDropdown = null"
+<nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, activeDropdown: null }" @keydown.escape.window="profileOpen = false; notificationsOpen = false; activeDropdown = null"
     class="sticky top-0 z-50 border-b border-gray-200 bg-white">
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
         <a href="{{ route('home') }}" class="flex items-center">
@@ -73,17 +78,73 @@
                 @endauth
             </div>
 
-            <button type="button"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
-                aria-label="Ver novedades">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 10-12 0v.05-.001v.701a8.967 8.967 0 00-2.312 6.022c1.733.64 3.561 1.083 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
-                </svg>
-            </button>
-
             @auth
+                <div class="relative" @click.outside="notificationsOpen = false">
+                    <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false"
+                        class="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
+                        aria-label="Ver notificaciones" :aria-expanded="notificationsOpen.toString()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 10-12 0v.05-.001v.701a8.967 8.967 0 00-2.312 6.022c1.733.64 3.561 1.083 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
+                        </svg>
+
+                        @if ($forumUnreadNotificationCount > 0)
+                            <span
+                                class="absolute -right-0.5 -top-0.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm ring-2 ring-white">
+                                {{ $forumUnreadNotificationCount > 9 ? '+9' : $forumUnreadNotificationCount }}
+                            </span>
+                        @endif
+                    </button>
+
+                    <div x-show="notificationsOpen" x-cloak x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-1"
+                        class="absolute right-0 top-full mt-3 w-80 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl sm:w-96">
+                        <div class="flex items-center justify-between border-b border-brand-secondary/10 px-4 py-3">
+                            <div>
+                                <p class="text-sm font-semibold text-brand-secondary">Notificaciones</p>
+                            </div>
+                        </div>
+
+                        <div class="max-h-[28rem] overflow-y-auto p-2">
+                            @forelse ($forumUnreadNotifications as $notification)
+                                <a href="{{ route('notifications.show', $notification->id) }}"
+                                    class="block rounded-2xl px-3 py-3 transition hover:bg-brand-secondary/5">
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 10-12 0v.05-.001v.701a8.967 8.967 0 00-2.312 6.022c1.733.64 3.561 1.083 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
+                                            </svg>
+                                        </div>
+
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-semibold text-brand-secondary">
+                                                {{ data_get($notification->data, 'message') }}
+                                            </p>
+                                            <p class="mt-1 text-sm text-brand-secondary/70">
+                                                {{ data_get($notification->data, 'thread_title') }}
+                                            </p>
+                                            <p class="mt-1 text-xs text-brand-secondary/40">
+                                                {{ $notification->created_at?->diffForHumans() }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </a>
+                            @empty
+                                <div class="rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center">
+                                    <p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
                 <div class="relative hidden md:block" @click.outside="profileOpen = false">
                     <button type="button" @click="profileOpen = !profileOpen"
                         class="flex cursor-pointer items-center rounded-full bg-white/90 p-0.5 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
@@ -217,3 +278,4 @@
         </div>
     </div>
 </nav>
+
