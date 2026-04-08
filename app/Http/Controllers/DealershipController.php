@@ -57,8 +57,8 @@ class DealershipController extends Controller
             'salesforce_id' => ['required', 'string', 'max:255', 'unique:dealerships,salesforce_id'],
             'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'phone' => ['required', 'string', 'max:255'],
-            'google_maps_url' => ['required', 'url', 'max:255'],
-            'reviews_url' => ['required', 'url', 'max:255'],
+            'google_maps_url' => ['required', 'url', 'max:2048'],
+            'reviews_url' => ['required', 'url', 'max:2048'],
         ]);
 
         $dealership = Dealership::create([
@@ -108,8 +108,8 @@ class DealershipController extends Controller
             'salesforce_id' => ['required', 'string', 'max:255', 'unique:dealerships,salesforce_id,' . $dealership->id],
             'image' => [$dealership->image_path ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'phone' => ['required', 'string', 'max:255'],
-            'google_maps_url' => ['required', 'url', 'max:255'],
-            'reviews_url' => ['required', 'url', 'max:255'],
+            'google_maps_url' => ['required', 'url', 'max:2048'],
+            'reviews_url' => ['required', 'url', 'max:2048'],
         ]);
 
         $changes = $this->buildChangeSet($dealership, [
