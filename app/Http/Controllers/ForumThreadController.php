@@ -193,7 +193,7 @@ class ForumThreadController extends Controller
             return;
         }
 
-        $directory = public_path('images/forum/threads');
+        $directory = storage_path('app/public/forum/threads');
         File::ensureDirectoryExists($directory);
 
         foreach ((array) $request->file('attachments') as $image) {
@@ -202,7 +202,7 @@ class ForumThreadController extends Controller
             $image->move($directory, $filename);
 
             $thread->attachments()->create([
-                'image_path' => 'images/forum/threads/' . $filename,
+                'image_path' => 'forum/threads/' . $filename,
             ]);
         }
     }
@@ -213,7 +213,7 @@ class ForumThreadController extends Controller
             return;
         }
 
-        $directory = public_path('images/forum/replies');
+        $directory = storage_path('app/public/forum/replies');
         File::ensureDirectoryExists($directory);
 
         foreach ((array) $request->file('attachments') as $image) {
@@ -222,7 +222,7 @@ class ForumThreadController extends Controller
             $image->move($directory, $filename);
 
             $reply->attachments()->create([
-                'image_path' => 'images/forum/replies/' . $filename,
+                'image_path' => 'forum/replies/' . $filename,
             ]);
         }
     }

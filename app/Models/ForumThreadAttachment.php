@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 class ForumThreadAttachment extends Model
 {
@@ -19,6 +20,11 @@ class ForumThreadAttachment extends Model
     protected static function booted(): void
     {
         static::deleting(function (self $attachment): void {
+            if (Storage::disk('public')->exists($attachment->image_path)) {
+                Storage::disk('public')->delete($attachment->image_path);
+                return;
+            }
+
             $path = public_path($attachment->image_path);
 
             if (File::exists($path)) {
@@ -34,6 +40,10 @@ class ForumThreadAttachment extends Model
 
     public function getImageUrlAttribute(): string
     {
-        return asset($this->image_path);
+        if (str_starts_with($this->image_path, 'images/')) {
+            return asset($this->image_path);
+        }
+
+        return asset('storage/' . ltrim($this->image_path, '/'));
     }
 }
