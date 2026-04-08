@@ -3,10 +3,6 @@
 return [
     'main' => [
         [
-            'label' => 'Vídeos',
-            'route' => 'videos',
-        ],
-        [
             'label' => 'Foro',
             'route' => 'forum.index',
         ],
@@ -27,6 +23,10 @@ return [
             'label' => 'Hot & Cold',
             'route' => 'leaderboard.vehicles',
         ],
+        [
+            'label' => 'Videos',
+            'route' => 'videos',
+        ],
     ],
 
     'footer' => [
@@ -36,7 +36,7 @@ return [
                 'route' => 'home',
             ],
             [
-                'label' => 'Vídeos',
+                'label' => 'Videos',
                 'route' => 'videos',
             ],
             [
