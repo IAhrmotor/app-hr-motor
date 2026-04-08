@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminLogController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ForumThreadController;
+use App\Http\Controllers\ForumTagController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
@@ -28,10 +29,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/foro', [ForumThreadController::class, 'index'])->name('forum.index');
     Route::get('/foro/crear', [ForumThreadController::class, 'create'])->name('forum.create');
     Route::post('/foro', [ForumThreadController::class, 'store'])->name('forum.store');
-    Route::get('/foro/{thread}', [ForumThreadController::class, 'show'])->name('forum.show');
-    Route::post('/foro/{thread}/respuestas', [ForumThreadController::class, 'reply'])->name('forum.reply');
-    Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->name('forum.status.update');
-    Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->name('forum.destroy');
+    Route::get('/foro/{thread}', [ForumThreadController::class, 'show'])->whereNumber('thread')->name('forum.show');
+    Route::post('/foro/{thread}/respuestas', [ForumThreadController::class, 'reply'])->whereNumber('thread')->name('forum.reply');
+    Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->whereNumber('thread')->name('forum.status.update');
+    Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->whereNumber('thread')->name('forum.destroy');
     Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
@@ -226,6 +227,11 @@ Route::middleware('auth')->group(function () {
                     'route' => 'dealerships.index',
                 ],
                 [
+                    'label' => 'Tags del foro',
+                    'description' => 'Crea, edita y elimina etiquetas para organizar las dudas del foro.',
+                    'route' => 'admin.forum-tags.index',
+                ],
+                [
                     'label' => 'Logs de usuarios',
                     'description' => 'Consulta el historial de altas, ediciones y eliminaciones de usuarios.',
                     'route' => 'admin.logs.index',
@@ -260,6 +266,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/delegaciones/{dealership}/editar', [DealershipController::class, 'edit'])->name('dealerships.edit');
         Route::put('/delegaciones/{dealership}', [DealershipController::class, 'update'])->name('dealerships.update');
         Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])->name('dealerships.destroy');
+        Route::get('/foro/tags', [ForumTagController::class, 'index'])->name('admin.forum-tags.index');
+        Route::get('/foro/tags/crear', [ForumTagController::class, 'create'])->name('admin.forum-tags.create');
+        Route::post('/foro/tags', [ForumTagController::class, 'store'])->name('admin.forum-tags.store');
+        Route::get('/foro/tags/{forumTag}/editar', [ForumTagController::class, 'edit'])->name('admin.forum-tags.edit');
+        Route::put('/foro/tags/{forumTag}', [ForumTagController::class, 'update'])->name('admin.forum-tags.update');
+        Route::delete('/foro/tags/{forumTag}', [ForumTagController::class, 'destroy'])->name('admin.forum-tags.destroy');
         Route::redirect('/admin/logs', '/admin/logs/usuarios');
         Route::get('/admin/logs/usuarios', [AdminLogController::class, 'index'])->name('admin.logs.index');
         Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');

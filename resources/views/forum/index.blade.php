@@ -60,7 +60,7 @@
                                 </svg>
                             </div>
                             <input type="text" name="search" value="{{ $search }}"
-                                placeholder="Buscar por título, contenido, autor o delegación"
+                                placeholder="Buscar por título, contenido, autor, delegación o tag"
                                 class="w-full rounded-2xl border border-gray-300 py-3 pl-11 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                         </div>
 
@@ -110,6 +110,19 @@
                                                 {{ $thread->replies_count }} {{ $thread->replies_count === 1 ? 'respuesta' : 'respuestas' }}
                                             </span>
                                         </div>
+
+                                        @if ($thread->tags->isNotEmpty())
+                                            <div class="mt-3 flex flex-wrap gap-2">
+                                                @foreach ($thread->tags as $tag)
+                                                    <a href="{{ route('forum.index', ['search' => $tag->name]) }}"
+                                                        class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
+                                                        style="background-color: {{ $tag->color }}">
+                                                        <span class="h-2 w-2 rounded-full bg-white/80"></span>
+                                                        {{ $tag->name }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @endif
 
                                         <h2 class="mt-3 text-xl font-bold tracking-tight text-brand-secondary">
                                             <a href="{{ route('forum.show', $thread) }}" class="transition group-hover:text-brand-primary">{{ $thread->title }}</a>
