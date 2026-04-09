@@ -39,9 +39,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
     Route::get('/leaderboard/coches', [LeaderboardController::class, 'vehicles'])->name('leaderboard.vehicles');
+    Route::get('/web', function () {
+        return view('tools.web-hr-motor', [
+            'hrMotorUrl' => 'https://hrmotor.com/gestor',
+        ]);
+    })->name('tools.web');
 
     Route::get('/', function (LeaderboardTrendService $trendService) {
-        $authUser = auth()->user();
+        $authUser = request()->user();
         $isStoreManager = $authUser?->role === User::ROLE_STORE_MANAGER;
         $salesforceUrl = $isStoreManager
             ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
@@ -67,8 +72,9 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Web HR Motor',
-                        'url' => config('portal.links.tools.web_hr_motor'),
+                        'url' => route('tools.web'),
                         'image' => asset('images/tools/hrmotor.png'),
+                        'open_in_new_tab' => false,
                     ],
                     [
                         'label' => 'Woffu',
