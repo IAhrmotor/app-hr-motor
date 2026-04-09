@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\PurchaseLeaderboardEntry;
+use App\Models\Dealership;
 use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\VehicleLeaderboardDailySnapshot;
@@ -278,6 +279,7 @@ class LeaderboardController extends Controller
         $entryItems = new Collection();
         $topEntries = new Collection();
         $hasLeaderboardData = false;
+        $dealerships = new Collection();
 
         if (Schema::hasTable($config['entry_table'])) {
             $allEntries = $config['entry_model']::query()
@@ -288,11 +290,21 @@ class LeaderboardController extends Controller
                 ->orderBy('ranking_position')
                 ->get();
 
-            $aggregatedEntries = $this->aggregateEntriesByDealership($allEntries, $config['metric_field'], $search);
+            $dealerships = Schema::hasTable('dealerships')
+                ? Dealership::query()->select(['id', 'name', 'image_path'])->orderBy('name')->get()
+                : new Collection();
+
+            $aggregatedEntries = $this->aggregateEntriesByDealership(
+                $allEntries,
+                $config['metric_field'],
+                $search,
+                $config['entry_model'],
+                $dealerships
+            );
             $topEntries = $aggregatedEntries->take(3)->values();
             $entries = $this->paginateCollection($aggregatedEntries, 'dealership_page');
             $entryItems = collect($entries->items());
-            $hasLeaderboardData = $allEntries->isNotEmpty();
+            $hasLeaderboardData = $allEntries->isNotEmpty() || $dealerships->isNotEmpty();
         }
 
         return [
@@ -395,7 +407,13 @@ class LeaderboardController extends Controller
         return config('services.salesforce.excluded_leaderboard_user_ids', []);
     }
 
-    private function aggregateEntriesByDealership(Collection $entries, string $metricField, string $search): Collection
+    private function aggregateEntriesByDealership(
+        Collection $entries,
+        string $metricField,
+        string $search,
+        string $entryModelClass,
+        Collection $dealerships = new Collection()
+    ): Collection
     {
         $aggregatedEntries = $entries
             ->groupBy(fn (Model $entry): string => $this->resolveDealershipGroupKey($entry))
@@ -421,6 +439,48 @@ class LeaderboardController extends Controller
 
                 return $entry;
             })
+            ->values();
+
+        if ($dealerships->isNotEmpty()) {
+            $existingDealershipIds = $aggregatedEntries
+                ->pluck('dealership_id')
+                ->filter()
+                ->map(fn ($dealershipId) => (string) $dealershipId)
+                ->all();
+            $existingDealershipNames = $aggregatedEntries
+                ->pluck('dealership_name')
+                ->filter()
+                ->map(fn ($dealershipName) => Str::lower(trim((string) $dealershipName)))
+                ->all();
+
+            $missingEntries = $dealerships
+                ->reject(function (Dealership $dealership) use ($existingDealershipIds, $existingDealershipNames): bool {
+                    return in_array((string) $dealership->id, $existingDealershipIds, true)
+                        || in_array(Str::lower($dealership->name), $existingDealershipNames, true);
+                })
+                ->map(function (Dealership $dealership) use ($entryModelClass, $metricField): Model {
+                    $entry = new $entryModelClass();
+                    $entry->forceFill([
+                        'id' => 'dealership:' . $dealership->id,
+                        'ranking_position' => 0,
+                        'user_id' => null,
+                        'salesforce_user_id' => null,
+                        'seller_name' => $dealership->name,
+                        $metricField => 0,
+                        'dealership_id' => $dealership->id,
+                        'dealership_name' => $dealership->name,
+                        'dealership_image_url' => $dealership->image_url,
+                        'commercial_count' => 0,
+                        'synced_at' => now(),
+                    ]);
+
+                    return $entry;
+                });
+
+            $aggregatedEntries = $aggregatedEntries->concat($missingEntries)->values();
+        }
+
+        $aggregatedEntries = $aggregatedEntries
             ->sort(function (Model $left, Model $right) use ($metricField) {
                 $metricComparison = (float) $right->getAttribute($metricField) <=> (float) $left->getAttribute($metricField);
 

@@ -11,6 +11,7 @@
 
     <main
         x-data="{ isImageOpen: false }"
+        x-effect="document.body.classList.toggle('overflow-hidden', isImageOpen)"
         @keydown.escape.window="isImageOpen = false"
         class="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-8"
     >
