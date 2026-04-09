@@ -78,6 +78,7 @@ class User extends Authenticatable
         'is_active',
         'must_change_password',
         'activated_at',
+        'invitation_sent_at',
     ];
 
     protected static function booted(): void
@@ -109,6 +110,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'activated_at' => 'datetime',
+            'invitation_sent_at' => 'datetime',
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
             'password' => 'hashed',
@@ -153,5 +155,22 @@ class User extends Authenticatable
             self::ROLE_STORE_MANAGER => 'Jefe de tienda',
             default => 'Comercial',
         };
+    }
+
+    public function isInvitationExpired(): bool
+    {
+        if ($this->is_active || ! $this->must_change_password) {
+            return false;
+        }
+
+        $sentAt = $this->invitation_sent_at ?? $this->created_at;
+
+        if (! $sentAt) {
+            return false;
+        }
+
+        $expiresInMinutes = (int) config('auth.passwords.users.expire', 60);
+
+        return $sentAt->lt(now()->subMinutes($expiresInMinutes));
     }
 }
