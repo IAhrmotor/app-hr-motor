@@ -24,7 +24,7 @@ return [
             'route' => 'leaderboard.vehicles',
         ],
         [
-            'label' => 'Videos',
+            'label' => 'Vídeos',
             'route' => 'videos',
         ],
     ],
@@ -36,7 +36,7 @@ return [
                 'route' => 'home',
             ],
             [
-                'label' => 'Videos',
+                'label' => 'Vídeos',
                 'route' => 'videos',
             ],
             [

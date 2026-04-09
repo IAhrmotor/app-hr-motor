@@ -124,6 +124,7 @@ class UserController extends Controller
                     'is_active' => false,
                     'must_change_password' => true,
                     'activated_at' => null,
+                    'invitation_sent_at' => now(),
                 ]);
 
                 return [$user, $this->sendInvitationLink($user)];
@@ -297,6 +298,13 @@ class UserController extends Controller
                 ->route('users.index')
                 ->with('error', $this->invitationErrorMessage($status));
         }
+
+        $user->forceFill([
+            'is_active' => false,
+            'must_change_password' => true,
+            'activated_at' => null,
+            'invitation_sent_at' => now(),
+        ])->save();
 
         return redirect()
             ->route('users.index')

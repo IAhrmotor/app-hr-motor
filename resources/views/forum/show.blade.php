@@ -8,7 +8,7 @@
         $threadCreatorProfileUrl = route('users.show', $thread->creator);
     @endphp
 
-    <main x-data="{ isImageOpen: false, imageUrl: '', imageAlt: '' }" @keydown.escape.window="isImageOpen = false"
+    <main x-data="{ isImageOpen: false, imageUrl: '', imageAlt: '' }" x-effect="document.body.classList.toggle('overflow-hidden', isImageOpen)" @keydown.escape.window="isImageOpen = false"
         class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
         <div class="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_22rem]">
             <section class="overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white shadow-sm">

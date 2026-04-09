@@ -14,6 +14,7 @@
                 this.isVehicleImageOpen = true;
             },
         }"
+        x-effect="document.body.classList.toggle('overflow-hidden', isVehicleImageOpen)"
         @open-vehicle-image.window="openVehicleImage($event.detail)"
         @keydown.escape.window="isVehicleImageOpen = false"
         class="py-10 sm:py-14"

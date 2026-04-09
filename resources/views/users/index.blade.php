@@ -3,8 +3,6 @@
 @section('content')
     @php
         $authUser = auth()->user();
-        $invitationExpiresInMinutes = (int) config('auth.passwords.users.expire', 60);
-
         $sortDirection = function ($column, $sort, $direction) {
             if ($sort !== $column) {
                 return 'asc';
@@ -111,9 +109,7 @@
                                         || ($authUser->role === \App\Models\User::ROLE_MANAGER
                                             && $authUser->id !== $user->id
                                             && $user->isCommercialLike());
-                                    $isInvitationExpired = ! $user->is_active
-                                        && $user->must_change_password
-                                        && $user->created_at?->lt(now()->subMinutes($invitationExpiresInMinutes));
+                                    $isInvitationExpired = $user->isInvitationExpired();
                                     $rowClasses = $user->is_active
                                         ? 'transition hover:bg-brand-secondary/5'
                                         : ($isInvitationExpired
