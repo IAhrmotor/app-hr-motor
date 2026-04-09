@@ -38,7 +38,8 @@
 
                             <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                                 @foreach ($communicationSection['buttons'] as $button)
-                                    <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
+                                    @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
+                                    <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
                                         class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-primary/20 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                         <div class="bg-white">
                                             <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
@@ -67,7 +68,7 @@
                         </div>
 
                         <div class="flex flex-1 items-center justify-center">
-                            <a href="{{ $itSupportUrl }}" target="_blank" rel="noopener noreferrer"
+                            <a href="{{ $itSupportUrl }}"
                                 class="group relative flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-brand-primary/15 bg-white shadow-sm ring-1 ring-brand-primary/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
                                 <div class="absolute right-5 top-5 rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary ring-1 ring-brand-primary/10">
                                     Soporte
@@ -142,7 +143,8 @@
 
                         <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                             @foreach ($generalSection['buttons'] as $button)
-                                <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
+                                @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
+                                <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
                                     class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                     <div class="bg-white">
                                         <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
@@ -173,7 +175,8 @@
 
                     <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                         @foreach ($section['buttons'] as $button)
-                            <a href="{{ $button['url'] }}" target="_blank" rel="noopener noreferrer"
+                            @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
+                            <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
                                 class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                 <div class="bg-white">
                                     <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
@@ -404,13 +407,6 @@
 
             <div class="overflow-hidden rounded-2xl border border-brand-secondary/10">
                 <iframe src="{{ $magazineEmbedUrl }}" class="h-96 w-full sm:h-110" frameborder="0" allowfullscreen></iframe>
-            </div>
-
-            <div class="mt-4 text-center sm:text-right">
-                <a href="{{ $magazineUrl }}" target="_blank" rel="noopener noreferrer"
-                    class="text-sm font-medium text-brand-primary hover:underline">
-                    Abrir revista en una nueva pestaña
-                </a>
             </div>
         </section>
 
