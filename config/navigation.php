@@ -24,6 +24,10 @@ return [
             'route' => 'leaderboard.vehicles',
         ],
         [
+            'label' => 'Web',
+            'route' => 'tools.web',
+        ],
+        [
             'label' => 'Vídeos',
             'route' => 'videos',
         ],
