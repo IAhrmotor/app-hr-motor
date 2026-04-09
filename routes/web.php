@@ -61,9 +61,9 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/docusign.jpg'),
                     ],
                     [
-                        'label' => 'Google Drive',
-                        'url' => config('portal.links.tools.google_drive'),
-                        'image' => asset('images/tools/drive.png'),
+                        'label' => 'OneDrive',
+                        'url' => config('portal.links.tools.onedrive'),
+                        'image' => asset('images/tools/onedrive.webp'),
                     ],
                     [
                         'label' => 'Web HR Motor',
