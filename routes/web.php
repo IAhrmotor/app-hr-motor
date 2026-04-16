@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\AdminDealershipLogController;
+use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AdminMonthlyMagazineController;
 use App\Http\Controllers\AdminLogController;
-use App\Http\Controllers\AdminForumTagLogController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ForumThreadController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
 use App\Http\Controllers\UserController;
+use App\Models\MonthlyMagazineSetting;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use App\Services\LeaderboardTrendService;
@@ -156,9 +158,10 @@ Route::middleware('auth')->group(function () {
                 ->get()
             : new Collection();
 
+        $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl'));
+        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
@@ -239,6 +242,11 @@ Route::middleware('auth')->group(function () {
                     'route' => 'admin.forum-tags.index',
                 ],
                 [
+                    'label' => 'Revista mensual',
+                    'description' => 'Publica la edición mensual, actualiza el texto visible de la portada y gestiona el nombre del archivo.',
+                    'route' => 'admin.magazine.edit',
+                ],
+                [
                     'label' => 'Logs de usuarios',
                     'description' => 'Consulta el historial de altas, ediciones y eliminaciones de usuarios.',
                     'route' => 'admin.logs.index',
@@ -249,9 +257,9 @@ Route::middleware('auth')->group(function () {
                     'route' => 'admin.dealership-logs.index',
                 ],
                 [
-                    'label' => 'Logs de tags',
-                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de tags del foro.',
-                    'route' => 'admin.forum-tag-logs.index',
+                    'label' => 'Logs de contenidos',
+                    'description' => 'Consulta el historial de la revista mensual y de los tags del foro en un único lugar.',
+                    'route' => 'admin.content-logs.index',
                 ],
             ];
 
@@ -284,8 +292,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/foro/tags/{forumTag}/editar', [ForumTagController::class, 'edit'])->name('admin.forum-tags.edit');
         Route::put('/foro/tags/{forumTag}', [ForumTagController::class, 'update'])->name('admin.forum-tags.update');
         Route::delete('/foro/tags/{forumTag}', [ForumTagController::class, 'destroy'])->name('admin.forum-tags.destroy');
-        Route::get('/admin/logs/tags', [AdminForumTagLogController::class, 'index'])->name('admin.forum-tag-logs.index');
-        Route::get('/admin/logs/tags/descargar', [AdminForumTagLogController::class, 'export'])->name('admin.forum-tag-logs.export');
+        Route::get('/admin/logs/contenidos', [AdminContentLogController::class, 'index'])->name('admin.content-logs.index');
+        Route::get('/admin/logs/contenidos/descargar', [AdminContentLogController::class, 'export'])->name('admin.content-logs.export');
+        Route::redirect('/admin/logs/tags', '/admin/logs/contenidos?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
+        Route::redirect('/admin/logs/tags/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
+        Route::get('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'edit'])->name('admin.magazine.edit');
+        Route::put('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'update'])->name('admin.magazine.update');
         Route::redirect('/admin/logs', '/admin/logs/usuarios');
         Route::get('/admin/logs/usuarios', [AdminLogController::class, 'index'])->name('admin.logs.index');
         Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');

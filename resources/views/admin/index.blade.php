@@ -149,7 +149,9 @@
                                     </h3>
 
                                     <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                                        @if (str_contains($section['route'], 'forum-tag'))
+                                        @if (str_contains($section['route'], 'content-logs'))
+                                            Altas, cambios y bajas de la revista mensual y tags del foro.
+                                        @elseif (str_contains($section['route'], 'forum-tag'))
                                             Altas, cambios y bajas de tags del foro.
                                         @elseif (str_contains($section['route'], 'dealership'))
                                             Altas, cambios y bajas de delegaciones.

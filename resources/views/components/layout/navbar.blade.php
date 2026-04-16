@@ -72,11 +72,13 @@
                         @php
                             $isAdminActive = request()->routeIs('admin.index');
                             $isAdminLogsActive = request()->routeIs('admin.logs.*');
+                            $isContentLogsActive = request()->routeIs('admin.content-logs.*');
                             $isUsersActive = request()->routeIs('users.*');
                             $isDealershipsActive = request()->routeIs('dealerships.*');
+                            $isMagazineActive = request()->routeIs('admin.magazine.*');
                         @endphp
                         <a href="{{ route('admin.index') }}"
-                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? $navItemActiveClass : $navItemInactiveClass }}">
+                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive ? $navItemActiveClass : $navItemInactiveClass }}">
                             Admin
                         </a>
                     @endif
@@ -257,11 +259,13 @@
                     @php
                         $isAdminActive = request()->routeIs('admin.index');
                         $isAdminLogsActive = request()->routeIs('admin.logs.*');
+                        $isContentLogsActive = request()->routeIs('admin.content-logs.*');
                         $isUsersActive = request()->routeIs('users.*');
                         $isDealershipsActive = request()->routeIs('dealerships.*');
+                        $isMagazineActive = request()->routeIs('admin.magazine.*');
                     @endphp
                     <a href="{{ route('admin.index') }}" @click="open = false"
-                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isUsersActive || $isDealershipsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         Admin
                     </a>
                 @endif
@@ -283,4 +287,3 @@
         </div>
     </div>
 </nav>
-
