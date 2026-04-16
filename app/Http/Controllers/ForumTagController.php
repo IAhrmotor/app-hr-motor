@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ForumTag;
-use App\Models\ForumTagActivityLog;
-use App\Models\User;
+use App\Models\ContentActivityLog;
+use App\Services\ContentActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,10 +32,17 @@ class ForumTagController extends Controller
         ]);
 
         $tag = ForumTag::query()->create($validated);
-        $this->logActivity(ForumTagActivityLog::ACTION_CREATED, $request->user(), $tag, [
-            'name' => ['from' => null, 'to' => $tag->name],
-            'color' => ['from' => null, 'to' => $tag->color],
-        ]);
+        app(ContentActivityLogger::class)->record(
+            actor: $request->user(),
+            contentType: ContentActivityLog::CONTENT_TYPE_FORUM_TAG,
+            action: ContentActivityLog::ACTION_CREATED,
+            targetName: $tag->name,
+            targetReference: $tag->color,
+            changes: [
+                'name' => ['from' => null, 'to' => $tag->name],
+                'color' => ['from' => null, 'to' => $tag->color],
+            ],
+        );
 
         return redirect()
             ->route('admin.forum-tags.index')
@@ -67,7 +74,14 @@ class ForumTagController extends Controller
         }
 
         $forumTag->update($validated);
-        $this->logActivity(ForumTagActivityLog::ACTION_UPDATED, $request->user(), $forumTag, $changes);
+        app(ContentActivityLogger::class)->record(
+            actor: $request->user(),
+            contentType: ContentActivityLog::CONTENT_TYPE_FORUM_TAG,
+            action: ContentActivityLog::ACTION_UPDATED,
+            targetName: $forumTag->name,
+            targetReference: $forumTag->color,
+            changes: $changes,
+        );
 
         return redirect()
             ->route('admin.forum-tags.index')
@@ -76,30 +90,22 @@ class ForumTagController extends Controller
 
     public function destroy(Request $request, ForumTag $forumTag): RedirectResponse
     {
-        $this->logActivity(ForumTagActivityLog::ACTION_DELETED, $request->user(), $forumTag, [
-            'name' => ['from' => $forumTag->name, 'to' => null],
-            'color' => ['from' => $forumTag->color, 'to' => null],
-        ]);
+        app(ContentActivityLogger::class)->record(
+            actor: $request->user(),
+            contentType: ContentActivityLog::CONTENT_TYPE_FORUM_TAG,
+            action: ContentActivityLog::ACTION_DELETED,
+            targetName: $forumTag->name,
+            targetReference: $forumTag->color,
+            changes: [
+                'name' => ['from' => $forumTag->name, 'to' => null],
+                'color' => ['from' => $forumTag->color, 'to' => null],
+            ],
+        );
 
         $forumTag->delete();
 
         return redirect()
             ->route('admin.forum-tags.index')
             ->with('success', 'Tag eliminado correctamente.');
-    }
-
-    private function logActivity(string $action, User $actor, ForumTag $tag, array $changes): void
-    {
-        ForumTagActivityLog::query()->create([
-            'action' => $action,
-            'actor_user_id' => $actor->id,
-            'actor_name' => $actor->name,
-            'actor_email' => $actor->email,
-            'target_forum_tag_id' => $tag->id,
-            'target_name' => $tag->name,
-            'target_color' => $tag->color,
-            'changes' => $changes,
-            'created_at' => now(),
-        ]);
     }
 }
