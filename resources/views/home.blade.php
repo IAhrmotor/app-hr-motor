@@ -9,9 +9,10 @@
             return in_array($section['title'], ['Herramientas generales', 'Comunicación']);
         });
 
-        $magazinePath = 'revista/revista-abril-2026.pdf';
-        $magazineUrl = asset($magazinePath);
-        $magazineEmbedUrl = asset($magazinePath);
+        $magazinePath = $magazine->pdf_path ?? \App\Models\MonthlyMagazineSetting::DEFAULT_PDF_PATH;
+        $magazineUrl = $magazine->pdf_url ?? asset($magazinePath);
+        $magazineEmbedUrl = $magazineUrl;
+        $magazineTagLabel = $magazine->tag_label ?? \App\Models\MonthlyMagazineSetting::DEFAULT_TAG_LABEL;
         $homeLeaderboardSubtitle = static fn ($entry) => $entry->user?->dealership ?: 'Sin delegación asignada';
         $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
         $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
@@ -397,7 +398,7 @@
 
                 <div
                     class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
-                    Abril
+                    {{ $magazineTagLabel }}
                 </div>
 
                 <p class="text-center text-sm text-brand-secondary/70 sm:mt-2">
