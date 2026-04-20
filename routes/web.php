@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AdminDealershipLogController;
 use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\AdminNotificationLogController;
 use App\Http\Controllers\AdminMonthlyMagazineController;
 use App\Http\Controllers\AdminLogController;
 use App\Http\Controllers\LeaderboardController;
@@ -247,6 +249,16 @@ Route::middleware('auth')->group(function () {
                     'route' => 'admin.magazine.edit',
                 ],
                 [
+                    'label' => 'Notificaciones prioritarias',
+                    'description' => 'Envía avisos destacados a los roles que elijas para que aparezcan por encima de las notificaciones del foro.',
+                    'route' => 'admin.notifications.create',
+                ],
+                [
+                    'label' => 'Logs de notificaciones',
+                    'description' => 'Revisa qué notificaciones prioritarias se enviaron, a quién iban dirigidas y cuántos usuarios las recibieron.',
+                    'route' => 'admin.notification-logs.index',
+                ],
+                [
                     'label' => 'Logs de usuarios',
                     'description' => 'Consulta el historial de altas, ediciones y eliminaciones de usuarios.',
                     'route' => 'admin.logs.index',
@@ -298,6 +310,10 @@ Route::middleware('auth')->group(function () {
         Route::redirect('/admin/logs/tags/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
         Route::get('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'edit'])->name('admin.magazine.edit');
         Route::put('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'update'])->name('admin.magazine.update');
+        Route::get('/admin/notificaciones', [AdminNotificationController::class, 'create'])->name('admin.notifications.create');
+        Route::post('/admin/notificaciones', [AdminNotificationController::class, 'store'])->name('admin.notifications.store');
+        Route::get('/admin/logs/notificaciones', [AdminNotificationLogController::class, 'index'])->name('admin.notification-logs.index');
+        Route::get('/admin/logs/notificaciones/descargar', [AdminNotificationLogController::class, 'export'])->name('admin.notification-logs.export');
         Route::redirect('/admin/logs', '/admin/logs/usuarios');
         Route::get('/admin/logs/usuarios', [AdminLogController::class, 'index'])->name('admin.logs.index');
         Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');

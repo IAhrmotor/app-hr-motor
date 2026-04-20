@@ -51,6 +51,11 @@ class ForumActivityNotification extends Notification
     {
         return [
             'type' => $this->type,
+            'priority' => false,
+            'title' => $this->message(),
+            'description' => $this->thread->title,
+            'link_url' => route('forum.show', $this->thread),
+            'link_label' => 'Ir al foro',
             'message' => $this->message(),
             'actor_name' => $this->actor->name,
             'actor_avatar_url' => $this->actor->avatar_url,

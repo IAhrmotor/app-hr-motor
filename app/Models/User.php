@@ -24,6 +24,23 @@ class User extends Authenticatable
 
     public const DEFAULT_AVATAR_PATH = 'images/users/hrmotor-default-user-avatar.png';
 
+    public static function roleLabels(): array
+    {
+        return [
+            self::ROLE_ADMIN => 'Admin',
+            self::ROLE_MANAGER => 'Gestor',
+            self::ROLE_COMMERCIAL => 'Comercial',
+            self::ROLE_STORE_MANAGER => 'Jefe de tienda',
+        ];
+    }
+
+    public static function notificationTargetRolesFor(self $user): array
+    {
+        return $user->role === self::ROLE_ADMIN
+            ? [self::ROLE_ADMIN, self::ROLE_MANAGER, self::ROLE_COMMERCIAL, self::ROLE_STORE_MANAGER]
+            : [self::ROLE_COMMERCIAL, self::ROLE_STORE_MANAGER];
+    }
+
     public const DEALERSHIPS = [
         'Torrejón',
         'Manresa',
@@ -149,12 +166,7 @@ class User extends Authenticatable
 
     public function getRoleLabelAttribute(): string
     {
-        return match ($this->role) {
-            self::ROLE_ADMIN => 'Admin',
-            self::ROLE_MANAGER => 'Gestor',
-            self::ROLE_STORE_MANAGER => 'Jefe de tienda',
-            default => 'Comercial',
-        };
+        return self::roleLabels()[$this->role] ?? 'Comercial';
     }
 
     public function isInvitationExpired(): bool
