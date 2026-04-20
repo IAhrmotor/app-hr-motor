@@ -16,7 +16,11 @@ class NotificationController extends Controller
 
         $userNotification->markAsRead();
 
-        $targetUrl = data_get($userNotification->data, 'thread_url', route('forum.index'));
+        $targetUrl = data_get(
+            $userNotification->data,
+            'link_url',
+            data_get($userNotification->data, 'thread_url', route('home'))
+        );
 
         return redirect()->to($targetUrl);
     }
