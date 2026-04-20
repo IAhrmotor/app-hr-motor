@@ -49,11 +49,7 @@
                         <dt class="text-brand-secondary/60">Extensión 3CX</dt>
                         <dd class="mt-1 font-semibold text-brand-secondary">{{ $contact->threecx_extension }}</dd>
                     </div>
-                    <div>
-                        <dt class="text-brand-secondary/60">Teléfono Enreach</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $contact->enreach_phone ?: 'No disponible' }}</dd>
-                    </div>
-                    <div>
+                    <div class="md:col-span-2">
                         <dt class="text-brand-secondary/60">Extensión Enreach</dt>
                         <dd class="mt-1 font-semibold text-brand-secondary">{{ $contact->enreach_extension ?: 'No disponible' }}</dd>
                     </div>

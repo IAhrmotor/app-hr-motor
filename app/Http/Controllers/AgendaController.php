@@ -104,7 +104,6 @@ class AgendaController extends Controller
                 'email',
                 'phone',
                 'threecx_extension',
-                'enreach_phone',
                 'enreach_extension',
             ])
             ->get()
@@ -115,7 +114,6 @@ class AgendaController extends Controller
                     'email' => $contact->email,
                     'phone' => $contact->phone,
                     'threecx_extension' => $contact->threecx_extension,
-                    'enreach_phone' => $contact->enreach_phone,
                     'enreach_extension' => $contact->enreach_extension,
                     'subtitle' => 'Contacto externo',
                     'route' => route('agenda.contacts.show', $contact),

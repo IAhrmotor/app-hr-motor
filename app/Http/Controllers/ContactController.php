@@ -30,7 +30,6 @@ class ContactController extends Controller
                     if ($normalizedSearch) {
                         $subquery->orWhere('phone', 'like', "%{$normalizedSearch}%")
                             ->orWhere('threecx_extension', 'like', "%{$normalizedSearch}%")
-                            ->orWhere('enreach_phone', 'like', "%{$normalizedSearch}%")
                             ->orWhere('enreach_extension', 'like', "%{$normalizedSearch}%");
                     }
                 });
@@ -54,7 +53,6 @@ class ContactController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => $this->agendaPhoneRules(),
             'threecx_extension' => $this->agendaExtensionRules(required: true),
-            'enreach_phone' => $this->agendaPhoneRules(),
             'enreach_extension' => $this->agendaExtensionRules(),
         ]);
 
@@ -67,7 +65,6 @@ class ContactController extends Controller
             'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'threecx_extension' => $validated['threecx_extension'],
-            'enreach_phone' => $validated['enreach_phone'] ?? null,
             'enreach_extension' => $validated['enreach_extension'] ?? null,
         ]);
 
@@ -93,7 +90,6 @@ class ContactController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => $this->agendaPhoneRules(),
             'threecx_extension' => $this->agendaExtensionRules(required: true),
-            'enreach_phone' => $this->agendaPhoneRules(),
             'enreach_extension' => $this->agendaExtensionRules(),
         ]);
 
@@ -106,7 +102,6 @@ class ContactController extends Controller
             'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'threecx_extension' => $validated['threecx_extension'],
-            'enreach_phone' => $validated['enreach_phone'] ?? null,
             'enreach_extension' => $validated['enreach_extension'] ?? null,
         ]);
 
