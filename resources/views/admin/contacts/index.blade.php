@@ -62,7 +62,7 @@
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Correo</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Teléfono</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">3CX</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Enreach</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Extensión Enreach</th>
                                 <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Acciones</th>
                             </tr>
                         </thead>
@@ -78,14 +78,7 @@
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $contact->email ?: 'No disponible' }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $contact->phone ?: 'No disponible' }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $contact->threecx_extension }}</td>
-                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">
-                                        <div class="space-y-1">
-                                            <div>{{ $contact->enreach_phone ?: 'No disponible' }}</div>
-                                            <div class="text-xs text-brand-secondary/55">
-                                                {{ $contact->enreach_extension ? 'Ext. ' . $contact->enreach_extension : 'Sin extensión' }}
-                                            </div>
-                                        </div>
-                                    </td>
+                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $contact->enreach_extension ?: 'No disponible' }}</td>
                                     <td class="px-6 py-4">
                                         <div class="flex justify-end gap-2">
                                             <a href="{{ route('agenda.contacts.show', $contact) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-secondary/15 bg-white text-brand-secondary transition hover:bg-brand-secondary/5" title="Ver contacto" aria-label="Ver contacto">

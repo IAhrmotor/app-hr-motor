@@ -19,7 +19,6 @@ class ContactFactory extends Factory
             'email' => fake()->optional()->safeEmail(),
             'phone' => fake()->optional()->numerify('6########'),
             'threecx_extension' => fake()->unique()->numerify('####'),
-            'enreach_phone' => fake()->optional()->numerify('6########'),
             'enreach_extension' => fake()->optional()->unique()->numerify('####'),
         ];
     }

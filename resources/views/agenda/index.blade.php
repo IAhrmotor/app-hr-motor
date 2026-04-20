@@ -43,7 +43,7 @@
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Correo</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Teléfono</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">3CX</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Enreach</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Extensión Enreach</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Tipo</th>
                             </tr>
                         </thead>
@@ -64,12 +64,7 @@
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $entry['phone'] ?: 'No disponible' }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $entry['threecx_extension'] ?: 'No disponible' }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
-                                        <div class="space-y-1">
-                                            <div>{{ $entry['enreach_phone'] ?? 'No disponible' }}</div>
-                                            <div class="text-xs text-brand-secondary/55">
-                                                {{ ($entry['enreach_extension'] ?? null) ? 'Ext. ' . $entry['enreach_extension'] : 'Sin extensión' }}
-                                            </div>
-                                        </div>
+                                        {{ $entry['enreach_extension'] ?? 'No disponible' }}
                                     </td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
                                         <span class="inline-flex min-w-[7rem] justify-center rounded-full px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide {{ $entry['type'] === 'user' ? 'bg-brand-primary/10 text-brand-primary' : 'bg-slate-100 text-slate-700' }}">

@@ -37,12 +37,6 @@
         </div>
 
         <div>
-            <label for="enreach_phone" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Teléfono Enreach</label>
-            <input id="enreach_phone" name="enreach_phone" type="text" value="{{ old('enreach_phone', $contact->enreach_phone ?? '') }}"
-                class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-        </div>
-
-        <div>
             <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extensión Enreach</label>
             <input id="enreach_extension" name="enreach_extension" type="text" value="{{ old('enreach_extension', $contact->enreach_extension ?? '') }}"
                 class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
