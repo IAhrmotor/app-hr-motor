@@ -44,6 +44,10 @@ return [
                 'route' => 'home',
             ],
             [
+                'label' => 'Agenda',
+                'route' => 'agenda.index',
+            ],
+            [
                 'label' => 'Vídeos',
                 'route' => 'videos',
             ],
