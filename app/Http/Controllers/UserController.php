@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesAgendaExtensions;
 use App\Models\Dealership;
 use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardEntry;
@@ -13,17 +14,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Throwable;
 
 class UserController extends Controller
 {
+    use HandlesAgendaExtensions;
+
     protected const INVITATION_DELIVERY_FAILED = 'invitation_delivery_failed';
 
     public function index(Request $request)
     {
         $search = $request->query('search');
+        $normalizedSearch = $this->normalizeAgendaValue($search);
         $status = $request->query('status');
         $sort = $request->query('sort', 'name');
         $direction = $request->query('direction', 'asc');
@@ -34,13 +39,21 @@ class UserController extends Controller
         $status = in_array($status, ['active', 'pending'], true) ? $status : null;
 
         $users = User::query()
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($subquery) use ($search) {
-                    $subquery->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('role', 'like', "%{$search}%")
-                        ->orWhere('dealership', 'like', "%{$search}%")
-                        ->orWhere('salesforce_user_id', 'like', "%{$search}%");
+            ->when(($search && trim((string) $search) !== '') || $normalizedSearch, function ($query) use ($search, $normalizedSearch) {
+                $query->where(function ($subquery) use ($search, $normalizedSearch) {
+                    if ($search && trim((string) $search) !== '') {
+                        $subquery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('role', 'like', "%{$search}%")
+                            ->orWhere('dealership', 'like', "%{$search}%")
+                            ->orWhere('salesforce_user_id', 'like', "%{$search}%");
+                    }
+
+                    if ($normalizedSearch) {
+                        $subquery->orWhere('phone', 'like', "%{$normalizedSearch}%")
+                            ->orWhere('threecx_extension', 'like', "%{$normalizedSearch}%")
+                            ->orWhere('enreach_extension', 'like', "%{$normalizedSearch}%");
+                    }
                 });
             })
             ->when($status === 'active', function ($query) {
@@ -91,6 +104,9 @@ class UserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'role' => ['required', 'string', Rule::in($allowedRoles)],
             'is_store_manager' => ['nullable', 'boolean'],
+            'phone' => $this->agendaPhoneRules(),
+            'threecx_extension' => $this->agendaExtensionRules(required: true),
+            'enreach_extension' => $this->agendaExtensionRules(),
             'salesforce_user_id' => [
                 Rule::requiredIf($isCommercialLike),
                 'nullable',
@@ -106,6 +122,10 @@ class UserController extends Controller
             ],
         ]);
 
+        $validator = Validator::make($validated, []);
+        $this->agendaValidationHook($validator);
+        $validator->validate();
+
         try {
             [$user, $status] = DB::transaction(function () use ($validated, $submittedRole) {
                 $isCommercialLike = $this->isCommercialLikeRole($submittedRole);
@@ -117,6 +137,9 @@ class UserController extends Controller
                     'name' => $validated['name'],
                     'email' => $validated['email'],
                     'role' => $submittedRole,
+                    'phone' => $validated['phone'] ?? null,
+                    'threecx_extension' => $validated['threecx_extension'],
+                    'enreach_extension' => $validated['enreach_extension'] ?? null,
                     'salesforce_user_id' => $isCommercialLike ? $validated['salesforce_user_id'] : null,
                     'dealership' => $dealership?->name,
                     'dealership_id' => $dealership?->id,
@@ -210,6 +233,9 @@ class UserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'role' => ['required', 'string', Rule::in($allowedRoles)],
             'is_store_manager' => ['nullable', 'boolean'],
+            'phone' => $this->agendaPhoneRules(),
+            'threecx_extension' => $this->agendaExtensionRules(required: true),
+            'enreach_extension' => $this->agendaExtensionRules(),
             'salesforce_user_id' => [
                 Rule::requiredIf($isCommercialLike),
                 'nullable',
@@ -226,6 +252,10 @@ class UserController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
+        $validator = Validator::make($validated, []);
+        $this->agendaValidationHook($validator, $user->id);
+        $validator->validate();
+
         $dealership = $isCommercialLike
             ? Dealership::query()->find($validated['dealership_id'])
             : null;
@@ -234,6 +264,9 @@ class UserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'role' => $submittedRole,
+            'phone' => $validated['phone'] ?? null,
+            'threecx_extension' => $validated['threecx_extension'],
+            'enreach_extension' => $validated['enreach_extension'] ?? null,
             'salesforce_user_id' => $isCommercialLike ? $validated['salesforce_user_id'] : null,
             'dealership' => $dealership?->name,
         ]);
@@ -241,6 +274,9 @@ class UserController extends Controller
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->role = $submittedRole;
+        $user->phone = $validated['phone'] ?? null;
+        $user->threecx_extension = $validated['threecx_extension'];
+        $user->enreach_extension = $validated['enreach_extension'] ?? null;
         $user->salesforce_user_id = $this->isCommercialLikeRole($user->role)
             ? $validated['salesforce_user_id']
             : null;
@@ -370,6 +406,9 @@ class UserController extends Controller
         $labels = [
             'name' => 'Nombre',
             'email' => 'Email',
+            'phone' => 'Telefono',
+            'threecx_extension' => 'Extension 3CX',
+            'enreach_extension' => 'Extension Enreach',
             'role' => 'Rol',
             'salesforce_user_id' => 'ID Salesforce',
             'dealership' => 'Delegacion',

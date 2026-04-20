@@ -68,7 +68,11 @@
                             </div>
                         </div>
                     @else
-                        @php $isItemActive = request()->routeIs($item['route']); @endphp
+                        @php
+                            $isItemActive = $item['route'] === 'agenda.index'
+                                ? request()->routeIs('agenda.index', 'agenda.contacts.*')
+                                : request()->routeIs($item['route']);
+                        @endphp
                         <a href="{{ route($item['route']) }}"
                             class="{{ $navItemClass }} {{ $isItemActive ? $navItemActiveClass : $navItemInactiveClass }}">
                             {{ $item['label'] }}
@@ -84,9 +88,10 @@
                             $isUsersActive = request()->routeIs('users.*');
                             $isDealershipsActive = request()->routeIs('dealerships.*');
                             $isMagazineActive = request()->routeIs('admin.magazine.*');
+                            $isContactsActive = request()->routeIs('admin.contacts.*');
                         @endphp
                         <a href="{{ route('admin.index') }}"
-                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive ? $navItemActiveClass : $navItemInactiveClass }}">
+                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isContactsActive ? $navItemActiveClass : $navItemInactiveClass }}">
                             Admin
                         </a>
                     @endif
@@ -283,7 +288,11 @@
                         </a>
                     @endforeach
                 @else
-                    @php $isItemActive = request()->routeIs($item['route']); @endphp
+                    @php
+                        $isItemActive = $item['route'] === 'agenda.index'
+                            ? request()->routeIs('agenda.index', 'agenda.contacts.*')
+                            : request()->routeIs($item['route']);
+                    @endphp
                     <a href="{{ route($item['route']) }}" @click="open = false"
                         class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         {{ $item['label'] }}
@@ -300,9 +309,10 @@
                         $isUsersActive = request()->routeIs('users.*');
                         $isDealershipsActive = request()->routeIs('dealerships.*');
                         $isMagazineActive = request()->routeIs('admin.magazine.*');
+                        $isContactsActive = request()->routeIs('admin.contacts.*');
                     @endphp
                     <a href="{{ route('admin.index') }}" @click="open = false"
-                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isContactsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         Admin
                     </a>
                 @endif
