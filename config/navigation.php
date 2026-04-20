@@ -7,6 +7,10 @@ return [
             'route' => 'forum.index',
         ],
         [
+            'label' => 'Agenda',
+            'route' => 'agenda.index',
+        ],
+        [
             'label' => 'Ranking',
             'children' => [
                 [

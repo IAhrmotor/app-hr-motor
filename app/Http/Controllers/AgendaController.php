@@ -1,0 +1,128 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Concerns\HandlesAgendaExtensions;
+use App\Models\Contact;
+use App\Models\User;
+use Illuminate\Contracts\View\View;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+
+class AgendaController extends Controller
+{
+    use HandlesAgendaExtensions;
+
+    public function index(Request $request): View
+    {
+        $search = trim((string) $request->query('search', ''));
+        $normalizedSearch = $this->normalizeAgendaValue($search);
+
+        $entries = $this->buildEntries()
+            ->filter(function (array $entry) use ($search, $normalizedSearch): bool {
+                if ($search === '') {
+                    return true;
+                }
+
+                $haystack = strtolower(implode(' ', array_filter([
+                    $entry['name'] ?? '',
+                    $entry['email'] ?? '',
+                    $entry['phone'] ?? '',
+                    $entry['threecx_extension'] ?? '',
+                    $entry['enreach_extension'] ?? '',
+                    $entry['subtitle'] ?? '',
+                ])));
+
+                if (str_contains($haystack, strtolower($search))) {
+                    return true;
+                }
+
+                if ($normalizedSearch === null) {
+                    return false;
+                }
+
+                return collect([
+                    $entry['phone'] ?? null,
+                    $entry['threecx_extension'] ?? null,
+                    $entry['enreach_extension'] ?? null,
+                ])->filter()->contains(fn (string $value) => str_contains($value, $normalizedSearch));
+            })
+            ->sortBy(fn (array $entry) => sprintf('%s-%s', strtolower($entry['name']), $entry['type']))
+            ->values();
+
+        $perPage = 12;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $pageItems = $entries->forPage($page, $perPage)->values();
+
+        $results = new LengthAwarePaginator(
+            $pageItems,
+            $entries->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        return view('agenda.index', compact('results', 'search'));
+    }
+
+    protected function buildEntries(): Collection
+    {
+        $users = User::query()
+            ->select([
+                'id',
+                'name',
+                'email',
+                'avatar_path',
+                'phone',
+                'threecx_extension',
+                'enreach_extension',
+                'role',
+            ])
+            ->get()
+            ->map(function (User $user): array {
+                return [
+                    'type' => 'user',
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'threecx_extension' => $user->threecx_extension,
+                    'enreach_extension' => $user->enreach_extension,
+                    'subtitle' => $user->role_label,
+                    'route' => route('agenda.users.show', $user),
+                    'avatar' => $user->avatar_url,
+                ];
+            });
+
+        $contacts = Contact::query()
+            ->select([
+                'id',
+                'name',
+                'email',
+                'phone',
+                'threecx_extension',
+                'enreach_phone',
+                'enreach_extension',
+            ])
+            ->get()
+            ->map(function (Contact $contact): array {
+                return [
+                    'type' => 'contact',
+                    'name' => $contact->name,
+                    'email' => $contact->email,
+                    'phone' => $contact->phone,
+                    'threecx_extension' => $contact->threecx_extension,
+                    'enreach_phone' => $contact->enreach_phone,
+                    'enreach_extension' => $contact->enreach_extension,
+                    'subtitle' => 'Contacto externo',
+                    'route' => route('agenda.contacts.show', $contact),
+                    'avatar' => asset('images/users/hrmotor-default-user-avatar.png'),
+                ];
+            });
+
+        return $users->merge($contacts);
+    }
+}

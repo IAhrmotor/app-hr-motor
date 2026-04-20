@@ -91,6 +91,9 @@ class User extends Authenticatable
         'dealership_id',
         'avatar_path',
         'linkedin_url',
+        'phone',
+        'threecx_extension',
+        'enreach_extension',
         'password',
         'is_active',
         'must_change_password',
@@ -105,6 +108,21 @@ class User extends Authenticatable
                 $user->avatar_path = self::DEFAULT_AVATAR_PATH;
             }
         });
+    }
+
+    public function setPhoneAttribute($value): void
+    {
+        $this->attributes['phone'] = $this->normalizeAgendaValue($value);
+    }
+
+    public function setThreecxExtensionAttribute($value): void
+    {
+        $this->attributes['threecx_extension'] = $this->normalizeAgendaValue($value);
+    }
+
+    public function setEnreachExtensionAttribute($value): void
+    {
+        $this->attributes['enreach_extension'] = $this->normalizeAgendaValue($value);
     }
 
     /**
@@ -184,5 +202,12 @@ class User extends Authenticatable
         $expiresInMinutes = (int) config('auth.passwords.users.expire', 60);
 
         return $sentAt->lt(now()->subMinutes($expiresInMinutes));
+    }
+
+    protected function normalizeAgendaValue(mixed $value): ?string
+    {
+        $normalized = preg_replace('/\D+/', '', trim((string) $value));
+
+        return $normalized === '' ? null : $normalized;
     }
 }

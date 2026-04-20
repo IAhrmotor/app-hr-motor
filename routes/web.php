@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AdminDealershipLogController;
 use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AdminNotificationLogController;
 use App\Http\Controllers\AdminMonthlyMagazineController;
@@ -39,6 +41,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->whereNumber('thread')->name('forum.status.update');
     Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->whereNumber('thread')->name('forum.destroy');
     Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
+    Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
+    Route::get('/agenda/usuarios/{user}', [UserController::class, 'show'])->name('agenda.users.show');
+    Route::get('/agenda/contactos/{contact}', [ContactController::class, 'show'])->name('agenda.contacts.show');
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
@@ -239,6 +244,11 @@ Route::middleware('auth')->group(function () {
                     'route' => 'dealerships.index',
                 ],
                 [
+                    'label' => 'Contactos de agenda',
+                    'description' => 'Mantiene los contactos externos que aparecen junto al directorio interno.',
+                    'route' => 'admin.contacts.index',
+                ],
+                [
                     'label' => 'Tags del foro',
                     'description' => 'Crea, edita y elimina etiquetas para organizar las dudas del foro.',
                     'route' => 'admin.forum-tags.index',
@@ -319,5 +329,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');
         Route::get('/admin/logs/delegaciones', [AdminDealershipLogController::class, 'index'])->name('admin.dealership-logs.index');
         Route::get('/admin/logs/delegaciones/descargar', [AdminDealershipLogController::class, 'export'])->name('admin.dealership-logs.export');
+        Route::get('/admin/contactos', [ContactController::class, 'index'])->name('admin.contacts.index');
+        Route::get('/admin/contactos/crear', [ContactController::class, 'create'])->name('admin.contacts.create');
+        Route::post('/admin/contactos', [ContactController::class, 'store'])->name('admin.contacts.store');
+        Route::get('/admin/contactos/{contact}/editar', [ContactController::class, 'edit'])->name('admin.contacts.edit');
+        Route::put('/admin/contactos/{contact}', [ContactController::class, 'update'])->name('admin.contacts.update');
+        Route::delete('/admin/contactos/{contact}', [ContactController::class, 'destroy'])->name('admin.contacts.destroy');
     });
 });
