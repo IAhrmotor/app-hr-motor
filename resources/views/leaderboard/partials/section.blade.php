@@ -9,7 +9,7 @@
     $searchParam = $leaderboard['searchParam'];
     $pageParam = $leaderboard['pageParam'];
     $routeName = $leaderboard['routeName'];
-    $persistedQuery = request()->except([$searchParam, $pageParam]);
+    $persistedQuery = request()->except([$searchParam, $pageParam, 'ajax', 'section']);
     $entityLabelPlural = $entityLabelPlural ?? 'comerciales';
     $searchPlaceholder = $searchPlaceholder ?? 'Buscar comercial, email o delegacion';
     $aggregateByDealership = $aggregateByDealership ?? false;
@@ -23,9 +23,16 @@
     $storeManagerTooltipClasses = 'pointer-events-none absolute left-full top-1/2 z-10 ml-3 inline-flex -translate-y-1/2 whitespace-nowrap rounded-xl bg-brand-secondary px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100';
 @endphp
 
-<section class="rounded-[1.85rem] border border-brand-secondary/10 bg-white/90 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-6">
+<section
+    class="rounded-[1.85rem] border border-brand-secondary/10 bg-white/90 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:p-6"
+    data-leaderboard-root
+    data-leaderboard-search-param="{{ $searchParam }}"
+    data-leaderboard-page-param="{{ $pageParam }}"
+    data-leaderboard-section="{{ $aggregateByDealership ? 'dealership' : 'leaderboard' }}"
+>
     @if ($hasLeaderboardData)
         <form method="GET" action="{{ route($routeName) }}"
+            data-leaderboard-search-form
             class="rounded-[1.75rem] border border-brand-secondary/10 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
             @foreach ($persistedQuery as $queryKey => $queryValue)
                 @if (is_array($queryValue))
@@ -70,6 +77,34 @@
         </form>
     @endif
 
+    <div data-leaderboard-loading class="hidden space-y-4">
+        <div class="rounded-[1.6rem] border border-brand-secondary/10 bg-slate-50/80 p-5 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div class="min-w-0 flex-1 space-y-3">
+                    <div class="h-4 w-24 animate-pulse rounded-full bg-slate-200"></div>
+                    <div class="h-6 w-2/3 animate-pulse rounded bg-slate-200"></div>
+                    <div class="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                    <div class="h-4 w-5/6 animate-pulse rounded bg-slate-200"></div>
+                </div>
+                <div class="h-10 w-24 shrink-0 animate-pulse rounded-2xl bg-slate-200"></div>
+            </div>
+        </div>
+
+        <div class="rounded-[1.6rem] border border-brand-secondary/10 bg-white p-4 shadow-sm">
+            <div class="space-y-3">
+                @for ($loaderRow = 0; $loaderRow < 4; $loaderRow++)
+                    <div class="grid grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] gap-6 rounded-2xl border border-slate-100 px-4 py-4">
+                        <div class="h-5 w-24 animate-pulse rounded bg-slate-200"></div>
+                        <div class="h-5 w-full animate-pulse rounded bg-slate-200"></div>
+                        <div class="h-5 w-5/6 animate-pulse rounded bg-slate-200"></div>
+                        <div class="h-5 w-12 animate-pulse rounded bg-slate-200 justify-self-end"></div>
+                    </div>
+                @endfor
+            </div>
+        </div>
+    </div>
+
+    <div data-leaderboard-results>
     @if ($entryItems->isEmpty())
         <div class="rounded-[2rem] border border-dashed border-brand-secondary/15 bg-slate-50 px-6 py-12 text-center text-brand-secondary/75">
             @if ($hasLeaderboardData && $search !== '')
@@ -506,7 +541,7 @@
                     Mostrando del {{ $entries->firstItem() }} al {{ $entries->lastItem() }} de {{ $entries->total() }} {{ $entityLabelPlural }}.
                 </p>
 
-                <nav class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start" aria-label="Paginacion del ranking">
+                <nav class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start" aria-label="Paginacion del ranking" data-leaderboard-pagination>
                     @if ($entries->onFirstPage())
                         <span class="inline-flex items-center justify-center rounded-2xl border border-brand-secondary/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-brand-secondary/35">Anterior</span>
                     @else
@@ -534,4 +569,5 @@
             </div>
         @endif
     @endif
+    </div>
 </section>
