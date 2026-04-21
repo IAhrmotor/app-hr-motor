@@ -51,7 +51,7 @@
                     <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
                 @endif
 
-                <form method="GET" action="{{ route('forum.index') }}" class="mb-6">
+                <form method="GET" action="{{ route('forum.index') }}" class="mb-6" data-forum-search-form>
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div class="relative w-full lg:max-w-xl">
                             <div class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-brand-secondary/50">
@@ -90,108 +90,232 @@
                     </div>
                 </form>
 
-                <div class="grid gap-4 xl:grid-cols-2">
-                    @forelse ($threads as $thread)
-                        @php
-                            $isOpen = $thread->status === \App\Models\ForumThread::STATUS_OPEN;
-                            $lastActivityAt = $thread->latestReply?->created_at ?? $thread->created_at;
-                            $isStoreManager = $thread->creator->role === \App\Models\User::ROLE_STORE_MANAGER;
-                        @endphp
-
-                        <article class="group overflow-hidden rounded-[1.75rem] border {{ $isOpen ? 'border-brand-primary/15 bg-[linear-gradient(180deg,rgba(229,26,46,0.04),rgba(255,255,255,1))]' : 'border-brand-secondary/10 bg-slate-50/80' }} p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
-                            <div class="flex flex-col gap-4">
-                                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $isOpen ? 'bg-brand-primary/10 text-brand-primary' : 'bg-emerald-100 text-emerald-700' }}">
-                                                {{ $thread->status_label }}
-                                            </span>
-                                            <span class="inline-flex rounded-full bg-brand-secondary/5 px-3 py-1 text-xs font-semibold text-brand-secondary/70">
-                                                {{ $thread->replies_count }} {{ $thread->replies_count === 1 ? 'respuesta' : 'respuestas' }}
-                                            </span>
-                                        </div>
-
-                                        @if ($thread->tags->isNotEmpty())
-                                            <div class="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
-                                                @foreach ($thread->tags as $tag)
-                                                    <a href="{{ route('forum.index', ['search' => $tag->name]) }}"
-                                                        class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:opacity-90 sm:px-3 sm:py-1 sm:text-xs"
-                                                        style="background-color: {{ $tag->color }}">
-                                                        <span class="h-2 w-2 rounded-full bg-white/80"></span>
-                                                        {{ $tag->name }}
-                                                    </a>
-                                                @endforeach
-                                            </div>
-                                        @endif
-
-                                        <h2 class="mt-3 text-xl font-bold tracking-tight text-brand-secondary">
-                                            <a href="{{ route('forum.show', $thread) }}" class="transition group-hover:text-brand-primary">{{ $thread->title }}</a>
-                                        </h2>
-
-                                        <p class="mt-3 line-clamp-3 text-sm leading-6 text-brand-secondary/75">
-                                            {{ $thread->content }}
-                                        </p>
-                                    </div>
-
-                                    <a href="{{ route('forum.show', $thread) }}"
-                                        class="inline-flex self-start items-center gap-2 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-2 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5 sm:self-auto">
-                                        Ver hilo
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5l6 6m0 0-6 6m6-6h-15" />
-                                        </svg>
-                                    </a>
+                <div id="forum-loading" class="hidden space-y-4" aria-hidden="true">
+                    <div class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50/80 p-5 shadow-sm">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="min-w-0 flex-1 space-y-3">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <div class="h-5 w-20 animate-pulse rounded-full bg-slate-200"></div>
+                                    <div class="h-5 w-24 animate-pulse rounded-full bg-slate-200"></div>
                                 </div>
-
-                                <div class="grid gap-3 rounded-[1.5rem] border border-brand-secondary/10 bg-white/90 px-4 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-                                    <a href="{{ route('users.show', $thread->creator) }}" class="shrink-0">
-                                        <img src="{{ $thread->creator->avatar_url }}" alt="Avatar de {{ $thread->creator->name }}"
-                                            class="h-12 w-12 rounded-2xl object-cover ring-1 ring-brand-secondary/10 transition hover:opacity-90">
-                                    </a>
-
-                                    <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <a href="{{ route('users.show', $thread->creator) }}" class="text-sm font-semibold {{ $isStoreManager ? 'text-amber-700' : 'text-brand-secondary' }} transition hover:text-brand-primary">
-                                                {{ $thread->creator->name }}
-                                            </a>
-                                            @if ($isStoreManager)
-                                                <span class="inline-flex rounded-full border border-amber-300/80 bg-[linear-gradient(135deg,#f59e0b_0%,#facc15_55%,#fde68a_100%)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-950">
-                                                    Jefe de tienda
-                                                </span>
-                                            @endif
-                                        </div>
-                                        <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-brand-secondary/60">
-                                            <span>{{ $thread->creator->role_label }}</span>
-                                            <span>{{ $thread->creator->resolved_dealership_name ?: 'Sin delegación' }}</span>
-                                            <span>Creado {{ $thread->created_at->diffForHumans() }}</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="text-left sm:text-right">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/45">Última actividad</p>
-                                        <p class="mt-1 text-sm font-semibold text-brand-secondary">{{ $lastActivityAt->diffForHumans() }}</p>
-                                        @if ($thread->latestReply?->author)
-                                            <p class="mt-1 text-xs text-brand-secondary/60">Última respuesta de {{ $thread->latestReply->author->name }}</p>
-                                        @elseif ($thread->status === \App\Models\ForumThread::STATUS_RESOLVED && $thread->resolver)
-                                            <p class="mt-1 text-xs text-brand-secondary/60">Resuelto por {{ $thread->resolver->name }}</p>
-                                        @endif
-                                    </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <div class="h-5 w-14 animate-pulse rounded-full bg-slate-200"></div>
+                                    <div class="h-5 w-20 animate-pulse rounded-full bg-slate-200"></div>
+                                </div>
+                                <div class="space-y-2 pt-2">
+                                    <div class="h-5 w-2/3 animate-pulse rounded bg-slate-200"></div>
+                                    <div class="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                                    <div class="h-4 w-5/6 animate-pulse rounded bg-slate-200"></div>
                                 </div>
                             </div>
-                        </article>
-                    @empty
-                        <div class="xl:col-span-2">
-                            <div class="rounded-[1.75rem] border border-dashed border-brand-secondary/20 bg-slate-50 px-6 py-12 text-center">
-                                <h2 class="text-xl font-bold tracking-tight text-brand-secondary">No hay hilos que coincidan con tu filtro</h2>
-                                <p class="mt-2 text-sm text-brand-secondary/70">Prueba con otra búsqueda o abre una nueva consulta si necesitas ayuda.</p>
+
+                            <div class="h-10 w-28 shrink-0 animate-pulse rounded-2xl border border-slate-200 bg-white"></div>
+                        </div>
+
+                        <div class="mt-5 grid gap-3 rounded-[1.5rem] border border-brand-secondary/10 bg-white/90 px-4 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+                            <div class="h-12 w-12 animate-pulse rounded-2xl bg-slate-200"></div>
+                            <div class="min-w-0 space-y-2">
+                                <div class="h-4 w-40 animate-pulse rounded bg-slate-200"></div>
+                                <div class="h-3 w-48 animate-pulse rounded bg-slate-200"></div>
+                            </div>
+                            <div class="space-y-2 sm:text-right">
+                                <div class="h-3 w-28 animate-pulse rounded bg-slate-200"></div>
+                                <div class="h-4 w-20 animate-pulse rounded bg-slate-200 sm:ml-auto"></div>
+                                <div class="h-3 w-32 animate-pulse rounded bg-slate-200 sm:ml-auto"></div>
                             </div>
                         </div>
-                    @endforelse
+                    </div>
+
+                    <div class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50/80 p-5 shadow-sm">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="min-w-0 flex-1 space-y-3">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <div class="h-5 w-20 animate-pulse rounded-full bg-slate-200"></div>
+                                    <div class="h-5 w-24 animate-pulse rounded-full bg-slate-200"></div>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <div class="h-5 w-14 animate-pulse rounded-full bg-slate-200"></div>
+                                    <div class="h-5 w-20 animate-pulse rounded-full bg-slate-200"></div>
+                                </div>
+                                <div class="space-y-2 pt-2">
+                                    <div class="h-5 w-1/2 animate-pulse rounded bg-slate-200"></div>
+                                    <div class="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                                    <div class="h-4 w-4/5 animate-pulse rounded bg-slate-200"></div>
+                                </div>
+                            </div>
+
+                            <div class="h-10 w-28 shrink-0 animate-pulse rounded-2xl border border-slate-200 bg-white"></div>
+                        </div>
+
+                        <div class="mt-5 grid gap-3 rounded-[1.5rem] border border-brand-secondary/10 bg-white/90 px-4 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+                            <div class="h-12 w-12 animate-pulse rounded-2xl bg-slate-200"></div>
+                            <div class="min-w-0 space-y-2">
+                                <div class="h-4 w-40 animate-pulse rounded bg-slate-200"></div>
+                                <div class="h-3 w-48 animate-pulse rounded bg-slate-200"></div>
+                            </div>
+                            <div class="space-y-2 sm:text-right">
+                                <div class="h-3 w-28 animate-pulse rounded bg-slate-200"></div>
+                                <div class="h-4 w-20 animate-pulse rounded bg-slate-200 sm:ml-auto"></div>
+                                <div class="h-3 w-32 animate-pulse rounded bg-slate-200 sm:ml-auto"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                @if ($threads->hasPages())
-                    <div class="mt-6">{{ $threads->links() }}</div>
-                @endif
+                <div data-forum-results>
+                    @include('forum.partials.thread-results', ['threads' => $threads])
+                </div>
             </div>
         </section>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('[data-forum-search-form]');
+            const resultsWrapper = document.querySelector('[data-forum-results]');
+            const loadingWrapper = document.getElementById('forum-loading');
+
+            if (!form || !resultsWrapper || !loadingWrapper) {
+                return;
+            }
+
+            const searchInput = form.querySelector('input[name="search"]');
+            const statusSelect = form.querySelector('select[name="status"]');
+            const baseUrl = new URL(form.action, window.location.origin);
+            let searchTimeout = null;
+            let abortController = null;
+            let lastRequestKey = '';
+
+            const buildUrl = (page = 1) => {
+                const url = new URL(baseUrl.toString());
+                const search = searchInput?.value.trim() ?? '';
+                const status = statusSelect?.value ?? '';
+
+                if (search !== '') {
+                    url.searchParams.set('search', search);
+                }
+
+                if (status !== '') {
+                    url.searchParams.set('status', status);
+                }
+
+                if (Number(page) > 1) {
+                    url.searchParams.set('page', page);
+                }
+
+                url.searchParams.set('ajax', '1');
+
+                return url;
+            };
+
+            const updateHistory = (url) => {
+                const historyUrl = new URL(url.toString());
+                historyUrl.searchParams.delete('ajax');
+                window.history.replaceState({}, '', historyUrl.toString());
+            };
+
+            const setLoading = (isLoading) => {
+                loadingWrapper.classList.toggle('hidden', !isLoading);
+                resultsWrapper.classList.toggle('hidden', isLoading);
+            };
+
+            const loadResults = async ({ page = 1, updateBrowserHistory = true } = {}) => {
+                const requestUrl = buildUrl(page);
+                const requestKey = requestUrl.searchParams.toString();
+
+                if (requestKey === lastRequestKey) {
+                    return;
+                }
+
+                lastRequestKey = requestKey;
+
+                if (abortController) {
+                    abortController.abort();
+                }
+
+                const controller = new AbortController();
+                abortController = controller;
+                setLoading(true);
+
+                try {
+                    const response = await fetch(requestUrl.toString(), {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        signal: controller.signal,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('No se pudo cargar el foro');
+                    }
+
+                    const payload = await response.json();
+
+                    if (abortController !== controller) {
+                        return;
+                    }
+
+                    resultsWrapper.innerHTML = payload.html;
+                    resultsWrapper.classList.remove('forum-results-pop');
+                    void resultsWrapper.offsetWidth;
+                    resultsWrapper.classList.add('forum-results-pop');
+
+                    if (updateBrowserHistory) {
+                        updateHistory(requestUrl);
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error(error);
+                    }
+                } finally {
+                    if (abortController === controller) {
+                        setLoading(false);
+                        abortController = null;
+                    }
+                }
+            };
+
+            const queueSearch = () => {
+                window.clearTimeout(searchTimeout);
+                searchTimeout = window.setTimeout(() => {
+                    loadResults({ page: 1 });
+                }, 250);
+            };
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                loadResults({ page: 1 });
+            });
+
+            searchInput?.addEventListener('input', queueSearch);
+
+            statusSelect?.addEventListener('change', () => {
+                loadResults({ page: 1 });
+            });
+
+            resultsWrapper.addEventListener('click', (event) => {
+                const link = event.target.closest('[data-forum-pagination] a[href]');
+
+                if (!link) {
+                    return;
+                }
+
+                const url = new URL(link.href);
+
+                if (url.pathname !== window.location.pathname) {
+                    return;
+                }
+
+                const page = url.searchParams.get('page');
+
+                if (!page) {
+                    return;
+                }
+
+                event.preventDefault();
+                loadResults({ page });
+            });
+        });
+    </script>
 @endsection

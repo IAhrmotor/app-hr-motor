@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\HandlesAgendaExtensions;
 use App\Models\Contact;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -14,7 +15,7 @@ class ContactController extends Controller
 {
     use HandlesAgendaExtensions;
 
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $search = trim((string) $request->query('search', ''));
         $normalizedSearch = $this->normalizeAgendaValue($search);
@@ -36,6 +37,15 @@ class ContactController extends Controller
             ->orderBy('name')
             ->paginate(12)
             ->withQueryString();
+
+        if ($request->boolean('ajax')) {
+            return response()->json([
+                'html' => view('admin.contacts.partials.index-results', [
+                    'contacts' => $contacts,
+                    'search' => $search,
+                ])->render(),
+            ]);
+        }
 
         return view('admin.contacts.index', compact('contacts', 'search'));
     }

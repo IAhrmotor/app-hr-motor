@@ -12,6 +12,7 @@ use App\Models\VehicleLeaderboardEntry;
 use App\Services\LeaderboardTrendService;
 use App\Services\SalesforceLeaderboardService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -165,6 +166,30 @@ class LeaderboardController extends Controller
                 : ($salesforceConfigReady
                     ? 'Completa la autorización OAuth en Salesforce y después ejecuta la primera sincronización.'
                     : 'Completa la configuración de Salesforce y después autoriza la conexión.'));
+
+        if ($request->boolean('ajax')) {
+            $section = $request->query('section', 'leaderboard');
+            $isDealershipSection = $section === 'dealership' && $dealershipLeaderboard !== null;
+            $sectionLeaderboard = $isDealershipSection ? $dealershipLeaderboard : $leaderboard;
+
+            return response()->json([
+                'html' => view('leaderboard.partials.section', [
+                    'leaderboard' => $sectionLeaderboard,
+                    'eyebrow' => $config['eyebrow'],
+                    'title' => $isDealershipSection ? ($config['dealership_title'] ?? 'Ranking por delegaciones') : $config['title'],
+                    'description' => $isDealershipSection ? ($config['dealership_description'] ?? '') : $config['description'],
+                    'metricLabel' => $config['metric_label'],
+                    'metricField' => $config['metric_field'],
+                    'emptyTitle' => $isDealershipSection ? ($config['dealership_empty_title'] ?? 'Aun no hay datos de delegaciones') : $config['empty_title'],
+                    'emptyDescription' => $emptyDescription,
+                    'entityLabelPlural' => $isDealershipSection ? 'delegaciones' : ($config['entity_label_plural'] ?? 'comerciales'),
+                    'searchPlaceholder' => $isDealershipSection ? 'Buscar delegacion' : ($config['search_placeholder'] ?? 'Buscar comercial, email o delegacion'),
+                    'aggregateByDealership' => $isDealershipSection,
+                    'searchParam' => $sectionLeaderboard['searchParam'],
+                    'pageParam' => $sectionLeaderboard['pageParam'],
+                ])->render(),
+            ]);
+        }
 
         return view('leaderboard.show', [
             'leaderboard' => $leaderboard,

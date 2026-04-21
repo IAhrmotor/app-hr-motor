@@ -2,11 +2,11 @@
 
 @section('content')
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
-        <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
+        <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm" data-contacts-root>
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight text-brand-secondary">Contactos de agenda</h1>
-                    <p class="mt-2 text-sm text-brand-secondary/70">Gestión de contactos externos visibles en la agenda.</p>
+                    <p class="mt-2 text-sm text-brand-secondary/70">Gestion de contactos externos visibles en la agenda.</p>
                 </div>
 
                 <a href="{{ route('admin.contacts.create') }}"
@@ -29,7 +29,7 @@
                 <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
             @endif
 
-            <form method="GET" action="{{ route('admin.contacts.index') }}" class="mb-6">
+            <form method="GET" action="{{ route('admin.contacts.index') }}" class="mb-6" data-contacts-search-form>
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div class="relative w-full md:max-w-md">
                         <div class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-brand-secondary/50">
@@ -38,83 +38,191 @@
                             </svg>
                         </div>
 
-                        <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Buscar por nombre, correo o número"
+                        <input type="text" name="search" value="{{ $search }}" data-contacts-search-input
+                            placeholder="Buscar por nombre, correo o numero"
                             class="w-full rounded-2xl border border-gray-300 py-3 pl-11 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
 
                     <div class="flex items-center gap-3">
                         <button type="submit" class="inline-flex cursor-pointer items-center rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90">Buscar</button>
-
-                        @if (request('search'))
+                        @if ($search)
                             <a href="{{ route('admin.contacts.index') }}" class="inline-flex items-center rounded-xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Limpiar</a>
                         @endif
                     </div>
                 </div>
             </form>
 
-            <div class="overflow-hidden rounded-2xl border border-brand-secondary/10">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-brand-secondary/10">
-                        <thead class="bg-brand-secondary/5">
-                            <tr>
-                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Nombre</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Correo</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Teléfono</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Extensión Enreach</th>
-                                <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Acciones</th>
-                            </tr>
-                        </thead>
+            <div data-contacts-loading class="hidden space-y-4" aria-hidden="true">
+                <div class="rounded-2xl border border-brand-secondary/10 bg-white p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 animate-pulse rounded-full bg-slate-200"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="h-4 w-2/5 animate-pulse rounded bg-slate-200"></div>
+                            <div class="h-3 w-1/4 animate-pulse rounded bg-slate-200"></div>
+                        </div>
+                    </div>
+                </div>
 
-                        <tbody class="divide-y divide-brand-secondary/10 bg-white">
-                            @forelse ($contacts as $contact)
-                                <tr class="transition hover:bg-brand-secondary/5">
-                                    <td class="px-6 py-4 text-sm font-semibold text-brand-secondary">
-                                        <a href="{{ route('agenda.contacts.show', $contact) }}" class="transition hover:text-brand-primary">
-                                            {{ $contact->name }}
-                                        </a>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $contact->email ?: 'No disponible' }}</td>
-                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $contact->phone ?: 'No disponible' }}</td>
-                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $contact->enreach_extension ?: 'No disponible' }}</td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex justify-end gap-2">
-                                            <a href="{{ route('agenda.contacts.show', $contact) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-secondary/15 bg-white text-brand-secondary transition hover:bg-brand-secondary/5" title="Ver contacto" aria-label="Ver contacto">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12 18 19.5 12 19.5 2.25 12 2.25 12Z" />
-                                                    <circle cx="12" cy="12" r="3" />
-                                                </svg>
-                                            </a>
-                                            <a href="{{ route('admin.contacts.edit', $contact) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-secondary/15 bg-white text-brand-secondary transition hover:bg-brand-secondary/5" title="Editar contacto" aria-label="Editar contacto">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.25 2.25 0 113.182 3.182L8.25 18.462 3 20l1.538-5.25L16.862 3.487z" />
-                                                </svg>
-                                            </a>
-                                            <form method="POST" action="{{ route('admin.contacts.destroy', $contact) }}" onsubmit="return confirm('Seguro que quieres eliminar este contacto?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700" title="Eliminar contacto" aria-label="Eliminar contacto">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.35 9m-4.78 0L9.26 9m9.97-3.21c.34.05.68.1 1.02.17m-1.02-.17L18.16 19.67A2.25 2.25 0 0115.91 21.75H8.09a2.25 2.25 0 01-2.25-2.08L4.77 5.79m14.46 0A48.108 48.108 0 0012 5.25c-2.43 0-4.82.18-7.23.54m14.46 0a48.11 48.11 0 00-14.46 0m9.75-2.04v-.23A1.5 1.5 0 0013.02 2h-2.04a1.5 1.5 0 00-1.5 1.5v.23m5.04 0A49.5 49.5 0 009.48 3.75" />
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-sm text-brand-secondary/70">No hay contactos registrados.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-brand-secondary/10">
+                            <tbody class="divide-y divide-brand-secondary/10 bg-white">
+                                @for ($row = 0; $row < 6; $row++)
+                                    <tr>
+                                        <td class="px-6 py-4"><div class="h-4 w-40 animate-pulse rounded bg-slate-200"></div></td>
+                                        <td class="px-6 py-4"><div class="h-4 w-44 animate-pulse rounded bg-slate-200"></div></td>
+                                        <td class="px-6 py-4"><div class="h-4 w-32 animate-pulse rounded bg-slate-200"></div></td>
+                                        <td class="px-6 py-4"><div class="h-4 w-32 animate-pulse rounded bg-slate-200"></div></td>
+                                        <td class="px-6 py-4"><div class="ml-auto h-10 w-28 animate-pulse rounded-xl bg-slate-200"></div></td>
+                                    </tr>
+                                @endfor
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            @if ($contacts->hasPages())
-                <div class="mt-6">{{ $contacts->links() }}</div>
-            @endif
+            <div data-contacts-results>
+                @include('admin.contacts.partials.index-results', ['contacts' => $contacts, 'search' => $search])
+            </div>
         </section>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const root = document.querySelector('[data-contacts-root]');
+            const form = document.querySelector('[data-contacts-search-form]');
+            const results = document.querySelector('[data-contacts-results]');
+            const loading = document.querySelector('[data-contacts-loading]');
+
+            if (!root || !form || !results || !loading) {
+                return;
+            }
+
+            const searchInput = form.querySelector('[data-contacts-search-input]');
+            const baseUrl = new URL(form.action, window.location.origin);
+            let timeout = null;
+            let abortController = null;
+            let lastRequestKey = '';
+
+            const setLoading = (isLoading) => {
+                loading.classList.toggle('hidden', !isLoading);
+                results.classList.toggle('hidden', isLoading);
+            };
+
+            const buildUrl = (page = 1) => {
+                const url = new URL(baseUrl.toString());
+                const search = searchInput?.value.trim() ?? '';
+
+                if (search !== '') {
+                    url.searchParams.set('search', search);
+                }
+
+                if (Number(page) > 1) {
+                    url.searchParams.set('page', page);
+                }
+
+                url.searchParams.set('ajax', '1');
+
+                return url;
+            };
+
+            const updateHistory = (requestUrl) => {
+                const historyUrl = new URL(requestUrl.toString());
+                historyUrl.searchParams.delete('ajax');
+                window.history.replaceState({}, '', historyUrl.toString());
+            };
+
+            const loadResults = async ({ page = 1 } = {}) => {
+                const requestUrl = buildUrl(page);
+                const requestKey = requestUrl.searchParams.toString();
+
+                if (requestKey === lastRequestKey) {
+                    return;
+                }
+
+                lastRequestKey = requestKey;
+
+                if (abortController) {
+                    abortController.abort();
+                }
+
+                const controller = new AbortController();
+                abortController = controller;
+                setLoading(true);
+
+                try {
+                    const response = await fetch(requestUrl.toString(), {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        signal: controller.signal,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('No se pudo cargar contactos');
+                    }
+
+                    const payload = await response.json();
+
+                    if (abortController !== controller) {
+                        return;
+                    }
+
+                    results.innerHTML = payload.html;
+                    results.classList.remove('live-results-pop');
+                    void results.offsetWidth;
+                    results.classList.add('live-results-pop');
+                    updateHistory(requestUrl);
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error(error);
+                    }
+                } finally {
+                    if (abortController === controller) {
+                        abortController = null;
+                        setLoading(false);
+                    }
+                }
+            };
+
+            const queueSearch = () => {
+                window.clearTimeout(timeout);
+                timeout = window.setTimeout(() => {
+                    loadResults({ page: 1 });
+                }, 250);
+            };
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                loadResults({ page: 1 });
+            });
+
+            searchInput?.addEventListener('input', queueSearch);
+
+            document.addEventListener('click', (event) => {
+                const paginationLink = event.target.closest('[data-contacts-pagination] a[href]');
+
+                if (!paginationLink) {
+                    return;
+                }
+
+                const url = new URL(paginationLink.href);
+
+                if (url.pathname !== window.location.pathname) {
+                    return;
+                }
+
+                const page = url.searchParams.get('page');
+
+                if (!page) {
+                    return;
+                }
+
+                event.preventDefault();
+                loadResults({ page });
+            });
+        });
+    </script>
 @endsection

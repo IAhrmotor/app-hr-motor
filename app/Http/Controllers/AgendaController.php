@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\HandlesAgendaExtensions;
 use App\Models\Contact;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
@@ -14,9 +15,23 @@ class AgendaController extends Controller
 {
     use HandlesAgendaExtensions;
 
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $search = trim((string) $request->query('search', ''));
+        $results = $this->paginateAgendaEntries($request, $search);
+        $agendaStats = $this->buildAgendaStats();
+
+        if ($this->isAjaxAgendaRequest($request)) {
+            return response()->json([
+                'html' => view('agenda.partials.results', compact('results'))->render(),
+            ]);
+        }
+
+        return view('agenda.index', compact('results', 'search', 'agendaStats'));
+    }
+
+    protected function paginateAgendaEntries(Request $request, string $search): LengthAwarePaginator
+    {
         $normalizedSearch = $this->normalizeAgendaValue($search);
 
         $entries = $this->buildEntries()
@@ -53,18 +68,16 @@ class AgendaController extends Controller
         $page = LengthAwarePaginator::resolveCurrentPage();
         $pageItems = $entries->forPage($page, $perPage)->values();
 
-        $results = new LengthAwarePaginator(
+        return new LengthAwarePaginator(
             $pageItems,
             $entries->count(),
             $perPage,
             $page,
             [
                 'path' => $request->url(),
-                'query' => $request->query(),
+                'query' => collect($request->query())->except('ajax')->all(),
             ]
         );
-
-        return view('agenda.index', compact('results', 'search'));
     }
 
     protected function buildEntries(): Collection
@@ -116,5 +129,19 @@ class AgendaController extends Controller
             });
 
         return $users->merge($contacts);
+    }
+
+    protected function isAjaxAgendaRequest(Request $request): bool
+    {
+        return $request->boolean('ajax');
+    }
+
+    protected function buildAgendaStats(): array
+    {
+        return [
+            'users_total' => User::query()->count(),
+            'contacts' => Contact::query()->count(),
+            'total' => User::query()->count() + Contact::query()->count(),
+        ];
     }
 }
