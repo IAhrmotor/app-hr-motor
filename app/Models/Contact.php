@@ -13,18 +13,12 @@ class Contact extends Model
         'name',
         'email',
         'phone',
-        'threecx_extension',
         'enreach_extension',
     ];
 
     public function setPhoneAttribute($value): void
     {
         $this->attributes['phone'] = $this->normalizeAgendaValue($value);
-    }
-
-    public function setThreecxExtensionAttribute($value): void
-    {
-        $this->attributes['threecx_extension'] = $this->normalizeAgendaValue($value);
     }
 
     public function setEnreachExtensionAttribute($value): void

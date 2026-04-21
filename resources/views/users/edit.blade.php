@@ -51,13 +51,6 @@
                     </div>
 
                     <div>
-                        <label for="threecx_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extensión 3CX</label>
-                        <input id="threecx_extension" name="threecx_extension" type="text" value="{{ old('threecx_extension', $user->threecx_extension) }}" required
-                            class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Es obligatoria y no puede repetirse en ningún usuario ni contacto.</p>
-                    </div>
-
-                    <div>
                         <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extensión Enreach</label>
                         <input id="enreach_extension" name="enreach_extension" type="text" value="{{ old('enreach_extension', $user->enreach_extension) }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
