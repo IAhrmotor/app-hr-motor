@@ -7,6 +7,7 @@ use App\Models\ForumTag;
 use App\Models\ForumThread;
 use App\Models\User;
 use App\Notifications\ForumActivityNotification;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -16,7 +17,7 @@ use Illuminate\View\View;
 
 class ForumThreadController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $search = trim((string) $request->query('search'));
         $status = $request->query('status');
@@ -48,6 +49,14 @@ class ForumThreadController extends Controller
             'resolved' => ForumThread::query()->where('status', ForumThread::STATUS_RESOLVED)->count(),
             'totalReplies' => ForumReply::query()->count(),
         ];
+
+        if ($request->boolean('ajax')) {
+            return response()->json([
+                'html' => view('forum.partials.thread-results', [
+                    'threads' => $threads,
+                ])->render(),
+            ]);
+        }
 
         return view('forum.index', [
             'threads' => $threads,
