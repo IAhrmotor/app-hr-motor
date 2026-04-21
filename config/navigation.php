@@ -11,7 +11,7 @@ return [
             'route' => 'agenda.index',
         ],
         [
-            'label' => 'Ranking',
+            'label' => 'Rankings',
             'children' => [
                 [
                     'label' => 'Ranking de ventas',
@@ -21,11 +21,11 @@ return [
                     'label' => 'Ranking de compras',
                     'route' => 'leaderboard.purchases',
                 ],
+                [
+                    'label' => 'Hot & Cold',
+                    'route' => 'leaderboard.vehicles',
+                ],
             ],
-        ],
-        [
-            'label' => 'Hot & Cold',
-            'route' => 'leaderboard.vehicles',
         ],
         [
             'label' => 'Web',

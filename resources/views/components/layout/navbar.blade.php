@@ -20,15 +20,17 @@
     $navItemInactiveClass = 'text-gray-700 hover:text-gray-900';
 @endphp
 
-<nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, activeDropdown: null }" @keydown.escape.window="profileOpen = false; notificationsOpen = false; activeDropdown = null"
+<nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, activeDropdown: null }"
+    x-effect="document.body.classList.toggle('overflow-hidden', open)"
+    @keydown.escape.window="profileOpen = false; notificationsOpen = false; activeDropdown = null; open = false"
     class="sticky top-0 z-50 border-b border-gray-200 bg-white">
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
-        <a href="{{ route('home') }}" class="flex items-center">
-            <img src="{{ asset('images/logo-horizontal.svg') }}" alt="HR Motor" class="h-10 w-auto">
+        <a href="{{ route('home') }}" class="flex shrink-0 items-center">
+            <img src="{{ asset('images/logo-horizontal.svg') }}" alt="HR Motor" class="h-10 w-auto shrink-0">
         </a>
 
         <div class="flex items-center gap-2 md:gap-6">
-            <div class="hidden items-center gap-8 md:flex">
+            <div class="hidden items-center gap-8 xl:flex">
                 @foreach ($navItems as $item)
                     @if (! empty($item['children']))
                         @php
@@ -194,7 +196,7 @@
                     </div>
                 </div>
 
-                <div class="relative hidden md:block" @click.outside="profileOpen = false">
+                <div class="relative hidden xl:block" @click.outside="profileOpen = false">
                     <button type="button" @click="profileOpen = !profileOpen"
                         class="flex cursor-pointer items-center rounded-full bg-white/90 p-0.5 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
                         aria-label="Abrir menu de perfil" :aria-expanded="profileOpen.toString()">
@@ -246,7 +248,7 @@
             @endauth
 
             <button type="button" @click="open = !open"
-                class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 md:hidden"
+                class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 xl:hidden"
                 aria-label="Abrir menu de navegacion" :aria-expanded="open.toString()">
                 <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -264,7 +266,7 @@
     <div x-show="open" x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 -translate-y-1" x-cloak class="border-t border-gray-200 bg-white md:hidden">
+        x-transition:leave-end="opacity-0 -translate-y-1" x-cloak class="border-t border-gray-200 bg-white xl:hidden">
         <div class="mx-auto max-w-7xl px-6 py-4 lg:px-8">
             @auth
                 <a href="{{ route('profile.show') }}" @click="open = false"
