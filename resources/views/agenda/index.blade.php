@@ -42,7 +42,6 @@
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Nombre</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Correo</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Teléfono</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">3CX</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Extensión Enreach</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/70">Tipo</th>
                             </tr>
@@ -62,7 +61,6 @@
                                     </td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $entry['email'] ?: 'No disponible' }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $entry['phone'] ?: 'No disponible' }}</td>
-                                    <td class="px-6 py-4 text-sm text-brand-secondary/80">{{ $entry['threecx_extension'] ?: 'No disponible' }}</td>
                                     <td class="px-6 py-4 text-sm text-brand-secondary/80">
                                         {{ $entry['enreach_extension'] ?? 'No disponible' }}
                                     </td>
@@ -74,7 +72,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-6 py-8 text-center text-sm text-brand-secondary/70">No se han encontrado resultados.</td>
+                                    <td colspan="5" class="px-6 py-8 text-center text-sm text-brand-secondary/70">No se han encontrado resultados.</td>
                                 </tr>
                             @endforelse
                         </tbody>

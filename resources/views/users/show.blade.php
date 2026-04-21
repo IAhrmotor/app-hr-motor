@@ -84,11 +84,6 @@
                     </div>
 
                     <div>
-                        <dt class="text-brand-secondary/60">Extensión 3CX</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->threecx_extension ?: 'No disponible' }}</dd>
-                    </div>
-
-                    <div>
                         <dt class="text-brand-secondary/60">Extensión Enreach</dt>
                         <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->enreach_extension ?: 'No disponible' }}</dd>
                     </div>

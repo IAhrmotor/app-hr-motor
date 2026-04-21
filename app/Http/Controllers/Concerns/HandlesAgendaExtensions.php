@@ -30,12 +30,7 @@ trait HandlesAgendaExtensions
     protected function agendaValidationHook(Validator $validator, ?int $ignoreUserId = null, ?int $ignoreContactId = null): void
     {
         $validator->after(function (Validator $validator) use ($ignoreUserId, $ignoreContactId): void {
-            $threecx = $this->normalizeAgendaValue($validator->getData()['threecx_extension'] ?? null);
             $enreach = $this->normalizeAgendaValue($validator->getData()['enreach_extension'] ?? null);
-
-            if ($threecx && $this->agendaExtensionExists('threecx_extension', $threecx, $ignoreUserId, $ignoreContactId)) {
-                $validator->errors()->add('threecx_extension', 'Esa extension de 3CX ya esta asignada.');
-            }
 
             if ($enreach && $this->agendaExtensionExists('enreach_extension', $enreach, $ignoreUserId, $ignoreContactId)) {
                 $validator->errors()->add('enreach_extension', 'Esa extension de Enreach ya esta asignada.');

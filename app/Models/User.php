@@ -92,7 +92,6 @@ class User extends Authenticatable
         'avatar_path',
         'linkedin_url',
         'phone',
-        'threecx_extension',
         'enreach_extension',
         'password',
         'is_active',
@@ -113,11 +112,6 @@ class User extends Authenticatable
     public function setPhoneAttribute($value): void
     {
         $this->attributes['phone'] = $this->normalizeAgendaValue($value);
-    }
-
-    public function setThreecxExtensionAttribute($value): void
-    {
-        $this->attributes['threecx_extension'] = $this->normalizeAgendaValue($value);
     }
 
     public function setEnreachExtensionAttribute($value): void

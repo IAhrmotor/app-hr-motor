@@ -29,7 +29,6 @@ class AgendaController extends Controller
                     $entry['name'] ?? '',
                     $entry['email'] ?? '',
                     $entry['phone'] ?? '',
-                    $entry['threecx_extension'] ?? '',
                     $entry['enreach_extension'] ?? '',
                     $entry['subtitle'] ?? '',
                 ])));
@@ -44,7 +43,6 @@ class AgendaController extends Controller
 
                 return collect([
                     $entry['phone'] ?? null,
-                    $entry['threecx_extension'] ?? null,
                     $entry['enreach_extension'] ?? null,
                 ])->filter()->contains(fn (string $value) => str_contains($value, $normalizedSearch));
             })
@@ -78,7 +76,6 @@ class AgendaController extends Controller
                 'email',
                 'avatar_path',
                 'phone',
-                'threecx_extension',
                 'enreach_extension',
                 'role',
             ])
@@ -89,7 +86,6 @@ class AgendaController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
-                    'threecx_extension' => $user->threecx_extension,
                     'enreach_extension' => $user->enreach_extension,
                     'subtitle' => $user->role_label,
                     'route' => route('agenda.users.show', $user),
@@ -103,7 +99,6 @@ class AgendaController extends Controller
                 'name',
                 'email',
                 'phone',
-                'threecx_extension',
                 'enreach_extension',
             ])
             ->get()
@@ -113,7 +108,6 @@ class AgendaController extends Controller
                     'name' => $contact->name,
                     'email' => $contact->email,
                     'phone' => $contact->phone,
-                    'threecx_extension' => $contact->threecx_extension,
                     'enreach_extension' => $contact->enreach_extension,
                     'subtitle' => 'Contacto externo',
                     'route' => route('agenda.contacts.show', $contact),
