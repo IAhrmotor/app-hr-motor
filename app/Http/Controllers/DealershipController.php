@@ -8,6 +8,7 @@ use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
@@ -17,7 +18,7 @@ use Illuminate\View\View;
 
 class DealershipController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $search = $request->query('search');
         $sort = $request->query('sort', 'name');
@@ -41,6 +42,17 @@ class DealershipController extends Controller
             ->orderBy($sort, $direction)
             ->paginate(10)
             ->withQueryString();
+
+        if ($request->boolean('ajax')) {
+            return response()->json([
+                'html' => view('dealerships.partials.index-results', [
+                    'dealerships' => $dealerships,
+                    'search' => $search,
+                    'sort' => $sort,
+                    'direction' => $direction,
+                ])->render(),
+            ]);
+        }
 
         return view('dealerships.index', compact('dealerships', 'search', 'sort', 'direction'));
     }

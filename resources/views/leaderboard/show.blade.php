@@ -165,6 +165,239 @@
     </section>
 
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const states = new Map();
+
+            const getRootState = (root) => {
+                const stateKey = root.dataset.leaderboardSearchParam || 'leaderboard';
+
+                if (!states.has(stateKey)) {
+                    states.set(stateKey, {
+                        timeout: null,
+                        controller: null,
+                        lastRequestKey: '',
+                    });
+                }
+
+                return states.get(stateKey);
+            };
+
+            const getRoot = (element) => element.closest('[data-leaderboard-root]');
+
+            const setLoadingState = (root, isLoading) => {
+                const loading = root.querySelector('[data-leaderboard-loading]');
+                const results = root.querySelector('[data-leaderboard-results]');
+
+                if (loading) {
+                    loading.classList.toggle('hidden', !isLoading);
+                }
+
+                if (results) {
+                    results.classList.toggle('hidden', isLoading);
+                }
+            };
+
+            const buildRequestUrl = (root, page = 1) => {
+                const form = root.querySelector('[data-leaderboard-search-form]');
+
+                if (!form) {
+                    return null;
+                }
+
+                const requestUrl = new URL(form.action, window.location.origin);
+                const currentUrl = new URL(window.location.href);
+                const searchParam = root.dataset.leaderboardSearchParam;
+                const pageParam = root.dataset.leaderboardPageParam;
+                const searchInput = form.querySelector(`input[name="${searchParam}"]`);
+                const search = searchInput?.value.trim() ?? '';
+
+                currentUrl.searchParams.forEach((value, key) => {
+                    if (key === searchParam || key === pageParam || key === 'ajax' || key === 'section') {
+                        return;
+                    }
+
+                    requestUrl.searchParams.set(key, value);
+                });
+
+                if (search !== '') {
+                    requestUrl.searchParams.set(searchParam, search);
+                } else {
+                    requestUrl.searchParams.delete(searchParam);
+                }
+
+                if (Number(page) > 1) {
+                    requestUrl.searchParams.set(pageParam, page);
+                } else {
+                    requestUrl.searchParams.delete(pageParam);
+                }
+
+                requestUrl.searchParams.set('ajax', '1');
+                requestUrl.searchParams.set('section', root.dataset.leaderboardSection || 'leaderboard');
+
+                return requestUrl;
+            };
+
+            const updateHistory = (requestUrl) => {
+                const historyUrl = new URL(requestUrl.toString());
+                historyUrl.searchParams.delete('ajax');
+                historyUrl.searchParams.delete('section');
+                window.history.replaceState({}, '', historyUrl.toString());
+            };
+
+            const loadSection = async (root, { page = 1 } = {}) => {
+                const state = getRootState(root);
+                const requestUrl = buildRequestUrl(root, page);
+
+                if (!requestUrl) {
+                    return;
+                }
+
+                const requestKey = requestUrl.searchParams.toString();
+
+                if (requestKey === state.lastRequestKey) {
+                    return;
+                }
+
+                state.lastRequestKey = requestKey;
+
+                if (state.controller) {
+                    state.controller.abort();
+                }
+
+                const controller = new AbortController();
+                state.controller = controller;
+
+                const activeElement = document.activeElement;
+                const shouldRestoreFocus = activeElement && root.contains(activeElement) && activeElement.matches('[data-leaderboard-search-form] input[type="text"]');
+                const selectionStart = shouldRestoreFocus ? activeElement.selectionStart : null;
+
+                setLoadingState(root, true);
+
+                try {
+                    const response = await fetch(requestUrl.toString(), {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        signal: controller.signal,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('No se pudo cargar el ranking');
+                    }
+
+                    const payload = await response.json();
+
+                    if (state.controller !== controller) {
+                        return;
+                    }
+
+                    root.outerHTML = payload.html;
+
+                    const updatedRoot = document.querySelector(
+                        `[data-leaderboard-root][data-leaderboard-search-param="${root.dataset.leaderboardSearchParam}"]`
+                    );
+
+                    if (updatedRoot) {
+                        updatedRoot.classList.remove('leaderboard-results-pop');
+                        void updatedRoot.offsetWidth;
+                        updatedRoot.classList.add('leaderboard-results-pop');
+
+                        if (shouldRestoreFocus) {
+                            const updatedInput = updatedRoot.querySelector('[data-leaderboard-search-form] input[type="text"]');
+
+                            if (updatedInput) {
+                                updatedInput.focus({ preventScroll: true });
+
+                                if (selectionStart !== null) {
+                                    const selectionEnd = updatedInput.value.length;
+                                    updatedInput.setSelectionRange(selectionEnd, selectionEnd);
+                                }
+                            }
+                        }
+                    }
+
+                    updateHistory(requestUrl);
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error(error);
+                    }
+                } finally {
+                    if (state.controller === controller) {
+                        state.controller = null;
+                        setLoadingState(root, false);
+                    }
+                }
+            };
+
+            document.addEventListener('input', (event) => {
+                const input = event.target.closest('[data-leaderboard-search-form] input[type="text"]');
+
+                if (!input) {
+                    return;
+                }
+
+                const root = getRoot(input);
+
+                if (!root) {
+                    return;
+                }
+
+                const state = getRootState(root);
+                window.clearTimeout(state.timeout);
+                state.timeout = window.setTimeout(() => {
+                    loadSection(root, { page: 1 });
+                }, 250);
+            });
+
+            document.addEventListener('submit', (event) => {
+                const form = event.target.closest('[data-leaderboard-search-form]');
+
+                if (!form) {
+                    return;
+                }
+
+                const root = getRoot(form);
+
+                if (!root) {
+                    return;
+                }
+
+                event.preventDefault();
+                loadSection(root, { page: 1 });
+            });
+
+            document.addEventListener('click', (event) => {
+                const link = event.target.closest('[data-leaderboard-pagination] a[href]');
+
+                if (!link) {
+                    return;
+                }
+
+                const root = getRoot(link);
+
+                if (!root) {
+                    return;
+                }
+
+                const url = new URL(link.href);
+
+                if (url.pathname !== window.location.pathname) {
+                    return;
+                }
+
+                const pageParam = root.dataset.leaderboardPageParam;
+                const page = url.searchParams.get(pageParam);
+
+                if (!page) {
+                    return;
+                }
+
+                event.preventDefault();
+                loadSection(root, { page });
+            });
+        });
+
         document.querySelectorAll('a[href="#ranking-delegaciones"]').forEach((link) => {
             link.addEventListener('click', (event) => {
                 const target = document.querySelector('#ranking-delegaciones');

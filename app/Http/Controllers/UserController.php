@@ -9,6 +9,7 @@ use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +26,7 @@ class UserController extends Controller
 
     protected const INVITATION_DELIVERY_FAILED = 'invitation_delivery_failed';
 
-    public function index(Request $request)
+    public function index(Request $request): \Illuminate\Contracts\View\View|JsonResponse
     {
         $search = $request->query('search');
         $normalizedSearch = $this->normalizeAgendaValue($search);
@@ -64,6 +65,19 @@ class UserController extends Controller
             ->orderBy($sort, $direction)
             ->paginate(10)
             ->withQueryString();
+
+        if ($request->boolean('ajax')) {
+            return response()->json([
+                'html' => view('users.partials.index-results', [
+                    'users' => $users,
+                    'authUser' => $request->user(),
+                    'search' => $search,
+                    'status' => $status,
+                    'sort' => $sort,
+                    'direction' => $direction,
+                ])->render(),
+            ]);
+        }
 
         return view('users.index', compact('users', 'search', 'status', 'sort', 'direction'));
     }

@@ -284,4 +284,138 @@ window.imageLightbox = () => ({
     },
 });
 
+window.agendaSearch = (agendaUrl, initialSearch = '') => ({
+    search: initialSearch,
+    isLoading: false,
+    searchTimeout: null,
+    abortController: null,
+    lastRequestKey: '',
+
+    init() {
+        this.$watch('search', () => {
+            this.queueSearch();
+        });
+
+        this.$refs.resultsWrapper?.addEventListener('click', (event) => {
+            this.handleResultsClick(event);
+        });
+    },
+
+    queueSearch() {
+        clearTimeout(this.searchTimeout);
+
+        this.searchTimeout = setTimeout(() => {
+            this.loadResults({ page: 1 });
+        }, 250);
+    },
+
+    async loadResults({ page = 1, updateHistory = true } = {}) {
+        const search = this.search.trim();
+        const requestUrl = new URL(agendaUrl, window.location.origin);
+
+        if (search !== '') {
+            requestUrl.searchParams.set('search', search);
+        }
+
+        if (Number(page) > 1) {
+            requestUrl.searchParams.set('page', page);
+        }
+
+        requestUrl.searchParams.set('ajax', '1');
+
+        const requestKey = requestUrl.searchParams.toString();
+
+        if (requestKey === this.lastRequestKey) {
+            return;
+        }
+
+        this.lastRequestKey = requestKey;
+
+        if (this.abortController) {
+            this.abortController.abort();
+        }
+
+        const controller = new AbortController();
+        this.abortController = controller;
+        this.isLoading = true;
+
+        try {
+            const response = await fetch(requestUrl.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    Accept: 'application/json',
+                },
+                signal: controller.signal,
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo cargar la agenda');
+            }
+
+            const payload = await response.json();
+
+            if (this.abortController !== controller) {
+                return;
+            }
+
+            this.$refs.resultsWrapper.innerHTML = payload.html;
+
+            if (updateHistory) {
+                const historyUrl = new URL(agendaUrl, window.location.origin);
+
+                if (search !== '') {
+                    historyUrl.searchParams.set('search', search);
+                }
+
+                if (Number(page) > 1) {
+                    historyUrl.searchParams.set('page', page);
+                }
+
+                window.history.replaceState({}, '', historyUrl.toString());
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error(error);
+            }
+        } finally {
+            if (this.abortController === controller) {
+                this.isLoading = false;
+            }
+        }
+    },
+
+    handleResultsClick(event) {
+        const link = event.target.closest('a[href]');
+
+        if (!link || !this.$refs.resultsWrapper.contains(link)) {
+            return;
+        }
+
+        const url = new URL(link.href);
+
+        if (url.pathname !== window.location.pathname) {
+            return;
+        }
+
+        const page = url.searchParams.get('page');
+
+        if (!page) {
+            return;
+        }
+
+        event.preventDefault();
+        this.loadResults({ page });
+    },
+
+    clearSearch() {
+        if (this.search === '') {
+            return;
+        }
+
+        this.search = '';
+        clearTimeout(this.searchTimeout);
+        this.loadResults({ page: 1 });
+    },
+});
+
 Alpine.start();
