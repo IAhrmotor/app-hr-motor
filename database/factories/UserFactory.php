@@ -35,7 +35,6 @@ class UserFactory extends Factory
             'avatar_path' => User::DEFAULT_AVATAR_PATH,
             'linkedin_url' => null,
             'phone' => fake()->numerify('6########'),
-            'threecx_extension' => fake()->unique()->numerify('####'),
             'enreach_extension' => fake()->unique()->numerify('####'),
             'password' => static::$password ??= Hash::make('password'),
             'is_active' => true,

@@ -50,7 +50,7 @@
                         </div>
 
                         <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Buscar por nombre, correo, telefono, ext 3CX o Enreach"
+                            placeholder="Buscar por nombre, correo, telefono o Enreach"
                             class="w-full rounded-2xl border border-gray-300 py-3 pl-11 pr-4 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
 
