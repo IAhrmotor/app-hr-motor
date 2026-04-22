@@ -213,8 +213,8 @@
                             @else
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span class="group relative inline-flex max-w-full">
-                                        <p class="line-clamp-2 text-lg font-semibold leading-tight {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                        <p class="line-clamp-2 text-lg font-semibold leading-tight {{ $entry->user?->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                        @if ($entry->user?->isStoreManager())
                                             <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                         @endif
                                     </span>
@@ -256,8 +256,8 @@
                                     <div class="min-w-0 max-w-full">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <span class="group relative inline-flex max-w-full">
-                                                <p class="text-xl font-semibold leading-tight break-words {{ $entry->user->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user->name }}</p>
-                                                @if ($entry->user->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                <p class="text-xl font-semibold leading-tight break-words {{ $entry->user->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }} {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user->name }}</p>
+                                                @if ($entry->user->isStoreManager())
                                                     <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                                 @endif
                                             </span>
@@ -271,8 +271,8 @@
                                 <div class="min-w-0 max-w-full">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="group relative inline-flex max-w-full">
-                                            <p class="text-xl font-semibold leading-tight break-words {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                            @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                            <p class="text-xl font-semibold leading-tight break-words {{ $entry->user?->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                            @if ($entry->user?->isStoreManager())
                                                 <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                             @endif
                                         </span>
@@ -404,8 +404,8 @@
                                             <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
                                                 <div class="flex flex-wrap items-center gap-2">
                                                     <span class="group relative inline-flex max-w-full">
-                                                        <p class="text-sm font-semibold {{ $entry->user->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user->name }}</p>
-                                                        @if ($entry->user->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                        <p class="text-sm font-semibold {{ $entry->user->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user->name }}</p>
+                                                        @if ($entry->user->isStoreManager())
                                                             <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                                         @endif
                                                     </span>
@@ -416,8 +416,8 @@
                                             <div>
                                                 <div class="flex flex-wrap items-center gap-2">
                                                     <span class="group relative inline-flex max-w-full">
-                                                        <p class="text-sm font-semibold {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                        <p class="text-sm font-semibold {{ $entry->user?->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                                        @if ($entry->user?->isStoreManager())
                                                             <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                                         @endif
                                                     </span>
@@ -519,8 +519,8 @@
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <span class="group relative inline-flex max-w-full">
-                                                <p class="truncate text-sm font-semibold {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                                @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                                <p class="truncate text-sm font-semibold {{ $entry->user?->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                                @if ($entry->user?->isStoreManager())
                                                     <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                                 @endif
                                             </span>

@@ -92,7 +92,7 @@ class DealershipController extends Controller
 
         return redirect()
             ->route('dealerships.index')
-            ->with('success', 'Delegacion creada correctamente.');
+            ->with('success', 'Delegación creada correctamente.');
     }
 
     public function show(Dealership $dealership): View
@@ -165,7 +165,7 @@ class DealershipController extends Controller
 
         return redirect()
             ->route('dealerships.index')
-            ->with('success', 'Delegacion actualizada correctamente.');
+            ->with('success', 'Delegación actualizada correctamente.');
     }
 
     public function destroy(Dealership $dealership): RedirectResponse
@@ -173,7 +173,7 @@ class DealershipController extends Controller
         if ($dealership->users()->exists()) {
             return redirect()
                 ->route('dealerships.index')
-                ->with('error', 'No puedes eliminar una delegacion con usuarios asignados.');
+                ->with('error', 'No puedes eliminar una delegación con usuarios asignados.');
         }
 
         $this->storeActivityLog(
@@ -187,7 +187,7 @@ class DealershipController extends Controller
 
         return redirect()
             ->route('dealerships.index')
-            ->with('success', 'Delegacion eliminada correctamente.');
+            ->with('success', 'Delegación eliminada correctamente.');
     }
 
     private function storeImage(Request $request, Dealership $dealership): string
@@ -239,9 +239,9 @@ class DealershipController extends Controller
         $labels = [
             'name' => 'Nombre',
             'salesforce_id' => 'ID Salesforce',
-            'phone' => 'Telefono',
+            'phone' => 'Teléfono',
             'google_maps_url' => 'Google Maps',
-            'reviews_url' => 'Resenas',
+            'reviews_url' => 'Reseñas',
         ];
 
         return collect($newValues)
@@ -338,7 +338,7 @@ class DealershipController extends Controller
                 return [
                     'group_key' => $groupKey,
                     'metric_total' => (float) $dealershipEntries->sum($metricField),
-                    'name' => $dealershipName !== '' ? $dealershipName : 'Sin delegacion asignada',
+                    'name' => $dealershipName !== '' ? $dealershipName : 'Sin delegación asignada',
                 ];
             })
             ->sort(function (array $left, array $right) {

@@ -46,6 +46,7 @@ class UserController extends Controller
                         $subquery->where('name', 'like', "%{$search}%")
                             ->orWhere('email', 'like', "%{$search}%")
                             ->orWhere('role', 'like', "%{$search}%")
+                            ->orWhere('extra_role', 'like', "%{$search}%")
                             ->orWhere('dealership', 'like', "%{$search}%")
                             ->orWhere('salesforce_user_id', 'like', "%{$search}%");
                     }
@@ -86,12 +87,13 @@ class UserController extends Controller
     {
         $authUser = request()->user();
 
-        $availableRoles = app_visible_role($authUser) === User::ROLE_ADMIN
-            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
-            : [User::ROLE_COMMERCIAL];
+        $availableBaseRoles = app_visible_role($authUser) === User::ROLE_ADMIN
+            ? array_keys(User::baseRoleLabels())
+            : [User::ROLE_USER];
+        $availableExtraRoles = array_keys(User::extraRoleLabels());
         $availableDealerships = Dealership::query()->orderBy('name')->get();
 
-        return view('users.create', compact('availableRoles', 'availableDealerships'));
+        return view('users.create', compact('availableBaseRoles', 'availableExtraRoles', 'availableDealerships'));
     }
 
     public function show(User $user)
@@ -113,32 +115,29 @@ class UserController extends Controller
                 ->with('error', 'No tienes permisos para crear usuarios desde esta vista.');
         }
 
-        $allowedRoles = $visibleRole === User::ROLE_ADMIN
-            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
-            : [User::ROLE_COMMERCIAL];
-        $submittedRole = $this->resolveSubmittedRole($request, $authUser);
-        $isCommercialLike = $this->isCommercialLikeRole($submittedRole);
+        $allowedBaseRoles = $visibleRole === User::ROLE_ADMIN
+            ? array_keys(User::baseRoleLabels())
+            : [User::ROLE_USER];
+        $allowedExtraRoles = array_keys(User::extraRoleLabels());
+        $submittedBaseRole = $this->resolveSubmittedBaseRole($request, $authUser);
+        $submittedExtraRole = $this->resolveSubmittedExtraRole($request);
+        $isRankedCommercial = $this->isRankedCommercialRole($submittedBaseRole, $submittedExtraRole);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', 'string', Rule::in($allowedRoles)],
-            'is_store_manager' => ['nullable', 'boolean'],
+            'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
+            'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
             'enreach_extension' => $this->agendaExtensionRules(),
             'salesforce_user_id' => [
-                Rule::requiredIf($isCommercialLike),
+                Rule::requiredIf($isRankedCommercial),
                 'nullable',
                 'string',
                 'max:255',
                 Rule::unique('users', 'salesforce_user_id'),
             ],
-            'dealership_id' => [
-                Rule::requiredIf($isCommercialLike),
-                'nullable',
-                'integer',
-                Rule::exists('dealerships', 'id'),
-            ],
+            'dealership_id' => ['nullable', 'integer', Rule::exists('dealerships', 'id')],
         ]);
 
         $validator = Validator::make($validated, []);
@@ -146,19 +145,19 @@ class UserController extends Controller
         $validator->validate();
 
         try {
-            [$user, $status] = DB::transaction(function () use ($validated, $submittedRole) {
-                $isCommercialLike = $this->isCommercialLikeRole($submittedRole);
-                $dealership = $isCommercialLike
+            [$user, $status] = DB::transaction(function () use ($validated, $submittedBaseRole, $submittedExtraRole, $isRankedCommercial) {
+                $dealership = filled($validated['dealership_id'] ?? null)
                     ? Dealership::query()->find($validated['dealership_id'])
                     : null;
 
                 $user = User::create([
                     'name' => $validated['name'],
                     'email' => $validated['email'],
-                    'role' => $submittedRole,
+                    'role' => $submittedBaseRole,
+                    'extra_role' => $submittedExtraRole,
                     'phone' => $validated['phone'] ?? null,
                     'enreach_extension' => $validated['enreach_extension'] ?? null,
-                    'salesforce_user_id' => $isCommercialLike ? $validated['salesforce_user_id'] : null,
+                    'salesforce_user_id' => $isRankedCommercial ? $validated['salesforce_user_id'] : null,
                     'dealership' => $dealership?->name,
                     'dealership_id' => $dealership?->id,
                     'password' => Hash::make(Str::password(32)),
@@ -224,12 +223,13 @@ class UserController extends Controller
             return $response;
         }
 
-        $availableRoles = app_visible_role($authUser) === User::ROLE_ADMIN
-            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
-            : [User::ROLE_COMMERCIAL];
+        $availableBaseRoles = app_visible_role($authUser) === User::ROLE_ADMIN
+            ? array_keys(User::baseRoleLabels())
+            : [User::ROLE_USER];
+        $availableExtraRoles = array_keys(User::extraRoleLabels());
         $availableDealerships = Dealership::query()->orderBy('name')->get();
 
-        return view('users.edit', compact('user', 'availableRoles', 'availableDealerships'));
+        return view('users.edit', compact('user', 'availableBaseRoles', 'availableExtraRoles', 'availableDealerships'));
     }
 
     public function update(Request $request, User $user)
@@ -240,32 +240,29 @@ class UserController extends Controller
             return $response;
         }
 
-        $allowedRoles = app_visible_role($authUser) === User::ROLE_ADMIN
-            ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
-            : [User::ROLE_COMMERCIAL];
-        $submittedRole = $this->resolveSubmittedRole($request, $authUser);
-        $isCommercialLike = $this->isCommercialLikeRole($submittedRole);
+        $allowedBaseRoles = app_visible_role($authUser) === User::ROLE_ADMIN
+            ? array_keys(User::baseRoleLabels())
+            : [User::ROLE_USER];
+        $allowedExtraRoles = array_keys(User::extraRoleLabels());
+        $submittedBaseRole = $this->resolveSubmittedBaseRole($request, $authUser);
+        $submittedExtraRole = $this->resolveSubmittedExtraRole($request);
+        $isRankedCommercial = $this->isRankedCommercialRole($submittedBaseRole, $submittedExtraRole);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'role' => ['required', 'string', Rule::in($allowedRoles)],
-            'is_store_manager' => ['nullable', 'boolean'],
+            'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
+            'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
             'enreach_extension' => $this->agendaExtensionRules(),
             'salesforce_user_id' => [
-                Rule::requiredIf($isCommercialLike),
+                Rule::requiredIf($isRankedCommercial),
                 'nullable',
                 'string',
                 'max:255',
                 Rule::unique('users', 'salesforce_user_id')->ignore($user->id),
             ],
-            'dealership_id' => [
-                Rule::requiredIf($isCommercialLike),
-                'nullable',
-                'integer',
-                Rule::exists('dealerships', 'id'),
-            ],
+            'dealership_id' => ['nullable', 'integer', Rule::exists('dealerships', 'id')],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -273,26 +270,28 @@ class UserController extends Controller
         $this->agendaValidationHook($validator, $user->id);
         $validator->validate();
 
-        $dealership = $isCommercialLike
+        $dealership = filled($validated['dealership_id'] ?? null)
             ? Dealership::query()->find($validated['dealership_id'])
             : null;
 
         $changes = $this->buildChangeSet($user, [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $submittedRole,
+            'role' => $submittedBaseRole,
+            'extra_role' => $submittedExtraRole,
             'phone' => $validated['phone'] ?? null,
             'enreach_extension' => $validated['enreach_extension'] ?? null,
-            'salesforce_user_id' => $isCommercialLike ? $validated['salesforce_user_id'] : null,
+            'salesforce_user_id' => $isRankedCommercial ? $validated['salesforce_user_id'] : null,
             'dealership' => $dealership?->name,
         ]);
 
         $user->name = $validated['name'];
         $user->email = $validated['email'];
-        $user->role = $submittedRole;
+        $user->role = $submittedBaseRole;
+        $user->extra_role = $submittedExtraRole;
         $user->phone = $validated['phone'] ?? null;
         $user->enreach_extension = $validated['enreach_extension'] ?? null;
-        $user->salesforce_user_id = $this->isCommercialLikeRole($user->role)
+        $user->salesforce_user_id = $this->isRankedCommercialRole($user->role, $user->extra_role)
             ? $validated['salesforce_user_id']
             : null;
         $user->dealership = $dealership?->name;
@@ -378,7 +377,7 @@ class UserController extends Controller
                 ->with('error', "No tienes permisos para {$action} este usuario.");
         }
 
-        if ($visibleRole === User::ROLE_MANAGER && ! $this->isCommercialLikeRole($targetUser->role)) {
+        if ($visibleRole === User::ROLE_MANAGER && ! $targetUser->isCommercialLike()) {
             return redirect()
                 ->route('users.index')
                 ->with('error', "No tienes permisos para {$action} este usuario.");
@@ -432,6 +431,7 @@ class UserController extends Controller
             'phone' => 'Telefono',
             'enreach_extension' => 'Extension Enreach',
             'role' => 'Rol',
+            'extra_role' => 'Rol adicional',
             'salesforce_user_id' => 'ID Salesforce',
             'dealership' => 'Delegacion',
         ];
@@ -460,7 +460,7 @@ class UserController extends Controller
             ],
         ];
 
-        if (! $user->isCommercialLike()) {
+        if (! $user->isRankedCommercial()) {
             return $positions;
         }
 
@@ -514,21 +514,29 @@ class UserController extends Controller
         return config('services.salesforce.excluded_leaderboard_user_ids', []);
     }
 
-    protected function isCommercialLikeRole(?string $role): bool
+    protected function isRankedCommercialRole(?string $baseRole, ?string $extraRole): bool
     {
-        return in_array($role, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER], true);
+        return $baseRole === User::ROLE_USER
+            && in_array($extraRole, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER], true);
     }
 
-    protected function resolveSubmittedRole(Request $request, User $authUser): string
+    protected function resolveSubmittedBaseRole(Request $request, User $authUser): string
     {
         $baseRole = app_visible_role($authUser) === User::ROLE_ADMIN
             ? $request->input('role')
-            : User::ROLE_COMMERCIAL;
-
-        if ($baseRole === User::ROLE_COMMERCIAL && $request->boolean('is_store_manager')) {
-            return User::ROLE_STORE_MANAGER;
-        }
+            : User::ROLE_USER;
 
         return $baseRole;
+    }
+
+    protected function resolveSubmittedExtraRole(Request $request): ?string
+    {
+        $extraRole = $request->input('extra_role');
+
+        if (blank($extraRole) && $request->boolean('is_store_manager')) {
+            $extraRole = User::ROLE_STORE_MANAGER;
+        }
+
+        return filled($extraRole) ? $extraRole : null;
     }
 }

@@ -35,7 +35,7 @@
                     @endif
 
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Delegacion</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Delegación</p>
                         <h1 class="mt-2 text-3xl font-bold tracking-tight text-brand-secondary">{{ $dealership->name }}</h1>
                         <p class="mt-2 text-sm text-brand-secondary/65">{{ $dealership->phone }}</p>
                         @if ($salesRank || $purchasesRank)
@@ -77,7 +77,7 @@
             </div>
 
             <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-slate-50 p-6">
-                <h2 class="text-lg font-semibold text-brand-secondary">Informacion general</h2>
+                <h2 class="text-lg font-semibold text-brand-secondary">Información general</h2>
 
                 <dl class="mt-5 grid gap-5 text-sm md:grid-cols-2">
                     <div>
@@ -85,7 +85,7 @@
                         <dd class="mt-1 font-semibold text-brand-secondary">{{ $dealership->name }}</dd>
                     </div>
                     <div>
-                        <dt class="text-brand-secondary/60">Telefono</dt>
+                        <dt class="text-brand-secondary/60">Teléfono</dt>
                         <dd class="mt-1 font-semibold text-brand-secondary">{{ $dealership->phone }}</dd>
                     </div>
                     <div>
@@ -124,7 +124,7 @@
                 </div>
 
                 @if ($dealership->users->isEmpty())
-                    <p class="mt-4 text-sm text-brand-secondary/70">No hay usuarios asociados a esta delegacion.</p>
+                    <p class="mt-4 text-sm text-brand-secondary/70">No hay usuarios asociados a esta delegación.</p>
                 @else
                     <div class="mt-4 grid gap-3">
                         @foreach ($dealership->users as $user)
