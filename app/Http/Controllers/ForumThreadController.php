@@ -10,6 +10,7 @@ use App\Notifications\ForumActivityNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -177,6 +178,7 @@ class ForumThreadController extends Controller
         abort_unless(app_can_access_forum($request->user()), 403);
         abort_unless($this->canModerateThread($request->user()), 403);
 
+        $this->deleteThreadNotifications($thread);
         $thread->delete();
 
         return redirect()
@@ -272,5 +274,13 @@ class ForumThreadController extends Controller
         }
 
         $recipient->notify(ForumActivityNotification::replyCreated($thread, $actor));
+    }
+
+    private function deleteThreadNotifications(ForumThread $thread): void
+    {
+        DB::table('notifications')
+            ->where('type', ForumActivityNotification::class)
+            ->where('data->thread_id', $thread->id)
+            ->delete();
     }
 }

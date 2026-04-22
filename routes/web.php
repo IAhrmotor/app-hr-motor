@@ -91,9 +91,8 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Web HR Motor',
-                        'url' => route('tools.web'),
+                        'url' => config('portal.links.tools.web_hr_motor'),
                         'image' => asset('images/tools/hrmotor.png'),
-                        'open_in_new_tab' => false,
                     ],
                     [
                         'label' => 'Woffu',
@@ -149,7 +148,11 @@ Route::middleware('auth')->group(function () {
             ],
         ];
 
-        if (! app_can_access_web($authUser)) {
+        if (! app_user_has_any_role($authUser, [
+            User::ROLE_COMMERCIAL,
+            User::ROLE_STORE_MANAGER,
+            User::ROLE_AREA_MANAGER,
+        ])) {
             $buttonSections = collect($buttonSections)
                 ->map(function (array $section): array {
                     if (($section['title'] ?? null) !== 'Herramientas generales') {
@@ -157,7 +160,7 @@ Route::middleware('auth')->group(function () {
                     }
 
                     $section['buttons'] = collect($section['buttons'] ?? [])
-                        ->reject(fn (array $button) => ($button['label'] ?? null) === 'Web HR Motor')
+                        ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true))
                         ->values()
                         ->all();
 
