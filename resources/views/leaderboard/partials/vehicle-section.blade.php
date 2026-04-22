@@ -7,7 +7,11 @@
     $hasLeaderboardData = $leaderboard['hasLeaderboardData'];
     $theme = $leaderboard['theme'];
     $isHot = $theme === 'hot';
-
+    $demoMode = $demoMode ?? false;
+    $tableEntries = $leaderboard['tableEntries']
+        ?? ($topEntries->isNotEmpty()
+            ? $entryItems->reject(fn ($entry) => $topEntries->contains('id', $entry->id))->values()
+            : $entryItems);
     $themeStyles = $isHot
         ? [
             'section' => 'border-amber-200/70 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.12),transparent_34%),linear-gradient(180deg,rgba(255,251,235,0.9),rgba(255,255,255,0.96))]',
@@ -43,9 +47,6 @@
     $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
     $vehicleTitle = static fn ($entry) => $entry->vehicle_commercial_name ?: $entry->vehicle_name;
     $vehicleImageAlt = static fn ($entry) => 'Imagen de '.$vehicleTitle($entry);
-    $tableEntries = $topEntries->isNotEmpty()
-        ? $entryItems->reject(fn ($entry) => $topEntries->contains('id', $entry->id))->values()
-        : $entryItems;
 @endphp
 
 <section class="rounded-[1.85rem] border p-4 sm:p-6 {{ $themeStyles['section'] }}">
@@ -66,7 +67,7 @@
             </div>
 
             <span class="inline-flex w-fit shrink-0 rounded-full border px-3 py-1 text-xs font-semibold sm:self-start lg:inline-flex {{ $themeStyles['pill'] }}">
-                Top 10
+                {{ $demoMode ? 'Top 10 demo' : 'Top 10' }}
             </span>
         </div>
 
@@ -77,12 +78,12 @@
             </div>
         @else
             @if ($topEntries->isNotEmpty())
-                <div class="mt-6 grid auto-rows-fr gap-4">
+                <div class="mt-6 grid gap-4 lg:grid-cols-3 lg:items-stretch">
                     @foreach ($topEntries as $entry)
                         @php
                             $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         @endphp
-                        <article class="relative flex h-full flex-col overflow-hidden rounded-[1.7rem] border p-4 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }} sm:min-h-[15.5rem] sm:p-5">
+                        <article class="relative flex h-full flex-col overflow-hidden rounded-[1.7rem] border p-4 {{ $themeStyles['topCard'] }} {{ $themeStyles['topAura'] }} sm:min-h-[13rem] sm:p-5">
                             <div class="mb-1.5 flex items-start justify-between gap-3 sm:absolute sm:right-4 sm:top-4 sm:mb-0 sm:justify-start">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $themeStyles['rankBadge'] }}">
                                     #{{ $entry->ranking_position }}

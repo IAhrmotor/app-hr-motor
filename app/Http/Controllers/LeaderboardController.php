@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PurchaseLeaderboardDailySnapshot;
 use App\Models\PurchaseLeaderboardEntry;
 use App\Models\Dealership;
+use App\Models\SalesforceConnection;
 use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\VehicleLeaderboardDailySnapshot;
@@ -98,6 +99,7 @@ class LeaderboardController extends Controller
 
     public function vehicles(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
     {
+        $connection = $service->getConnection();
         $leaderboardTablesReady = Schema::hasTable('vehicle_leaderboard_entries')
             && Schema::hasTable('vehicle_leaderboard_daily_snapshots')
             && Schema::hasTable('salesforce_connections');
@@ -108,17 +110,18 @@ class LeaderboardController extends Controller
 
         $emptyDescription = ! $leaderboardTablesReady
             ? 'Ejecuta primero las migraciones para activar el almacenamiento del ranking.'
-            : ($service->getConnection()
+            : ($connection
                 ? 'Ejecuta una sincronización para llenar el ranking.'
                 : ($salesforceConfigReady
                     ? 'Completa la autorización OAuth en Salesforce y después ejecuta la primera sincronización.'
                     : 'Completa la configuración de Salesforce y después autoriza la conexión.'));
 
         return view('leaderboard.vehicles', [
-            'connection' => $service->getConnection(),
+            'connection' => $connection,
             'salesforceConfigReady' => $salesforceConfigReady,
             'leaderboardTablesReady' => $leaderboardTablesReady,
             'emptyDescription' => $emptyDescription,
+            'demoMode' => $connection === null,
             'hotLeaderboard' => $this->buildVehicleLeaderboardViewData($request, $trendService, [
                 'temperature' => 'hot',
                 'title' => 'Coches calientes',
@@ -129,7 +132,7 @@ class LeaderboardController extends Controller
                 'theme' => 'hot',
                 'empty_title' => 'Aún no hay coches calientes',
                 'search_placeholder' => 'Buscar coche caliente',
-            ]),
+            ], $connection),
             'coldLeaderboard' => $this->buildVehicleLeaderboardViewData($request, $trendService, [
                 'temperature' => 'cold',
                 'title' => 'Coches fríos',
@@ -140,7 +143,7 @@ class LeaderboardController extends Controller
                 'theme' => 'cold',
                 'empty_title' => 'Aún no hay coches fríos',
                 'search_placeholder' => 'Buscar coche frío',
-            ]),
+            ], $connection),
         ]);
     }
 
@@ -356,7 +359,12 @@ class LeaderboardController extends Controller
         ];
     }
 
-    private function buildVehicleLeaderboardViewData(Request $request, LeaderboardTrendService $trendService, array $config): array
+    private function buildVehicleLeaderboardViewData(
+        Request $request,
+        LeaderboardTrendService $trendService,
+        array $config,
+        ?SalesforceConnection $connection = null
+    ): array
     {
         $search = trim((string) $request->query($config['search_param'], ''));
         $entries = new LengthAwarePaginator(
@@ -372,6 +380,23 @@ class LeaderboardController extends Controller
         $entryItems = new Collection();
         $topEntries = new Collection();
         $hasLeaderboardData = false;
+
+        if ($connection === null) {
+            $demoLeaderboard = $this->buildDemoVehicleLeaderboardViewData($request, $config);
+
+            return array_merge($demoLeaderboard, [
+                'entryMovements' => $trendService->buildMovementMap(
+                    $demoLeaderboard['entryItems'],
+                    VehicleLeaderboardDailySnapshot::class,
+                    'vehicle_leaderboard_daily_snapshots'
+                ),
+                'topEntryMovements' => $trendService->buildMovementMap(
+                    $demoLeaderboard['topEntries'],
+                    VehicleLeaderboardDailySnapshot::class,
+                    'vehicle_leaderboard_daily_snapshots'
+                ),
+            ]);
+        }
 
         if (Schema::hasTable('vehicle_leaderboard_entries')) {
             $allEntries = VehicleLeaderboardEntry::query()
@@ -425,6 +450,95 @@ class LeaderboardController extends Controller
             'emptyTitle' => $config['empty_title'],
             'searchPlaceholder' => $config['search_placeholder'],
         ];
+    }
+
+    private function buildDemoVehicleLeaderboardViewData(Request $request, array $config): array
+    {
+        $search = trim((string) $request->query($config['search_param'], ''));
+        $demoEntries = $this->demoVehicleEntries($config['temperature']);
+
+        if ($search !== '') {
+            $needle = Str::lower($search);
+
+            $demoEntries = $demoEntries
+                ->filter(function (VehicleLeaderboardEntry $entry) use ($needle): bool {
+                    return str_contains(Str::lower((string) $entry->vehicle_name), $needle)
+                        || str_contains(Str::lower((string) $entry->vehicle_commercial_name), $needle)
+                        || str_contains(Str::lower((string) $entry->vehicle_plate), $needle);
+                })
+                ->values();
+        }
+
+        $entries = $this->paginateCollection($demoEntries, $config['page_param']);
+        $entryItems = collect($entries->items());
+        $topEntries = $demoEntries->take(3)->values();
+        $tableEntries = $demoEntries->slice(3)->values();
+
+        return [
+            'title' => $config['title'],
+            'description' => $config['description'],
+            'theme' => $config['theme'],
+            'entries' => $entries,
+            'entryItems' => $entryItems,
+            'topEntries' => $topEntries,
+            'tableEntries' => $tableEntries,
+            'search' => $search,
+            'hasLeaderboardData' => true,
+            'searchParam' => $config['search_param'],
+            'pageParam' => $config['page_param'],
+            'routeName' => $config['route_name'],
+            'emptyTitle' => $config['empty_title'],
+            'searchPlaceholder' => $config['search_placeholder'],
+        ];
+    }
+
+    private function demoVehicleEntries(string $temperature): Collection
+    {
+        $rows = $temperature === 'hot'
+            ? [
+                ['Demo Auto 01', 'Demo Auto 01 Sport', '0001 DMO', 42, 'demo-hot-01'],
+                ['Demo Auto 02', 'Demo Auto 02 Premium', '0002 DMO', 39, 'demo-hot-02'],
+                ['Demo Auto 03', 'Demo Auto 03 Hybrid', '0003 DMO', 36, 'demo-hot-03'],
+                ['Demo Auto 04', 'Demo Auto 04 SUV', '0004 DMO', 33, 'demo-hot-04'],
+                ['Demo Auto 05', 'Demo Auto 05 Touring', '0005 DMO', 30, 'demo-hot-05'],
+                ['Demo Auto 06', 'Demo Auto 06 Compact', '0006 DMO', 27, 'demo-hot-06'],
+                ['Demo Auto 07', 'Demo Auto 07 Urban', '0007 DMO', 24, 'demo-hot-07'],
+                ['Demo Auto 08', 'Demo Auto 08 Tech', '0008 DMO', 21, 'demo-hot-08'],
+                ['Demo Auto 09', 'Demo Auto 09 Line', '0009 DMO', 18, 'demo-hot-09'],
+                ['Demo Auto 10', 'Demo Auto 10 Plus', '0010 DMO', 15, 'demo-hot-10'],
+            ]
+            : [
+                ['Demo Auto 11', 'Demo Auto 11 Eco', '0011 DMO', 3, 'demo-cold-01'],
+                ['Demo Auto 12', 'Demo Auto 12 City', '0012 DMO', 3, 'demo-cold-02'],
+                ['Demo Auto 13', 'Demo Auto 13 Basic', '0013 DMO', 2, 'demo-cold-03'],
+                ['Demo Auto 14', 'Demo Auto 14 Entry', '0014 DMO', 2, 'demo-cold-04'],
+                ['Demo Auto 15', 'Demo Auto 15 Comfort', '0015 DMO', 2, 'demo-cold-05'],
+                ['Demo Auto 16', 'Demo Auto 16 Flex', '0016 DMO', 1, 'demo-cold-06'],
+                ['Demo Auto 17', 'Demo Auto 17 Easy', '0017 DMO', 1, 'demo-cold-07'],
+                ['Demo Auto 18', 'Demo Auto 18 Pure', '0018 DMO', 1, 'demo-cold-08'],
+                ['Demo Auto 19', 'Demo Auto 19 Base', '0019 DMO', 0, 'demo-cold-09'],
+                ['Demo Auto 20', 'Demo Auto 20 Start', '0020 DMO', 0, 'demo-cold-10'],
+            ];
+
+        return collect($rows)->map(function (array $row, int $index) use ($temperature): VehicleLeaderboardEntry {
+            [$vehicleName, $vehicleCommercialName, $vehiclePlate, $totalLeads, $vehicleId] = $row;
+
+            $entry = new VehicleLeaderboardEntry();
+            $entry->forceFill([
+                'id' => $vehicleId,
+                'temperature' => $temperature,
+                'ranking_position' => $index + 1,
+                'vehicle_salesforce_id' => $vehicleId,
+                'vehicle_name' => $vehicleName,
+                'vehicle_commercial_name' => $vehicleCommercialName,
+                'vehicle_plate' => $vehiclePlate,
+                'vehicle_image_url' => null,
+                'total_leads' => $totalLeads,
+                'synced_at' => now(),
+            ]);
+
+            return $entry;
+        })->values();
     }
 
     private function excludedLeaderboardUserIds(): array
