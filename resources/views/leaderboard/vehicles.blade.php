@@ -37,14 +37,16 @@
                                 @if ($connection)
                                     Conectado con Salesforce
                                 @elseif ($salesforceConfigReady)
-                                    Pendiente de autorizar la conexión en Salesforce
+                                    Sin conexión a Salesforce
                                 @else
-                                    Configuración de Salesforce pendiente
+                                    Sin conexión a Salesforce
                                 @endif
                             </p>
                             <p class="mt-1 text-xs text-brand-secondary/60">
                                 @if ($connection?->last_synced_at)
                                     Última sincronización: {{ $connection->last_synced_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
+                                @elseif ($demoMode)
+                                    Estás viendo una simulación con nombres ficticios mientras Salesforce no está conectado.
                                 @elseif ($salesforceConfigReady)
                                     La app está preparada, pero aún no se ha completado el OAuth.
                                 @else
@@ -54,6 +56,12 @@
                         </div>
                     </div>
                 </div>
+
+                @if ($demoMode)
+                    <div class="rounded-2xl border border-dashed border-sky-300 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-900">
+                        Modo demo activo. El hot y cold ranking muestran una simulación con nombres ficticios hasta que conectes Salesforce.
+                    </div>
+                @endif
 
                 @if (session('success'))
                     <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -123,9 +131,9 @@
                 @endauth
 
                 <div class="flex flex-col gap-6">
-                    @include('leaderboard.partials.vehicle-section', ['leaderboard' => $hotLeaderboard, 'emptyDescription' => $emptyDescription])
+                    @include('leaderboard.partials.vehicle-section', ['leaderboard' => $hotLeaderboard, 'emptyDescription' => $emptyDescription, 'demoMode' => $demoMode])
                     <div id="coches-frios" class="scroll-mt-28">
-                        @include('leaderboard.partials.vehicle-section', ['leaderboard' => $coldLeaderboard, 'emptyDescription' => $emptyDescription])
+                        @include('leaderboard.partials.vehicle-section', ['leaderboard' => $coldLeaderboard, 'emptyDescription' => $emptyDescription, 'demoMode' => $demoMode])
                     </div>
                 </div>
             </div>

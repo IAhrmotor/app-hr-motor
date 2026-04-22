@@ -2,7 +2,7 @@
 
 @section('content')
     <main
-        class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6 bg-[linear-gradient(180deg,rgba(31,41,68,0.06)_0%,rgba(31,41,68,0.025)_18%,rgba(255,255,255,0)_180px)]"
+        class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6"
         data-agenda-url="{{ route('agenda.index') }}"
     >
         <section class="overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white shadow-sm">
