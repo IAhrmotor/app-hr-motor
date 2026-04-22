@@ -21,6 +21,7 @@
     $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
     $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
     $storeManagerTooltipClasses = 'pointer-events-none absolute left-full top-1/2 z-10 ml-3 inline-flex -translate-y-1/2 whitespace-nowrap rounded-xl bg-brand-secondary px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100';
+    $visibleRole = app_visible_role(auth()->user());
 @endphp
 
 <section
@@ -126,7 +127,7 @@
                         $topEntryHref = null;
                         if ($aggregateByDealership && $entry->dealership_id) {
                             $topEntryHref = route('dealerships.show', $entry->dealership_id);
-                        } elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor'])) {
+                        } elseif ($entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true)) {
                             $topEntryHref = route('users.show', $entry->user);
                         }
                         $medalStyles = match ($entry->ranking_position) {
@@ -248,7 +249,7 @@
                                         {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
                                     </p>
                                 </div>
-                            @elseif ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
+                            @elseif ($entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true))
                                     <img src="{{ $entry->user->avatar_url }}"
                                         alt="Avatar de {{ $entry->user->name }}"
                                         class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
@@ -399,7 +400,7 @@
                                         <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                             alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                             class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                        @if ($entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']))
+                                        @if ($entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true))
                                             <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
                                                 <div class="flex flex-wrap items-center gap-2">
                                                     <span class="group relative inline-flex max-w-full">

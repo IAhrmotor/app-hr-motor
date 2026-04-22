@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AdminNotificationLogController;
 use App\Http\Controllers\AdminMonthlyMagazineController;
 use App\Http\Controllers\AdminLogController;
+use App\Http\Controllers\RoleViewerController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ForumThreadController;
@@ -54,9 +55,12 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('tools.web');
 
+    Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
+    Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
+
     Route::get('/', function (LeaderboardTrendService $trendService) {
         $authUser = request()->user();
-        $isStoreManager = $authUser?->role === User::ROLE_STORE_MANAGER;
+        $isStoreManager = app_visible_role($authUser) === User::ROLE_STORE_MANAGER;
         $salesforceUrl = $isStoreManager
             ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
             : config('portal.links.tools.salesforce_comunidad');

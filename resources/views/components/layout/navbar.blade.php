@@ -1,6 +1,15 @@
 @php
     $navItems = config('navigation.main', []);
     $authUser = auth()->user();
+    $visibleRole = app_visible_role($authUser);
+    $visibleRoleLabel = app_visible_role_label($authUser);
+    $roleViewerActive = app_role_viewer_active($authUser);
+    $roleViewerOptions = [
+        \App\Models\User::ROLE_ADMIN => 'Vista de admin',
+        \App\Models\User::ROLE_MANAGER => 'Vista de gestor',
+        \App\Models\User::ROLE_COMMERCIAL => 'Vista de comercial',
+        \App\Models\User::ROLE_STORE_MANAGER => 'Vista de jefe de tienda',
+    ];
     $forumUnreadNotifications = $authUser
         ? $authUser->unreadNotifications()
             ->get()
@@ -20,9 +29,9 @@
     $navItemInactiveClass = 'text-gray-700 hover:text-gray-900';
 @endphp
 
-<nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, activeDropdown: null }"
+<nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, roleViewerOpen: false, activeDropdown: null }"
     x-effect="document.body.classList.toggle('overflow-hidden', open)"
-    @keydown.escape.window="profileOpen = false; notificationsOpen = false; activeDropdown = null; open = false"
+    @keydown.escape.window="profileOpen = false; notificationsOpen = false; roleViewerOpen = false; activeDropdown = null; open = false"
     class="sticky top-0 z-50 border-b border-gray-200 bg-white">
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
         <a href="{{ route('home') }}" class="flex shrink-0 items-center">
@@ -82,7 +91,7 @@
                     @endif
                 @endforeach
                 @auth
-                    @if (in_array(auth()->user()->role, ['admin', 'gestor']))
+                    @if (in_array($visibleRole, ['admin', 'gestor'], true))
                         @php
                             $isAdminActive = request()->routeIs('admin.index');
                             $isAdminLogsActive = request()->routeIs('admin.logs.*');
@@ -101,6 +110,66 @@
             </div>
 
             @auth
+                @if ($authUser?->role === \App\Models\User::ROLE_ADMIN)
+                    <div class="relative" @click.outside="roleViewerOpen = false">
+                        <button type="button" @click="roleViewerOpen = !roleViewerOpen; notificationsOpen = false; profileOpen = false"
+                            class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} px-3 transition"
+                            aria-label="Abrir visor de roles" :aria-expanded="roleViewerOpen.toString()">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15.0007 12C15.0007 13.6569 13.6576 15 12.0007 15C10.3439 15 9.00073 13.6569 9.00073 12C9.00073 10.3431 10.3439 9 12.0007 9C13.6576 9 15.0007 10.3431 15.0007 12Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12.0012 5C7.52354 5 3.73326 7.94288 2.45898 12C3.73324 16.0571 7.52354 19 12.0012 19C16.4788 19 20.2691 16.0571 21.5434 12C20.2691 7.94291 16.4788 5 12.0012 5Z" />
+                            </svg>
+                            <span class="hidden lg:inline text-sm font-medium">{{ $roleViewerActive ? $visibleRoleLabel : 'Admin' }}</span>
+                        </button>
+
+                        <div x-show="roleViewerOpen" x-cloak x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-1"
+                            class="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
+                            <div class="border-b border-brand-secondary/10 px-4 py-3">
+                                <p class="text-sm font-semibold text-brand-secondary">Visor de roles</p>
+                                <p class="mt-1 text-xs text-brand-secondary/60">
+                                    Navega la app como otro rol sin perder el acceso de admin.
+                                </p>
+                            </div>
+
+                            <div class="p-2">
+                                @foreach ($roleViewerOptions as $role => $label)
+                                    <form method="POST" action="{{ route('role-viewer.store') }}">
+                                        @csrf
+                                        <input type="hidden" name="role" value="{{ $role }}">
+                                        <button type="submit"
+                                            class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium transition hover:bg-brand-secondary/5 {{ $visibleRole === $role ? 'text-brand-primary' : 'text-brand-secondary' }}">
+                                            <span>{{ $label }}</span>
+                                            @if ($visibleRole === $role)
+                                                <span class="rounded-full bg-brand-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-primary">Activa</span>
+                                            @endif
+                                        </button>
+                                    </form>
+                                @endforeach
+
+                                @if ($roleViewerActive)
+                                    <form method="POST" action="{{ route('role-viewer.destroy') }}" class="mt-1">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
+                                            <span>Volver a vista admin</span>
+                                            <span class="text-xs text-brand-secondary/45">Reiniciar</span>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="relative" @click.outside="notificationsOpen = false">
                     <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false"
                         class="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
@@ -303,7 +372,7 @@
             @endforeach
 
             @auth
-                @if (in_array(auth()->user()->role, ['admin', 'gestor']))
+                @if (in_array($visibleRole, ['admin', 'gestor'], true))
                     @php
                         $isAdminActive = request()->routeIs('admin.index');
                         $isAdminLogsActive = request()->routeIs('admin.logs.*');

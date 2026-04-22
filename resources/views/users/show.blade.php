@@ -3,6 +3,7 @@
 @section('content')
     @php
         $isOwnProfile = auth()->id() === $user->id;
+        $visibleRole = app_visible_role(auth()->user());
         $salesRankingPosition = $rankingPositions['sales']['position'] ?? null;
         $salesTotal = $rankingPositions['sales']['total'] ?? 0;
         $purchaseRankingPosition = $rankingPositions['purchases']['position'] ?? null;
@@ -51,7 +52,7 @@
                         <a href="{{ route('profile.edit') }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Editar perfil</a>
                     @endif
 
-                    @if (in_array(auth()->user()->role, ['admin', 'gestor']))
+                    @if (in_array($visibleRole, ['admin', 'gestor'], true))
                         <a href="{{ route('users.index') }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Volver a usuarios</a>
                     @else
                         <a href="{{ route('agenda.index') }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Volver a agenda</a>

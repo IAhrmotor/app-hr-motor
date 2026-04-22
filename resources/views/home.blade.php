@@ -14,6 +14,7 @@
         $magazineEmbedUrl = $magazineUrl;
         $magazineTagLabel = $magazine->tag_label ?? \App\Models\MonthlyMagazineSetting::DEFAULT_TAG_LABEL;
         $homeLeaderboardSubtitle = static fn ($entry) => $entry->user?->dealership ?: 'Sin delegación asignada';
+        $visibleRole = app_visible_role(auth()->user());
         $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
         $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
         $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
@@ -220,7 +221,7 @@
                 <div class="mt-6 grid gap-4 lg:grid-cols-3">
                     @foreach ($homeLeaderboardEntries->take(3) as $entry)
                         @php
-                            $canOpenProfile = $entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']);
+                            $canOpenProfile = $entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true);
                             $movement = $homeLeaderboardMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                             $medalStyles = match ($entry->ranking_position) {
                                 1 => [
@@ -307,7 +308,7 @@
                     <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         @foreach ($homeLeaderboardEntries->slice(3) as $entry)
                         @php
-                                $canOpenProfile = $entry->user && auth()->check() && in_array(auth()->user()->role, ['admin', 'gestor']);
+                                $canOpenProfile = $entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true);
                                 $movement = $homeLeaderboardMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                                 $rankStyles = match ($entry->ranking_position) {
                                     4 => 'border-brand-primary/20 bg-brand-primary/[0.03]',
