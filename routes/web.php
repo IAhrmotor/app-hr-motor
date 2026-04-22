@@ -302,7 +302,7 @@ Route::middleware('auth')->group(function () {
                 ],
                 [
                     'label' => 'Logs de contenidos',
-                    'description' => 'Consulta el historial de la revista mensual y de los tags del foro en un único lugar.',
+                    'description' => 'Consulta el historial de la revista mensual, los tags del foro y los contactos en un único lugar.',
                     'route' => 'admin.content-logs.index',
                     'kind' => 'logs',
                     'icon' => 'content-log',

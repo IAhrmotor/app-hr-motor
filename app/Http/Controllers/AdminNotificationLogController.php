@@ -34,7 +34,7 @@ class AdminNotificationLogController extends Controller
             );
             $logs->withQueryString();
 
-            return view('admin.notification-logs.index', [
+            return $this->renderIndexResponse($request, [
                 'logs' => $logs,
                 'dateFrom' => $dateFrom,
                 'dateTo' => $dateTo,
@@ -49,7 +49,7 @@ class AdminNotificationLogController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.notification-logs.index', [
+        return $this->renderIndexResponse($request, [
             'logs' => $logs,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
@@ -179,5 +179,16 @@ class AdminNotificationLogController extends Controller
         return collect($roles)
             ->map(fn ($role) => $labels[$role] ?? $role)
             ->implode(' | ');
+    }
+
+    private function renderIndexResponse(Request $request, array $data)
+    {
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.notification-logs.partials.content', $data)->render(),
+            ]);
+        }
+
+        return view('admin.notification-logs.index', $data);
     }
 }
