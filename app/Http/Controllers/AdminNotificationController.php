@@ -36,7 +36,10 @@ class AdminNotificationController extends Controller
 
         $recipientQuery = User::query()
             ->where('is_active', true)
-            ->whereIn('role', $validated['roles']);
+            ->where(function ($query) use ($validated): void {
+                $query->whereIn('role', $validated['roles'])
+                    ->orWhereIn('extra_role', $validated['roles']);
+            });
 
         $recipients = $recipientQuery->get();
 

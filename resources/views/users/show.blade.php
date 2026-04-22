@@ -107,7 +107,7 @@
                 </dl>
             </section>
 
-            @if ($user->isCommercialLike() && ($salesRankingPosition || $purchaseRankingPosition))
+            @if ($user->isRankedCommercial() && ($salesRankingPosition || $purchaseRankingPosition))
                 <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>

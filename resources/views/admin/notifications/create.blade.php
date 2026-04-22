@@ -95,7 +95,7 @@
                                         @elseif ($role === \App\Models\User::ROLE_STORE_MANAGER)
                                             Jefes de tienda.
                                         @else
-                                            Comerciales activos.
+                                            Usuarios con ese rol adicional.
                                         @endif
                                     </span>
                                 </span>

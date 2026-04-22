@@ -4,7 +4,7 @@
     @php
         $isOpen = $thread->status === \App\Models\ForumThread::STATUS_OPEN;
         $canDelete = $canModerateThread;
-        $isThreadCreatorStoreManager = $thread->creator->role === \App\Models\User::ROLE_STORE_MANAGER;
+        $isThreadCreatorStoreManager = $thread->creator->isStoreManager();
         $threadCreatorProfileUrl = route('users.show', $thread->creator);
     @endphp
 
@@ -114,7 +114,7 @@
                         <div class="space-y-4">
                             @forelse ($thread->replies as $reply)
                                 @php
-                                    $isReplyAuthorStoreManager = $reply->author->role === \App\Models\User::ROLE_STORE_MANAGER;
+                                    $isReplyAuthorStoreManager = $reply->author->isStoreManager();
                                     $replyAuthorProfileUrl = route('users.show', $reply->author);
                                 @endphp
                                 <article class="rounded-[1.5rem] border border-brand-secondary/10 bg-white p-5 shadow-sm">

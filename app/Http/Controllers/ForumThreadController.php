@@ -178,12 +178,8 @@ class ForumThreadController extends Controller
 
     private function canCreateThreads(User $user): bool
     {
-        return in_array(app_visible_role($user), [
-            User::ROLE_ADMIN,
-            User::ROLE_MANAGER,
-            User::ROLE_COMMERCIAL,
-            User::ROLE_STORE_MANAGER,
-        ], true);
+        return in_array($user->role, [User::ROLE_ADMIN, User::ROLE_MANAGER], true)
+            || $user->isCommercialLike();
     }
 
     private function canModerateThread(User $user): bool
@@ -240,12 +236,15 @@ class ForumThreadController extends Controller
     {
         $recipients = User::query()
             ->where('is_active', true)
-            ->whereIn('role', [
-                User::ROLE_ADMIN,
-                User::ROLE_MANAGER,
-                User::ROLE_COMMERCIAL,
-                User::ROLE_STORE_MANAGER,
-            ])
+            ->where(function ($query): void {
+                $query->whereIn('role', [
+                    User::ROLE_ADMIN,
+                    User::ROLE_MANAGER,
+                ])->orWhere(function ($userQuery): void {
+                    $userQuery->where('role', User::ROLE_USER)
+                        ->whereNotNull('extra_role');
+                });
+            })
             ->where('id', '!=', $actor->id)
             ->get();
 

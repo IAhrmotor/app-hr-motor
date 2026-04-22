@@ -2,6 +2,17 @@
 
 use App\Models\User;
 
+if (! function_exists('app_role_viewer_options')) {
+    function app_role_viewer_options(): array
+    {
+        return array_filter(
+            User::roleLabels(),
+            fn (string $label, string $role): bool => $role !== User::ROLE_USER,
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+}
+
 if (! function_exists('app_visible_role')) {
     function app_visible_role(?User $user = null): ?string
     {
@@ -13,7 +24,7 @@ if (! function_exists('app_visible_role')) {
 
         $viewerRole = session('role_viewer.active_role');
 
-        if ($user->role === User::ROLE_ADMIN && in_array($viewerRole, array_keys(User::roleLabels()), true)) {
+        if ($user->role === User::ROLE_ADMIN && in_array($viewerRole, array_keys(app_role_viewer_options()), true)) {
             return $viewerRole;
         }
 
@@ -39,7 +50,7 @@ if (! function_exists('app_role_viewer_active')) {
 
         $viewerRole = session('role_viewer.active_role');
 
-        return is_string($viewerRole) && $viewerRole !== $user->role && array_key_exists($viewerRole, User::roleLabels());
+        return is_string($viewerRole) && $viewerRole !== $user->role && array_key_exists($viewerRole, app_role_viewer_options());
     }
 }
 
