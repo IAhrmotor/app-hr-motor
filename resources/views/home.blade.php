@@ -285,8 +285,8 @@
                                     class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
                                 <div class="min-w-0 max-w-full">
                                     <span class="group relative inline-flex max-w-full">
-                                        <p class="text-xl font-semibold leading-tight break-words {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                        <p class="text-xl font-semibold leading-tight break-words {{ $entry->user?->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }} {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                        @if ($entry->user?->isStoreManager())
                                             <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                         @endif
                                     </span>
@@ -365,8 +365,8 @@
                                 </div>
                                 <div class="row-start-2 min-w-0 self-end sm:row-start-auto sm:flex-1">
                                     <span class="group relative inline-flex max-w-full">
-                                        <p class="line-clamp-2 text-sm font-semibold leading-snug {{ $entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER ? 'text-amber-700' : 'text-brand-secondary' }} sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
-                                        @if ($entry->user?->role === \App\Models\User::ROLE_STORE_MANAGER)
+                                        <p class="line-clamp-2 text-sm font-semibold leading-snug {{ $entry->user?->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }} sm:truncate {{ $canOpenProfile ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->user?->name ?? $entry->seller_name }}</p>
+                                        @if ($entry->user?->isStoreManager())
                                             <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
                                         @endif
                                     </span>

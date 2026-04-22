@@ -4,9 +4,12 @@
     @php
         $visibleRole = app_visible_role(auth()->user());
         $isManager = $visibleRole === \App\Models\User::ROLE_MANAGER;
-        $selectedRole = old('role', $user->isCommercialLike() ? \App\Models\User::ROLE_COMMERCIAL : $user->role);
-        $isStoreManager = old('is_store_manager', $user->role === \App\Models\User::ROLE_STORE_MANAGER ? '1' : '0') === '1';
-        $showCommercialFields = $selectedRole === \App\Models\User::ROLE_COMMERCIAL;
+        $baseRoleLabels = \App\Models\User::baseRoleLabels();
+        $extraRoleLabels = \App\Models\User::extraRoleLabels();
+        $selectedBaseRole = old('role', $user->role ?: \App\Models\User::ROLE_USER);
+        $selectedExtraRole = old('extra_role', $user->extra_role);
+        $showSalesforceFields = $selectedBaseRole === \App\Models\User::ROLE_USER
+            && in_array($selectedExtraRole, [\App\Models\User::ROLE_COMMERCIAL, \App\Models\User::ROLE_STORE_MANAGER], true);
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
@@ -38,7 +41,7 @@
                     </div>
 
                     <div>
-                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Correo electrónico</label>
+                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Correo electronico</label>
                         <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
@@ -46,29 +49,29 @@
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="phone" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Teléfono</label>
+                        <label for="phone" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Telefono</label>
                         <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
 
                     <div>
-                        <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extensión Enreach</label>
+                        <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extension Enreach</label>
                         <input id="enreach_extension" name="enreach_extension" type="text" value="{{ old('enreach_extension', $user->enreach_extension) }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si existe, también tiene que ser única.</p>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si existe, tambien tiene que ser unica.</p>
                     </div>
                 </div>
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="password" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Nueva contraseña</label>
+                        <label for="password" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Nueva contrasena</label>
                         <input id="password" name="password" type="password"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Déjala en blanco si no quieres cambiar la contraseña.</p>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Dejala en blanco si no quieres cambiar la contrasena.</p>
                     </div>
 
                     <div>
-                        <label for="password_confirmation" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Confirmar nueva contraseña</label>
+                        <label for="password_confirmation" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Confirmar nueva contrasena</label>
                         <input id="password_confirmation" name="password_confirmation" type="password"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
@@ -76,19 +79,19 @@
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="role" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Rol</label>
+                        <label for="role" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Rol base</label>
 
                         @if ($isManager)
-                            <input type="hidden" name="role" value="{{ \App\Models\User::ROLE_COMMERCIAL }}">
-                            <input type="text" value="Comercial" disabled
+                            <input type="hidden" name="role" value="{{ \App\Models\User::ROLE_USER }}">
+                            <input type="text" value="Usuario" disabled
                                 class="w-full cursor-not-allowed rounded-2xl border border-gray-300 bg-gray-100 px-4 py-3 text-sm text-brand-secondary/60">
-                            <p class="mt-2 text-xs text-brand-secondary/60">Como gestor, no puedes modificar el rol base.</p>
+                            <p class="mt-2 text-xs text-brand-secondary/60">Como gestor, el rol base queda fijado en usuario.</p>
                         @else
                             <div class="relative">
                                 <select id="role" name="role" required data-role-select
                                     class="w-full appearance-none rounded-2xl border border-gray-300 px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                                    @foreach ($availableRoles as $role)
-                                        <option value="{{ $role }}" @selected($selectedRole === $role)>{{ $role === \App\Models\User::ROLE_MANAGER ? 'Gestor' : ucfirst($role) }}</option>
+                                    @foreach ($availableBaseRoles as $role)
+                                        <option value="{{ $role }}" @selected($selectedBaseRole === $role)>{{ $baseRoleLabels[$role] ?? $role }}</option>
                                     @endforeach
                                 </select>
                                 <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-brand-secondary/70">
@@ -100,12 +103,31 @@
                         @endif
                     </div>
 
-                    <div id="dealership-wrapper" @class(['hidden' => ! $showCommercialFields])>
-                        <label for="dealership" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Delegación</label>
+                    <div>
+                        <label for="extra_role" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Rol adicional</label>
                         <div class="relative">
-                            <select id="dealership" name="dealership_id" @required($showCommercialFields)
+                            <select id="extra_role" name="extra_role" data-extra-role-select
                                 class="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                                <option value="">Selecciona una delegación</option>
+                                <option value="">Sin rol adicional</option>
+                                @foreach ($availableExtraRoles as $role)
+                                    <option value="{{ $role }}" @selected($selectedExtraRole === $role)>{{ $extraRoleLabels[$role] ?? $role }}</option>
+                                @endforeach
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-brand-secondary/70">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Los roles adicionales controlan el acceso comercial y el tipo de usuario.</p>
+                    </div>
+
+                    <div id="dealership-wrapper" class="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4">
+                        <label for="dealership" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Delegacion</label>
+                        <div class="relative">
+                            <select id="dealership" name="dealership_id"
+                                class="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                                <option value="">Sin delegacion</option>
                                 @foreach ($availableDealerships as $dealership)
                                     <option value="{{ $dealership->id }}" @selected((string) old('dealership_id', $user->dealership_id) === (string) $dealership->id)>{{ $dealership->name }}</option>
                                 @endforeach
@@ -116,30 +138,14 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Solo administradores y gestores pueden modificar esta delegación.</p>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">La delegacion se puede asignar a cualquier usuario.</p>
                     </div>
 
-                    <div id="salesforce-user-id-wrapper" @class(['hidden' => ! $showCommercialFields])>
+                    <div id="salesforce-user-id-wrapper" @class(['rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4', 'hidden' => ! $showSalesforceFields])>
                         <label for="salesforce_user_id" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">ID de usuario en Salesforce</label>
-                        <input id="salesforce_user_id" name="salesforce_user_id" type="text" value="{{ old('salesforce_user_id', $user->salesforce_user_id) }}" @required($showCommercialFields)
+                        <input id="salesforce_user_id" name="salesforce_user_id" type="text" value="{{ old('salesforce_user_id', $user->salesforce_user_id) }}" @required($showSalesforceFields)
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si el usuario deja de ser comercial o jefe de tienda, este campo se limpiará automáticamente.</p>
-                    </div>
-
-                    <div id="store-manager-wrapper" @class(['rounded-2xl border border-brand-primary/15 bg-white px-4 py-4 shadow-sm', 'hidden' => ! $showCommercialFields])>
-                        <label for="is_store_manager" class="group flex cursor-pointer items-start gap-4">
-                            <input id="is_store_manager" name="is_store_manager" type="checkbox" value="1" @checked($isStoreManager)
-                                class="peer sr-only">
-                            <span class="mt-0.5 inline-flex h-7 w-12 shrink-0 items-center rounded-full bg-slate-300 p-1 transition duration-300 ease-out peer-checked:bg-brand-primary peer-checked:[&>span]:translate-x-5 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-primary/20">
-                                <span class="block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ease-out"></span>
-                            </span>
-                            <span class="flex-1">
-                                <span class="block text-sm font-semibold text-brand-secondary">¿Es jefe de tienda?</span>
-                                <span class="mt-1 block text-sm text-brand-secondary/65">
-                                    Actívalo para guardar a este usuario como jefe de tienda manteniendo el mismo acceso que un comercial por ahora.
-                                </span>
-                            </span>
-                        </label>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Solo es obligatorio para usuarios con rol comercial o jefe de tienda.</p>
                     </div>
                 </div>
 
@@ -154,33 +160,31 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const roleSelect = document.querySelector('[data-role-select]');
-            const storeManagerWrapper = document.getElementById('store-manager-wrapper');
-            const dealershipWrapper = document.getElementById('dealership-wrapper');
-            const dealershipSelect = document.getElementById('dealership');
+            const extraRoleSelect = document.querySelector('[data-extra-role-select]');
             const salesforceWrapper = document.getElementById('salesforce-user-id-wrapper');
             const salesforceInput = document.getElementById('salesforce_user_id');
 
-            if (!salesforceWrapper || !salesforceInput || !dealershipWrapper || !dealershipSelect || !storeManagerWrapper) {
+            if (!salesforceWrapper || !salesforceInput || !extraRoleSelect) {
                 return;
             }
 
-            const toggleCommercialFields = () => {
-                const isCommercial = !roleSelect || roleSelect.value === '{{ \App\Models\User::ROLE_COMMERCIAL }}';
+            const toggleSalesforceFields = () => {
+                const needsSalesforce = (roleSelect ? roleSelect.value === '{{ \App\Models\User::ROLE_USER }}' : true) && [
+                    '{{ \App\Models\User::ROLE_COMMERCIAL }}',
+                    '{{ \App\Models\User::ROLE_STORE_MANAGER }}',
+                ].includes(extraRoleSelect.value);
 
-                storeManagerWrapper.classList.toggle('hidden', !isCommercial);
-                dealershipWrapper.classList.toggle('hidden', !isCommercial);
-                dealershipSelect.required = isCommercial;
-                salesforceWrapper.classList.toggle('hidden', !isCommercial);
-                salesforceInput.required = isCommercial;
+                salesforceWrapper.classList.toggle('hidden', !needsSalesforce);
+                salesforceInput.required = needsSalesforce;
 
-                if (!isCommercial) {
-                    dealershipSelect.value = '';
+                if (!needsSalesforce) {
                     salesforceInput.value = '';
                 }
             };
 
-            toggleCommercialFields();
-            roleSelect?.addEventListener('change', toggleCommercialFields);
+            toggleSalesforceFields();
+            roleSelect?.addEventListener('change', toggleSalesforceFields);
+            extraRoleSelect.addEventListener('change', toggleSalesforceFields);
         });
     </script>
 @endsection

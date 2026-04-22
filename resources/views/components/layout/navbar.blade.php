@@ -4,12 +4,9 @@
     $visibleRole = app_visible_role($authUser);
     $visibleRoleLabel = app_visible_role_label($authUser);
     $roleViewerActive = app_role_viewer_active($authUser);
-    $roleViewerOptions = [
-        \App\Models\User::ROLE_ADMIN => 'Vista de admin',
-        \App\Models\User::ROLE_MANAGER => 'Vista de gestor',
-        \App\Models\User::ROLE_COMMERCIAL => 'Vista de comercial',
-        \App\Models\User::ROLE_STORE_MANAGER => 'Vista de jefe de tienda',
-    ];
+    $roleViewerOptions = collect(\App\Models\User::roleLabels())
+        ->reject(fn (string $label, string $role) => $role === \App\Models\User::ROLE_USER)
+        ->all();
     $forumUnreadNotifications = $authUser
         ? $authUser->unreadNotifications()
             ->get()
@@ -131,7 +128,7 @@
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 translate-y-1"
-                            class="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
+                            class="absolute right-0 top-full mt-3 w-80 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl sm:w-96">
                             <div class="border-b border-brand-secondary/10 px-4 py-3">
                                 <p class="text-sm font-semibold text-brand-secondary">Visor de roles</p>
                                 <p class="mt-1 text-xs text-brand-secondary/60">
@@ -139,7 +136,7 @@
                                 </p>
                             </div>
 
-                            <div class="p-2">
+                            <div class="max-h-[28rem] overflow-y-auto p-2">
                                 @foreach ($roleViewerOptions as $role => $label)
                                     <form method="POST" action="{{ route('role-viewer.store') }}">
                                         @csrf
@@ -160,7 +157,7 @@
                                         @method('DELETE')
                                         <button type="submit"
                                             class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
-                                            <span>Volver a vista admin</span>
+                                            <span>Volver a admin</span>
                                             <span class="text-xs text-brand-secondary/45">Reiniciar</span>
                                         </button>
                                     </form>

@@ -9,23 +9,26 @@
 
             return $direction === 'asc' ? 'desc' : 'asc';
         };
+        $canManageDealerships = in_array(app_visible_role(auth()->user()), ['admin', 'gestor'], true);
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
         <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm" data-dealership-root>
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-brand-secondary">Gestion de delegaciones</h1>
-                    <p class="mt-2 text-sm text-brand-secondary/70">Listado de delegaciones configuradas en la aplicacion.</p>
+                    <h1 class="text-2xl font-bold tracking-tight text-brand-secondary">Gestión de delegaciones</h1>
+                    <p class="mt-2 text-sm text-brand-secondary/70">Listado de delegaciones configuradas en la aplicación.</p>
                 </div>
 
-                <a href="{{ route('dealerships.create') }}"
-                    class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary text-white transition hover:opacity-90"
-                    title="Crear delegacion" aria-label="Crear delegacion">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                </a>
+                @if ($canManageDealerships)
+                    <a href="{{ route('dealerships.create') }}"
+                        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary text-white transition hover:opacity-90"
+                        title="Crear delegación" aria-label="Crear delegación">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                    </a>
+                @endif
             </div>
 
             @if (session('success'))
@@ -175,6 +178,10 @@
             const loadResults = async ({ page = 1 } = {}) => {
                 const requestUrl = buildUrl(page);
                 const requestKey = requestUrl.searchParams.toString();
+                const scrollPosition = {
+                    left: window.scrollX,
+                    top: window.scrollY,
+                };
 
                 if (requestKey === lastRequestKey) {
                     return;
@@ -214,6 +221,11 @@
                     void results.offsetWidth;
                     results.classList.add('live-results-pop');
                     updateHistory(requestUrl);
+                    window.scrollTo({
+                        left: scrollPosition.left,
+                        top: scrollPosition.top,
+                        behavior: 'auto',
+                    });
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         console.error(error);

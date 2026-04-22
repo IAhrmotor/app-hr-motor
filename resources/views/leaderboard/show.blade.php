@@ -250,6 +250,10 @@
             const loadSection = async (root, { page = 1 } = {}) => {
                 const state = getRootState(root);
                 const requestUrl = buildRequestUrl(root, page);
+                const scrollPosition = {
+                    left: window.scrollX,
+                    top: window.scrollY,
+                };
 
                 if (!requestUrl) {
                     return;
@@ -321,6 +325,11 @@
                     }
 
                     updateHistory(requestUrl);
+                    window.scrollTo({
+                        left: scrollPosition.left,
+                        top: scrollPosition.top,
+                        behavior: 'auto',
+                    });
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         console.error(error);

@@ -49,6 +49,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
     Route::get('/leaderboard/coches', [LeaderboardController::class, 'vehicles'])->name('leaderboard.vehicles');
+    Route::get('/delegaciones', [DealershipController::class, 'index'])->name('dealerships.index');
+    Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])->name('dealerships.show');
     Route::get('/web', function () {
         return view('tools.web-hr-motor', [
             'hrMotorUrl' => 'https://hrmotor.com/gestor',
@@ -60,7 +62,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/', function (LeaderboardTrendService $trendService) {
         $authUser = request()->user();
-        $isStoreManager = app_visible_role($authUser) === User::ROLE_STORE_MANAGER;
+        $isStoreManager = $authUser?->isStoreManager() ?? false;
         $salesforceUrl = $isStoreManager
             ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
             : config('portal.links.tools.salesforce_comunidad');
@@ -325,10 +327,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        Route::get('/delegaciones', [DealershipController::class, 'index'])->name('dealerships.index');
         Route::get('/delegaciones/crear', [DealershipController::class, 'create'])->name('dealerships.create');
         Route::post('/delegaciones', [DealershipController::class, 'store'])->name('dealerships.store');
-        Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])->name('dealerships.show');
         Route::get('/delegaciones/{dealership}/editar', [DealershipController::class, 'edit'])->name('dealerships.edit');
         Route::put('/delegaciones/{dealership}', [DealershipController::class, 'update'])->name('dealerships.update');
         Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])->name('dealerships.destroy');

@@ -44,12 +44,15 @@ class PurchaseLeaderboardService
 
         $entries = collect($records)
             ->reject(fn (array $record): bool => $this->isExcludedSalesforceUserId($this->extractSalesforceUserId($record)))
-            ->values()
             ->map(function (array $record, int $index) use ($syncedAt): array {
                 $salesforceUserId = $this->extractSalesforceUserId($record);
                 $user = $salesforceUserId
                     ? User::query()->where('salesforce_user_id', $salesforceUserId)->first()
                     : null;
+
+                if ($user && ! $user->isRankedCommercial()) {
+                    return null;
+                }
 
                 return [
                     'ranking_position' => $index + 1,
@@ -61,7 +64,9 @@ class PurchaseLeaderboardService
                     'created_at' => $syncedAt,
                     'updated_at' => $syncedAt,
                 ];
-            });
+            })
+            ->filter()
+            ->values();
 
         $entries = $this->appendCommercialUsersWithoutPurchases($entries, $syncedAt);
 
@@ -248,16 +253,8 @@ class PurchaseLeaderboardService
             ->all();
 
         $missingCommercials = User::query()
-            ->whereIn('role', [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER])
-            ->where(function ($query): void {
-                $query->whereNull('salesforce_user_id');
-
-                if ($this->excludedLeaderboardUserIds() !== []) {
-                    $query->orWhereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
-                } else {
-                    $query->orWhereNotNull('salesforce_user_id');
-                }
-            })
+            ->where('role', User::ROLE_USER)
+            ->whereIn('extra_role', [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER])
             ->where(function ($query) use ($existingUserIds, $existingSalesforceUserIds): void {
                 $query->whereNotIn('id', $existingUserIds)
                     ->where(function ($userQuery) use ($existingSalesforceUserIds): void {

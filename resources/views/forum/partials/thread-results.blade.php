@@ -3,7 +3,7 @@
         @php
             $isOpen = $thread->status === \App\Models\ForumThread::STATUS_OPEN;
             $lastActivityAt = $thread->latestReply?->created_at ?? $thread->created_at;
-            $isStoreManager = $thread->creator->role === \App\Models\User::ROLE_STORE_MANAGER;
+            $isStoreManager = $thread->creator->isStoreManager();
         @endphp
 
         <article class="group overflow-hidden rounded-[1.75rem] border {{ $isOpen ? 'border-brand-primary/15 bg-[linear-gradient(180deg,rgba(229,26,46,0.04),rgba(255,255,255,1))]' : 'border-brand-secondary/10 bg-slate-50/80' }} p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
