@@ -36,7 +36,7 @@ class AdminContentLogController extends Controller
             );
             $logs->withQueryString();
 
-            return view('admin.content-logs.index', [
+            return $this->renderIndexResponse($request, [
                 'logs' => $logs,
                 'contentType' => $contentType,
                 'action' => $action,
@@ -53,7 +53,7 @@ class AdminContentLogController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.content-logs.index', [
+        return $this->renderIndexResponse($request, [
             'logs' => $logs,
             'contentType' => $contentType,
             'action' => $action,
@@ -150,6 +150,7 @@ class AdminContentLogController extends Controller
         $allowedTypes = [
             ContentActivityLog::CONTENT_TYPE_MAGAZINE,
             ContentActivityLog::CONTENT_TYPE_FORUM_TAG,
+            ContentActivityLog::CONTENT_TYPE_CONTACT,
         ];
 
         return in_array($contentType, $allowedTypes, true) ? $contentType : null;
@@ -232,5 +233,16 @@ class AdminContentLogController extends Controller
                 );
             })
             ->implode(' | ');
+    }
+
+    private function renderIndexResponse(Request $request, array $data)
+    {
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.content-logs.partials.content', $data)->render(),
+            ]);
+        }
+
+        return view('admin.content-logs.index', $data);
     }
 }
