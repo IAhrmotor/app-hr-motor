@@ -50,8 +50,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
     Route::get('/leaderboard/coches', [LeaderboardController::class, 'vehicles'])->name('leaderboard.vehicles');
     Route::get('/delegaciones', [DealershipController::class, 'index'])->name('dealerships.index');
-    Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])->name('dealerships.show');
+    Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])
+        ->whereNumber('dealership')
+        ->name('dealerships.show');
     Route::get('/web', function () {
+        abort_unless(app_can_access_web(), 403);
+
         return view('tools.web-hr-motor', [
             'hrMotorUrl' => 'https://hrmotor.com/gestor',
         ]);
@@ -145,6 +149,23 @@ Route::middleware('auth')->group(function () {
             ],
         ];
 
+        if (! app_can_access_web($authUser)) {
+            $buttonSections = collect($buttonSections)
+                ->map(function (array $section): array {
+                    if (($section['title'] ?? null) !== 'Herramientas generales') {
+                        return $section;
+                    }
+
+                    $section['buttons'] = collect($section['buttons'] ?? [])
+                        ->reject(fn (array $button) => ($button['label'] ?? null) === 'Web HR Motor')
+                        ->values()
+                        ->all();
+
+                    return $section;
+                })
+                ->all();
+        }
+
         $videos = [
             [
                 'title' => 'Firma electrónica DocuSign',
@@ -178,6 +199,8 @@ Route::middleware('auth')->group(function () {
     })->name('home');
 
     Route::get('/videos', function () {
+        abort_unless(app_can_access_videos(), 403);
+
         $videos = [
             [
                 'title' => 'Vista general Salesforce',
@@ -329,9 +352,15 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/delegaciones/crear', [DealershipController::class, 'create'])->name('dealerships.create');
         Route::post('/delegaciones', [DealershipController::class, 'store'])->name('dealerships.store');
-        Route::get('/delegaciones/{dealership}/editar', [DealershipController::class, 'edit'])->name('dealerships.edit');
-        Route::put('/delegaciones/{dealership}', [DealershipController::class, 'update'])->name('dealerships.update');
-        Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])->name('dealerships.destroy');
+        Route::get('/delegaciones/{dealership}/editar', [DealershipController::class, 'edit'])
+            ->whereNumber('dealership')
+            ->name('dealerships.edit');
+        Route::put('/delegaciones/{dealership}', [DealershipController::class, 'update'])
+            ->whereNumber('dealership')
+            ->name('dealerships.update');
+        Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])
+            ->whereNumber('dealership')
+            ->name('dealerships.destroy');
         Route::get('/foro/tags', [ForumTagController::class, 'index'])->name('admin.forum-tags.index');
         Route::get('/foro/tags/crear', [ForumTagController::class, 'create'])->name('admin.forum-tags.create');
         Route::post('/foro/tags', [ForumTagController::class, 'store'])->name('admin.forum-tags.store');

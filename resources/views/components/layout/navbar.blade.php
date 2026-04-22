@@ -1,6 +1,35 @@
 @php
-    $navItems = config('navigation.main', []);
     $authUser = auth()->user();
+    $navItems = collect(config('navigation.main', []))
+        ->map(function (array $item) use ($authUser) {
+            if (($item['route'] ?? null) === 'forum.index' && ! app_can_access_forum($authUser)) {
+                return null;
+            }
+
+            if (($item['route'] ?? null) === 'tools.web' && ! app_can_access_web($authUser)) {
+                return null;
+            }
+
+            if (($item['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
+                return null;
+            }
+
+            if (($item['label'] ?? null) === 'Rankings' && ! empty($item['children'])) {
+                $item['children'] = collect($item['children'])
+                    ->filter(fn (array $child) => app_can_access_rankings($authUser) || ! in_array($child['route'] ?? null, ['leaderboard.sales', 'leaderboard.purchases', 'leaderboard.vehicles'], true))
+                    ->values()
+                    ->all();
+
+                if ($item['children'] === []) {
+                    return null;
+                }
+            }
+
+            return $item;
+        })
+        ->filter()
+        ->values()
+        ->all();
     $visibleRole = app_visible_role($authUser);
     $visibleRoleLabel = app_visible_role_label($authUser);
     $roleViewerActive = app_role_viewer_active($authUser);
