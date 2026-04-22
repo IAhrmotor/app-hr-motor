@@ -15,6 +15,8 @@
         $magazineTagLabel = $magazine->tag_label ?? \App\Models\MonthlyMagazineSetting::DEFAULT_TAG_LABEL;
         $homeLeaderboardSubtitle = static fn ($entry) => $entry->user?->dealership ?: 'Sin delegación asignada';
         $visibleRole = app_visible_role(auth()->user());
+        $canAccessRankings = app_can_access_rankings(auth()->user());
+        $canAccessVideos = app_can_access_videos(auth()->user());
         $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
         $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
         $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
@@ -199,7 +201,7 @@
             @endforeach
         </div>
 
-        @if ($homeLeaderboardEntries->isNotEmpty())
+        @if ($canAccessRankings && $homeLeaderboardEntries->isNotEmpty())
             <section class="mt-8 overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
@@ -412,7 +414,8 @@
             </div>
         </section>
 
-        <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
+        @if ($canAccessVideos)
+            <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
             <div class="mb-6">
                 <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                     Vídeos de formación
@@ -442,6 +445,7 @@
                     </article>
                 @endforeach
             </div>
-        </section>
+            </section>
+        @endif
     </main>
 @endsection

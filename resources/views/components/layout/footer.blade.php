@@ -1,5 +1,22 @@
 @php
-    $footerPlatformItems = config('navigation.footer.platform', []);
+    $footerPlatformItems = collect(config('navigation.footer.platform', []))
+        ->filter(function (array $item): bool {
+            if (($item['route'] ?? null) === 'forum.index' && ! app_can_access_forum()) {
+                return false;
+            }
+
+            if (($item['route'] ?? null) === 'videos' && ! app_can_access_videos()) {
+                return false;
+            }
+
+            if (in_array($item['route'] ?? null, ['leaderboard.sales', 'leaderboard.purchases', 'leaderboard.vehicles'], true) && ! app_can_access_rankings()) {
+                return false;
+            }
+
+            return true;
+        })
+        ->values()
+        ->all();
     $footerPlatformColumns = collect($footerPlatformItems)->chunk((int) ceil(max(count($footerPlatformItems), 1) / 2));
 @endphp
 
