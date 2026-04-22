@@ -1,5 +1,6 @@
 @php
     $authUser = $authUser ?? auth()->user();
+    $visibleRole = app_visible_role($authUser);
     $persistedQuery = request()->except(['ajax']);
     $sortDirection = function ($column, $sort, $direction) {
         if ($sort !== $column) {
@@ -37,8 +38,8 @@
             <tbody class="divide-y divide-brand-secondary/10 bg-white">
                 @forelse ($users as $user)
                     @php
-                        $canManageUser = $authUser->role === \App\Models\User::ROLE_ADMIN
-                            || ($authUser->role === \App\Models\User::ROLE_MANAGER
+                        $canManageUser = $visibleRole === \App\Models\User::ROLE_ADMIN
+                            || ($visibleRole === \App\Models\User::ROLE_MANAGER
                                 && $authUser->id !== $user->id
                                 && $user->isCommercialLike());
                         $isInvitationExpired = $user->isInvitationExpired();

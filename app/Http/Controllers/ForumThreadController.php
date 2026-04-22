@@ -178,7 +178,7 @@ class ForumThreadController extends Controller
 
     private function canCreateThreads(User $user): bool
     {
-        return in_array($user->role, [
+        return in_array(app_visible_role($user), [
             User::ROLE_ADMIN,
             User::ROLE_MANAGER,
             User::ROLE_COMMERCIAL,
@@ -188,7 +188,7 @@ class ForumThreadController extends Controller
 
     private function canModerateThread(User $user): bool
     {
-        return in_array($user->role, [User::ROLE_ADMIN, User::ROLE_MANAGER], true);
+        return in_array(app_visible_role($user), [User::ROLE_ADMIN, User::ROLE_MANAGER], true);
     }
 
     private function canChangeThreadStatus(User $user, ForumThread $thread): bool

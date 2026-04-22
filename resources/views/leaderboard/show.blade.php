@@ -3,6 +3,9 @@
 @section('content')
     <section class="py-10 sm:py-14">
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            @php
+                $visibleRole = app_visible_role(auth()->user());
+            @endphp
             <div class="flex flex-col gap-6 rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
@@ -80,7 +83,7 @@
                 @endif
 
                 @auth
-                    @if (in_array(auth()->user()->role, ['admin', 'gestor']))
+                    @if (in_array($visibleRole, ['admin', 'gestor'], true))
                         @if (! $connection || ! $leaderboardTablesReady)
                             <div class="flex flex-col gap-3 sm:flex-row">
                                 @if ($salesforceConfigReady && $leaderboardTablesReady)

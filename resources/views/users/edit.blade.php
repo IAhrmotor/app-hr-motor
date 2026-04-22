@@ -2,7 +2,8 @@
 
 @section('content')
     @php
-        $isManager = auth()->user()->role === \App\Models\User::ROLE_MANAGER;
+        $visibleRole = app_visible_role(auth()->user());
+        $isManager = $visibleRole === \App\Models\User::ROLE_MANAGER;
         $selectedRole = old('role', $user->isCommercialLike() ? \App\Models\User::ROLE_COMMERCIAL : $user->role);
         $isStoreManager = old('is_store_manager', $user->role === \App\Models\User::ROLE_STORE_MANAGER ? '1' : '0') === '1';
         $showCommercialFields = $selectedRole === \App\Models\User::ROLE_COMMERCIAL;

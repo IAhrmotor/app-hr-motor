@@ -86,7 +86,7 @@ class UserController extends Controller
     {
         $authUser = request()->user();
 
-        $availableRoles = $authUser->role === User::ROLE_ADMIN
+        $availableRoles = app_visible_role($authUser) === User::ROLE_ADMIN
             ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
             : [User::ROLE_COMMERCIAL];
         $availableDealerships = Dealership::query()->orderBy('name')->get();
@@ -105,8 +105,15 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $authUser = $request->user();
+        $visibleRole = app_visible_role($authUser);
 
-        $allowedRoles = $authUser->role === User::ROLE_ADMIN
+        if (! in_array($visibleRole, [User::ROLE_ADMIN, User::ROLE_MANAGER], true)) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'No tienes permisos para crear usuarios desde esta vista.');
+        }
+
+        $allowedRoles = $visibleRole === User::ROLE_ADMIN
             ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
             : [User::ROLE_COMMERCIAL];
         $submittedRole = $this->resolveSubmittedRole($request, $authUser);
@@ -213,11 +220,11 @@ class UserController extends Controller
     {
         $authUser = request()->user();
 
-        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'editar', preventSelf: $authUser->role === 'gestor')) {
+        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'editar', preventSelf: app_visible_role($authUser) === User::ROLE_MANAGER)) {
             return $response;
         }
 
-        $availableRoles = $authUser->role === User::ROLE_ADMIN
+        $availableRoles = app_visible_role($authUser) === User::ROLE_ADMIN
             ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
             : [User::ROLE_COMMERCIAL];
         $availableDealerships = Dealership::query()->orderBy('name')->get();
@@ -229,11 +236,11 @@ class UserController extends Controller
     {
         $authUser = $request->user();
 
-        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'editar', preventSelf: $authUser->role === 'gestor')) {
+        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'editar', preventSelf: app_visible_role($authUser) === User::ROLE_MANAGER)) {
             return $response;
         }
 
-        $allowedRoles = $authUser->role === User::ROLE_ADMIN
+        $allowedRoles = app_visible_role($authUser) === User::ROLE_ADMIN
             ? [User::ROLE_ADMIN, User::ROLE_MANAGER, User::ROLE_COMMERCIAL]
             : [User::ROLE_COMMERCIAL];
         $submittedRole = $this->resolveSubmittedRole($request, $authUser);
@@ -357,13 +364,21 @@ class UserController extends Controller
 
     protected function ensureCanManageListedUser(User $authUser, User $targetUser, string $action, bool $preventSelf = false): ?RedirectResponse
     {
+        $visibleRole = app_visible_role($authUser);
+
         if ($preventSelf && $authUser->id === $targetUser->id) {
             return redirect()
                 ->route('users.index')
                 ->with('error', "No puedes {$action} tu propio usuario.");
         }
 
-        if ($authUser->role === User::ROLE_MANAGER && ! $this->isCommercialLikeRole($targetUser->role)) {
+        if (! in_array($visibleRole, [User::ROLE_ADMIN, User::ROLE_MANAGER], true)) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', "No tienes permisos para {$action} este usuario.");
+        }
+
+        if ($visibleRole === User::ROLE_MANAGER && ! $this->isCommercialLikeRole($targetUser->role)) {
             return redirect()
                 ->route('users.index')
                 ->with('error', "No tienes permisos para {$action} este usuario.");
@@ -506,7 +521,7 @@ class UserController extends Controller
 
     protected function resolveSubmittedRole(Request $request, User $authUser): string
     {
-        $baseRole = $authUser->role === User::ROLE_ADMIN
+        $baseRole = app_visible_role($authUser) === User::ROLE_ADMIN
             ? $request->input('role')
             : User::ROLE_COMMERCIAL;
 
