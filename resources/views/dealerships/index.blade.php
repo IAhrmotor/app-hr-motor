@@ -178,6 +178,10 @@
             const loadResults = async ({ page = 1 } = {}) => {
                 const requestUrl = buildUrl(page);
                 const requestKey = requestUrl.searchParams.toString();
+                const scrollPosition = {
+                    left: window.scrollX,
+                    top: window.scrollY,
+                };
 
                 if (requestKey === lastRequestKey) {
                     return;
@@ -217,6 +221,11 @@
                     void results.offsetWidth;
                     results.classList.add('live-results-pop');
                     updateHistory(requestUrl);
+                    window.scrollTo({
+                        left: scrollPosition.left,
+                        top: scrollPosition.top,
+                        behavior: 'auto',
+                    });
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         console.error(error);
