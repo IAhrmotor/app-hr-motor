@@ -17,7 +17,7 @@
             <div class="mb-8">
                 <h1 class="text-2xl font-bold tracking-tight text-brand-secondary">Crear usuario</h1>
                 <p class="mt-2 text-sm text-brand-secondary/70">
-                    Da de alta un nuevo usuario en la plataforma. Recibira un correo para establecer su contrasena y activar la cuenta.
+                    Da de alta un nuevo usuario en la plataforma. Recibirá un correo para establecer su contraseña y activar la cuenta.
                 </p>
             </div>
 
@@ -48,7 +48,7 @@
                     </div>
 
                     <div>
-                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Correo electronico</label>
+                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Correo electrónico</label>
                         <input id="email" name="email" type="email" value="{{ old('email') }}" required
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
@@ -56,16 +56,16 @@
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="phone" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Telefono</label>
+                        <label for="phone" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Teléfono</label>
                         <input id="phone" name="phone" type="text" value="{{ old('phone') }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
 
                     <div>
-                        <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extension Enreach</label>
+                        <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extensión Enreach</label>
                         <input id="enreach_extension" name="enreach_extension" type="text" value="{{ old('enreach_extension') }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si existe, tambien tiene que ser unica.</p>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si existe, también tiene que ser única.</p>
                     </div>
                 </div>
 
@@ -115,11 +115,11 @@
                     </div>
 
                     <div id="dealership-wrapper" class="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4">
-                        <label for="dealership" class="mb-2 block text-sm font-medium text-brand-secondary">Delegacion</label>
+                        <label for="dealership" class="mb-2 block text-sm font-medium text-brand-secondary">Delegación</label>
                         <div class="relative">
                             <select id="dealership" name="dealership_id"
                                 class="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                                <option value="">Sin delegacion</option>
+                                <option value="">Sin delegación</option>
                                 @foreach ($availableDealerships as $dealership)
                                     <option value="{{ $dealership->id }}" @selected((string) old('dealership_id') === (string) $dealership->id)>{{ $dealership->name }}</option>
                                 @endforeach
@@ -130,7 +130,7 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="mt-2 text-xs text-brand-secondary/60">La delegacion se puede asignar a cualquier usuario.</p>
+                        <p class="mt-2 text-xs text-brand-secondary/60">La delegación se puede asignar a cualquier usuario.</p>
                     </div>
 
                     <div id="salesforce-user-id-wrapper" @class(['rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4', 'hidden' => ! $showSalesforceFields])>
@@ -142,7 +142,7 @@
                 </div>
 
                 <div class="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4 text-sm text-brand-secondary/80">
-                    El usuario no podra iniciar sesion hasta que use el enlace recibido por correo y defina su propia contrasena.
+                    El usuario no podrá iniciar sesión hasta que use el enlace recibido por correo y defina su propia contraseña.
                 </div>
 
                 <div class="flex items-center justify-between gap-4">
