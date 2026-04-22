@@ -116,6 +116,12 @@
             </section>
 
             <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6">
+                @php
+                    $commercialUsers = $dealership->users->filter(fn ($user) => $user->isRankedCommercial())->values();
+                    $nonCommercialUsers = $dealership->users->reject(fn ($user) => $user->isRankedCommercial())->values();
+                    $storeManagerTooltipClasses = 'pointer-events-none absolute left-full top-1/2 z-10 ml-3 inline-flex -translate-y-1/2 whitespace-nowrap rounded-xl bg-brand-secondary px-3 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100';
+                @endphp
+
                 <div class="flex items-center justify-between gap-4">
                     <h2 class="text-lg font-semibold text-brand-secondary">Usuarios asignados</h2>
                     <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">
@@ -126,33 +132,82 @@
                 @if ($dealership->users->isEmpty())
                     <p class="mt-4 text-sm text-brand-secondary/70">No hay usuarios asociados a esta delegación.</p>
                 @else
-                    <div class="mt-4 grid gap-3">
-                        @foreach ($dealership->users as $user)
-                            @php
-                                $monthlyStats = $userMonthlyStats[$user->id] ?? ['sales' => 0, 'purchases' => 0];
-                            @endphp
-                            <a href="{{ route('users.show', $user) }}" class="flex items-center justify-between gap-4 rounded-2xl border border-brand-secondary/10 px-4 py-3 transition hover:bg-brand-secondary/5">
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
-                                    <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $user->name }}</p>
-                                        <p class="truncate text-xs text-brand-secondary/60">{{ $user->email }}</p>
-                                    </div>
-                                </div>
-                                <div class="shrink-0 text-right">
-                                    <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Este mes</p>
-                                    <div class="mt-1 flex items-center justify-end gap-2">
-                                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-                                            {{ number_format((float) $monthlyStats['sales'], 0, ',', '.') }} V
-                                        </span>
-                                        <span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
-                                            {{ number_format((float) $monthlyStats['purchases'], 0, ',', '.') }} C
-                                        </span>
-                                    </div>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
+                    @if ($commercialUsers->isNotEmpty())
+                        <div class="mt-6">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-secondary/55">Comerciales</h3>
+                                <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                                    {{ $commercialUsers->count() }}
+                                </span>
+                            </div>
+
+                            <div class="mt-4 grid gap-3">
+                                @foreach ($commercialUsers as $user)
+                                    @php
+                                        $monthlyStats = $userMonthlyStats[$user->id] ?? ['sales' => 0, 'purchases' => 0];
+                                    @endphp
+                                    <a href="{{ route('users.show', $user) }}" class="flex items-center justify-between gap-4 rounded-2xl border border-brand-secondary/10 px-4 py-3 transition hover:bg-brand-secondary/5">
+                                        <div class="flex min-w-0 items-center gap-3">
+                                            <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
+                                            <div class="min-w-0">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="group relative inline-flex max-w-full">
+                                                        <p class="truncate text-sm font-semibold {{ $user->isStoreManager() ? 'text-amber-700' : 'text-brand-secondary' }}">{{ $user->name }}</p>
+                                                        @if ($user->isStoreManager())
+                                                            <span class="{{ $storeManagerTooltipClasses }}">Jefe de tienda</span>
+                                                        @endif
+                                                    </span>
+                                                    <span class="inline-flex rounded-full bg-brand-secondary/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] {{ $user->isStoreManager() ? 'text-amber-700 ring-1 ring-amber-200 bg-amber-50' : 'text-brand-secondary/55 ring-1 ring-brand-secondary/10' }}">
+                                                        {{ $user->role_label }}
+                                                    </span>
+                                                </div>
+                                                <p class="truncate text-xs text-brand-secondary/60">{{ $user->email }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="shrink-0 text-right">
+                                            <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Este mes</p>
+                                            <div class="mt-1 flex items-center justify-end gap-2">
+                                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                                                    {{ number_format((float) $monthlyStats['sales'], 0, ',', '.') }} V
+                                                </span>
+                                                <span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                                                    {{ number_format((float) $monthlyStats['purchases'], 0, ',', '.') }} C
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($nonCommercialUsers->isNotEmpty())
+                        <div class="mt-8">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-secondary/55">No comerciales</h3>
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                                    {{ $nonCommercialUsers->count() }}
+                                </span>
+                            </div>
+
+                            <div class="mt-4 grid gap-3">
+                                @foreach ($nonCommercialUsers as $user)
+                                    <a href="{{ route('users.show', $user) }}" class="flex items-center gap-4 rounded-2xl border border-brand-secondary/10 px-4 py-3 transition hover:bg-brand-secondary/5">
+                                        <div class="flex min-w-0 items-center gap-3">
+                                            <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-brand-secondary">{{ $user->name }}</p>
+                                                <span class="mt-1 inline-flex rounded-full bg-brand-secondary/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/55 ring-1 ring-brand-secondary/10">
+                                                    {{ $user->role_label }}
+                                                </span>
+                                                <p class="truncate text-xs text-brand-secondary/60">{{ $user->email }}</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 @endif
             </section>
         </section>

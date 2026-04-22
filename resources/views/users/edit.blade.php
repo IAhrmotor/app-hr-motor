@@ -41,7 +41,7 @@
                     </div>
 
                     <div>
-                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Correo electronico</label>
+                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Correo electrónico</label>
                         <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
@@ -49,29 +49,29 @@
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="phone" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Telefono</label>
+                        <label for="phone" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Teléfono</label>
                         <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
 
                     <div>
-                        <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extension Enreach</label>
+                        <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extensión Enreach</label>
                         <input id="enreach_extension" name="enreach_extension" type="text" value="{{ old('enreach_extension', $user->enreach_extension) }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si existe, tambien tiene que ser unica.</p>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si existe, también tiene que ser única.</p>
                     </div>
                 </div>
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="password" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Nueva contrasena</label>
+                        <label for="password" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Nueva contraseña</label>
                         <input id="password" name="password" type="password"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Dejala en blanco si no quieres cambiar la contrasena.</p>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Déjala en blanco si no quieres cambiar la contraseña.</p>
                     </div>
 
                     <div>
-                        <label for="password_confirmation" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Confirmar nueva contrasena</label>
+                        <label for="password_confirmation" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Confirmar nueva contraseña</label>
                         <input id="password_confirmation" name="password_confirmation" type="password"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
@@ -123,11 +123,11 @@
                     </div>
 
                     <div id="dealership-wrapper" class="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4">
-                        <label for="dealership" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Delegacion</label>
+                        <label for="dealership" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Delegación</label>
                         <div class="relative">
                             <select id="dealership" name="dealership_id"
                                 class="w-full appearance-none rounded-2xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                                <option value="">Sin delegacion</option>
+                                <option value="">Sin delegación</option>
                                 @foreach ($availableDealerships as $dealership)
                                     <option value="{{ $dealership->id }}" @selected((string) old('dealership_id', $user->dealership_id) === (string) $dealership->id)>{{ $dealership->name }}</option>
                                 @endforeach
@@ -138,7 +138,7 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">La delegacion se puede asignar a cualquier usuario.</p>
+                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">La delegación se puede asignar a cualquier usuario.</p>
                     </div>
 
                     <div id="salesforce-user-id-wrapper" @class(['rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4', 'hidden' => ! $showSalesforceFields])>
