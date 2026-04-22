@@ -196,10 +196,12 @@
                                         <div class="flex min-w-0 items-center gap-3">
                                             <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
                                             <div class="min-w-0">
-                                                <p class="truncate text-sm font-semibold text-brand-secondary">{{ $user->name }}</p>
-                                                <span class="mt-1 inline-flex rounded-full bg-brand-secondary/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/55 ring-1 ring-brand-secondary/10">
-                                                    {{ $user->role_label }}
-                                                </span>
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <p class="truncate text-sm font-semibold text-brand-secondary">{{ $user->name }}</p>
+                                                    <span class="inline-flex rounded-full bg-brand-secondary/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/55 ring-1 ring-brand-secondary/10">
+                                                        {{ $user->role_label }}
+                                                    </span>
+                                                </div>
                                                 <p class="truncate text-xs text-brand-secondary/60">{{ $user->email }}</p>
                                             </div>
                                         </div>
