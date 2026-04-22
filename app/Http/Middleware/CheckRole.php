@@ -16,7 +16,9 @@ class CheckRole
             abort(403);
         }
 
-        if (! in_array($user->role, $roles, true)) {
+        $currentRoles = app_effective_roles($user);
+
+        if (array_intersect($currentRoles, $roles) === []) {
             abort(403);
         }
 

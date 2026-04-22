@@ -19,6 +19,8 @@ class ForumThreadController extends Controller
 {
     public function index(Request $request): View|JsonResponse
     {
+        abort_unless(app_can_access_forum($request->user()), 403);
+
         $search = trim((string) $request->query('search'));
         $status = $request->query('status');
         $status = in_array($status, [ForumThread::STATUS_OPEN, ForumThread::STATUS_RESOLVED], true) ? $status : null;
@@ -70,7 +72,7 @@ class ForumThreadController extends Controller
 
     public function create(Request $request): View
     {
-        abort_unless($this->canCreateThreads($request->user()), 403);
+        abort_unless($this->canCreateThreads($request->user()) && app_can_access_forum($request->user()), 403);
 
         return view('forum.create', [
             'tags' => ForumTag::query()->ordered()->get(),
@@ -79,7 +81,7 @@ class ForumThreadController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($this->canCreateThreads($request->user()), 403);
+        abort_unless($this->canCreateThreads($request->user()) && app_can_access_forum($request->user()), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:140'],
@@ -108,6 +110,8 @@ class ForumThreadController extends Controller
 
     public function show(ForumThread $thread, Request $request): View
     {
+        abort_unless(app_can_access_forum($request->user()), 403);
+
         $thread->load([
             'creator',
             'resolver',
@@ -126,6 +130,8 @@ class ForumThreadController extends Controller
 
     public function reply(Request $request, ForumThread $thread): RedirectResponse
     {
+        abort_unless(app_can_access_forum($request->user()), 403);
+
         $validated = $request->validate([
             'content' => ['required', 'string', 'min:2', 'max:3000'],
             'attachments' => ['nullable', 'array', 'max:4'],
@@ -147,6 +153,7 @@ class ForumThreadController extends Controller
 
     public function updateStatus(Request $request, ForumThread $thread): RedirectResponse
     {
+        abort_unless(app_can_access_forum($request->user()), 403);
         abort_unless($this->canChangeThreadStatus($request->user(), $thread), 403);
 
         $validated = $request->validate([
@@ -167,6 +174,7 @@ class ForumThreadController extends Controller
 
     public function destroy(Request $request, ForumThread $thread): RedirectResponse
     {
+        abort_unless(app_can_access_forum($request->user()), 403);
         abort_unless($this->canModerateThread($request->user()), 403);
 
         $thread->delete();
