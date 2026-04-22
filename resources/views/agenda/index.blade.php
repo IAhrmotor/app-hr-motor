@@ -16,7 +16,7 @@
                             Directorio del equipo y contactos externos
                         </h1>
                         <p class="mt-4 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">
-                            Busca personas, correos y extensiones sin recargar la página, con una experiencia más fluida y limpia.
+                            Directorio interno de contactos de la empresa para consultar personas, correos, teléfonos y extensiones de un vistazo.
                         </p>
                     </div>
 
