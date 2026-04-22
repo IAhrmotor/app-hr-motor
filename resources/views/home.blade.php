@@ -17,6 +17,13 @@
         $visibleRole = app_visible_role(auth()->user());
         $canAccessRankings = app_can_access_rankings(auth()->user());
         $canAccessVideos = app_can_access_videos(auth()->user());
+        $authUser = auth()->user();
+        $canAccessItSupport = $authUser
+            && (
+                $authUser->role !== \App\Models\User::ROLE_ADMIN
+                || app_role_viewer_active($authUser)
+            )
+            && app_visible_role($authUser) !== \App\Models\User::ROLE_INFORMATION_TECHNOLOGY;
         $movementPillBaseClasses = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1';
         $movementPillCompactClasses = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ring-1';
         $movementIconClasses = 'h-3.5 w-3.5 shrink-0';
@@ -63,8 +70,9 @@
                         </section>
                     @endif
 
-                    <section
-                        class="flex flex-1 flex-col rounded-3xl border border-brand-secondary/10 bg-white p-5 shadow-sm">
+                    @if ($canAccessItSupport)
+                        <section
+                            class="flex flex-1 flex-col rounded-3xl border border-brand-secondary/10 bg-white p-5 shadow-sm">
                         <div class="mb-4 text-center">
                             <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
                                 Asistencia IT
@@ -134,7 +142,8 @@
                                 </div>
                             </a>
                         </div>
-                    </section>
+                        </section>
+                    @endif
                 </div>
 
                 @if ($generalSection)
