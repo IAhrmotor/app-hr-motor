@@ -210,6 +210,40 @@
             @endforeach
         </div>
 
+        @if (! empty($otherResourcesSection))
+            <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
+                <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
+                    <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
+                        {{ $otherResourcesSection['title'] }}
+                    </h2>
+                </div>
+
+                <div class="overflow-x-auto pb-2">
+                    <div class="flex w-max items-stretch gap-6">
+                        @foreach ($otherResourcesSection['buttons'] as $button)
+                            @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
+                            <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
+                                style="width: 136px; min-width: 136px;"
+                                class="group flex self-stretch shrink-0 flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                <div class="bg-white">
+                                    <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                        class="block w-full">
+                                </div>
+
+                                <div
+                                    class="flex flex-1 items-center justify-center border-t border-brand-secondary/10 px-4 py-3">
+                                    <h3
+                                        class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
+                                        {{ $button['label'] }}
+                                    </h3>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+        @endif
+
         @if ($canAccessRankings && $homeLeaderboardEntries->isNotEmpty())
             <section class="mt-8 overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

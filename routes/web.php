@@ -91,8 +91,39 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Web HR Motor',
-                        'url' => config('portal.links.tools.web_hr_motor'),
+                        'url' => route('tools.web'),
                         'image' => asset('images/tools/hrmotor.png'),
+                        'open_in_new_tab' => false,
+                    ],
+                    [
+                        'label' => 'Tareas asignadas',
+                        'url' => 'https://axiumsoluciones-my.sharepoint.com/:x:/r/personal/carlos_jimenez_hrmotor_es/_layouts/15/guestaccess.aspx?e=4%3AMLgEPu&at=9&share=IQCamQKzRFtvRryS0Dmv_eAtAYXxXXXxBKlQYJlfbB3-4WI',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Canva',
+                        'url' => 'https://www.canva.com/',
+                        'image' => asset('images/tools/canva.png'),
+                    ],
+                    [
+                        'label' => 'ChatGPT',
+                        'url' => 'https://chatgpt.com/',
+                        'image' => asset('images/tools/chatgpt.png'),
+                    ],
+                    [
+                        'label' => 'Envato',
+                        'url' => 'https://app.envato.com/',
+                        'image' => asset('images/tools/envato.jpg'),
+                    ],
+                    [
+                        'label' => 'Trustpilot',
+                        'url' => 'https://es.trustpilot.com',
+                        'image' => asset('images/tools/trustpilot.jpg'),
+                    ],
+                    [
+                        'label' => 'Brevo',
+                        'url' => 'https://www.brevo.com/es/landing/products/?utm_source=adwords_brand&utm_medium=lastclick&utm_content=SendinBlue&utm_extension=&utm_term=brevo&utm_matchtype=e&utm_campaign=20027374472&utm_network=g&km_adid=656177194310&km_adposition=&km_device=c&utm_adgroupid=148424525436&gad_source=1&gad_campaignid=20027374472&gclid=CjwKCAjw46HPBhAMEiwASZpLRHPpa5cY5OVSvZ1nzM0F4-M6bkKkUJzkDHI18bUAHrlCCmLxFKCkxxoC9BAQAvD_BwE',
+                        'image' => asset('images/tools/brevo.png'),
                     ],
                     [
                         'label' => 'Woffu',
@@ -154,13 +185,19 @@ Route::middleware('auth')->group(function () {
             User::ROLE_AREA_MANAGER,
         ])) {
             $buttonSections = collect($buttonSections)
-                ->map(function (array $section): array {
+                ->map(function (array $section) use ($authUser): array {
                     if (($section['title'] ?? null) !== 'Herramientas generales') {
                         return $section;
                     }
 
                     $section['buttons'] = collect($section['buttons'] ?? [])
-                        ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true))
+                        ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true) || (
+                            ($button['label'] ?? null) === 'Tareas asignadas'
+                            && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
+                        ) || (
+                            in_array($button['label'] ?? null, ['Canva', 'ChatGPT', 'Envato', 'Trustpilot', 'Brevo'], true)
+                            && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
+                        ))
                         ->values()
                         ->all();
 
@@ -168,6 +205,39 @@ Route::middleware('auth')->group(function () {
                 })
                 ->all();
         }
+
+        $otherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_MARKETING])
+            ? [
+                'title' => 'Otros recursos',
+                'buttons' => [
+                    [
+                        'label' => 'Jottacloud',
+                        'url' => 'https://jottacloud.com/web/search/list/name/WVWZZZAUZLW072077',
+                        'image' => asset('images/tools/jottacloud.png'),
+                    ],
+                    [
+                        'label' => 'CarCutter',
+                        'url' => 'https://hub.car-cutter.com/workspace/7ec7b15b-b8a4-47b1-b1b1-5d73d29b341b/',
+                        'image' => asset('images/tools/carcutter.jpg'),
+                    ],
+                    [
+                        'label' => 'Pendiente editar',
+                        'url' => 'https://hrmotor.lightning.force.com/lightning/r/Report/00OQx00000W4PbjMAF/view?queryScope=userFolders',
+                        'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Inventario.pro',
+                        'url' => 'https://admin.inventario.pro/login',
+                        'image' => asset('images/tools/inventario-pro.jpg'),
+                    ],
+                    [
+                        'label' => 'Informe fotografía',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1OMiDqfiTeHWagtXNJagFpNVqxZjuOa5i/edit?gid=374625686#gid=374625686',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                ],
+            ]
+            : null;
 
         $videos = [
             [
@@ -198,7 +268,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
