@@ -137,6 +137,7 @@ if (! function_exists('app_can_access_web')) {
             User::ROLE_COMMERCIAL,
             User::ROLE_STORE_MANAGER,
             User::ROLE_INFORMATION_TECHNOLOGY,
+            User::ROLE_MARKETING,
             User::ROLE_AREA_MANAGER,
             User::ROLE_MANAGEMENT,
         ];
