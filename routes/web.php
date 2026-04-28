@@ -68,6 +68,7 @@ Route::middleware('auth')->group(function () {
         $authUser = request()->user();
         $visibleRole = app_visible_role($authUser);
         $isStoreManager = $visibleRole === User::ROLE_STORE_MANAGER;
+        $isExternalWebUser = in_array($visibleRole, [User::ROLE_LEGAL, User::ROLE_ADMINISTRATION], true);
         $salesforceUrl = $isStoreManager
             ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
             : config('portal.links.tools.salesforce_comunidad');
@@ -93,9 +94,9 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Web HR Motor',
-                        'url' => route('tools.web'),
+                        'url' => $isExternalWebUser ? 'https://www.hrmotor.com/' : route('tools.web'),
                         'image' => asset('images/tools/hrmotor.png'),
-                        'open_in_new_tab' => false,
+                        'open_in_new_tab' => $isExternalWebUser,
                     ],
                     [
                         'label' => 'Google Drive',
