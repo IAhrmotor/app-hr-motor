@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/', function (LeaderboardTrendService $trendService) {
         $authUser = request()->user();
+        $visibleRole = app_visible_role($authUser);
         $isStoreManager = $authUser?->isStoreManager() ?? false;
         $salesforceUrl = $isStoreManager
             ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
@@ -94,6 +95,21 @@ Route::middleware('auth')->group(function () {
                         'url' => route('tools.web'),
                         'image' => asset('images/tools/hrmotor.png'),
                         'open_in_new_tab' => false,
+                    ],
+                    [
+                        'label' => 'Google Drive',
+                        'url' => config('portal.links.tools.google_drive'),
+                        'image' => asset('images/tools/drive.png'),
+                    ],
+                    [
+                        'label' => 'Occident',
+                        'url' => 'https://cliente.occident.com/policies/32032289/B/fleets',
+                        'image' => asset('images/tools/occident.jpg'),
+                    ],
+                    [
+                        'label' => 'Calcular IVA',
+                        'url' => 'https://calcular-iva.net/',
+                        'image' => asset('images/tools/calcular-iva.jpg'),
                     ],
                     [
                         'label' => 'Tareas asignadas',
@@ -185,7 +201,7 @@ Route::middleware('auth')->group(function () {
             User::ROLE_AREA_MANAGER,
         ])) {
             $buttonSections = collect($buttonSections)
-                ->map(function (array $section) use ($authUser): array {
+                ->map(function (array $section) use ($authUser, $visibleRole): array {
                     if (($section['title'] ?? null) !== 'Herramientas generales') {
                         return $section;
                     }
@@ -197,6 +213,9 @@ Route::middleware('auth')->group(function () {
                         ) || (
                             in_array($button['label'] ?? null, ['Canva', 'ChatGPT', 'Envato', 'Trustpilot', 'Brevo'], true)
                             && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
+                        ) || (
+                            in_array($button['label'] ?? null, ['Google Drive', 'Occident', 'Calcular IVA'], true)
+                            && in_array($visibleRole, [User::ROLE_ADMINISTRATION], true)
                         ))
                         ->values()
                         ->all();
@@ -228,7 +247,7 @@ Route::middleware('auth')->group(function () {
                     [
                         'label' => 'Inventario.pro',
                         'url' => 'https://admin.inventario.pro/login',
-                        'image' => asset('images/tools/inventario-pro.jpg'),
+                        'image' => asset('images/tools/Inventario-pro.jpg'),
                     ],
                     [
                         'label' => 'Informe fotografía',
