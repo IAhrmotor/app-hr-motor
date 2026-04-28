@@ -67,7 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/', function (LeaderboardTrendService $trendService) {
         $authUser = request()->user();
         $visibleRole = app_visible_role($authUser);
-        $isStoreManager = $authUser?->isStoreManager() ?? false;
+        $isStoreManager = $visibleRole === User::ROLE_STORE_MANAGER;
         $salesforceUrl = $isStoreManager
             ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
             : config('portal.links.tools.salesforce_comunidad');
@@ -195,35 +195,41 @@ Route::middleware('auth')->group(function () {
             ],
         ];
 
-        if (! app_user_has_any_role($authUser, [
-            User::ROLE_COMMERCIAL,
-            User::ROLE_STORE_MANAGER,
-            User::ROLE_AREA_MANAGER,
-        ])) {
-            $buttonSections = collect($buttonSections)
-                ->map(function (array $section) use ($authUser, $visibleRole): array {
-                    if (($section['title'] ?? null) !== 'Herramientas generales') {
-                        return $section;
-                    }
-
-                    $section['buttons'] = collect($section['buttons'] ?? [])
-                        ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true) || (
-                            ($button['label'] ?? null) === 'Tareas asignadas'
-                            && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
-                        ) || (
-                            in_array($button['label'] ?? null, ['Canva', 'ChatGPT', 'Envato', 'Trustpilot', 'Brevo'], true)
-                            && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
-                        ) || (
-                            in_array($button['label'] ?? null, ['Google Drive', 'Occident', 'Calcular IVA'], true)
-                            && in_array($visibleRole, [User::ROLE_ADMINISTRATION], true)
-                        ))
-                        ->values()
-                        ->all();
-
+        $buttonSections = collect($buttonSections)
+            ->map(function (array $section) use ($authUser, $salesforceLabel): array {
+                if (($section['title'] ?? null) !== 'Herramientas generales') {
                     return $section;
-                })
-                ->all();
-        }
+                }
+
+                $commercialButtonLabels = [
+                    'DocuSign',
+                    $salesforceLabel,
+                    'Lendismart',
+                    'My Mutua',
+                    'Formación Comerciales',
+                    'ServiceForm',
+                ];
+
+                $section['buttons'] = collect($section['buttons'] ?? [])
+                    ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true) || (
+                        in_array($button['label'] ?? null, $commercialButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER])
+                    ) || (
+                        ($button['label'] ?? null) === 'Tareas asignadas'
+                        && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
+                    ) || (
+                        in_array($button['label'] ?? null, ['Canva', 'ChatGPT', 'Envato', 'Trustpilot', 'Brevo'], true)
+                        && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
+                    ) || (
+                        in_array($button['label'] ?? null, ['Google Drive', 'Occident', 'Calcular IVA'], true)
+                        && app_user_has_any_role($authUser, [User::ROLE_ADMINISTRATION])
+                    ))
+                    ->values()
+                    ->all();
+
+                return $section;
+            })
+            ->all();
 
         $otherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_MARKETING])
             ? [
