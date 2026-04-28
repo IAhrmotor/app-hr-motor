@@ -18,6 +18,7 @@
         $canAccessRankings = app_can_access_rankings(auth()->user());
         $canAccessVideos = app_can_access_videos(auth()->user());
         $authUser = auth()->user();
+        $isCallCenterHome = $visibleRole === \App\Models\User::ROLE_CALL_CENTER;
         $canAccessItSupport = $authUser
             && (
                 $authUser->role !== \App\Models\User::ROLE_ADMIN
@@ -32,8 +33,8 @@
 
     <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-6">
         <div class="space-y-8">
-            <div class="grid gap-8 lg:grid-cols-2 lg:items-stretch">
-                <div class="flex h-full flex-col gap-8">
+            <div class="grid gap-8 lg:grid-cols-2 lg:items-start">
+                <div class="flex flex-col gap-8">
                     @if ($communicationSection)
                         <section class="rounded-3xl border border-brand-primary/20 bg-brand-primary/5 p-5 shadow-sm sm:p-6">
                             <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
@@ -72,76 +73,107 @@
 
                     @if ($canAccessItSupport)
                         <section
-                            class="flex flex-1 flex-col rounded-3xl border border-brand-secondary/10 bg-white p-5 shadow-sm">
-                        <div class="mb-4 text-center">
-                            <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
-                                Asistencia IT
-                            </h2>
-                        </div>
+                            class="{{ $isCallCenterHome ? 'flex flex-col' : 'flex flex-1 flex-col' }} rounded-3xl border border-brand-secondary/10 bg-white p-5 shadow-sm">
+                            <div class="mb-4 text-center">
+                                <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
+                                    Asistencia IT
+                                </h2>
+                            </div>
 
-                        <div class="flex flex-1 items-center justify-center">
-                            <a href="{{ $itSupportUrl }}" target="_blank" rel="noopener noreferrer"
-                                class="group relative flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-brand-primary/15 bg-white shadow-sm ring-1 ring-brand-primary/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
-                                <div class="absolute right-5 top-5 rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary ring-1 ring-brand-primary/10">
-                                    Soporte
-                                </div>
+                            <div class="{{ $isCallCenterHome ? '' : 'flex flex-1 items-center justify-center' }}">
+                                <a href="{{ $itSupportUrl }}" target="_blank" rel="noopener noreferrer"
+                                    class="group relative flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-brand-primary/15 bg-white shadow-sm ring-1 ring-brand-primary/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
+                                    <div class="absolute right-5 top-5 rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary ring-1 ring-brand-primary/10">
+                                        Soporte
+                                    </div>
 
-                                <div class="absolute inset-x-0 top-0 h-1.5 bg-brand-primary"></div>
+                                    <div class="absolute inset-x-0 top-0 h-1.5 bg-brand-primary"></div>
 
-                                <div class="px-6 py-5 sm:px-7 sm:py-6">
-                                    <div class="text-center sm:text-left">
-                                        <div class="mb-4 flex justify-center sm:justify-start">
-                                            <div
-                                                class="flex h-18 w-18 items-center justify-center rounded-3xl border border-brand-primary/10 bg-brand-primary/8 text-brand-primary transition duration-200 group-hover:scale-105 group-hover:bg-brand-primary/12">
-                                                <x-icons.it-support class="h-7 w-7" />
+                                    <div class="px-6 py-5 sm:px-7 sm:py-6">
+                                        <div class="text-center sm:text-left">
+                                            <div class="mb-4 flex justify-center sm:justify-start">
+                                                <div
+                                                    class="flex h-18 w-18 items-center justify-center rounded-3xl border border-brand-primary/10 bg-brand-primary/8 text-brand-primary transition duration-200 group-hover:scale-105 group-hover:bg-brand-primary/12">
+                                                    <x-icons.it-support class="h-7 w-7" />
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <h3 class="text-xl font-bold tracking-tight text-brand-secondary">
+                                                    Reportar incidencia
+                                                </h3>
+
+                                                <p class="text-sm leading-5 text-brand-secondary/70">
+                                                    Abre una incidencia para que IT revise errores, bloqueos o accesos.
+                                                </p>
+
+                                                <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
+                                                    <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
+                                                        Hardware
+                                                    </span>
+                                                    <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
+                                                        Software
+                                                    </span>
+                                                    <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
+                                                        Accesos
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div class="space-y-2">
-                                            <h3 class="text-xl font-bold tracking-tight text-brand-secondary">
-                                                Reportar incidencia
-                                            </h3>
-
-                                            <p class="text-sm leading-5 text-brand-secondary/70">
-                                                Abre una incidencia para que IT revise errores, bloqueos o accesos.
+                                    <div class="flex items-center justify-between gap-4 border-t border-brand-primary/10 bg-slate-50/80 px-6 py-3.5 sm:px-7">
+                                        <div class="text-left">
+                                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary/50">
+                                                Canal recomendado
                                             </p>
-
-                                            <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
-                                                <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
-                                                    Hardware
-                                                </span>
-                                                <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
-                                                    Software
-                                                </span>
-                                                <span class="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10">
-                                                    Accesos
-                                                </span>
-                                            </div>
+                                            <p class="mt-1 text-sm font-medium text-brand-secondary">
+                                                Portal de incidencias IT
+                                            </p>
                                         </div>
-                                    </div>
-                                </div>
 
-                                <div class="flex items-center justify-between gap-4 border-t border-brand-primary/10 bg-slate-50/80 px-6 py-3.5 sm:px-7">
-                                    <div class="text-left">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary/50">
-                                            Canal recomendado
-                                        </p>
-                                        <p class="mt-1 text-sm font-medium text-brand-secondary">
-                                            Portal de incidencias IT
-                                        </p>
+                                        <span
+                                            class="inline-flex items-center gap-2 rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition duration-200 group-hover:translate-x-1">
+                                            Abrir ahora
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5l6 6m0 0-6 6m6-6h-15" />
+                                            </svg>
+                                        </span>
                                     </div>
+                                </a>
+                            </div>
+                        </section>
+                    @endif
 
-                                    <span
-                                        class="inline-flex items-center gap-2 rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition duration-200 group-hover:translate-x-1">
-                                        Abrir ahora
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5l6 6m0 0-6 6m6-6h-15" />
-                                        </svg>
-                                    </span>
-                                </div>
-                            </a>
-                        </div>
+                    @if ($isCallCenterHome && $callCenterResourcesSection)
+                        <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
+                            <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
+                                <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
+                                    {{ $callCenterResourcesSection['title'] }}
+                                </h2>
+                            </div>
+
+                            <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
+                                @foreach ($callCenterResourcesSection['buttons'] as $button)
+                                    @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
+                                    <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
+                                        class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                        <div class="bg-white">
+                                            <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                                class="block w-full">
+                                        </div>
+
+                                        <div
+                                            class="flex flex-1 items-center justify-center border-t border-brand-secondary/10 px-4 py-3">
+                                            <h3
+                                                class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
+                                                {{ $button['label'] }}
+                                            </h3>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
                         </section>
                     @endif
                 </div>
@@ -210,7 +242,7 @@
             @endforeach
         </div>
 
-        @if (! empty($otherResourcesSection))
+        @if (! empty($otherResourcesSection) && ! $isCallCenterHome)
             <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
                 <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
                     <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
@@ -218,13 +250,11 @@
                     </h2>
                 </div>
 
-                <div class="overflow-x-auto pb-2">
-                    <div class="flex w-max items-stretch gap-6">
+                <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
                         @foreach ($otherResourcesSection['buttons'] as $button)
                             @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
                             <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
-                                style="width: 136px; min-width: 136px;"
-                                class="group flex self-stretch shrink-0 flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
                                 <div class="bg-white">
                                     <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
                                         class="block w-full">
@@ -239,7 +269,6 @@
                                 </div>
                             </a>
                         @endforeach
-                    </div>
                 </div>
             </section>
         @endif
