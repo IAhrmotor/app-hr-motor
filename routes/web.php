@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function () {
             ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
             : config('portal.links.tools.salesforce_comunidad');
         $salesforceLabel = $isStoreManager ? 'Salesforce' : 'Salesforce comunidad';
+        $callCenterSalesforceUrl = 'https://hrmotor.lightning.force.com';
         $itSupportUrl = $isStoreManager
             ? 'https://hrmotor.lightning.force.com/lightning/o/Tareas_Departamento_Informatico__c/list?filterName=__Recent'
             : config('portal.links.it_support');
@@ -147,6 +148,21 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/woffu.png'),
                     ],
                     [
+                        'label' => 'Contact Center Motorflash',
+                        'url' => 'https://callcenter.motorflash.com/',
+                        'image' => asset('images/tools/contact-center-motorflash.png'),
+                    ],
+                    [
+                        'label' => 'Salesforce comunidad',
+                        'url' => 'https://hrmotor.my.site.com/hrmotorcommunity/s/login/',
+                        'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Microsoft Teams',
+                        'url' => 'https://teams.microsoft.com/v2/',
+                        'image' => asset('images/tools/teams.png'),
+                    ],
+                    [
                         'label' => $salesforceLabel,
                         'url' => $salesforceUrl,
                         'image' => asset('images/tools/salesforce.png'),
@@ -169,6 +185,81 @@ Route::middleware('auth')->group(function () {
                     [
                         'label' => 'ServiceForm',
                         'url' => config('portal.links.tools.serviceform'),
+                        'image' => asset('images/tools/serviceform.png'),
+                    ],
+                    [
+                        'label' => 'Coches de cortesía',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1_fiL4TyclqhOtkBijSqaxAcc8c6XmmSy/edit?pli=1&gid=590253332#gid=590253332',
+                        'image' => asset('images/tools/coches-cortesia.png'),
+                    ],
+                    [
+                        'label' => 'Citas garantías HR',
+                        'url' => 'https://docs.google.com/spreadsheets/d/16uY7SOshvkNKOti7BfLfIgWkJNyNM__8/edit?pli=1&gid=2129562621#gid=2129562621',
+                        'image' => asset('images/tools/citas-garantias-hr.png'),
+                    ],
+                    [
+                        'label' => 'Pólizas activas Caser OK',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1Q6iDEW_dhR47MwVR3t-omI-zV-c0W72x/edit?pli=1&gid=714492361#gid=714492361',
+                        'image' => asset('images/tools/polizas-activas-caser-ok.png'),
+                    ],
+                    [
+                        'label' => 'Envío documentación',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1ZN-ej468hjsZM-Aqb5Mgdk_hocXSkkcM/edit?pli=1&gid=1194646592#gid=1194646592',
+                        'image' => asset('images/tools/envio-documentacion.png'),
+                    ],
+                    [
+                        'label' => 'Ventas caídas y excesos 2026',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1Ovm_KJr2JAumJ1KngBT3rYopFYDjk2W4/edit?pli=1&gid=36299908#gid=36299908',
+                        'image' => asset('images/tools/ventas-caidas-excesos-2026.png'),
+                    ],
+                    [
+                        'label' => 'Seguro coche cortesía',
+                        'url' => 'https://docs.google.com/spreadsheets/d/15w1ELzuEQsG3zq79y2w_6t_BRD8uZjx8/edit?pli=1&gid=2118661665#gid=2118661665',
+                        'image' => asset('images/tools/seguro-coche-cortesia.png'),
+                    ],
+                    [
+                        'label' => 'Salesforce',
+                        'url' => $callCenterSalesforceUrl,
+                        'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Facilitea',
+                        'url' => 'https://www.admin.faciliteacoches.com/admin/orders',
+                        'image' => asset('images/tools/stock-facilitea.jpg'),
+                    ],
+                    [
+                        'label' => 'ChatGPT',
+                        'url' => 'https://chatgpt.com/',
+                        'image' => asset('images/tools/chatgpt.png'),
+                    ],
+                        [
+                            'label' => 'Stock Facilitea',
+                            'url' => 'https://stockyleads.motorflash.com/login.php?urlBack=%2Findex.php',
+                            'image' => asset('images/tools/stock-facilitea.jpg'),
+                        ],
+                    [
+                        'label' => 'Enreach',
+                        'url' => 'https://omnichannel.masvoz.es',
+                        'image' => asset('images/tools/enreach.png'),
+                    ],
+                    [
+                        'label' => 'GarantiAuto',
+                        'url' => 'https://www.gsonline.es/login',
+                        'image' => asset('images/tools/garantiauto.png'),
+                    ],
+                    [
+                        'label' => 'Coches.net',
+                        'url' => 'https://www.coches.net/',
+                        'image' => asset('images/tools/cochesnet.jpg'),
+                    ],
+                    [
+                        'label' => 'Norauto',
+                        'url' => 'https://www.fleetvalidation.com/login?redirect=%2F1031%2F',
+                        'image' => asset('images/tools/norauto.png'),
+                    ],
+                    [
+                        'label' => 'Chat ServiceForm',
+                        'url' => 'https://dash.serviceform.com/chat?sid=3466609922234647151187',
                         'image' => asset('images/tools/serviceform.png'),
                     ],
                 ],
@@ -210,10 +301,28 @@ Route::middleware('auth')->group(function () {
                     'ServiceForm',
                 ];
 
+                $callCenterGeneralButtonLabels = [
+                    'Salesforce',
+                    'Salesforce comunidad',
+                    'Facilitea',
+                    'ChatGPT',
+                    'Contact Center Motorflash',
+                    'Microsoft Teams',
+                    'Stock Facilitea',
+                    'Enreach',
+                    'GarantiAuto',
+                    'Coches.net',
+                    'Norauto',
+                    'Chat ServiceForm',
+                ];
+
                 $section['buttons'] = collect($section['buttons'] ?? [])
                     ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true) || (
                         in_array($button['label'] ?? null, $commercialButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER])
+                    ) || (
+                        in_array($button['label'] ?? null, $callCenterGeneralButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_CALL_CENTER])
                     ) || (
                         ($button['label'] ?? null) === 'Tareas asignadas'
                         && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
@@ -224,12 +333,51 @@ Route::middleware('auth')->group(function () {
                         in_array($button['label'] ?? null, ['Google Drive', 'Occident', 'Calcular IVA'], true)
                         && app_user_has_any_role($authUser, [User::ROLE_ADMINISTRATION])
                     ))
+                    ->unique(fn (array $button) => $button['label'] ?? null)
                     ->values()
                     ->all();
 
                 return $section;
             })
             ->all();
+
+        $callCenterResourcesSection = app_user_has_any_role($authUser, [User::ROLE_CALL_CENTER])
+            ? [
+                'title' => 'Otros recursos',
+                'buttons' => [
+                    [
+                        'label' => 'Coches de cortesía',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1_fiL4TyclqhOtkBijSqaxAcc8c6XmmSy/edit?pli=1&gid=590253332#gid=590253332',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Citas garantías HR',
+                        'url' => 'https://docs.google.com/spreadsheets/d/16uY7SOshvkNKOti7BfLfIgWkJNyNM__8/edit?pli=1&gid=2129562621#gid=2129562621',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Pólizas activas Caser OK',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1Q6iDEW_dhR47MwVR3t-omI-zV-c0W72x/edit?pli=1&gid=714492361#gid=714492361',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Envío documentación',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1ZN-ej468hjsZM-Aqb5Mgdk_hocXSkkcM/edit?pli=1&gid=1194646592#gid=1194646592',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Ventas caídas y excesos 2026',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1Ovm_KJr2JAumJ1KngBT3rYopFYDjk2W4/edit?pli=1&gid=36299908#gid=36299908',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Seguro coche cortesía',
+                        'url' => 'https://docs.google.com/spreadsheets/d/15w1ELzuEQsG3zq79y2w_6t_BRD8uZjx8/edit?pli=1&gid=2118661665#gid=2118661665',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                ],
+            ]
+            : null;
 
         $otherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_MARKETING])
             ? [
@@ -293,7 +441,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'otherResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
