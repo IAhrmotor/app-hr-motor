@@ -200,3 +200,29 @@ if (! function_exists('app_visible_role_label')) {
         return User::roleLabels()[$role] ?? 'Admin';
     }
 }
+
+if (! function_exists('app_salesforce_url_for')) {
+    function app_salesforce_url_for(?User $user = null): string
+    {
+        $visibleRole = app_visible_role($user);
+
+        if (in_array($visibleRole, [User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER], true)) {
+            return 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos';
+        }
+
+        return config('portal.links.tools.salesforce_comunidad');
+    }
+}
+
+if (! function_exists('app_it_support_url_for')) {
+    function app_it_support_url_for(?User $user = null): string
+    {
+        $visibleRole = app_visible_role($user);
+
+        if (in_array($visibleRole, [User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER], true)) {
+            return 'https://hrmotor.lightning.force.com/lightning/o/Tareas_Departamento_Informatico__c/list?filterName=__Recent';
+        }
+
+        return config('portal.links.it_support');
+    }
+}

@@ -61,7 +61,7 @@
 
                     <ul class="mt-4 space-y-3 text-sm text-white/75">
                         <li>
-                            <a href="{{ config('portal.links.it_support') }}" target="_blank" rel="noopener noreferrer" class="transition hover:text-white">
+                            <a href="{{ app_it_support_url_for() }}" target="_blank" rel="noopener noreferrer" class="transition hover:text-white">
                                 Asistencia IT
                             </a>
                         </li>

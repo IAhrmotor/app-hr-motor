@@ -67,16 +67,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/', function (LeaderboardTrendService $trendService) {
         $authUser = request()->user();
         $visibleRole = app_visible_role($authUser);
-        $isStoreManager = $visibleRole === User::ROLE_STORE_MANAGER;
+        $isDirectSalesforceRole = in_array($visibleRole, [User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER], true);
         $isExternalWebUser = in_array($visibleRole, [User::ROLE_LEGAL, User::ROLE_ADMINISTRATION], true);
-        $salesforceUrl = $isStoreManager
-            ? 'https://hrmotor.lightning.force.com/lightning/n/Veh_culos'
-            : config('portal.links.tools.salesforce_comunidad');
-        $salesforceLabel = $isStoreManager ? 'Salesforce' : 'Salesforce comunidad';
+        $salesforceUrl = app_salesforce_url_for($authUser);
+        $salesforceLabel = $isDirectSalesforceRole ? 'Salesforce' : 'Salesforce comunidad';
         $callCenterSalesforceUrl = 'https://hrmotor.lightning.force.com';
-        $itSupportUrl = $isStoreManager
-            ? 'https://hrmotor.lightning.force.com/lightning/o/Tareas_Departamento_Informatico__c/list?filterName=__Recent'
-            : config('portal.links.it_support');
+        $itSupportUrl = app_it_support_url_for($authUser);
 
         $buttonSections = [
             [
@@ -100,7 +96,9 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Google Drive',
-                        'url' => config('portal.links.tools.google_drive'),
+                        'url' => app_user_has_any_role($authUser, [User::ROLE_RENTING])
+                            ? 'https://drive.google.com/drive/folders/1mMTTZxsiAyasIgeEcE6wvefIHEaPH1aPq'
+                            : config('portal.links.tools.google_drive'),
                         'image' => asset('images/tools/drive.png'),
                     ],
                     [
@@ -120,7 +118,9 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Canva',
-                        'url' => 'https://www.canva.com/',
+                        'url' => app_user_has_any_role($authUser, [User::ROLE_RENTING])
+                            ? 'https://www.canva.com/folder/FAFxRzs7QD0'
+                            : 'https://www.canva.com/',
                         'image' => asset('images/tools/canva.png'),
                     ],
                     [
@@ -157,6 +157,33 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Salesforce comunidad',
                         'url' => 'https://hrmotor.my.site.com/hrmotorcommunity/s/login/',
                         'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Rent2click',
+                        'url' => 'https://rent2click.com/renting/',
+                        'image' => asset('images/tools/rent2click.png'),
+                    ],
+                    [
+                        'label' => 'Flit2GO',
+                        'url' => 'https://manager.flit2go.com/#/s/vehicles/contracts',
+                        'image' => asset('images/tools/flit2go.jpg'),
+                    ],
+                    [
+                        'label' => 'Salesforce',
+                        'url' => app_user_has_any_role($authUser, [User::ROLE_RENTING])
+                            ? 'https://hrmotor.my.salesforce.com'
+                            : $callCenterSalesforceUrl,
+                        'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Axesor',
+                        'url' => 'https://login.axesor.es/account/login?ReturnUrl=%2Fconnect%2Fauthorize%2Fcallback%3Fclient_id%3DWarsImplicitSTS%26redirect_uri%3Dhttps%253A%252F%252Fwww.axesor.es%252F%26response_type%3Did_token%2520token%26scope%3Dopenid%2520profile%2520email%2520BackOffice%2520ApiGestoria%2520ApiRestAxesor%26state%3DOpenIdConnect.AuthenticationProperties%253D9n7EF3VQALVdy7LAzGo41YYYFMLfXwPDfhrFyrwZhMjSE8ON0eSx2X8NTwlDRiVrYmyEswRsBCCPd5iDoRO12x3KpIX9kSGw-owqmKbBBYQ9Lx1TkiKcBQGDgu3uvn5fszKqo5FLGmheZsOnhyng3nWh34X3BvoTLHU5myd0rpiC9KB2LJXUgEr4ShNkwcTJ44X__S1ryzofJfTfs2AO7XXOV22vMOkIQr_-SJuS9sM%26response_mode%3Dform_post%26nonce%3D638996572989165092.NmJjOWQxNDUtZTVjOC00MzE5LWEyNDMtMDlmZGQ1YjRkNzEyNDEwZTdhYWQtMTZmMC00MTY5LWFmNjgtYzQ5NmRiOTRmYmY4%26acr_values%3Dtenant%253Dmonitoriza%26prompt%3Dlogin%26x-client-SKU%3DID_NET472%26x-client-ver%3D7.6.2.0%26suppressed_prompt%3Dlogin',
+                        'image' => asset('images/tools/axesor.jpg'),
+                    ],
+                    [
+                        'label' => 'Incofisa',
+                        'url' => 'https://incofisa-digital.web.app/incofisadigital/auth/login',
+                        'image' => asset('images/tools/incofisa.png'),
                     ],
                     [
                         'label' => 'Microsoft Teams',
@@ -317,7 +344,23 @@ Route::middleware('auth')->group(function () {
                     'Chat ServiceForm',
                 ];
 
-                $section['buttons'] = collect($section['buttons'] ?? [])
+                $rentingButtonLabels = [
+                    'Rent2click',
+                    'Flit2GO',
+                    'Salesforce',
+                    'Axesor',
+                    'Incofisa',
+                    'Canva',
+                    'Google Drive',
+                ];
+
+                $fixedGeneralButtonLabels = [
+                    'Woffu',
+                    'Web HR Motor',
+                    'OneDrive',
+                ];
+
+                $filteredButtons = collect($section['buttons'] ?? [])
                     ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true) || (
                         in_array($button['label'] ?? null, $commercialButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER])
@@ -333,8 +376,18 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, ['Google Drive', 'Occident', 'Calcular IVA'], true)
                         && app_user_has_any_role($authUser, [User::ROLE_ADMINISTRATION])
+                    ) || (
+                        in_array($button['label'] ?? null, $rentingButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_RENTING])
                     ))
-                    ->unique(fn (array $button) => $button['label'] ?? null)
+                    ->unique(fn (array $button) => $button['label'] ?? null);
+
+                $section['buttons'] = collect($fixedGeneralButtonLabels)
+                    ->map(fn (string $label) => $filteredButtons->firstWhere('label', $label))
+                    ->filter()
+                    ->merge(
+                        $filteredButtons->reject(fn (array $button) => in_array($button['label'] ?? null, $fixedGeneralButtonLabels, true))
+                    )
                     ->values()
                     ->all();
 
