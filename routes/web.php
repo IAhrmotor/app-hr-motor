@@ -159,9 +159,9 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/salesforce.png'),
                     ],
                     [
-                        'label' => 'Rent2click',
-                        'url' => 'https://rent2click.com/renting/',
-                        'image' => asset('images/tools/rent2click.png'),
+                        'label' => 'HR Renting',
+                        'url' => 'https://hrrenting.com/renting/',
+                        'image' => asset('images/tools/hrrenting.png'),
                     ],
                     [
                         'label' => 'Flit2GO',
@@ -184,6 +184,26 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Incofisa',
                         'url' => 'https://incofisa-digital.web.app/incofisadigital/auth/login',
                         'image' => asset('images/tools/incofisa.png'),
+                    ],
+                    [
+                        'label' => 'Wiuse',
+                        'url' => 'https://wiuse.net/',
+                        'image' => asset('images/tools/wiuse.png'),
+                    ],
+                    [
+                        'label' => 'Caixabank',
+                        'url' => 'https://www.caixabank.es/particular/home/particulares_es.html',
+                        'image' => asset('images/tools/caixabank.png'),
+                    ],
+                    [
+                        'label' => 'Excel Recambios',
+                        'url' => 'https://docs.google.com/spreadsheets/d/181wJehtjfuXl0fS-Rhbnol4SS7tRJPGazu8IUJVpXj0/edit?gid=0#gid=0',
+                        'image' => asset('images/tools/excel.png'),
+                    ],
+                    [
+                        'label' => 'VISA',
+                        'url' => 'https://docs.google.com/spreadsheets/d/11gJdeRYSWrRX7Uej5JK_g0gUOmD5vvSM/edit?gid=1895952355#gid=1895952355',
+                        'image' => asset('images/tools/visa.jpg'),
                     ],
                     [
                         'label' => 'Microsoft Teams',
@@ -223,27 +243,27 @@ Route::middleware('auth')->group(function () {
                     [
                         'label' => 'Citas garantías HR',
                         'url' => 'https://docs.google.com/spreadsheets/d/16uY7SOshvkNKOti7BfLfIgWkJNyNM__8/edit?pli=1&gid=2129562621#gid=2129562621',
-                        'image' => asset('images/tools/citas-garantias-hr.png'),
+                        'image' => asset('images/tools/tareas-asignadas.png'),
                     ],
                     [
                         'label' => 'Pólizas activas Caser OK',
                         'url' => 'https://docs.google.com/spreadsheets/d/1Q6iDEW_dhR47MwVR3t-omI-zV-c0W72x/edit?pli=1&gid=714492361#gid=714492361',
-                        'image' => asset('images/tools/polizas-activas-caser-ok.png'),
+                        'image' => asset('images/tools/tareas-asignadas.png'),
                     ],
                     [
                         'label' => 'Envío documentación',
                         'url' => 'https://docs.google.com/spreadsheets/d/1ZN-ej468hjsZM-Aqb5Mgdk_hocXSkkcM/edit?pli=1&gid=1194646592#gid=1194646592',
-                        'image' => asset('images/tools/envio-documentacion.png'),
+                        'image' => asset('images/tools/tareas-asignadas.png'),
                     ],
                     [
                         'label' => 'Ventas caídas y excesos 2026',
                         'url' => 'https://docs.google.com/spreadsheets/d/1Ovm_KJr2JAumJ1KngBT3rYopFYDjk2W4/edit?pli=1&gid=36299908#gid=36299908',
-                        'image' => asset('images/tools/ventas-caidas-excesos-2026.png'),
+                        'image' => asset('images/tools/tareas-asignadas.png'),
                     ],
                     [
                         'label' => 'Seguro coche cortesía',
                         'url' => 'https://docs.google.com/spreadsheets/d/15w1ELzuEQsG3zq79y2w_6t_BRD8uZjx8/edit?pli=1&gid=2118661665#gid=2118661665',
-                        'image' => asset('images/tools/seguro-coche-cortesia.png'),
+                        'image' => asset('images/tools/tareas-asignadas.png'),
                     ],
                     [
                         'label' => 'Salesforce',
@@ -346,12 +366,28 @@ Route::middleware('auth')->group(function () {
 
                 $rentingButtonLabels = [
                     'Rent2click',
+                    'HR Renting',
                     'Flit2GO',
                     'Salesforce',
                     'Axesor',
                     'Incofisa',
                     'Canva',
                     'Google Drive',
+                ];
+
+                $legalButtonLabels = [
+                    'Citas garantías HR',
+                    'Pólizas activas Caser OK',
+                    'Envío documentación',
+                    'Ventas caídas y excesos 2026',
+                    'Seguro coche cortesía',
+                ];
+
+                $sparePartsGeneralButtonLabels = [
+                    'Wiuse',
+                    'Caixabank',
+                    'Excel Recambios',
+                    'VISA',
                 ];
 
                 $fixedGeneralButtonLabels = [
@@ -376,6 +412,12 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, ['Google Drive', 'Occident', 'Calcular IVA'], true)
                         && app_user_has_any_role($authUser, [User::ROLE_ADMINISTRATION])
+                    ) || (
+                        in_array($button['label'] ?? null, $legalButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_LEGAL])
+                    ) || (
+                        in_array($button['label'] ?? null, $sparePartsGeneralButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_SPARE_PARTS])
                     ) || (
                         in_array($button['label'] ?? null, $rentingButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_RENTING])
@@ -428,6 +470,59 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Seguro coche cortesía',
                         'url' => 'https://docs.google.com/spreadsheets/d/15w1ELzuEQsG3zq79y2w_6t_BRD8uZjx8/edit?pli=1&gid=2118661665#gid=2118661665',
                         'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                ],
+            ]
+            : null;
+
+        $sparePartsResourcesSection = app_user_has_any_role($authUser, [User::ROLE_SPARE_PARTS])
+            ? [
+                'title' => 'Recambios',
+                'buttons' => [
+                    [
+                        'label' => 'Recambio Fácil',
+                        'url' => 'https://www.recambiofacil.com/login/index',
+                        'image' => asset('images/tools/recambio-facil.jpg'),
+                    ],
+                    [
+                        'label' => 'Top Recambios',
+                        'url' => 'https://toprecambios.com/profesional/login.php',
+                        'image' => asset('images/tools/top-recambios.jpg'),
+                    ],
+                    [
+                        'label' => 'Amazon',
+                        'url' => 'https://www.amazon.es/',
+                        'image' => asset('images/tools/amazon.webp'),
+                    ],
+                    [
+                        'label' => 'partslink24',
+                        'url' => 'https://www.partslink24.com/partslink24/user/login.do',
+                        'image' => asset('images/tools/partslink24.jpg'),
+                    ],
+                    [
+                        'label' => 'Aliexpress',
+                        'url' => 'https://es.aliexpress.com/',
+                        'image' => asset('images/tools/aliexpress.webp'),
+                    ],
+                    [
+                        'label' => 'Taros Trade',
+                        'url' => 'https://www.tarostrade.es/',
+                        'image' => asset('images/tools/taros-trade.jpg'),
+                    ],
+                    [
+                        'label' => 'Ovoko',
+                        'url' => 'https://ovoko.es/buscar',
+                        'image' => asset('images/tools/ovoko.png'),
+                    ],
+                    [
+                        'label' => 'Ebay',
+                        'url' => 'https://www.ebay.es/',
+                        'image' => asset('images/tools/ebay.jpg'),
+                    ],
+                    [
+                        'label' => 'Lyreco',
+                        'url' => 'https://www.lyreco.com/webshop/SPSP/welcome?lc=SPSP',
+                        'image' => asset('images/tools/lyreco.png'),
                     ],
                 ],
             ]
@@ -495,7 +590,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {

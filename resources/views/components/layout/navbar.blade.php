@@ -33,9 +33,7 @@
     $visibleRole = app_visible_role($authUser);
     $visibleRoleLabel = app_visible_role_label($authUser);
     $roleViewerActive = app_role_viewer_active($authUser);
-    $roleViewerOptions = collect(\App\Models\User::roleLabels())
-        ->reject(fn (string $label, string $role) => $role === \App\Models\User::ROLE_USER)
-        ->all();
+    $roleViewerOptions = app_role_viewer_options($authUser);
     $forumUnreadNotifications = $authUser
         ? $authUser->unreadNotifications()
             ->get()
@@ -136,7 +134,7 @@
             </div>
 
             @auth
-                @if ($authUser?->role === \App\Models\User::ROLE_ADMIN)
+                @if (app_role_viewer_enabled($authUser))
                     <div class="relative" @click.outside="roleViewerOpen = false">
                         <button type="button" @click="roleViewerOpen = !roleViewerOpen; notificationsOpen = false; profileOpen = false"
                             class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} px-3 transition"
@@ -148,7 +146,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M12.0012 5C7.52354 5 3.73326 7.94288 2.45898 12C3.73324 16.0571 7.52354 19 12.0012 19C16.4788 19 20.2691 16.0571 21.5434 12C20.2691 7.94291 16.4788 5 12.0012 5Z" />
                             </svg>
-                            <span class="hidden lg:inline text-sm font-medium">{{ $roleViewerActive ? $visibleRoleLabel : 'Admin' }}</span>
+                            <span class="hidden lg:inline text-sm font-medium">{{ $roleViewerActive ? $visibleRoleLabel : ($authUser?->role === \App\Models\User::ROLE_ADMIN ? 'Admin' : 'Visor') }}</span>
                         </button>
 
                         <div x-show="roleViewerOpen" x-cloak x-transition:enter="transition ease-out duration-150"
@@ -161,7 +159,7 @@
                             <div class="border-b border-brand-secondary/10 px-4 py-3">
                                 <p class="text-sm font-semibold text-brand-secondary">Visor de roles</p>
                                 <p class="mt-1 text-xs text-brand-secondary/60">
-                                    Navega la app como otro rol sin perder el acceso de admin.
+                                    Navega la app como otro rol con los permisos disponibles para tu perfil.
                                 </p>
                             </div>
 
@@ -186,7 +184,7 @@
                                         @method('DELETE')
                                         <button type="submit"
                                             class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
-                                            <span>Volver a admin</span>
+                                            <span>{{ $authUser?->role === \App\Models\User::ROLE_ADMIN ? 'Volver a admin' : 'Volver a mi rol' }}</span>
                                             <span class="text-xs text-brand-secondary/45">Reiniciar</span>
                                         </button>
                                     </form>
@@ -412,6 +410,42 @@
                         class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isContactsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         Admin
                     </a>
+                @endif
+
+                @if (app_role_viewer_enabled($authUser))
+                    <div class="mt-3 rounded-2xl border border-brand-secondary/10 bg-slate-50 p-3">
+                        <p class="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/60">
+                            Visor de roles
+                        </p>
+
+                        <div class="mt-2 space-y-1">
+                            @foreach ($roleViewerOptions as $role => $label)
+                                <form method="POST" action="{{ route('role-viewer.store') }}">
+                                    @csrf
+                                    <input type="hidden" name="role" value="{{ $role }}">
+                                    <button type="submit" @click="open = false"
+                                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition {{ $visibleRole === $role ? 'bg-white text-brand-primary' : 'text-gray-700 hover:bg-white' }}">
+                                        <span>{{ $label }}</span>
+                                        @if ($visibleRole === $role)
+                                            <span class="rounded-full bg-brand-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-primary">Activa</span>
+                                        @endif
+                                    </button>
+                                </form>
+                            @endforeach
+
+                            @if ($roleViewerActive)
+                                <form method="POST" action="{{ route('role-viewer.destroy') }}" class="pt-1">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" @click="open = false"
+                                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-700 transition hover:bg-white">
+                                        <span>{{ $authUser?->role === \App\Models\User::ROLE_ADMIN ? 'Volver a admin' : 'Volver a mi rol' }}</span>
+                                        <span class="text-xs text-gray-400">Reiniciar</span>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    </div>
                 @endif
             @endauth
 
