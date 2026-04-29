@@ -291,6 +291,46 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/salesforce.png'),
                     ],
                     [
+                        'label' => 'Onlogist',
+                        'url' => 'https://portal.onlogist.com/#myBuynows',
+                        'image' => asset('images/tools/onlogist.png'),
+                    ],
+                    [
+                        'label' => 'FaciliteaCoches',
+                        'url' => 'https://www.admin.faciliteacoches.com/login',
+                        'image' => asset('images/tools/stock-facilitea.jpg'),
+                    ],
+                    [
+                        'label' => 'Tickelia',
+                        'url' => 'https://cloud.tickelia.com/web/#/login',
+                        'image' => asset('images/tools/tickelia.png'),
+                    ],
+                    [
+                        'label' => 'COC Online',
+                        'url' => 'https://www.coc-online.com/es',
+                        'image' => asset('images/tools/coc-online.jpg'),
+                    ],
+                    [
+                        'label' => 'Euro COC',
+                        'url' => 'https://www.eurococ.eu/it/coc-vin-verifica//?checkvin=VF3CU9HP0KY038844',
+                        'image' => asset('images/tools/euro-coc.png'),
+                    ],
+                    [
+                        'label' => 'Encheres VO',
+                        'url' => 'https://pro.encheres-vo.com/portail.html',
+                        'image' => asset('images/tools/encheres-vo.png'),
+                    ],
+                    [
+                        'label' => 'UPS',
+                        'url' => 'https://www.ups.com/track?loc=es_ES&requester=ST/',
+                        'image' => asset('images/tools/ups.jpg'),
+                    ],
+                    [
+                        'label' => 'Occident',
+                        'url' => 'https://cliente.occident.com/overall-position',
+                        'image' => asset('images/tools/occident.jpg'),
+                    ],
+                    [
                         'label' => 'Facilitea',
                         'url' => 'https://www.admin.faciliteacoches.com/admin/orders',
                         'image' => asset('images/tools/stock-facilitea.jpg'),
@@ -395,6 +435,18 @@ Route::middleware('auth')->group(function () {
                     'Google Drive',
                 ];
 
+                $logisticsButtonLabels = [
+                    'Salesforce',
+                    'Onlogist',
+                    'FaciliteaCoches',
+                    'Tickelia',
+                    'COC Online',
+                    'Euro COC',
+                    'Encheres VO',
+                    'UPS',
+                    'Occident',
+                ];
+
                 $legalButtonLabels = [
                     'Citas garantías HR',
                     'Pólizas activas Caser OK',
@@ -463,6 +515,9 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, $rentingButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_RENTING])
+                    ) || (
+                        in_array($button['label'] ?? null, $logisticsButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_LOGISTICS])
                     ))
                     ->unique(fn (array $button) => $button['label'] ?? null);
 
@@ -540,6 +595,69 @@ Route::middleware('auth')->group(function () {
                         'label' => 'BitGest PRO',
                         'url' => 'https://bitgestprofesionales.com/mi-cuenta/mis-tramites',
                         'image' => asset('images/tools/bitgest.jpg'),
+                    ],
+                ],
+            ]
+            : null;
+
+        $logisticsResourcesSection = app_user_has_any_role($authUser, [User::ROLE_LOGISTICS])
+            ? [
+                'title' => 'Hojas de cálculo',
+                'buttons' => [
+                    [
+                        'label' => 'Transporte 24-25',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1U2fuEEPgY26ylsoVOrHbVOZ41pQ5N0VvW-MJIffkPI4/edit?pli=1&gid=0#gid=0',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Control Tickelia Internos',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1XG7LlCaao9ueoBpGibMGY3t1ka_btB_LnlWqTNuXzhk/edit?gid=0#gid=0',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Docs Extranjeras',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1qNlbHsxXN03UXzrWMozhizRSbkzjepN6/edit?gid=903951598#gid=903951598',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Envío Documentación',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1ZN-ej468hjsZM-Aqb5Mgdk_hocXSkkcM/edit?gid=1186450835#gid=1186450835',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Cargas Extranjeras',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1Y3RcOKWtw7WXYKKtEjDZx8mkz0Gw8OvA/edit?gid=138774793#gid=138774793',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Cargas Nacionales',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1gR3Lx9AdZxXVAdLVJYLmChrwsZdojYJD_r5UoLmXUCY/edit?gid=0#gid=0',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Pendientes Crear Salesforce',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1vT3jlH_xmBLBPUPrKQnjrzfBXt1QMFHfB0A6EUTG9mI/edit?gid=876360531#gid=876360531',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Vehículos Sin Ubicación',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1T3s-ftYq3MvLDU1iIYuo8QGGpGCOKYD5/edit?gid=1273017528#gid=1273017528',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Envío CMR',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1GViw3gWAOGdzgGX65z_U08x8IDmMjtYb/edit?gid=1796310716#gid=1796310716',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Control de Vehículos',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1x0qBp4M5S_oVDoLlq3EETurRNTlekRyp/edit?gid=1415421642#gid=1415421642',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Hoja de Transporte',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1nC6iC2m8kcUlDzaRzAadmUd9LrgoZd_f6fgGMHmc3tY/edit?gid=0#gid=0',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
                     ],
                 ],
             ]
@@ -660,7 +778,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'logisticsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
