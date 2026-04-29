@@ -2,17 +2,6 @@
 
 use App\Models\User;
 
-if (! function_exists('app_role_viewer_options')) {
-    function app_role_viewer_options(): array
-    {
-        return array_filter(
-            User::roleLabels(),
-            fn (string $label, string $role): bool => $role !== User::ROLE_USER,
-            ARRAY_FILTER_USE_BOTH
-        );
-    }
-}
-
 if (! function_exists('app_effective_roles')) {
     function app_effective_roles(?User $user = null): array
     {
@@ -22,14 +11,13 @@ if (! function_exists('app_effective_roles')) {
             return [];
         }
 
-        if ($user->role === User::ROLE_ADMIN) {
+        if (app_role_viewer_enabled($user)) {
             $viewerRole = session('role_viewer.active_role');
+            $allowedRoles = array_keys(app_role_viewer_options($user));
 
-            if (is_string($viewerRole) && $viewerRole !== $user->role && array_key_exists($viewerRole, app_role_viewer_options())) {
+            if (is_string($viewerRole) && $viewerRole !== $user->role && in_array($viewerRole, $allowedRoles, true)) {
                 return [$viewerRole];
             }
-
-            return [User::ROLE_ADMIN];
         }
 
         return array_values(array_unique(array_filter([
@@ -161,8 +149,9 @@ if (! function_exists('app_visible_role')) {
         }
 
         $viewerRole = session('role_viewer.active_role');
+        $allowedRoles = array_keys(app_role_viewer_options($user));
 
-        if ($user->role === User::ROLE_ADMIN && in_array($viewerRole, array_keys(app_role_viewer_options()), true)) {
+        if (app_role_viewer_enabled($user) && is_string($viewerRole) && in_array($viewerRole, $allowedRoles, true)) {
             return $viewerRole;
         }
 
@@ -182,13 +171,14 @@ if (! function_exists('app_role_viewer_active')) {
     {
         $user ??= auth()->user();
 
-        if (! $user || $user->role !== User::ROLE_ADMIN) {
+        if (! app_role_viewer_enabled($user)) {
             return false;
         }
 
         $viewerRole = session('role_viewer.active_role');
+        $allowedRoles = array_keys(app_role_viewer_options($user));
 
-        return is_string($viewerRole) && $viewerRole !== $user->role && array_key_exists($viewerRole, app_role_viewer_options());
+        return is_string($viewerRole) && $viewerRole !== $user->role && in_array($viewerRole, $allowedRoles, true);
     }
 }
 
@@ -198,6 +188,48 @@ if (! function_exists('app_visible_role_label')) {
         $role = app_visible_role($user);
 
         return User::roleLabels()[$role] ?? 'Admin';
+    }
+}
+
+if (! function_exists('app_role_viewer_enabled')) {
+    function app_role_viewer_enabled(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return in_array($user->role, [
+            User::ROLE_ADMIN,
+            User::ROLE_MANAGER,
+            User::ROLE_INFORMATION_TECHNOLOGY,
+        ], true);
+    }
+}
+
+if (! function_exists('app_role_viewer_options')) {
+    function app_role_viewer_options(?User $user = null): array
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return [];
+        }
+
+        if ($user->role === User::ROLE_ADMIN) {
+            return array_filter(
+                User::roleLabels(),
+                fn (string $label, string $role): bool => $role !== User::ROLE_USER,
+                ARRAY_FILTER_USE_BOTH
+            );
+        }
+
+        if (in_array($user->role, [User::ROLE_MANAGER, User::ROLE_INFORMATION_TECHNOLOGY], true)) {
+            return User::extraRoleLabels();
+        }
+
+        return [];
     }
 }
 

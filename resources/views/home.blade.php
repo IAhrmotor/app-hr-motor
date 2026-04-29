@@ -176,6 +176,7 @@
                             </div>
                         </section>
                     @endif
+
                 </div>
 
                 @if ($generalSection)
@@ -242,35 +243,70 @@
             @endforeach
         </div>
 
-        @if (! empty($otherResourcesSection) && ! $isCallCenterHome)
-            <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
-                <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
-                    <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
-                        {{ $otherResourcesSection['title'] }}
-                    </h2>
-                </div>
+        @if ((! empty($otherResourcesSection) && ! $isCallCenterHome) || ! empty($sparePartsResourcesSection))
+            <div class="space-y-8">
+                @if (! empty($otherResourcesSection) && ! $isCallCenterHome)
+                    <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
+                        <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
+                            <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
+                                {{ $otherResourcesSection['title'] }}
+                            </h2>
+                        </div>
 
-                <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
-                        @foreach ($otherResourcesSection['buttons'] as $button)
-                            @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
-                            <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
-                                class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
-                                <div class="bg-white">
-                                    <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
-                                        class="block w-full">
-                                </div>
+                        <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
+                                @foreach ($otherResourcesSection['buttons'] as $button)
+                                    @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
+                                    <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
+                                        class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                        <div class="bg-white">
+                                            <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                                class="block w-full">
+                                        </div>
 
-                                <div
-                                    class="flex flex-1 items-center justify-center border-t border-brand-secondary/10 px-4 py-3">
-                                    <h3
-                                        class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
-                                        {{ $button['label'] }}
-                                    </h3>
-                                </div>
-                            </a>
-                        @endforeach
-                </div>
-            </section>
+                                        <div
+                                            class="flex flex-1 items-center justify-center border-t border-brand-secondary/10 px-4 py-3">
+                                            <h3
+                                                class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
+                                                {{ $button['label'] }}
+                                            </h3>
+                                        </div>
+                                    </a>
+                                @endforeach
+                        </div>
+                    </section>
+                @endif
+
+                @if (! empty($sparePartsResourcesSection))
+                    <section class="mt-8 rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm">
+                        <div class="mb-5 flex flex-col items-center gap-2 sm:relative sm:block">
+                            <h2 class="text-center text-2xl font-bold tracking-tight text-brand-secondary">
+                                {{ $sparePartsResourcesSection['title'] }}
+                            </h2>
+                        </div>
+
+                        <div class="grid justify-center grid-cols-[repeat(auto-fit,minmax(136px,136px))] gap-6">
+                            @foreach ($sparePartsResourcesSection['buttons'] as $button)
+                                @php $opensInNewTab = $button['open_in_new_tab'] ?? true; @endphp
+                                <a href="{{ $button['url'] }}" @if ($opensInNewTab) target="_blank" rel="noopener noreferrer" @endif
+                                    class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+                                    <div class="bg-white">
+                                        <img src="{{ $button['image'] }}" alt="{{ $button['label'] }}"
+                                            class="block w-full">
+                                    </div>
+
+                                    <div
+                                        class="flex flex-1 items-center justify-center border-t border-brand-secondary/10 px-4 py-3">
+                                        <h3
+                                            class="text-center text-sm font-semibold uppercase tracking-wide text-brand-secondary">
+                                            {{ $button['label'] }}
+                                        </h3>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+            </div>
         @endif
 
         @if ($canAccessRankings && $homeLeaderboardEntries->isNotEmpty())
