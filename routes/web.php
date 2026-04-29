@@ -73,6 +73,8 @@ Route::middleware('auth')->group(function () {
         $salesforceLabel = $isDirectSalesforceRole ? 'Salesforce' : 'Salesforce comunidad';
         $callCenterSalesforceUrl = 'https://hrmotor.lightning.force.com';
         $itSupportUrl = app_it_support_url_for($authUser);
+        $webHrMotorUrl = app_can_access_web($authUser) ? route('tools.web') : 'https://www.hrmotor.com/';
+        $webHrMotorOpenInNewTab = ! app_can_access_web($authUser);
 
         $buttonSections = [
             [
@@ -90,9 +92,9 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Web HR Motor',
-                        'url' => $isExternalWebUser ? 'https://www.hrmotor.com/' : route('tools.web'),
+                        'url' => $webHrMotorUrl,
                         'image' => asset('images/tools/hrmotor.png'),
-                        'open_in_new_tab' => $isExternalWebUser,
+                        'open_in_new_tab' => $webHrMotorOpenInNewTab,
                     ],
                     [
                         'label' => 'Google Drive',
