@@ -102,11 +102,6 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/drive.png'),
                     ],
                     [
-                        'label' => 'Occident',
-                        'url' => 'https://cliente.occident.com/policies/32032289/B/fleets',
-                        'image' => asset('images/tools/occident.jpg'),
-                    ],
-                    [
                         'label' => 'Calcular IVA',
                         'url' => 'https://calcular-iva.net/',
                         'image' => asset('images/tools/calcular-iva.jpg'),
@@ -186,6 +181,36 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/incofisa.png'),
                     ],
                     [
+                        'label' => 'Caixa',
+                        'url' => 'https://loc26.caixabank.es/GPeticiones;WebLogicSession=1YvYZ9P4si6mlmZiPgbjyPGiP_gJIAjWNv3wsLDgRlvsL3cjV7U9!118285288!866939666',
+                        'image' => asset('images/tools/caixabank.png'),
+                    ],
+                    [
+                        'label' => 'Drive Financiaciones',
+                        'url' => 'https://docs.google.com/spreadsheets/d/1fPr7brHdculz7zGGGL9kND306EvpaRrT/edit?gid=1992833401#gid=1992833401',
+                        'image' => asset('images/tools/drive.png'),
+                    ],
+                    [
+                        'label' => 'Caixa todas operaciones',
+                        'url' => 'https://autos.caixabankpc.com/apw5/fncWebPrescriptores/VerTodasOperaciones.do',
+                        'image' => asset('images/tools/caixabank.png'),
+                    ],
+                    [
+                        'label' => 'BBVA Financiaciones',
+                        'url' => 'https://operaciones.bbvaconsumerfinance.es/finanzianet/pro/vulcanize/index.html',
+                        'image' => asset('images/tools/bbva.jpg'),
+                    ],
+                    [
+                        'label' => 'Banco Santander',
+                        'url' => 'https://www.bancosantander.es/particulares',
+                        'image' => asset('images/tools/santander.png'),
+                    ],
+                    [
+                        'label' => 'Pagos',
+                        'url' => 'https://www.bbva.es/empresas.html',
+                        'image' => asset('images/tools/bbva.jpg'),
+                    ],
+                    [
                         'label' => 'Wiuse',
                         'url' => 'https://wiuse.net/',
                         'image' => asset('images/tools/wiuse.png'),
@@ -214,11 +239,6 @@ Route::middleware('auth')->group(function () {
                         'label' => $salesforceLabel,
                         'url' => $salesforceUrl,
                         'image' => asset('images/tools/salesforce.png'),
-                    ],
-                    [
-                        'label' => 'Lendismart',
-                        'url' => config('portal.links.tools.lendismart'),
-                        'image' => asset('images/tools/lendismart.png'),
                     ],
                     [
                         'label' => 'My Mutua',
@@ -390,6 +410,22 @@ Route::middleware('auth')->group(function () {
                     'VISA',
                 ];
 
+                $financingButtonLabels = [
+                    'Caixa',
+                    'Drive Financiaciones',
+                    'Caixa todas operaciones',
+                    'BBVA Financiaciones',
+                    'Banco Santander',
+                    'Pagos',
+                ];
+
+                $financingOtherResourcesLabels = [
+                    'Occident',
+                    'Soyou',
+                    'Lendismart',
+                    'BitGest PRO',
+                ];
+
                 $fixedGeneralButtonLabels = [
                     'Woffu',
                     'Web HR Motor',
@@ -418,6 +454,12 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, $sparePartsGeneralButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_SPARE_PARTS])
+                    ) || (
+                        in_array($button['label'] ?? null, $financingButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_FINANCING])
+                    ) || (
+                        in_array($button['label'] ?? null, $financingOtherResourcesLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_FINANCING])
                     ) || (
                         in_array($button['label'] ?? null, $rentingButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_RENTING])
@@ -470,6 +512,34 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Seguro coche cortesía',
                         'url' => 'https://docs.google.com/spreadsheets/d/15w1ELzuEQsG3zq79y2w_6t_BRD8uZjx8/edit?pli=1&gid=2118661665#gid=2118661665',
                         'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                ],
+            ]
+            : null;
+
+        $financingOtherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_FINANCING])
+            ? [
+                'title' => 'Otros recursos',
+                'buttons' => [
+                    [
+                        'label' => 'Occident',
+                        'url' => 'https://cliente.occident.com/policies/27201113/B/fleets',
+                        'image' => asset('images/tools/occident.jpg'),
+                    ],
+                    [
+                        'label' => 'Soyou',
+                        'url' => 'https://colabora.soyou.es/#/login',
+                        'image' => asset('images/tools/soyou.jpg'),
+                    ],
+                    [
+                        'label' => 'Lendismart',
+                        'url' => 'https://hrmotor.lendismart.com/app/search-applications',
+                        'image' => asset('images/tools/lendismart.png'),
+                    ],
+                    [
+                        'label' => 'BitGest PRO',
+                        'url' => 'https://bitgestprofesionales.com/mi-cuenta/mis-tramites',
+                        'image' => asset('images/tools/bitgest.jpg'),
                     ],
                 ],
             ]
@@ -590,7 +660,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
