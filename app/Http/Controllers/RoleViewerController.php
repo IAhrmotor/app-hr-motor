@@ -12,13 +12,15 @@ class RoleViewerController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user && $user->role === User::ROLE_ADMIN, 403);
+        abort_unless(app_role_viewer_enabled($user), 403);
+
+        $allowedRoles = array_keys(app_role_viewer_options($user));
 
         $validated = $request->validate([
-            'role' => ['required', 'string', 'in:' . implode(',', array_keys(app_role_viewer_options()))],
+            'role' => ['required', 'string', 'in:' . implode(',', $allowedRoles)],
         ]);
 
-        if ($validated['role'] === User::ROLE_ADMIN) {
+        if ($validated['role'] === $user->role) {
             session()->forget('role_viewer.active_role');
         } else {
             session(['role_viewer.active_role' => $validated['role']]);
@@ -31,13 +33,15 @@ class RoleViewerController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user && $user->role === User::ROLE_ADMIN, 403);
+        abort_unless(app_role_viewer_enabled($user), 403);
 
         $previousRole = session('role_viewer.active_role');
         session()->forget('role_viewer.active_role');
 
-        return back()->with('success', $previousRole
-            ? 'Has vuelto a admin.'
-            : 'Ya estabas en admin.');
+        $resetMessage = $user->role === User::ROLE_ADMIN
+            ? ($previousRole ? 'Has vuelto a admin.' : 'Ya estabas en admin.')
+            : ($previousRole ? 'Has vuelto a tu rol.' : 'Ya estabas en tu rol.');
+
+        return back()->with('success', $resetMessage);
     }
 }
