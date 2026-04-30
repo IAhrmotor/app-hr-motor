@@ -68,7 +68,7 @@ Route::middleware('auth')->group(function () {
         $authUser = request()->user();
         $visibleRole = app_visible_role($authUser);
         $isDirectSalesforceRole = in_array($visibleRole, [User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER], true);
-        $isExternalWebUser = in_array($visibleRole, [User::ROLE_LEGAL, User::ROLE_ADMINISTRATION], true);
+        $isExternalWebUser = in_array($visibleRole, [User::ROLE_LEGAL, User::ROLE_GUARANTEES, User::ROLE_ADMINISTRATION], true);
         $salesforceUrl = app_salesforce_url_for($authUser);
         $salesforceLabel = $isDirectSalesforceRole ? 'Salesforce' : 'Salesforce comunidad';
         $callCenterSalesforceUrl = 'https://hrmotor.lightning.force.com';
@@ -241,6 +241,36 @@ Route::middleware('auth')->group(function () {
                         'label' => $salesforceLabel,
                         'url' => $salesforceUrl,
                         'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Salesforce',
+                        'url' => 'https://hrmotor.my.salesforce.com/',
+                        'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'DGT',
+                        'url' => 'https://sede.dgt.gob.es/es/multas/identificacion-del-conductor-de-tu-vehiculo/',
+                        'image' => asset('images/tools/dgt.png'),
+                    ],
+                    [
+                        'label' => 'REG',
+                        'url' => 'https://reg.redsara.es/es/',
+                        'image' => asset('images/tools/registro-electronico-general.jpeg'),
+                    ],
+                    [
+                        'label' => 'DEHú',
+                        'url' => 'https://dehu.redsara.es/es/public',
+                        'image' => asset('images/tools/dehu.png'),
+                    ],
+                    [
+                        'label' => 'Sede Judicial Electrónica',
+                        'url' => 'https://sedejudicial.justicia.es/-/lexnet',
+                        'image' => asset('images/tools/sede-judicial-electronica.png'),
+                    ],
+                    [
+                        'label' => 'BOE',
+                        'url' => 'https://www.boe.es/',
+                        'image' => asset('images/tools/boe.png'),
                     ],
                     [
                         'label' => 'My Mutua',
@@ -457,6 +487,23 @@ Route::middleware('auth')->group(function () {
                     'Seguro coche cortesía',
                 ];
 
+                $legalExcludedButtonLabels = [
+                    'Citas garantías HR',
+                    'Pólizas activas Caser OK',
+                    'Envío documentación',
+                    'Ventas caídas y excesos 2026',
+                    'Seguro coche cortesía',
+                ];
+
+                $legalGeneralButtonLabels = [
+                    'Salesforce',
+                    'DGT',
+                    'REG',
+                    'DEHú',
+                    'Sede Judicial Electrónica',
+                    'BOE',
+                ];
+
                 $sparePartsGeneralButtonLabels = [
                     'Wiuse',
                     'Caixabank',
@@ -504,7 +551,16 @@ Route::middleware('auth')->group(function () {
                         && app_user_has_any_role($authUser, [User::ROLE_ADMINISTRATION])
                     ) || (
                         in_array($button['label'] ?? null, $legalButtonLabels, true)
-                        && app_user_has_any_role($authUser, [User::ROLE_LEGAL])
+                        && (
+                            app_user_has_any_role($authUser, [User::ROLE_GUARANTEES])
+                            || (
+                                app_user_has_any_role($authUser, [User::ROLE_LEGAL])
+                                && ! in_array($button['label'] ?? null, $legalExcludedButtonLabels, true)
+                            )
+                        )
+                    ) || (
+                        in_array($button['label'] ?? null, $legalGeneralButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_LEGAL, User::ROLE_GUARANTEES])
                     ) || (
                         in_array($button['label'] ?? null, $sparePartsGeneralButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_SPARE_PARTS])
@@ -751,6 +807,39 @@ Route::middleware('auth')->group(function () {
             ]
             : null;
 
+        $legalOtherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_LEGAL])
+            ? [
+                'title' => 'Otros recursos',
+                'buttons' => [
+                    [
+                        'label' => 'Id Cat Móvil',
+                        'url' => 'https://valid.aoc.cat/o/oauth2/auth?response_type=code&client_id=enotum-pro.aoc.cat&scope=autenticacio_usuari&redirect_uri=https%3A%2F%2Fusuari.enotum.cat%2Fvalid%2Fredirect&login_hint=K6Nz6ysRIwx3mULOGk1t9a5K5d2KF4S8nuXruIR3ubt5LqSdL8-jUEtiJFfz8zsrNWKXm3QAeaRmF4k68scapA%3D%3D&codi_ens=1',
+                        'image' => asset('images/tools/id-cat-movil.png'),
+                    ],
+                    [
+                        'label' => 'Multas Euskadi',
+                        'url' => 'https://www.euskadi.eus/multa_sancion/multas-trafico/web01-tramite/es/',
+                        'image' => asset('images/tools/multas-euskadi.jpg'),
+                    ],
+                    [
+                        'label' => 'Diputació Barcelona',
+                        'url' => 'https://orgt.diba.cat/ca/Home/selecciomunicipi?areaToReturn=TramitsPagaments&viewToReturn=idconductor&controllerToReturn=IdentificacioConductor&concepteTramit=NO&codiError=WEB00011&parametre=V&IDSessionReturn=3d76d9eb-0a37-4fd7-a1e5-d68840a08ad5&keyModel=modelIDCONDUCTOR_',
+                        'image' => asset('images/tools/diputacio-barcelona.png'),
+                    ],
+                    [
+                        'label' => 'gencat',
+                        'url' => 'https://consum.gencat.cat/ca/lagencia/atencio-al-consumidor/resolucio-de-conflictes-de-consum/la-mediacio/index.html#googtrans(ca|es)',
+                        'image' => asset('images/tools/gencat.jpg'),
+                    ],
+                    [
+                        'label' => 'Oficina Virtual Barcelona',
+                        'url' => 'https://seuelectronica.ajuntament.barcelona.cat/oficinavirtual/es',
+                        'image' => asset('images/tools/oficina-virtual-barcelona.jpg'),
+                    ],
+                ],
+            ]
+            : null;
+
         $videos = [
             [
                 'title' => 'Firma electrónica DocuSign',
@@ -780,7 +869,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'otherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'logisticsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'legalOtherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'logisticsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
