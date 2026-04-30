@@ -833,6 +833,222 @@ Route::middleware('auth')->group(function () {
             ]
             : null;
 
+        $informaticaOtherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_INFORMATION_TECHNOLOGY])
+            ? [
+                'title' => 'Otros recursos',
+                'buttons' => [
+                    [
+                        'label' => 'Salesforce',
+                        'url' => 'https://hrmotor.my.salesforce.com/',
+                        'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Monday',
+                        'url' => 'https://hr-motor.monday.com/boards/5088189551/views/39476655',
+                        'image' => asset('images/tools/monday.png'),
+                    ],
+                    [
+                        'label' => 'Google Meet',
+                        'url' => 'https://meet.google.com/landing',
+                        'image' => asset('images/tools/google-meet.png'),
+                    ],
+                    [
+                        'label' => 'n8n VPS',
+                        'url' => 'https://n8n.hrmotor.com/',
+                        'image' => asset('images/tools/n8n-vps.png'),
+                    ],
+                    [
+                        'label' => 'n8n cloud',
+                        'url' => 'https://hrmotor.app.n8n.cloud/projects/FPytsnvV2BfoZtnO/workflows',
+                        'image' => asset('images/tools/n8n.png'),
+                    ],
+                    [
+                        'label' => 'Postgres',
+                        'url' => 'https://pgadmin.hrmotor.com/',
+                        'image' => asset('images/tools/postgres.png'),
+                    ],
+                    [
+                        'label' => 'Enreach admin',
+                        'url' => 'https://omnichannel.masvoz.es/',
+                        'image' => asset('images/tools/enreach-2.jpg'),
+                    ],
+                    [
+                        'label' => 'Enreach normal',
+                        'url' => 'https://manager.masvoz.es/',
+                        'image' => asset('images/tools/enreach.png'),
+                    ],
+                    [
+                        'label' => 'Grafana',
+                        'url' => 'https://grafana.hrmotor.com/',
+                        'image' => asset('images/tools/grafana.png'),
+                    ],
+                    [
+                        'label' => 'Twilio',
+                        'url' => 'https://console.twilio.com/',
+                        'image' => asset('images/tools/twilio.png'),
+                    ],
+                    [
+                        'label' => 'ElevenLabs',
+                        'url' => 'https://elevenlabs.io/app/agents/agents',
+                        'image' => asset('images/tools/elevenlabs.png'),
+                    ],
+                    [
+                        'label' => 'Google Drive',
+                        'url' => 'https://drive.google.com/drive/home',
+                        'image' => asset('images/tools/drive.png'),
+                    ],
+                    [
+                        'label' => 'Google Cloud',
+                        'url' => 'https://console.cloud.google.com/welcome?project=n8n-credenciales-475007',
+                        'image' => asset('images/tools/google-cloud.png'),
+                    ],
+                    [
+                        'label' => 'Supabase',
+                        'url' => 'https://supabase.com/dashboard/org/wsidyogtxwqhxjywhtqs',
+                        'image' => asset('images/tools/supabase.png'),
+                    ],
+                    [
+                        'label' => 'Formación HR Motor',
+                        'url' => 'https://formacion.hrmotor.com/',
+                        'image' => asset('images/tools/logo-formacion-cuadrado.png'),
+                    ],
+                    [
+                        'label' => 'Hey Gen',
+                        'url' => 'https://app.heygen.com/projects',
+                        'image' => asset('images/tools/heygen.png'),
+                    ],
+                    [
+                        'label' => 'App Scripts',
+                        'url' => 'https://script.google.com/home',
+                        'image' => asset('images/tools/apps-scripts.png'),
+                    ],
+                    [
+                        'label' => 'Google Business',
+                        'url' => 'https://business.google.com/u/2/reviews',
+                        'image' => asset('images/tools/google-business.png'),
+                    ],
+                    [
+                        'label' => 'Canva',
+                        'url' => 'https://www.canva.com/projects',
+                        'image' => asset('images/tools/canva.png'),
+                    ],
+                    [
+                        'label' => 'Freepik',
+                        'url' => 'https://www.freepik.es/app',
+                        'image' => asset('images/tools/freepik.png'),
+                    ],
+                    [
+                        'label' => 'OVHCloud',
+                        'url' => 'https://manager.eu.ovhcloud.com/#/dedicated/vps/vps-9b2e26eb.vps.ovh.net/dashboard',
+                        'image' => asset('images/tools/ovh.png'),
+                    ],
+                    [
+                        'label' => 'Nginx Proxy Manager',
+                        'url' => 'https://npm.hrmotor.com/',
+                        'image' => asset('images/tools/nginx.png'),
+                    ],
+                    [
+                        'label' => 'Motorflash',
+                        'url' => 'https://message.motorflash.com/',
+                        'image' => asset('images/tools/motorflash-whatsapp.png'),
+                    ],
+                    [
+                        'label' => 'Dinahosting',
+                        'url' => 'https://panel.dinahosting.com/login',
+                        'image' => asset('images/tools/dinahosting.png'),
+                    ],
+                    [
+                        'label' => 'Docusign',
+                        'url' => 'https://account.docusign.com/oauth/auth?response_type=code&scope=all%20click.manage%20me_profile%20room_forms%20room_fields%20inproductcommunication_read%20data_explorer_signing_insights%20notary_read%20notary_write%20search_read%20search_write%20webforms_manage%20dtr%20valmod_manage%20spring_read%20spring_write%20signature&client_id=2CC56DC9-4BCD-4B55-8AB0-8BA60BAE1065&redirect_uri=https://apps.docusign.com/authenticate&state=%7b%22widgetId%22:%22%40ds/send%22%2c%22xsrfToken%22:%22IYIogBvwZtz%2BEZviKPqyJlr915WEM8vmFZ14xMfBM5jq%2BBofLnLQDzRb37YARzOUNCSgjxu5e3ub3V0hoZVtzDbLaz7JvwviWui6HrM8DIybiaUP6kTN162yJKtVehy4Vm5nUroRdbTTg0cV3qpGirh%2BH3owkhvZb9GPMPNPPCE%3D%22%2c%22redirectUri%22:%22/send/authentication?back%3D%252Fhome%22%2c%22authTxnId%22:%2217f86b96-dd9d-4f8d-8d26-f741b689b5c2%22%7d',
+                        'image' => asset('images/tools/docusign.jpg'),
+                    ],
+                    [
+                        'label' => 'Ricoh',
+                        'url' => 'https://eu.portal.ricoh-europe.com/es/login?next=%2Fmy-products',
+                        'image' => asset('images/tools/ricoh.jpg'),
+                    ],
+                    [
+                        'label' => 'Serviceform',
+                        'url' => 'https://www.serviceform.es/',
+                        'image' => asset('images/tools/serviceform.png'),
+                    ],
+                    [
+                        'label' => 'Vodafone',
+                        'url' => 'https://m.vodafone.es/mves/login',
+                        'image' => asset('images/tools/vodafone.png'),
+                    ],
+                    [
+                        'label' => 'Microsoft 365',
+                        'url' => 'https://www.microsoft.com/es-es/microsoft-365/outlook/log-in',
+                        'image' => asset('images/tools/microsoft-365.png'),
+                    ],
+                    [
+                        'label' => 'Supremo',
+                        'url' => 'https://www.supremocontrol.com/es/descarga-supremo/windows/',
+                        'image' => asset('images/tools/supremo.png'),
+                    ],
+                    [
+                        'label' => 'Eset',
+                        'url' => 'https://identity.eset.com/login/pwd?ReturnUrl=%2Fconnect%2Fauthorize%2Fcallback',
+                        'image' => asset('images/tools/eset.png'),
+                    ],
+                ],
+            ]
+            : null;
+
+        $informaticaAccessSection = app_user_has_any_role($authUser, [User::ROLE_INFORMATION_TECHNOLOGY])
+            ? [
+                'title' => 'Documentos Sistemas',
+                'buttons' => [
+                    [
+                        'label' => 'Contraseñas',
+                        'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7B84BBE688-98BE-4E4A-A3FC-9D480B44697C%7D&file=herramientas-Redes-y-Sistemas.xlsx&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Fibras inventario',
+                        'url' => 'https://axiumsoluciones-my.sharepoint.com/personal/alberto_cabanyes_hrmotor_es/_layouts/15/AccessDenied.aspx?Source=https%3A%2F%2Faxiumsoluciones%2Dmy%2Esharepoint%2Ecom%2Fpersonal%2Falberto%5Fcabanyes%5Fhrmotor%5Fes%2FDocuments%2FInventario%5FFibras%5Fpor%5FDelegacion%2Exlsx%3Fweb%3D1&correlation=e90a0fa2%2Da0f0%2D0001%2Df6d2%2D2515fd50c549&Type=item&name=c6295303%2D7c4e%2D486e%2D988c%2Da91c960581a5&listItemId=30&listItemUniqueId=64b4b9a5%2Dda32%2D4cc8%2D8997%2D8f224f96a12f',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Licencias Microsoft',
+                        'url' => 'https://axiumsoluciones-my.sharepoint.com/personal/alberto_cabanyes_hrmotor_es/_layouts/15/AccessDenied.aspx?Source=https%3A%2F%2Faxiumsoluciones%2Dmy%2Esharepoint%2Ecom%2Fpersonal%2Falberto%5Fcabanyes%5Fhrmotor%5Fes%2FDocuments%2FLicencias%20Microsoft%2Exlsx%3Fweb%3D1&correlation=ec0a0fa2%2D901c%2D0001%2Df6d2%2D26314294ea33&Type=item&name=c6295303%2D7c4e%2D486e%2D988c%2Da91c960581a5&listItemId=28&listItemUniqueId=7a672b81%2D16e8%2D4527%2D89cb%2D3d32b3f1ca2e',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Usuarios ESET',
+                        'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7B19906C40-001A-41EF-9562-2D7EF77EE71B%7D&file=Eset-Usuarios.xlsx&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Usuarios Mutua',
+                        'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7BCFDC3286-5B01-4A89-9AFD-9F70F2282AE0%7D&file=usuarios-mutua.ods&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Cámaras Vigilancia',
+                        'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7B878D1CEF-B4D2-4EBC-B523-8B63973D03EB%7D&file=C%25u00e1maras-Videovigilancia.xlsx&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Alias Corporativo',
+                        'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7BE03B16F1-F72A-49F1-B518-D8165550666E%7D&file=Alias-de-HRCORPORATIVO.xlsx&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Suscripciones Herramientas',
+                        'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7BBDEFBFF9-B1A4-4B1F-A33C-4154F9BDF6B5%7D&file=Suscripciones-Herramientas.xlsx&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                    [
+                        'label' => 'Inventario Equipos',
+                        'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7BBD76EE28-FCEE-405D-A3DC-4249A61C33BB%7D&file=Inventario-Equipos-HRMOTOR.ods&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.png'),
+                    ],
+                ],
+            ]
+            : null;
+
         $legalOtherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_LEGAL])
             ? [
                 'title' => 'Otros recursos',
@@ -895,7 +1111,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'otherResourcesSection', 'legalOtherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'logisticsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'informaticaOtherResourcesSection', 'informaticaAccessSection', 'legalOtherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'logisticsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
