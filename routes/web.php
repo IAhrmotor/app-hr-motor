@@ -504,6 +504,15 @@ Route::middleware('auth')->group(function () {
                     'BOE',
                 ];
 
+                $guaranteesExcludedGeneralButtonLabels = [
+                    'Salesforce',
+                    'DGT',
+                    'REG',
+                    'DEHú',
+                    'Sede Judicial Electrónica',
+                    'BOE',
+                ];
+
                 $sparePartsGeneralButtonLabels = [
                     'Wiuse',
                     'Caixabank',
@@ -560,7 +569,13 @@ Route::middleware('auth')->group(function () {
                         )
                     ) || (
                         in_array($button['label'] ?? null, $legalGeneralButtonLabels, true)
-                        && app_user_has_any_role($authUser, [User::ROLE_LEGAL, User::ROLE_GUARANTEES])
+                        && (
+                            app_user_has_any_role($authUser, [User::ROLE_LEGAL])
+                            || (
+                                app_user_has_any_role($authUser, [User::ROLE_GUARANTEES])
+                                && ! in_array($button['label'] ?? null, $guaranteesExcludedGeneralButtonLabels, true)
+                            )
+                        )
                     ) || (
                         in_array($button['label'] ?? null, $sparePartsGeneralButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_SPARE_PARTS])
