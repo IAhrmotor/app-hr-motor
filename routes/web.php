@@ -248,6 +248,11 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/salesforce.png'),
                     ],
                     [
+                        'label' => 'Lendismart',
+                        'url' => 'https://hrmotor.lendismart.com/app/search-applications',
+                        'image' => asset('images/tools/lendismart.png'),
+                    ],
+                    [
                         'label' => 'DGT',
                         'url' => 'https://sede.dgt.gob.es/es/multas/identificacion-del-conductor-de-tu-vehiculo/',
                         'image' => asset('images/tools/dgt.png'),
@@ -536,6 +541,11 @@ Route::middleware('auth')->group(function () {
                     'BitGest PRO',
                 ];
 
+                $financingExcludedGeneralButtonLabels = [
+                    'Occident',
+                    'Lendismart',
+                ];
+
                 $fixedGeneralButtonLabels = [
                     'Woffu',
                     'Web HR Motor',
@@ -585,6 +595,7 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, $financingOtherResourcesLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_FINANCING])
+                        && ! in_array($button['label'] ?? null, $financingExcludedGeneralButtonLabels, true)
                     ) || (
                         in_array($button['label'] ?? null, $rentingButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_RENTING])
