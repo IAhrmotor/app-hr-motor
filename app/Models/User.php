@@ -34,6 +34,8 @@ class User extends Authenticatable
 
     public const ROLE_LEGAL = 'legal';
 
+    public const ROLE_GUARANTEES = 'garantias';
+
     public const ROLE_CALL_CENTER = 'call_center';
 
     public const ROLE_CAPTADOR = 'captador';
@@ -80,6 +82,7 @@ class User extends Authenticatable
             self::ROLE_ADMINISTRATION => 'Administración',
             self::ROLE_AREA_MANAGER => 'Área Manager',
             self::ROLE_LEGAL => 'Legal',
+            self::ROLE_GUARANTEES => 'Garantías',
             self::ROLE_CALL_CENTER => 'Call Center',
             self::ROLE_CAPTADOR => 'Captador',
             self::ROLE_WORKSHOP => 'Taller',
