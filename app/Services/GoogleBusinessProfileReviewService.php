@@ -75,15 +75,34 @@ class GoogleBusinessProfileReviewService
         $reviewRows = [];
         $mappedDealerships = collect();
 
+        Log::info('Google Business Profile sync started.', [
+            'connection_id' => $connection->id,
+            'account_name' => data_get($account, 'accountName'),
+            'account_resource_name' => data_get($account, 'name'),
+            'locations_found' => count($locations),
+        ]);
+
         foreach ($locations as $location) {
             $locationName = $this->stringOrNull(data_get($location, 'name'));
             if (! $locationName) {
+                Log::warning('Google Business Profile location skipped because it has no resource name.', [
+                    'account_resource_name' => data_get($account, 'name'),
+                    'location_payload' => $location,
+                ]);
                 continue;
             }
 
             $locationTitle = $this->extractLocationTitle($location);
             $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle);
             $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
+
+            Log::info('Google Business Profile location processing started.', [
+                'location_name' => $locationName,
+                'location_title' => $locationTitle,
+                'dealership_id' => $dealership?->id,
+                'dealership_name' => $dealership?->name,
+                'location_resource_name' => $locationResourceName,
+            ]);
 
             if ($dealership) {
                 $mappedDealerships->push($dealership->id);
@@ -93,7 +112,14 @@ class GoogleBusinessProfileReviewService
                 ])->save();
             }
 
-            foreach ($this->fetchReviews($connection, $locationResourceName) as $review) {
+            $reviews = $this->fetchReviews($connection, $locationResourceName);
+
+            Log::info('Google Business Profile location reviews fetched.', [
+                'location_resource_name' => $locationResourceName,
+                'reviews_found' => count($reviews),
+            ]);
+
+            foreach ($reviews as $review) {
                 $reviewRows[] = $this->buildReviewRow(
                     review: $review,
                     locationName: $locationResourceName,
@@ -140,6 +166,13 @@ class GoogleBusinessProfileReviewService
                     'mapped_dealership_ids' => $mappedDealerships->unique()->values()->all(),
                 ]),
             ])->save();
+
+            Log::info('Google Business Profile sync finished.', [
+                'connection_id' => $connection->id,
+                'account_resource_name' => data_get($account, 'name'),
+                'review_rows' => count($reviewRows),
+                'mapped_dealerships' => $mappedDealerships->unique()->values()->all(),
+            ]);
         });
 
         return GoogleBusinessProfileReview::query()
