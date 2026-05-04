@@ -242,6 +242,7 @@ class GoogleBusinessProfileReviewService
             $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($accountResourceName, $nextPageToken) {
                 $query = [
                     'pageSize' => 100,
+                    'readMask' => 'name,title,storefrontAddress.locality,storefrontAddress.administrativeArea,storefrontAddress.postalCode',
                 ];
 
                 if ($nextPageToken) {
@@ -324,9 +325,10 @@ class GoogleBusinessProfileReviewService
 
     private function persistTokens(array $payload, ?GoogleBusinessProfileConnection $connection = null): GoogleBusinessProfileConnection
     {
-        $connection ??= new GoogleBusinessProfileConnection([
-            'provider' => self::PROVIDER,
-        ]);
+        $connection ??= GoogleBusinessProfileConnection::query()
+            ->firstOrNew([
+                'provider' => self::PROVIDER,
+            ]);
 
         $metadata = $connection->metadata ?? [];
         $metadata['issued_at'] = $payload['issued_at'] ?? ($metadata['issued_at'] ?? null);
@@ -343,7 +345,7 @@ class GoogleBusinessProfileReviewService
             'metadata' => $metadata,
         ])->save();
 
-        return $connection->fresh();
+        return $connection->refresh();
     }
 
     private function refreshAccessToken(GoogleBusinessProfileConnection $connection): GoogleBusinessProfileConnection
