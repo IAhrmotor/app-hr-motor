@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('google_business_profile_monthly_snapshots')) {
+            return;
+        }
+
         Schema::create('google_business_profile_monthly_snapshots', function (Blueprint $table) {
             $table->id();
             $table->foreignId('dealership_id')->constrained()->cascadeOnDelete();

@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('google_business_profile_reviews')) {
+            return;
+        }
+
         Schema::create('google_business_profile_reviews', function (Blueprint $table) {
             $table->id();
             $table->foreignId('dealership_id')->nullable()->constrained()->nullOnDelete();
