@@ -1240,9 +1240,6 @@ Route::middleware('auth')->group(function () {
     })->name('videos');
 
     Route::middleware('role:admin,gestor')->group(function () {
-        Route::get('/integraciones/google-business-profile/conectar', [GoogleBusinessProfileAuthController::class, 'redirect'])->name('google-business-profile.connect');
-        Route::get('/integraciones/google-business-profile/callback', [GoogleBusinessProfileAuthController::class, 'callback'])->name('google-business-profile.callback');
-
         Route::get('/admin', function () {
             $adminSections = [
                 [
