@@ -468,12 +468,14 @@ class GoogleBusinessProfileReviewService
 
     private function resolveDealershipForLocation(string $locationName, ?string $locationTitle): ?Dealership
     {
-        $dealership = Dealership::query()
-            ->where('google_business_profile_location_name', $locationName)
-            ->first();
+        if (Schema::hasColumn('dealerships', 'google_business_profile_location_name')) {
+            $dealership = Dealership::query()
+                ->where('google_business_profile_location_name', $locationName)
+                ->first();
 
-        if ($dealership) {
-            return $dealership;
+            if ($dealership) {
+                return $dealership;
+            }
         }
 
         $normalizedLocationTitle = $this->normalizeText($locationTitle);
