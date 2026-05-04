@@ -498,6 +498,11 @@ class GoogleBusinessProfileReviewService
         }
 
         foreach (array_chunk($reviewRows, 250) as $index => $chunk) {
+            $chunk = array_map(
+                fn (array $reviewRow): array => $this->normalizeReviewRowForPersistence($reviewRow),
+                $chunk
+            );
+
             DB::transaction(function () use ($chunk): void {
                 GoogleBusinessProfileReview::query()->upsert(
                     $chunk,
@@ -527,6 +532,19 @@ class GoogleBusinessProfileReviewService
                 'chunk_count' => count($chunk),
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $reviewRow
+     * @return array<string, mixed>
+     */
+    private function normalizeReviewRowForPersistence(array $reviewRow): array
+    {
+        if (array_key_exists('raw_payload', $reviewRow)) {
+            $reviewRow['raw_payload'] = json_encode($reviewRow['raw_payload'], JSON_THROW_ON_ERROR);
+        }
+
+        return $reviewRow;
     }
 
     private function resolveDealershipForLocation(string $locationName, ?string $locationTitle): ?Dealership
