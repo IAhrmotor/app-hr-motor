@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class ReviewController extends Controller
@@ -18,9 +19,9 @@ class ReviewController extends Controller
     public function index(Request $request): View
     {
         $connection = $this->getConnection();
-        $reviews = $this->reviewsQuery($request)
-            ->with('dealership')
-            ->get();
+        $reviews = $this->reviewTableExists()
+            ? $this->reviewsQuery($request)->with('dealership')->get()
+            : collect();
 
         $dealershipSummaries = $this->buildDealershipSummaries($reviews);
         $locationSummaries = $this->buildLocationSummaries($reviews);
@@ -45,22 +46,26 @@ class ReviewController extends Controller
 
     public function show(Request $request, Dealership $dealership): View
     {
-        $reviews = GoogleBusinessProfileReview::query()
-            ->with('dealership')
-            ->where('dealership_id', $dealership->id)
-            ->when($request->filled('status'), function ($query) use ($request): void {
-                if ($request->string('status')->toString() === 'unanswered') {
-                    $query->whereNull('reply_comment');
-                }
-            })
-            ->orderByDesc('review_created_at')
-            ->orderByDesc('id')
-            ->get();
+        $reviews = $this->reviewTableExists()
+            ? GoogleBusinessProfileReview::query()
+                ->with('dealership')
+                ->where('dealership_id', $dealership->id)
+                ->when($request->filled('status'), function ($query) use ($request): void {
+                    if ($request->string('status')->toString() === 'unanswered') {
+                        $query->whereNull('reply_comment');
+                    }
+                })
+                ->orderByDesc('review_created_at')
+                ->orderByDesc('id')
+                ->get()
+            : collect();
 
-        $snapshots = GoogleBusinessProfileMonthlySnapshot::query()
-            ->where('dealership_id', $dealership->id)
-            ->orderBy('snapshot_month')
-            ->get();
+        $snapshots = $this->monthlySnapshotsTableExists()
+            ? GoogleBusinessProfileMonthlySnapshot::query()
+                ->where('dealership_id', $dealership->id)
+                ->orderBy('snapshot_month')
+                ->get()
+            : collect();
 
         $stats = $this->buildStats($reviews);
 
@@ -78,17 +83,19 @@ class ReviewController extends Controller
 
         abort_unless(filled($locationName), 404);
 
-        $reviews = GoogleBusinessProfileReview::query()
-            ->with('dealership')
-            ->where('location_name', $locationName)
-            ->when($request->filled('status'), function ($query) use ($request): void {
-                if ($request->string('status')->toString() === 'unanswered') {
-                    $query->whereNull('reply_comment');
-                }
-            })
-            ->orderByDesc('review_created_at')
-            ->orderByDesc('id')
-            ->get();
+        $reviews = $this->reviewTableExists()
+            ? GoogleBusinessProfileReview::query()
+                ->with('dealership')
+                ->where('location_name', $locationName)
+                ->when($request->filled('status'), function ($query) use ($request): void {
+                    if ($request->string('status')->toString() === 'unanswered') {
+                        $query->whereNull('reply_comment');
+                    }
+                })
+                ->orderByDesc('review_created_at')
+                ->orderByDesc('id')
+                ->get()
+            : collect();
 
         $locationTitle = $reviews->first()?->location_title ?? $locationName;
         $location = (object) [
@@ -110,11 +117,13 @@ class ReviewController extends Controller
 
     public function reports(): View
     {
-        $snapshots = GoogleBusinessProfileMonthlySnapshot::query()
-            ->with('dealership')
-            ->orderBy('snapshot_month')
-            ->orderBy('dealership_id')
-            ->get();
+        $snapshots = $this->monthlySnapshotsTableExists()
+            ? GoogleBusinessProfileMonthlySnapshot::query()
+                ->with('dealership')
+                ->orderBy('snapshot_month')
+                ->orderBy('dealership_id')
+                ->get()
+            : collect();
 
         $grouped = $snapshots->groupBy(fn (GoogleBusinessProfileMonthlySnapshot $snapshot): string => $snapshot->snapshot_month?->format('Y-m') ?? 'sin-fecha');
 
@@ -157,6 +166,16 @@ class ReviewController extends Controller
     private function getConnection(): ?GoogleBusinessProfileConnection
     {
         return app(GoogleBusinessProfileReviewService::class)->getConnection();
+    }
+
+    private function reviewTableExists(): bool
+    {
+        return Schema::hasTable('google_business_profile_reviews');
+    }
+
+    private function monthlySnapshotsTableExists(): bool
+    {
+        return Schema::hasTable('google_business_profile_monthly_snapshots');
     }
 
     private function reviewsQuery(Request $request)
@@ -216,10 +235,12 @@ class ReviewController extends Controller
                     fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth()
                 );
 
-                $snapshot = GoogleBusinessProfileMonthlySnapshot::query()
-                    ->where('dealership_id', $dealership->id)
-                    ->orderByDesc('snapshot_month')
-                    ->first();
+                $snapshot = $this->monthlySnapshotsTableExists()
+                    ? GoogleBusinessProfileMonthlySnapshot::query()
+                        ->where('dealership_id', $dealership->id)
+                        ->orderByDesc('snapshot_month')
+                        ->first()
+                    : null;
 
                 return [
                     'dealership' => $dealership,
