@@ -89,14 +89,14 @@ class ReviewController extends Controller
     public function refresh(GoogleBusinessProfileReviewService $service): RedirectResponse
     {
         try {
-            $service->sync();
+            $reviews = $service->sync();
         } catch (Throwable $exception) {
             report($exception);
 
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('success', 'Reseñas sincronizadas correctamente.');
+        return back()->with('success', 'Sincronización completada. Se han cargado ' . number_format($reviews->count()) . ' reseñas.');
     }
 
     public function reply(Request $request, GoogleBusinessProfileReviewService $service, GoogleBusinessProfileReview $review): RedirectResponse
