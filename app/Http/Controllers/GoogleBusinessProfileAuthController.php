@@ -12,7 +12,7 @@ class GoogleBusinessProfileAuthController extends Controller
 {
     public function redirect(Request $request)
     {
-        $redirectUri = config('services.google_business_profile.redirect_uri');
+        $redirectUri = route('google-business-profile.callback', [], true);
 
         if (blank(config('services.google_business_profile.client_id')) || blank($redirectUri)) {
             return redirect()
