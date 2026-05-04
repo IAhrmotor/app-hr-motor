@@ -23,7 +23,7 @@ class GoogleBusinessProfileAuthController extends Controller
         $state = Str::random(40);
         $request->session()->put('google_business_profile_oauth_state', $state);
 
-        $query = http_build_query([
+        $queryParameters = [
             'response_type' => 'code',
             'client_id' => config('services.google_business_profile.client_id'),
             'redirect_uri' => $redirectUri,
@@ -31,7 +31,13 @@ class GoogleBusinessProfileAuthController extends Controller
             'access_type' => 'offline',
             'prompt' => 'consent',
             'state' => $state,
-        ]);
+        ];
+
+        if (filled(config('services.google_business_profile.login_hint'))) {
+            $queryParameters['login_hint'] = config('services.google_business_profile.login_hint');
+        }
+
+        $query = http_build_query($queryParameters);
 
         return redirect()->away(config('services.google_business_profile.authorize_url') . '?' . $query);
     }

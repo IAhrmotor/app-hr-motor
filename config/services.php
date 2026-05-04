@@ -72,6 +72,7 @@ return [
         'redirect_uri' => env('GOOGLE_BUSINESS_PROFILE_REDIRECT_URI'),
         'scope' => env('GOOGLE_BUSINESS_PROFILE_SCOPE', 'https://www.googleapis.com/auth/business.manage'),
         'account_group_name' => env('GOOGLE_BUSINESS_PROFILE_ACCOUNT_GROUP_NAME', 'Tiendas HR Motor'),
+        'login_hint' => env('GOOGLE_BUSINESS_PROFILE_LOGIN_HINT'),
     ],
 
 ];
