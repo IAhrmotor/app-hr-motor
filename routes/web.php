@@ -238,9 +238,24 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/teams.png'),
                     ],
                     [
-                        'label' => $salesforceLabel,
+                        'label' => app_user_has_any_role($authUser, [User::ROLE_CAPTADOR]) ? 'Salesforce' : $salesforceLabel,
                         'url' => $salesforceUrl,
                         'image' => asset('images/tools/salesforce.png'),
+                    ],
+                    [
+                        'label' => 'Milanuncios',
+                        'url' => 'https://www.milanuncios.com/',
+                        'image' => asset('images/tools/milanuncios.png'),
+                    ],
+                    [
+                        'label' => 'Wallapop',
+                        'url' => 'https://es.wallapop.com/wall',
+                        'image' => asset('images/tools/wallapop.png'),
+                    ],
+                    [
+                        'label' => 'Cochesnet',
+                        'url' => 'https://www.coches.net/',
+                        'image' => asset('images/tools/cochesnet.jpg'),
                     ],
                     [
                         'label' => 'Salesforce',
@@ -446,6 +461,13 @@ Route::middleware('auth')->group(function () {
                     'ServiceForm',
                 ];
 
+                $captadorButtonLabels = [
+                    'Salesforce',
+                    'Milanuncios',
+                    'Wallapop',
+                    'Cochesnet',
+                ];
+
                 $callCenterGeneralButtonLabels = [
                     'Salesforce',
                     'Salesforce comunidad',
@@ -556,6 +578,9 @@ Route::middleware('auth')->group(function () {
                     ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true) || (
                         in_array($button['label'] ?? null, $commercialButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER])
+                    ) || (
+                        in_array($button['label'] ?? null, $captadorButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_CAPTADOR])
                     ) || (
                         in_array($button['label'] ?? null, $callCenterGeneralButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_CALL_CENTER])
