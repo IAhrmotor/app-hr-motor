@@ -54,7 +54,7 @@
 @endphp
 
 <nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, roleViewerOpen: false, activeDropdown: null }"
-    x-effect="document.body.classList.toggle('overflow-hidden', open)"
+    x-effect="document.body.classList.toggle('overflow-hidden', open || (roleViewerOpen && window.matchMedia('(max-width: 1279px)').matches))"
     @keydown.escape.window="profileOpen = false; notificationsOpen = false; roleViewerOpen = false; activeDropdown = null; open = false"
     class="sticky top-0 z-50 border-b border-gray-200 bg-white">
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
@@ -135,7 +135,19 @@
 
             @auth
                 @if (app_role_viewer_enabled($authUser))
-                    <div class="relative" @click.outside="roleViewerOpen = false">
+                    <button type="button" @click="roleViewerOpen = !roleViewerOpen; notificationsOpen = false; profileOpen = false"
+                        class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} transition xl:hidden"
+                        aria-label="Abrir visor de roles" :aria-expanded="roleViewerOpen.toString()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15.0007 12C15.0007 13.6569 13.6576 15 12.0007 15C10.3439 15 9.00073 13.6569 9.00073 12C9.00073 10.3431 10.3439 9 12.0007 9C13.6576 9 15.0007 10.3431 15.0007 12Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12.0012 5C7.52354 5 3.73326 7.94288 2.45898 12C3.73324 16.0571 7.52354 19 12.0012 19C16.4788 19 20.2691 16.0571 21.5434 12C20.2691 7.94291 16.4788 5 12.0012 5Z" />
+                        </svg>
+                    </button>
+
+                    <div class="relative hidden xl:block" @click.outside="roleViewerOpen = false">
                         <button type="button" @click="roleViewerOpen = !roleViewerOpen; notificationsOpen = false; profileOpen = false"
                             class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} px-3 transition"
                             aria-label="Abrir visor de roles" :aria-expanded="roleViewerOpen.toString()">
@@ -155,7 +167,7 @@
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 translate-y-1"
-                            class="absolute right-0 top-full mt-3 w-80 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl sm:w-96">
+                            class="absolute right-0 top-full mt-3 flex max-h-[calc(100vh-6rem)] w-[min(24rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
                             <div class="border-b border-brand-secondary/10 px-4 py-3">
                                 <p class="text-sm font-semibold text-brand-secondary">Visor de roles</p>
                                 <p class="mt-1 text-xs text-brand-secondary/60">
@@ -163,14 +175,14 @@
                                 </p>
                             </div>
 
-                            <div class="max-h-[28rem] overflow-y-auto p-2">
+                            <div class="min-h-0 flex-1 overflow-y-auto p-2">
                                 @foreach ($roleViewerOptions as $role => $label)
                                     <form method="POST" action="{{ route('role-viewer.store') }}">
                                         @csrf
                                         <input type="hidden" name="role" value="{{ $role }}">
                                         <button type="submit"
-                                            class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium transition hover:bg-brand-secondary/5 {{ $visibleRole === $role ? 'text-brand-primary' : 'text-brand-secondary' }}">
-                                            <span>{{ $label }}</span>
+                                            class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition hover:bg-brand-secondary/5 {{ $visibleRole === $role ? 'text-brand-primary' : 'text-brand-secondary' }}">
+                                            <span class="min-w-0 flex-1 break-words">{{ $label }}</span>
                                             @if ($visibleRole === $role)
                                                 <span class="rounded-full bg-brand-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-primary">Activa</span>
                                             @endif
@@ -356,6 +368,52 @@
         </div>
     </div>
 
+    @auth
+        @if (app_role_viewer_enabled($authUser))
+            <div x-show="roleViewerOpen" x-cloak x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1" class="w-full overflow-x-hidden border-t border-gray-200 bg-white xl:hidden">
+                <div class="mx-auto max-h-[calc(100dvh-5rem)] max-w-7xl overflow-y-auto overscroll-contain px-6 py-4 lg:px-8">
+                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/60">
+                        Visor de roles
+                    </p>
+                    <p class="mt-1 text-sm text-brand-secondary/60">
+                        Navega la app como otro rol con los permisos disponibles para tu perfil.
+                    </p>
+
+                    <div class="mt-3 space-y-1">
+                        @foreach ($roleViewerOptions as $role => $label)
+                            <form method="POST" action="{{ route('role-viewer.store') }}">
+                                @csrf
+                                <input type="hidden" name="role" value="{{ $role }}">
+                                <button type="submit" @click="roleViewerOpen = false"
+                                    class="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm font-medium transition {{ $visibleRole === $role ? 'bg-brand-primary/5 text-brand-primary' : 'text-gray-700 hover:bg-gray-100' }}">
+                                    <span class="min-w-0 flex-1 break-words">{{ $label }}</span>
+                                    @if ($visibleRole === $role)
+                                        <span class="ml-3 rounded-full bg-brand-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-primary">Activa</span>
+                                    @endif
+                                </button>
+                            </form>
+                        @endforeach
+
+                        @if ($roleViewerActive)
+                            <form method="POST" action="{{ route('role-viewer.destroy') }}" class="pt-1">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" @click="roleViewerOpen = false"
+                                    class="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm font-semibold text-gray-700 transition hover:bg-gray-100">
+                                    <span>{{ $authUser?->role === \App\Models\User::ROLE_ADMIN ? 'Volver a admin' : 'Volver a mi rol' }}</span>
+                                    <span class="ml-3 text-xs text-gray-400">Reiniciar</span>
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endif
+    @endauth
+
     <div x-show="open" x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
@@ -412,41 +470,6 @@
                     </a>
                 @endif
 
-                @if (app_role_viewer_enabled($authUser))
-                    <div class="mt-3 rounded-2xl border border-brand-secondary/10 bg-slate-50 p-3">
-                        <p class="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-brand-secondary/60">
-                            Visor de roles
-                        </p>
-
-                        <div class="mt-2 space-y-1">
-                            @foreach ($roleViewerOptions as $role => $label)
-                                <form method="POST" action="{{ route('role-viewer.store') }}">
-                                    @csrf
-                                    <input type="hidden" name="role" value="{{ $role }}">
-                                    <button type="submit" @click="open = false"
-                                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition {{ $visibleRole === $role ? 'bg-white text-brand-primary' : 'text-gray-700 hover:bg-white' }}">
-                                        <span>{{ $label }}</span>
-                                        @if ($visibleRole === $role)
-                                            <span class="rounded-full bg-brand-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-primary">Activa</span>
-                                        @endif
-                                    </button>
-                                </form>
-                            @endforeach
-
-                            @if ($roleViewerActive)
-                                <form method="POST" action="{{ route('role-viewer.destroy') }}" class="pt-1">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" @click="open = false"
-                                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-700 transition hover:bg-white">
-                                        <span>{{ $authUser?->role === \App\Models\User::ROLE_ADMIN ? 'Volver a admin' : 'Volver a mi rol' }}</span>
-                                        <span class="text-xs text-gray-400">Reiniciar</span>
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-                    </div>
-                @endif
             @endauth
 
             <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t border-gray-200 pt-2">
