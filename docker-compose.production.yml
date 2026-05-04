@@ -7,10 +7,13 @@ services:
       dockerfile: Dockerfile
     container_name: laravel-prod-app
     working_dir: /var/www
+    env_file:
+      - .env.docker
     volumes:
       - ./:/var/www
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   scheduler:
     build:
@@ -20,11 +23,15 @@ services:
     working_dir: /var/www
     command: ["php", "artisan", "schedule:work"]
     restart: unless-stopped
+    env_file:
+      - .env.docker
     volumes:
       - ./:/var/www
     depends_on:
-      - app
-      - db
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
 
   nginx:
     image: nginx:stable-alpine
@@ -50,6 +57,12 @@ services:
       - production_db_data:/var/lib/mysql
     ports:
       - "3308:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
 
 volumes:
   production_db_data:
