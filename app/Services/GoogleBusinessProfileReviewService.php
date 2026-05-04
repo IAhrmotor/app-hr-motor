@@ -74,13 +74,21 @@ class GoogleBusinessProfileReviewService
         $syncedAt = now();
         $reviewRows = [];
         $mappedDealerships = collect();
+        $dealershipCount = Dealership::query()->count();
 
         Log::info('Google Business Profile sync started.', [
             'connection_id' => $connection->id,
             'account_name' => data_get($account, 'accountName'),
             'account_resource_name' => data_get($account, 'name'),
             'locations_found' => count($locations),
+            'dealership_count' => $dealershipCount,
         ]);
+
+        if ($dealershipCount === 0) {
+            Log::warning('Google Business Profile sync found no dealership records in the database.', [
+                'account_resource_name' => data_get($account, 'name'),
+            ]);
+        }
 
         foreach ($locations as $location) {
             $locationName = $this->stringOrNull(data_get($location, 'name'));
