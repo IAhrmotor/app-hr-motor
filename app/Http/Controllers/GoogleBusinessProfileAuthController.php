@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Services\GoogleBusinessProfileReviewService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -53,7 +52,6 @@ class GoogleBusinessProfileAuthController extends Controller
 
         try {
             $service->saveAuthorizationCodeTokens($request->string('code')->toString());
-            $service->sync();
         } catch (Throwable $exception) {
             Log::error('Google Business Profile OAuth callback failed.', [
                 'message' => $exception->getMessage(),
@@ -62,6 +60,18 @@ class GoogleBusinessProfileAuthController extends Controller
             return redirect()
                 ->route('reviews.index')
                 ->with('error', 'No se ha podido completar la conexion OAuth con Google Business Profile.');
+        }
+
+        try {
+            $service->sync();
+        } catch (Throwable $exception) {
+            Log::warning('Google Business Profile initial sync failed after OAuth connection.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return redirect()
+                ->route('reviews.index')
+                ->with('success', 'Google Business Profile conectado correctamente, pero la primera sincronizacion no ha podido completarse. Se reintentara en el siguiente ciclo.');
         }
 
         return redirect()
