@@ -165,17 +165,29 @@ class ReviewController extends Controller
 
     private function getConnection(): ?GoogleBusinessProfileConnection
     {
-        return app(GoogleBusinessProfileReviewService::class)->getConnection();
+        try {
+            return app(GoogleBusinessProfileReviewService::class)->getConnection();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function reviewTableExists(): bool
     {
-        return Schema::hasTable('google_business_profile_reviews');
+        try {
+            return Schema::hasTable('google_business_profile_reviews');
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function monthlySnapshotsTableExists(): bool
     {
-        return Schema::hasTable('google_business_profile_monthly_snapshots');
+        try {
+            return Schema::hasTable('google_business_profile_monthly_snapshots');
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function reviewsQuery(Request $request)
