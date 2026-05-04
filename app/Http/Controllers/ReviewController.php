@@ -7,6 +7,7 @@ use App\Models\GoogleBusinessProfileConnection;
 use App\Models\GoogleBusinessProfileMonthlySnapshot;
 use App\Models\GoogleBusinessProfileReview;
 use App\Services\GoogleBusinessProfileReviewService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -19,18 +20,27 @@ class ReviewController extends Controller
     public function index(Request $request): View
     {
         $connection = $this->getConnection();
-        $reviews = $this->reviewTableExists()
-            ? $this->reviewsQuery($request)->with('dealership')->get()
-            : collect();
 
-        $dealershipSummaries = $this->buildDealershipSummaries($reviews);
-        $locationSummaries = $this->buildLocationSummaries($reviews);
-        $latestUnanswered = $reviews
-            ->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())
-            ->take(8)
-            ->values();
-        $latestReviews = $reviews->take(18);
-        $stats = $this->buildStats($reviews);
+        $dealershipSummaries = $this->buildDealershipSummaries();
+        $locationSummaries = $this->buildLocationSummaries();
+        $latestUnanswered = $this->reviewTableExists()
+            ? GoogleBusinessProfileReview::query()
+                ->with('dealership')
+                ->whereNull('reply_comment')
+                ->orderByDesc('review_created_at')
+                ->orderByDesc('id')
+                ->limit(8)
+                ->get()
+            : collect();
+        $latestReviews = $this->reviewTableExists()
+            ? GoogleBusinessProfileReview::query()
+                ->with('dealership')
+                ->orderByDesc('review_created_at')
+                ->orderByDesc('id')
+                ->limit(18)
+                ->get()
+            : collect();
+        $stats = $this->buildStats();
 
         return view('reviews.index', [
             'connection' => $connection,
@@ -236,16 +246,19 @@ class ReviewController extends Controller
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    private function buildDealershipSummaries(Collection $reviews): Collection
+    private function buildDealershipSummaries(): Collection
     {
         return Dealership::query()
             ->orderBy('name')
             ->get()
-            ->map(function (Dealership $dealership) use ($reviews): array {
-                $dealershipReviews = $reviews->where('dealership_id', $dealership->id);
-                $monthlyReviews = $dealershipReviews->filter(
-                    fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth()
-                );
+            ->map(function (Dealership $dealership): array {
+                $dealershipReviewsQuery = GoogleBusinessProfileReview::query()
+                    ->where('dealership_id', $dealership->id);
+
+                $monthStart = now()->startOfMonth();
+                $monthEnd = now()->endOfMonth();
+                $monthlyReviewsQuery = (clone $dealershipReviewsQuery)
+                    ->whereBetween('review_created_at', [$monthStart, $monthEnd]);
 
                 $snapshot = $this->monthlySnapshotsTableExists()
                     ? GoogleBusinessProfileMonthlySnapshot::query()
@@ -256,11 +269,11 @@ class ReviewController extends Controller
 
                 return [
                     'dealership' => $dealership,
-                    'total_reviews' => $dealershipReviews->count(),
-                    'average_rating' => round((float) $dealershipReviews->avg('rating'), 2),
-                    'monthly_reviews' => $monthlyReviews->count(),
-                    'monthly_average_rating' => round((float) $monthlyReviews->avg('rating'), 2),
-                    'unanswered_reviews' => $dealershipReviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+                    'total_reviews' => $dealershipReviewsQuery->count(),
+                    'average_rating' => round((float) $dealershipReviewsQuery->avg('rating'), 2),
+                    'monthly_reviews' => $monthlyReviewsQuery->count(),
+                    'monthly_average_rating' => round((float) $monthlyReviewsQuery->avg('rating'), 2),
+                    'unanswered_reviews' => (clone $dealershipReviewsQuery)->whereNull('reply_comment')->count(),
                     'snapshot' => $snapshot,
                 ];
             });
@@ -269,25 +282,40 @@ class ReviewController extends Controller
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    private function buildLocationSummaries(Collection $reviews): Collection
+    private function buildLocationSummaries(): Collection
     {
-        return $reviews
-            ->groupBy('location_name')
-            ->map(function (Collection $locationReviews, string $locationName): array {
-                $locationTitle = $locationReviews->first()?->location_title ?? $locationName;
-                $monthlyReviews = $locationReviews->filter(
-                    fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth()
-                );
+        if (! $this->reviewTableExists()) {
+            return collect();
+        }
+
+        return GoogleBusinessProfileReview::query()
+            ->select('location_name')
+            ->whereNotNull('location_name')
+            ->distinct()
+            ->orderBy('location_name')
+            ->pluck('location_name')
+            ->map(function (string $locationName): array {
+                $locationReviewsQuery = GoogleBusinessProfileReview::query()
+                    ->where('location_name', $locationName);
+
+                $locationTitle = (clone $locationReviewsQuery)
+                    ->orderByDesc('review_created_at')
+                    ->orderByDesc('id')
+                    ->value('location_title') ?? $locationName;
+                $monthStart = now()->startOfMonth();
+                $monthEnd = now()->endOfMonth();
+                $monthlyReviewsQuery = (clone $locationReviewsQuery)
+                    ->whereBetween('review_created_at', [$monthStart, $monthEnd]);
 
                 return [
                     'key' => $this->encodeLocationKey($locationName),
                     'location_name' => $locationName,
                     'location_title' => $locationTitle,
-                    'total_reviews' => $locationReviews->count(),
-                    'average_rating' => round((float) $locationReviews->avg('rating'), 2),
-                    'monthly_reviews' => $monthlyReviews->count(),
-                    'monthly_average_rating' => round((float) $monthlyReviews->avg('rating'), 2),
-                    'unanswered_reviews' => $locationReviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+                    'total_reviews' => $locationReviewsQuery->count(),
+                    'average_rating' => round((float) $locationReviewsQuery->avg('rating'), 2),
+                    'monthly_reviews' => $monthlyReviewsQuery->count(),
+                    'monthly_average_rating' => round((float) $monthlyReviewsQuery->avg('rating'), 2),
+                    'unanswered_reviews' => (clone $locationReviewsQuery)->whereNull('reply_comment')->count(),
                 ];
             })
             ->values()
@@ -296,17 +324,42 @@ class ReviewController extends Controller
     }
 
     /**
-     * @param  Collection<int, GoogleBusinessProfileReview>  $reviews
      * @return array<string, mixed>
      */
-    private function buildStats(Collection $reviews): array
+    private function buildStats(?Collection $reviews = null): array
     {
+        if ($reviews !== null) {
+            return [
+                'total_reviews' => $reviews->count(),
+                'average_rating' => round((float) $reviews->avg('rating'), 2),
+                'monthly_reviews' => $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth())->count(),
+                'monthly_average_rating' => round((float) $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth())->avg('rating'), 2),
+                'unanswered_reviews' => $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+            ];
+        }
+
+        if (! $this->reviewTableExists()) {
+            return [
+                'total_reviews' => 0,
+                'average_rating' => 0,
+                'monthly_reviews' => 0,
+                'monthly_average_rating' => 0,
+                'unanswered_reviews' => 0,
+            ];
+        }
+
+        $query = GoogleBusinessProfileReview::query();
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
+        $monthlyQuery = GoogleBusinessProfileReview::query()
+            ->whereBetween('review_created_at', [$monthStart, $monthEnd]);
+
         return [
-            'total_reviews' => $reviews->count(),
-            'average_rating' => round((float) $reviews->avg('rating'), 2),
-            'monthly_reviews' => $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth())->count(),
-            'monthly_average_rating' => round((float) $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth())->avg('rating'), 2),
-            'unanswered_reviews' => $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+            'total_reviews' => $query->count(),
+            'average_rating' => round((float) $query->avg('rating'), 2),
+            'monthly_reviews' => $monthlyQuery->count(),
+            'monthly_average_rating' => round((float) $monthlyQuery->avg('rating'), 2),
+            'unanswered_reviews' => (clone $query)->whereNull('reply_comment')->count(),
         ];
     }
 
