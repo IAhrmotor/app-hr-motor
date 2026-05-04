@@ -519,7 +519,15 @@ class GoogleBusinessProfileReviewService
         return Dealership::query()
             ->get()
             ->first(function (Dealership $candidate) use ($normalizedLocationTitle): bool {
-                return $this->normalizeText($candidate->name) === $normalizedLocationTitle;
+                $normalizedCandidate = $this->normalizeText($candidate->name);
+
+                if ($normalizedCandidate === '') {
+                    return false;
+                }
+
+                return $normalizedCandidate === $normalizedLocationTitle
+                    || str_contains($normalizedLocationTitle, $normalizedCandidate)
+                    || str_contains($normalizedCandidate, $normalizedLocationTitle);
             });
     }
 
