@@ -35,18 +35,28 @@ class GoogleBusinessProfileReviewService
     {
         $this->ensureRequiredTablesExist();
 
+        $redirectUri = route('google-business-profile.callback', [], true);
+
         $response = Http::asForm()
             ->post(config('services.google_business_profile.token_url'), [
                 'grant_type' => 'authorization_code',
                 'client_id' => config('services.google_business_profile.client_id'),
                 'client_secret' => config('services.google_business_profile.client_secret'),
-                'redirect_uri' => config('services.google_business_profile.redirect_uri'),
+                'redirect_uri' => $redirectUri,
                 'code' => $code,
-            ])
-            ->throw()
-            ->json();
+            ]);
 
-        return $this->persistTokens($response);
+        if ($response->failed()) {
+            Log::error('Google Business Profile token exchange failed.', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'redirect_uri' => $redirectUri,
+            ]);
+        }
+
+        $response->throw();
+
+        return $this->persistTokens($response->json());
     }
 
     public function sync(): Collection
