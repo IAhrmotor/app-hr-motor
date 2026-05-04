@@ -31,7 +31,7 @@
                 <form method="POST" action="{{ route('reviews.refresh') }}">
                     @csrf
                     <button type="submit"
-                        class="inline-flex items-center justify-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
+                        class="inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
                         Sincronizar ahora
                     </button>
                 </form>
@@ -68,7 +68,7 @@
                     <p class="text-xs text-gray-500">Las ultimas reseñas sin responder se muestran aqui para actuar rapido.</p>
                 </div>
                 <button type="button" @click="open = !open"
-                    class="inline-flex items-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                    class="inline-flex cursor-pointer items-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                     <span class="inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
                     {{ $latestUnanswered->count() }} sin responder
                 </button>
@@ -210,7 +210,7 @@
                         <option value="rating_asc" @selected(($filters['sort'] ?? '') === 'rating_asc')>Peor valoradas</option>
                     </select>
                     <div class="md:col-span-4 flex justify-end">
-                        <button type="submit" class="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white">
+                        <button type="submit" class="cursor-pointer rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white">
                             Aplicar filtros
                         </button>
                     </div>
