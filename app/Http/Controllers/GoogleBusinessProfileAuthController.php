@@ -68,20 +68,8 @@ class GoogleBusinessProfileAuthController extends Controller
                 ->with('error', 'No se ha podido completar la conexion OAuth con Google Business Profile.');
         }
 
-        try {
-            $service->sync();
-        } catch (Throwable $exception) {
-            Log::warning('Google Business Profile initial sync failed after OAuth connection.', [
-                'message' => $exception->getMessage(),
-            ]);
-
-            return redirect()
-                ->route('reviews.index')
-                ->with('success', 'Google Business Profile conectado correctamente, pero la primera sincronizacion no ha podido completarse. Se reintentara en el siguiente ciclo.');
-        }
-
         return redirect()
             ->route('reviews.index')
-            ->with('success', 'Google Business Profile conectado correctamente y reseñas sincronizadas.');
+            ->with('success', 'Google Business Profile conectado correctamente. La sincronizacion se ejecutara en el siguiente ciclo o al pulsar Sincronizar ahora.');
     }
 }
