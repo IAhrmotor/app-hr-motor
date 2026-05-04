@@ -77,6 +77,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/resenas/delegacion/{dealership}', [ReviewController::class, 'show'])
             ->whereNumber('dealership')
             ->name('reviews.show');
+        Route::get('/resenas/ubicacion/{locationKey}', [ReviewController::class, 'location'])
+            ->where('locationKey', '[A-Za-z0-9\-_]+')
+            ->name('reviews.location');
         Route::post('/resenas/sincronizar', [ReviewController::class, 'refresh'])->name('reviews.refresh');
         Route::post('/resenas/reply/{review}', [ReviewController::class, 'reply'])
             ->whereNumber('review')

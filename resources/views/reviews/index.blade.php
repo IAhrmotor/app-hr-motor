@@ -177,11 +177,65 @@
                     </div>
                 </a>
             @empty
-                <div class="rounded-3xl border border-dashed border-gray-200 bg-white p-8 text-sm text-gray-500 xl:col-span-3">
-                    Aun no hay delegaciones vinculadas con reseñas.
-                </div>
+                @if ($locationSummaries->isEmpty())
+                    <div class="rounded-3xl border border-dashed border-gray-200 bg-white p-8 text-sm text-gray-500 xl:col-span-3">
+                        Aun no hay delegaciones vinculadas con reseñas.
+                    </div>
+                @endif
             @endforelse
         </div>
+
+        @if ($dealershipSummaries->isEmpty() && $locationSummaries->isNotEmpty())
+            <div class="mt-10">
+                <div class="mb-4">
+                    <h2 class="text-lg font-semibold text-brand-secondary">Ubicaciones de Google</h2>
+                    <p class="text-sm text-gray-500">Mostramos las ubicaciones reales de Google Business Profile mientras no haya delegaciones locales enlazadas.</p>
+                </div>
+
+                <div class="grid gap-4 xl:grid-cols-3">
+                    @foreach ($locationSummaries as $summary)
+                        @php
+                            $avg = max(0, min(5, (float) $summary['average_rating']));
+                            $monthlyAvg = max(0, min(5, (float) $summary['monthly_average_rating']));
+                        @endphp
+                        <a href="{{ route('reviews.location', $summary['key']) }}"
+                            class="group rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:shadow-md">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-lg font-semibold text-brand-secondary">{{ $summary['location_title'] }}</p>
+                                    <p class="mt-1 text-sm text-gray-500">Google location</p>
+                                </div>
+                                <span class="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
+                                    {{ $summary['total_reviews'] }} total
+                                </span>
+                            </div>
+
+                            <div class="mt-5 space-y-3">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-500">Media actual</span>
+                                    <span class="font-semibold text-brand-secondary">{{ number_format($avg, 2) }}</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    @for ($i = 1; $i <= 5; $i++)
+                                        <span class="{{ $i <= $starValue($avg) ? 'text-amber-400' : 'text-gray-200' }}">★</span>
+                                    @endfor
+                                </div>
+
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-500">Media este mes</span>
+                                    <span class="font-semibold text-brand-secondary">{{ number_format($monthlyAvg, 2) }}</span>
+                                </div>
+
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-500">Sin responder</span>
+                                    <span class="font-semibold text-brand-secondary">{{ $summary['unanswered_reviews'] }}</span>
+                                </div>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         <div class="mt-10 rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div class="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
