@@ -23,6 +23,7 @@ class ReviewController extends Controller
             ->get();
 
         $dealershipSummaries = $this->buildDealershipSummaries($reviews);
+        $locationSummaries = $this->buildLocationSummaries($reviews);
         $latestUnanswered = $reviews
             ->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())
             ->take(8)
@@ -33,6 +34,7 @@ class ReviewController extends Controller
         return view('reviews.index', [
             'connection' => $connection,
             'dealershipSummaries' => $dealershipSummaries,
+            'locationSummaries' => $locationSummaries,
             'latestUnanswered' => $latestUnanswered,
             'latestReviews' => $latestReviews,
             'stats' => $stats,
@@ -64,6 +66,42 @@ class ReviewController extends Controller
 
         return view('reviews.show', [
             'dealership' => $dealership,
+            'reviews' => $reviews,
+            'snapshots' => $snapshots,
+            'stats' => $stats,
+        ]);
+    }
+
+    public function location(Request $request, string $locationKey): View
+    {
+        $locationName = $this->decodeLocationKey($locationKey);
+
+        abort_unless(filled($locationName), 404);
+
+        $reviews = GoogleBusinessProfileReview::query()
+            ->with('dealership')
+            ->where('location_name', $locationName)
+            ->when($request->filled('status'), function ($query) use ($request): void {
+                if ($request->string('status')->toString() === 'unanswered') {
+                    $query->whereNull('reply_comment');
+                }
+            })
+            ->orderByDesc('review_created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $locationTitle = $reviews->first()?->location_title ?? $locationName;
+        $location = (object) [
+            'id' => null,
+            'name' => $locationTitle,
+            'google_business_profile_location_title' => $locationTitle,
+            'google_business_profile_location_name' => $locationName,
+        ];
+        $snapshots = collect();
+        $stats = $this->buildStats($reviews);
+
+        return view('reviews.show', [
+            'dealership' => $location,
             'reviews' => $reviews,
             'snapshots' => $snapshots,
             'stats' => $stats,
@@ -196,6 +234,35 @@ class ReviewController extends Controller
     }
 
     /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function buildLocationSummaries(Collection $reviews): Collection
+    {
+        return $reviews
+            ->groupBy('location_name')
+            ->map(function (Collection $locationReviews, string $locationName): array {
+                $locationTitle = $locationReviews->first()?->location_title ?? $locationName;
+                $monthlyReviews = $locationReviews->filter(
+                    fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth()
+                );
+
+                return [
+                    'key' => $this->encodeLocationKey($locationName),
+                    'location_name' => $locationName,
+                    'location_title' => $locationTitle,
+                    'total_reviews' => $locationReviews->count(),
+                    'average_rating' => round((float) $locationReviews->avg('rating'), 2),
+                    'monthly_reviews' => $monthlyReviews->count(),
+                    'monthly_average_rating' => round((float) $monthlyReviews->avg('rating'), 2),
+                    'unanswered_reviews' => $locationReviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+                ];
+            })
+            ->values()
+            ->sortByDesc('total_reviews')
+            ->values();
+    }
+
+    /**
      * @param  Collection<int, GoogleBusinessProfileReview>  $reviews
      * @return array<string, mixed>
      */
@@ -208,5 +275,17 @@ class ReviewController extends Controller
             'monthly_average_rating' => round((float) $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => optional($review->review_created_at)->isCurrentMonth())->avg('rating'), 2),
             'unanswered_reviews' => $reviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
         ];
+    }
+
+    private function encodeLocationKey(string $locationName): string
+    {
+        return rtrim(strtr(base64_encode($locationName), '+/', '-_'), '=');
+    }
+
+    private function decodeLocationKey(string $locationKey): ?string
+    {
+        $decoded = base64_decode(strtr($locationKey, '-_', '+/'), true);
+
+        return is_string($decoded) && $decoded !== '' ? $decoded : null;
     }
 }
