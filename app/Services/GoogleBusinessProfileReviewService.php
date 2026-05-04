@@ -73,6 +73,7 @@ class GoogleBusinessProfileReviewService
 
             $locationTitle = $this->extractLocationTitle($location);
             $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle);
+            $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
 
             if ($dealership) {
                 $mappedDealerships->push($dealership->id);
@@ -82,10 +83,10 @@ class GoogleBusinessProfileReviewService
                 ])->save();
             }
 
-            foreach ($this->fetchReviews($connection, $locationName) as $review) {
+            foreach ($this->fetchReviews($connection, $locationResourceName) as $review) {
                 $reviewRows[] = $this->buildReviewRow(
                     review: $review,
-                    locationName: $locationName,
+                    locationName: $locationResourceName,
                     locationTitle: $locationTitle,
                     dealershipId: $dealership?->id,
                     syncedAt: $syncedAt
@@ -277,14 +278,14 @@ class GoogleBusinessProfileReviewService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function fetchReviews(GoogleBusinessProfileConnection $connection, string $locationName): array
+    private function fetchReviews(GoogleBusinessProfileConnection $connection, string $locationResourceName): array
     {
         $reviews = [];
         $nextPageToken = null;
-        $endpoint = sprintf('https://mybusiness.googleapis.com/v4/%s/reviews', $locationName);
+        $endpoint = sprintf('https://mybusiness.googleapis.com/v4/%s/reviews', $locationResourceName);
 
         do {
-            $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($locationName, $nextPageToken) {
+            $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($locationResourceName, $nextPageToken) {
                 $query = [
                     'pageSize' => 50,
                     'orderBy' => 'updateTime desc',
@@ -295,7 +296,7 @@ class GoogleBusinessProfileReviewService
                 }
 
                 return Http::withToken($accessToken)->get(
-                    sprintf('https://mybusiness.googleapis.com/v4/%s/reviews', $locationName),
+                    sprintf('https://mybusiness.googleapis.com/v4/%s/reviews', $locationResourceName),
                     $query
                 );
             });
@@ -305,7 +306,7 @@ class GoogleBusinessProfileReviewService
             } catch (\Throwable $exception) {
                 Log::error('Google Business Profile fetchReviews failed.', [
                     'endpoint' => $endpoint,
-                    'location_name' => $locationName,
+                    'location_name' => $locationResourceName,
                     'page_token' => $nextPageToken,
                     'status' => $response->status(),
                     'body' => $response->body(),
@@ -409,6 +410,17 @@ class GoogleBusinessProfileReviewService
             'created_at' => $syncedAt->toDateTimeString(),
             'updated_at' => $syncedAt->toDateTimeString(),
         ];
+    }
+
+    private function buildLocationResourceName(string $accountResourceName, string $locationName): string
+    {
+        $locationName = ltrim($locationName, '/');
+
+        if (str_starts_with($locationName, 'accounts/')) {
+            return $locationName;
+        }
+
+        return rtrim($accountResourceName, '/') . '/' . $locationName;
     }
 
     private function refreshMonthlySnapshots(Carbon $capturedAt): void
