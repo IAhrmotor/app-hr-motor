@@ -1,0 +1,492 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Dealership;
+use App\Models\GoogleBusinessProfileConnection;
+use App\Models\GoogleBusinessProfileMonthlySnapshot;
+use App\Models\GoogleBusinessProfileReview;
+use Carbon\Carbon;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use RuntimeException;
+
+class GoogleBusinessProfileReviewService
+{
+    private const PROVIDER = 'google_business_profile';
+
+    public function getConnection(): ?GoogleBusinessProfileConnection
+    {
+        if (! Schema::hasTable('google_business_profile_connections')) {
+            return null;
+        }
+
+        return GoogleBusinessProfileConnection::query()
+            ->where('provider', self::PROVIDER)
+            ->first();
+    }
+
+    public function saveAuthorizationCodeTokens(string $code): GoogleBusinessProfileConnection
+    {
+        $this->ensureRequiredTablesExist();
+
+        $response = Http::asForm()
+            ->post(config('services.google_business_profile.token_url'), [
+                'grant_type' => 'authorization_code',
+                'client_id' => config('services.google_business_profile.client_id'),
+                'client_secret' => config('services.google_business_profile.client_secret'),
+                'redirect_uri' => config('services.google_business_profile.redirect_uri'),
+                'code' => $code,
+            ])
+            ->throw()
+            ->json();
+
+        return $this->persistTokens($response);
+    }
+
+    public function sync(): Collection
+    {
+        $this->ensureRequiredTablesExist();
+
+        $connection = $this->getConnection();
+
+        if (! $connection) {
+            throw new RuntimeException('No hay ninguna conexion de Google Business Profile configurada.');
+        }
+
+        $account = $this->resolveAccount($connection);
+        $locations = $this->fetchLocations($connection, $account['name']);
+        $syncedAt = now();
+        $reviewRows = [];
+        $mappedDealerships = collect();
+
+        foreach ($locations as $location) {
+            $locationName = $this->stringOrNull(data_get($location, 'name'));
+            if (! $locationName) {
+                continue;
+            }
+
+            $locationTitle = $this->extractLocationTitle($location);
+            $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle);
+
+            if ($dealership) {
+                $mappedDealerships->push($dealership->id);
+                $dealership->forceFill([
+                    'google_business_profile_location_name' => $locationName,
+                    'google_business_profile_location_title' => $locationTitle,
+                ])->save();
+            }
+
+            foreach ($this->fetchReviews($connection, $locationName) as $review) {
+                $reviewRows[] = $this->buildReviewRow(
+                    review: $review,
+                    locationName: $locationName,
+                    locationTitle: $locationTitle,
+                    dealershipId: $dealership?->id,
+                    syncedAt: $syncedAt
+                );
+            }
+        }
+
+        DB::transaction(function () use ($connection, $reviewRows, $syncedAt, $account, $mappedDealerships): void {
+            if ($reviewRows !== []) {
+                GoogleBusinessProfileReview::query()->upsert(
+                    $reviewRows,
+                    ['review_name'],
+                    [
+                        'dealership_id',
+                        'location_name',
+                        'location_title',
+                        'reviewer_name',
+                        'reviewer_photo_url',
+                        'rating',
+                        'comment',
+                        'reply_name',
+                        'reply_comment',
+                        'reply_updated_at',
+                        'review_created_at',
+                        'review_updated_at',
+                        'synced_at',
+                        'raw_payload',
+                        'updated_at',
+                    ]
+                );
+            }
+
+            $this->refreshMonthlySnapshots($syncedAt);
+
+            $connection->forceFill([
+                'account_name' => data_get($account, 'accountName'),
+                'account_resource_name' => data_get($account, 'name'),
+                'last_synced_at' => $syncedAt,
+                'metadata' => array_merge($connection->metadata ?? [], [
+                    'location_count' => count($reviewRows),
+                    'mapped_dealership_ids' => $mappedDealerships->unique()->values()->all(),
+                ]),
+            ])->save();
+        });
+
+        return GoogleBusinessProfileReview::query()
+            ->with('dealership')
+            ->orderByDesc('review_created_at')
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    public function replyToReview(string $reviewName, string $comment): GoogleBusinessProfileReview
+    {
+        $this->ensureRequiredTablesExist();
+
+        $review = GoogleBusinessProfileReview::query()
+            ->where('review_name', $reviewName)
+            ->firstOrFail();
+
+        $connection = $this->getConnection();
+
+        if (! $connection) {
+            throw new RuntimeException('No hay ninguna conexion de Google Business Profile configurada.');
+        }
+
+        $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($reviewName, $comment) {
+            return Http::withToken($accessToken)
+                ->put(sprintf('https://mybusiness.googleapis.com/v4/%s/reply', $reviewName), [
+                    'comment' => $comment,
+                ]);
+        });
+
+        $payload = $response->throw()->json();
+        $replyComment = data_get($payload, 'comment', $comment);
+        $replyUpdatedAt = $this->parseTimestamp(data_get($payload, 'updateTime')) ?? now();
+
+        $review->forceFill([
+            'reply_comment' => $replyComment,
+            'reply_updated_at' => $replyUpdatedAt,
+            'synced_at' => now(),
+        ])->save();
+
+        return $review->fresh(['dealership']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveAccount(GoogleBusinessProfileConnection $connection): array
+    {
+        $accounts = $this->listAccounts($connection);
+        $targetName = Str::lower(trim((string) config('services.google_business_profile.account_group_name')));
+
+        $matchedAccount = collect($accounts)->first(function (array $account) use ($targetName): bool {
+            $accountName = Str::lower(trim((string) data_get($account, 'accountName')));
+
+            return $accountName !== '' && (
+                $accountName === $targetName
+                || str_contains($accountName, $targetName)
+                || str_contains($targetName, $accountName)
+            );
+        });
+
+        if ($matchedAccount) {
+            return $matchedAccount;
+        }
+
+        if ($accounts !== []) {
+            return $accounts[0];
+        }
+
+        throw new RuntimeException('No se han encontrado cuentas de Google Business Profile para el usuario autenticado.');
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function listAccounts(GoogleBusinessProfileConnection $connection): array
+    {
+        $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) {
+            return Http::withToken($accessToken)->get('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', [
+                'pageSize' => 50,
+            ]);
+        });
+
+        return $response->throw()->json('accounts', []);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchLocations(GoogleBusinessProfileConnection $connection, string $accountResourceName): array
+    {
+        $locations = [];
+        $nextPageToken = null;
+
+        do {
+            $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($accountResourceName, $nextPageToken) {
+                $query = [
+                    'pageSize' => 100,
+                ];
+
+                if ($nextPageToken) {
+                    $query['pageToken'] = $nextPageToken;
+                }
+
+                return Http::withToken($accessToken)->get(
+                    sprintf('https://mybusinessbusinessinformation.googleapis.com/v1/%s/locations', $accountResourceName),
+                    $query
+                );
+            });
+
+            $payload = $response->throw()->json();
+            $locations = [...$locations, ...($payload['locations'] ?? [])];
+            $nextPageToken = $payload['nextPageToken'] ?? null;
+        } while ($nextPageToken);
+
+        return $locations;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchReviews(GoogleBusinessProfileConnection $connection, string $locationName): array
+    {
+        $reviews = [];
+        $nextPageToken = null;
+
+        do {
+            $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($locationName, $nextPageToken) {
+                $query = [
+                    'pageSize' => 100,
+                    'orderBy' => 'updateTime desc',
+                ];
+
+                if ($nextPageToken) {
+                    $query['pageToken'] = $nextPageToken;
+                }
+
+                return Http::withToken($accessToken)->get(
+                    sprintf('https://mybusiness.googleapis.com/v4/%s/reviews', $locationName),
+                    $query
+                );
+            });
+
+            $payload = $response->throw()->json();
+            $reviews = [...$reviews, ...($payload['reviews'] ?? [])];
+            $nextPageToken = $payload['nextPageToken'] ?? null;
+        } while ($nextPageToken);
+
+        return $reviews;
+    }
+
+    private function persistTokens(array $payload, ?GoogleBusinessProfileConnection $connection = null): GoogleBusinessProfileConnection
+    {
+        $connection ??= new GoogleBusinessProfileConnection([
+            'provider' => self::PROVIDER,
+        ]);
+
+        $metadata = $connection->metadata ?? [];
+        $metadata['issued_at'] = $payload['issued_at'] ?? ($metadata['issued_at'] ?? null);
+
+        $connection->forceFill([
+            'provider' => self::PROVIDER,
+            'access_token' => $payload['access_token'] ?? $connection->access_token,
+            'refresh_token' => $payload['refresh_token'] ?? $connection->refresh_token,
+            'token_type' => $payload['token_type'] ?? $connection->token_type,
+            'scope' => $payload['scope'] ?? $connection->scope,
+            'expires_at' => isset($payload['expires_in'])
+                ? now()->addSeconds((int) $payload['expires_in'])
+                : $connection->expires_at,
+            'metadata' => $metadata,
+        ])->save();
+
+        return $connection->fresh();
+    }
+
+    private function refreshAccessToken(GoogleBusinessProfileConnection $connection): GoogleBusinessProfileConnection
+    {
+        $response = Http::asForm()
+            ->post(config('services.google_business_profile.token_url'), [
+                'grant_type' => 'refresh_token',
+                'client_id' => config('services.google_business_profile.client_id'),
+                'client_secret' => config('services.google_business_profile.client_secret'),
+                'refresh_token' => $connection->refresh_token,
+            ])
+            ->throw()
+            ->json();
+
+        return $this->persistTokens($response, $connection);
+    }
+
+    private function requestWithAutoRefresh(GoogleBusinessProfileConnection $connection, callable $request): Response
+    {
+        if (blank($connection->access_token) && filled($connection->refresh_token)) {
+            $connection = $this->refreshAccessToken($connection);
+        }
+
+        if (blank($connection->access_token)) {
+            throw new RuntimeException('La conexion no tiene un access token valido.');
+        }
+
+        $response = $request($connection->access_token);
+
+        if ($response->status() !== 401 || blank($connection->refresh_token)) {
+            return $response;
+        }
+
+        $connection = $this->refreshAccessToken($connection);
+
+        return $request($connection->access_token);
+    }
+
+    /**
+     * @param  array<string, mixed>  $review
+     * @return array<string, mixed>
+     */
+    private function buildReviewRow(array $review, string $locationName, ?string $locationTitle, ?int $dealershipId, Carbon $syncedAt): array
+    {
+        $replyComment = data_get($review, 'reviewReply.comment');
+        $replyUpdatedAt = $this->parseTimestamp(data_get($review, 'reviewReply.updateTime'));
+
+        return [
+            'dealership_id' => $dealershipId,
+            'location_name' => $locationName,
+            'location_title' => $locationTitle,
+            'review_name' => (string) data_get($review, 'name'),
+            'reviewer_name' => $this->stringOrNull(data_get($review, 'reviewer.displayName') ?? data_get($review, 'reviewer.name')),
+            'reviewer_photo_url' => $this->stringOrNull(data_get($review, 'reviewer.profilePhotoUrl')),
+            'rating' => $this->ratingToInteger(data_get($review, 'starRating') ?? data_get($review, 'rating')),
+            'comment' => $this->stringOrNull(data_get($review, 'comment')),
+            'reply_name' => $this->stringOrNull(data_get($review, 'reviewReply.name')),
+            'reply_comment' => $this->stringOrNull($replyComment),
+            'reply_updated_at' => $replyUpdatedAt?->toDateTimeString(),
+            'review_created_at' => $this->parseTimestamp(data_get($review, 'createTime'))?->toDateTimeString(),
+            'review_updated_at' => $this->parseTimestamp(data_get($review, 'updateTime'))?->toDateTimeString(),
+            'synced_at' => $syncedAt->toDateTimeString(),
+            'raw_payload' => $review,
+            'created_at' => $syncedAt->toDateTimeString(),
+            'updated_at' => $syncedAt->toDateTimeString(),
+        ];
+    }
+
+    private function refreshMonthlySnapshots(Carbon $capturedAt): void
+    {
+        $snapshotMonth = $capturedAt->copy()->startOfMonth();
+        $dealerships = Dealership::query()->orderBy('name')->get();
+
+        foreach ($dealerships as $dealership) {
+            $reviewsQuery = GoogleBusinessProfileReview::query()
+                ->where('dealership_id', $dealership->id);
+
+            $allReviews = (clone $reviewsQuery)->get();
+            $monthReviews = (clone $reviewsQuery)
+                ->whereBetween('review_created_at', [$snapshotMonth->copy()->startOfMonth(), $snapshotMonth->copy()->endOfMonth()])
+                ->get();
+
+            GoogleBusinessProfileMonthlySnapshot::query()->updateOrCreate(
+                [
+                    'dealership_id' => $dealership->id,
+                    'snapshot_month' => $snapshotMonth->toDateString(),
+                ],
+                [
+                    'total_reviews' => $allReviews->count(),
+                    'average_rating' => $allReviews->avg('rating'),
+                    'monthly_reviews' => $monthReviews->count(),
+                    'monthly_average_rating' => $monthReviews->avg('rating'),
+                    'unanswered_reviews' => $allReviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+                    'captured_at' => $capturedAt,
+                ]
+            );
+        }
+    }
+
+    private function resolveDealershipForLocation(string $locationName, ?string $locationTitle): ?Dealership
+    {
+        $dealership = Dealership::query()
+            ->where('google_business_profile_location_name', $locationName)
+            ->first();
+
+        if ($dealership) {
+            return $dealership;
+        }
+
+        $normalizedLocationTitle = $this->normalizeText($locationTitle);
+        if ($normalizedLocationTitle === '') {
+            return null;
+        }
+
+        return Dealership::query()
+            ->get()
+            ->first(function (Dealership $candidate) use ($normalizedLocationTitle): bool {
+                return $this->normalizeText($candidate->name) === $normalizedLocationTitle;
+            });
+    }
+
+    private function extractLocationTitle(array $location): ?string
+    {
+        return $this->stringOrNull(
+            data_get($location, 'title')
+                ?? data_get($location, 'locationName')
+                ?? data_get($location, 'storeCode')
+                ?? data_get($location, 'name')
+        );
+    }
+
+    private function ratingToInteger(mixed $rating): ?int
+    {
+        if (is_numeric($rating)) {
+            return (int) $rating;
+        }
+
+        return match (Str::upper(trim((string) $rating))) {
+            'ONE' => 1,
+            'TWO' => 2,
+            'THREE' => 3,
+            'FOUR' => 4,
+            'FIVE' => 5,
+            default => null,
+        };
+    }
+
+    private function parseTimestamp(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function stringOrNull(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function normalizeText(?string $value): string
+    {
+        $value = Str::ascii(Str::lower(trim((string) $value)));
+
+        return preg_replace('/[^a-z0-9]+/', '', $value) ?? '';
+    }
+
+    private function ensureRequiredTablesExist(): void
+    {
+        if (
+            ! Schema::hasTable('google_business_profile_connections')
+            || ! Schema::hasTable('google_business_profile_reviews')
+            || ! Schema::hasTable('google_business_profile_monthly_snapshots')
+        ) {
+            throw new RuntimeException('Faltan las tablas de reseñas de Google Business Profile. Ejecuta las migraciones antes de conectar.');
+        }
+    }
+}

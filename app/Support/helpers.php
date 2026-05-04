@@ -139,6 +139,27 @@ if (! function_exists('app_can_access_web')) {
     }
 }
 
+if (! function_exists('app_can_access_reviews')) {
+    function app_can_access_reviews(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        $allowedRoles = [
+            User::ROLE_MARKETING,
+        ];
+
+        if ($user->role === User::ROLE_ADMIN) {
+            return ! app_role_viewer_active($user) || in_array(app_visible_role($user), $allowedRoles, true);
+        }
+
+        return app_user_has_any_role($user, $allowedRoles);
+    }
+}
+
 if (! function_exists('app_visible_role')) {
     function app_visible_role(?User $user = null): ?string
     {

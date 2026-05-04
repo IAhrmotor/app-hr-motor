@@ -32,6 +32,10 @@ return [
             'route' => 'tools.web',
         ],
         [
+            'label' => 'Reseñas',
+            'route' => 'reviews.index',
+        ],
+        [
             'label' => 'Vídeos',
             'route' => 'videos',
         ],

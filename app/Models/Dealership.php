@@ -17,11 +17,23 @@ class Dealership extends Model
         'phone',
         'google_maps_url',
         'reviews_url',
+        'google_business_profile_location_name',
+        'google_business_profile_location_title',
     ];
 
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function googleBusinessProfileReviews(): HasMany
+    {
+        return $this->hasMany(GoogleBusinessProfileReview::class);
+    }
+
+    public function googleBusinessProfileMonthlySnapshots(): HasMany
+    {
+        return $this->hasMany(GoogleBusinessProfileMonthlySnapshot::class);
     }
 
     public function getImageUrlAttribute(): ?string
