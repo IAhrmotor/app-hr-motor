@@ -66,6 +66,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
 
+    Route::get('/integraciones/google-business-profile/conectar', [GoogleBusinessProfileAuthController::class, 'redirect'])
+        ->name('google-business-profile.connect');
+    Route::get('/integraciones/google-business-profile/callback', [GoogleBusinessProfileAuthController::class, 'callback'])
+        ->name('google-business-profile.callback');
+
     Route::middleware('role:marketing')->group(function () {
         Route::get('/resenas', [ReviewController::class, 'index'])->name('reviews.index');
         Route::get('/resenas/informes', [ReviewController::class, 'reports'])->name('reviews.reports');

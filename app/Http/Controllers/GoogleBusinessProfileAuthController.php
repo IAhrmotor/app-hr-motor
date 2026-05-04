@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\GoogleBusinessProfileReviewService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +13,8 @@ class GoogleBusinessProfileAuthController extends Controller
 {
     public function redirect(Request $request)
     {
+        abort_unless(in_array(app_real_role($request->user()), [User::ROLE_ADMIN, User::ROLE_MANAGER], true), 403);
+
         $redirectUri = config('services.google_business_profile.redirect_uri');
 
         if (blank(config('services.google_business_profile.client_id')) || blank($redirectUri)) {
@@ -38,6 +41,8 @@ class GoogleBusinessProfileAuthController extends Controller
 
     public function callback(Request $request, GoogleBusinessProfileReviewService $service)
     {
+        abort_unless(in_array(app_real_role($request->user()), [User::ROLE_ADMIN, User::ROLE_MANAGER], true), 403);
+
         $expectedState = (string) $request->session()->pull('google_business_profile_oauth_state');
         $receivedState = (string) $request->string('state');
 
