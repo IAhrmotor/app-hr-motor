@@ -14,6 +14,10 @@
                 return null;
             }
 
+            if (($item['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews($authUser)) {
+                return null;
+            }
+
             if (($item['label'] ?? null) === 'Rankings' && ! empty($item['children'])) {
                 $item['children'] = collect($item['children'])
                     ->filter(fn (array $child) => app_can_access_rankings($authUser) || ! in_array($child['route'] ?? null, ['leaderboard.sales', 'leaderboard.purchases', 'leaderboard.vehicles'], true))
@@ -106,7 +110,9 @@
                         @php
                             $isItemActive = $item['route'] === 'agenda.index'
                                 ? request()->routeIs('agenda.index', 'agenda.contacts.*')
-                                : request()->routeIs($item['route']);
+                                : ($item['route'] === 'reviews.index'
+                                    ? request()->routeIs('reviews.*')
+                                    : request()->routeIs($item['route']));
                         @endphp
                         <a href="{{ route($item['route']) }}"
                             class="{{ $navItemClass }} {{ $isItemActive ? $navItemActiveClass : $navItemInactiveClass }}">
@@ -444,7 +450,9 @@
                     @php
                         $isItemActive = $item['route'] === 'agenda.index'
                             ? request()->routeIs('agenda.index', 'agenda.contacts.*')
-                            : request()->routeIs($item['route']);
+                            : ($item['route'] === 'reviews.index'
+                                ? request()->routeIs('reviews.*')
+                                : request()->routeIs($item['route']));
                     @endphp
                     <a href="{{ route($item['route']) }}" @click="open = false"
                         class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">

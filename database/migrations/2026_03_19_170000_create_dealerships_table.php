@@ -15,6 +15,8 @@ return new class extends Migration
             $table->string('image_path')->nullable();
             $table->string('google_maps_url')->nullable();
             $table->string('reviews_url')->nullable();
+            $table->string('google_business_profile_location_name')->nullable()->unique();
+            $table->string('google_business_profile_location_title')->nullable();
             $table->timestamps();
         });
     }
