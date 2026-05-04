@@ -12,7 +12,8 @@ services:
     volumes:
       - ./:/var/www
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   scheduler:
     build:
@@ -27,8 +28,10 @@ services:
     volumes:
       - ./:/var/www
     depends_on:
-      - app
-      - db
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
 
   nginx:
     image: nginx:stable-alpine
@@ -54,6 +57,12 @@ services:
       - staging_db_data:/var/lib/mysql
     ports:
       - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
 
 volumes:
   staging_db_data:
