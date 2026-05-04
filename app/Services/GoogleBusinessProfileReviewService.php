@@ -72,9 +72,9 @@ class GoogleBusinessProfileReviewService
         $account = $this->resolveAccount($connection);
         $locations = $this->fetchLocations($connection, $account['name']);
         $syncedAt = now();
-        $reviewRows = [];
         $mappedDealerships = collect();
         $dealershipCount = Dealership::query()->count();
+        $syncedReviewCount = 0;
 
         Log::info('Google Business Profile sync started.', [
             'connection_id' => $connection->id,
@@ -127,6 +127,8 @@ class GoogleBusinessProfileReviewService
                 'reviews_found' => count($reviews),
             ]);
 
+            $reviewRows = [];
+
             foreach ($reviews as $review) {
                 $reviewRows[] = $this->buildReviewRow(
                     review: $review,
@@ -136,33 +138,12 @@ class GoogleBusinessProfileReviewService
                     syncedAt: $syncedAt
                 );
             }
+
+            $this->persistReviewRows($reviewRows);
+            $syncedReviewCount += count($reviewRows);
         }
 
-        DB::transaction(function () use ($connection, $reviewRows, $syncedAt, $account, $mappedDealerships): void {
-            if ($reviewRows !== []) {
-                GoogleBusinessProfileReview::query()->upsert(
-                    $reviewRows,
-                    ['review_name'],
-                    [
-                        'dealership_id',
-                        'location_name',
-                        'location_title',
-                        'reviewer_name',
-                        'reviewer_photo_url',
-                        'rating',
-                        'comment',
-                        'reply_name',
-                        'reply_comment',
-                        'reply_updated_at',
-                        'review_created_at',
-                        'review_updated_at',
-                        'synced_at',
-                        'raw_payload',
-                        'updated_at',
-                    ]
-                );
-            }
-
+        DB::transaction(function () use ($connection, $syncedAt, $account, $mappedDealerships, $syncedReviewCount): void {
             $this->refreshMonthlySnapshots($syncedAt);
 
             $connection->forceFill([
@@ -170,7 +151,7 @@ class GoogleBusinessProfileReviewService
                 'account_resource_name' => data_get($account, 'name'),
                 'last_synced_at' => $syncedAt,
                 'metadata' => array_merge($connection->metadata ?? [], [
-                    'location_count' => count($reviewRows),
+                    'location_count' => $syncedReviewCount,
                     'mapped_dealership_ids' => $mappedDealerships->unique()->values()->all(),
                 ]),
             ])->save();
@@ -178,7 +159,7 @@ class GoogleBusinessProfileReviewService
             Log::info('Google Business Profile sync finished.', [
                 'connection_id' => $connection->id,
                 'account_resource_name' => data_get($account, 'name'),
-                'review_rows' => count($reviewRows),
+                'review_rows' => $syncedReviewCount,
                 'mapped_dealerships' => $mappedDealerships->unique()->values()->all(),
             ]);
         });
@@ -504,6 +485,47 @@ class GoogleBusinessProfileReviewService
                     'captured_at' => $capturedAt,
                 ]
             );
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $reviewRows
+     */
+    private function persistReviewRows(array $reviewRows): void
+    {
+        if ($reviewRows === []) {
+            return;
+        }
+
+        foreach (array_chunk($reviewRows, 250) as $index => $chunk) {
+            DB::transaction(function () use ($chunk): void {
+                GoogleBusinessProfileReview::query()->upsert(
+                    $chunk,
+                    ['review_name'],
+                    [
+                        'dealership_id',
+                        'location_name',
+                        'location_title',
+                        'reviewer_name',
+                        'reviewer_photo_url',
+                        'rating',
+                        'comment',
+                        'reply_name',
+                        'reply_comment',
+                        'reply_updated_at',
+                        'review_created_at',
+                        'review_updated_at',
+                        'synced_at',
+                        'raw_payload',
+                        'updated_at',
+                    ]
+                );
+            });
+
+            Log::info('Google Business Profile review chunk persisted.', [
+                'chunk_index' => $index + 1,
+                'chunk_count' => count($chunk),
+            ]);
         }
     }
 

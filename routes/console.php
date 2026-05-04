@@ -9,4 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('salesforce:sync-leaderboard')->everyTenMinutes();
-Schedule::command('google-business-profile:sync-reviews')->everyFiveMinutes();
+Schedule::command('google-business-profile:sync-reviews')->everyFiveMinutes()->withoutOverlapping();
