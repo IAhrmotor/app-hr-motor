@@ -238,9 +238,21 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/teams.webp'),
                     ],
                     [
-                        'label' => app_user_has_any_role($authUser, [User::ROLE_CAPTADOR]) ? 'Salesforce' : $salesforceLabel,
-                        'url' => $salesforceUrl,
+                        'label' => app_user_has_any_role($authUser, [User::ROLE_CAPTADOR]) ? 'Salesforce comunidad' : $salesforceLabel,
+                        'url' => app_user_has_any_role($authUser, [User::ROLE_CAPTADOR])
+                            ? 'https://hrmotor.my.site.com/hrmotorcommunity/s/'
+                            : $salesforceUrl,
                         'image' => asset('images/tools/salesforce.webp'),
+                    ],
+                    [
+                        'label' => 'Salesforce',
+                        'url' => 'https://hrmotor.lightning.force.com/lightning',
+                        'image' => asset('images/tools/salesforce.webp'),
+                    ],
+                    [
+                        'label' => 'AD360',
+                        'url' => 'https://www.ad360.es/',
+                        'image' => asset('images/tools/ad360.webp'),
                     ],
                     [
                         'label' => 'Milanuncios',
@@ -256,11 +268,6 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Cochesnet',
                         'url' => 'https://www.coches.net/',
                         'image' => asset('images/tools/cochesnet.webp'),
-                    ],
-                    [
-                        'label' => 'Salesforce',
-                        'url' => 'https://hrmotor.my.salesforce.com/',
-                        'image' => asset('images/tools/salesforce.webp'),
                     ],
                     [
                         'label' => 'Lendismart',
@@ -462,10 +469,15 @@ Route::middleware('auth')->group(function () {
                 ];
 
                 $captadorButtonLabels = [
-                    'Salesforce',
+                    'Salesforce comunidad',
                     'Milanuncios',
                     'Wallapop',
                     'Cochesnet',
+                ];
+
+                $workshopButtonLabels = [
+                    'Salesforce',
+                    'AD360',
                 ];
 
                 $callCenterGeneralButtonLabels = [
@@ -581,6 +593,9 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, $captadorButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_CAPTADOR])
+                    ) || (
+                        in_array($button['label'] ?? null, $workshopButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_WORKSHOP])
                     ) || (
                         in_array($button['label'] ?? null, $callCenterGeneralButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_CALL_CENTER])
