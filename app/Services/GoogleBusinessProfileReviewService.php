@@ -516,7 +516,7 @@ class GoogleBusinessProfileReviewService
             return null;
         }
 
-        return Dealership::query()
+        $dealership = Dealership::query()
             ->get()
             ->first(function (Dealership $candidate) use ($normalizedLocationTitle): bool {
                 $normalizedCandidate = $this->normalizeText($candidate->name);
@@ -529,6 +529,66 @@ class GoogleBusinessProfileReviewService
                     || str_contains($normalizedLocationTitle, $normalizedCandidate)
                     || str_contains($normalizedCandidate, $normalizedLocationTitle);
             });
+
+        if ($dealership) {
+            return $dealership;
+        }
+
+        foreach ($this->extractLocationSegments($locationTitle) as $segment) {
+            $normalizedSegment = $this->normalizeText($segment);
+            if ($normalizedSegment === '') {
+                continue;
+            }
+
+            $dealership = Dealership::query()
+                ->get()
+                ->first(function (Dealership $candidate) use ($normalizedSegment): bool {
+                    $normalizedCandidate = $this->normalizeText($candidate->name);
+
+                    return $normalizedCandidate !== ''
+                        && (
+                            $normalizedCandidate === $normalizedSegment
+                            || str_contains($normalizedSegment, $normalizedCandidate)
+                            || str_contains($normalizedCandidate, $normalizedSegment)
+                        );
+                });
+
+            if ($dealership) {
+                Log::info('Google Business Profile dealership matched by segmented title.', [
+                    'location_name' => $locationName,
+                    'location_title' => $locationTitle,
+                    'segment' => $segment,
+                    'dealership_id' => $dealership->id,
+                    'dealership_name' => $dealership->name,
+                ]);
+
+                return $dealership;
+            }
+        }
+
+        Log::warning('Google Business Profile location could not be matched to a dealership.', [
+            'location_name' => $locationName,
+            'location_title' => $locationTitle,
+            'normalized_title' => $normalizedLocationTitle,
+        ]);
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractLocationSegments(?string $locationTitle): array
+    {
+        $locationTitle = trim((string) $locationTitle);
+
+        if ($locationTitle === '') {
+            return [];
+        }
+
+        $segments = preg_split('/\s*\|\|\s*|\s*\|\s*|\s*-\s*|\/|·/', $locationTitle) ?: [];
+
+        return array_values(array_filter(array_map('trim', $segments), fn (string $segment): bool => $segment !== ''));
     }
 
     private function extractLocationTitle(array $location): ?string
