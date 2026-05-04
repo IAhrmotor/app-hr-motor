@@ -185,11 +185,11 @@
             @endforelse
         </div>
 
-        @if ($dealershipSummaries->isEmpty() && $locationSummaries->isNotEmpty())
+        @if ($locationSummaries->isNotEmpty())
             <div class="mt-10">
                 <div class="mb-4">
                     <h2 class="text-lg font-semibold text-brand-secondary">Ubicaciones de Google</h2>
-                    <p class="text-sm text-gray-500">Mostramos las ubicaciones reales de Google Business Profile mientras no haya delegaciones locales enlazadas.</p>
+                    <p class="text-sm text-gray-500">Mostramos las ubicaciones reales de Google Business Profile para no depender de que la tabla de delegaciones esté completa.</p>
                 </div>
 
                 <div class="grid gap-4 xl:grid-cols-3">
