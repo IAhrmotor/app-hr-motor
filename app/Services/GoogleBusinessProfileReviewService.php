@@ -11,6 +11,7 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -205,13 +206,26 @@ class GoogleBusinessProfileReviewService
      */
     private function listAccounts(GoogleBusinessProfileConnection $connection): array
     {
-        $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) {
-            return Http::withToken($accessToken)->get('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', [
+        $endpoint = 'https://mybusinessaccountmanagement.googleapis.com/v1/accounts';
+
+        $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($endpoint) {
+            return Http::withToken($accessToken)->get($endpoint, [
                 'pageSize' => 50,
             ]);
         });
 
-        return $response->throw()->json('accounts', []);
+        try {
+            return $response->throw()->json('accounts', []);
+        } catch (\Throwable $exception) {
+            Log::error('Google Business Profile listAccounts failed.', [
+                'endpoint' => $endpoint,
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'message' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
     }
 
     /**
@@ -221,6 +235,7 @@ class GoogleBusinessProfileReviewService
     {
         $locations = [];
         $nextPageToken = null;
+        $endpoint = sprintf('https://mybusinessbusinessinformation.googleapis.com/v1/%s/locations', $accountResourceName);
 
         do {
             $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($accountResourceName, $nextPageToken) {
@@ -238,7 +253,20 @@ class GoogleBusinessProfileReviewService
                 );
             });
 
-            $payload = $response->throw()->json();
+            try {
+                $payload = $response->throw()->json();
+            } catch (\Throwable $exception) {
+                Log::error('Google Business Profile fetchLocations failed.', [
+                    'endpoint' => $endpoint,
+                    'account_resource_name' => $accountResourceName,
+                    'page_token' => $nextPageToken,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw $exception;
+            }
             $locations = [...$locations, ...($payload['locations'] ?? [])];
             $nextPageToken = $payload['nextPageToken'] ?? null;
         } while ($nextPageToken);
@@ -253,11 +281,12 @@ class GoogleBusinessProfileReviewService
     {
         $reviews = [];
         $nextPageToken = null;
+        $endpoint = sprintf('https://mybusiness.googleapis.com/v4/%s/reviews', $locationName);
 
         do {
             $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($locationName, $nextPageToken) {
                 $query = [
-                    'pageSize' => 100,
+                    'pageSize' => 50,
                     'orderBy' => 'updateTime desc',
                 ];
 
@@ -271,7 +300,20 @@ class GoogleBusinessProfileReviewService
                 );
             });
 
-            $payload = $response->throw()->json();
+            try {
+                $payload = $response->throw()->json();
+            } catch (\Throwable $exception) {
+                Log::error('Google Business Profile fetchReviews failed.', [
+                    'endpoint' => $endpoint,
+                    'location_name' => $locationName,
+                    'page_token' => $nextPageToken,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw $exception;
+            }
             $reviews = [...$reviews, ...($payload['reviews'] ?? [])];
             $nextPageToken = $payload['nextPageToken'] ?? null;
         } while ($nextPageToken);
