@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: laravel-staging-app
     working_dir: /var/www
+    env_file:
+      - .env.docker
     volumes:
       - ./:/var/www
     depends_on:
@@ -20,6 +22,8 @@ services:
     working_dir: /var/www
     command: ["php", "artisan", "schedule:work"]
     restart: unless-stopped
+    env_file:
+      - .env.docker
     volumes:
       - ./:/var/www
     depends_on:
