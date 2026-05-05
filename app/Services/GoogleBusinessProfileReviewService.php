@@ -591,6 +591,7 @@ class GoogleBusinessProfileReviewService
         }
 
         $this->persistReviewRows($reviewRows);
+        $this->pruneMissingReviews($locationResourceName, $reviewRows);
 
         return count($reviewRows);
     }
@@ -662,6 +663,7 @@ class GoogleBusinessProfileReviewService
         }
 
         $this->persistReviewRows($reviewRows);
+        $this->pruneMissingReviews($locationResourceName, $reviewRows);
 
         return count($reviewRows);
     }
@@ -710,6 +712,43 @@ class GoogleBusinessProfileReviewService
                 'chunk_count' => count($chunk),
             ]);
         }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $reviewRows
+     */
+    private function pruneMissingReviews(string $locationName, array $reviewRows): void
+    {
+        $reviewNames = collect($reviewRows)
+            ->pluck('review_name')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $query = GoogleBusinessProfileReview::query()
+            ->where('location_name', $locationName);
+
+        if ($reviewNames === []) {
+            $deletedCount = $query->delete();
+
+            Log::info('Google Business Profile review rows pruned for empty location sync.', [
+                'location_name' => $locationName,
+                'deleted_count' => $deletedCount,
+            ]);
+
+            return;
+        }
+
+        $deletedCount = $query
+            ->whereNotIn('review_name', $reviewNames)
+            ->delete();
+
+        Log::info('Google Business Profile review rows pruned after sync.', [
+            'location_name' => $locationName,
+            'deleted_count' => $deletedCount,
+            'remaining_review_count' => count($reviewNames),
+        ]);
     }
 
     /**
