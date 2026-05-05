@@ -669,4 +669,87 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
             'dealership_id' => $madridLike->id,
         ]);
     }
+
+    public function test_sync_explicitly_matches_malaga_centro_to_the_malaga_centro_dealership(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/117678944517959788740',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        $malaga = Dealership::query()->create([
+            'name' => 'Málaga',
+            'google_maps_url' => 'https://maps.google.com/?q=malaga',
+            'reviews_url' => 'https://example.com/resenas/malaga',
+            'phone' => '+34 000 000 008',
+            'salesforce_id' => 'sf-malaga-3',
+        ]);
+
+        $malagaCentro = Dealership::query()->create([
+            'name' => 'Málaga Centro',
+            'google_maps_url' => 'https://maps.google.com/?q=malaga-centro',
+            'reviews_url' => 'https://example.com/resenas/malaga-centro',
+            'phone' => '+34 000 000 009',
+            'salesforce_id' => 'sf-malaga-centro-3',
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/117678944517959788740',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/117678944517959788740/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/malaga-centro',
+                        'title' => 'HR Motor || Málaga Centro',
+                        'storefrontAddress' => [
+                            'locality' => 'Málaga',
+                            'administrativeArea' => 'Málaga',
+                            'postalCode' => '29001',
+                        ],
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/malaga-centro/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
+                        'reviewer' => [
+                            'displayName' => 'Cliente Málaga Centro',
+                        ],
+                        'starRating' => 'FIVE',
+                        'comment' => 'Muy buena atención en Málaga Centro',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
+
+        $this->assertCount(1, $reviews);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
+            'dealership_id' => $malagaCentro->id,
+        ]);
+        $this->assertDatabaseMissing('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
+            'dealership_id' => $malaga->id,
+        ]);
+    }
 }
