@@ -347,4 +347,242 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
         $this->assertSame('accounts/117678944517959788740/locations/bilbao', $dealership->fresh()->google_business_profile_location_name);
         $this->assertSame('HR Motor', $dealership->fresh()->google_business_profile_location_title);
     }
+
+    public function test_sync_prefers_the_location_title_over_a_broader_province_match_when_the_name_is_close_but_not_exact(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/117678944517959788740',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        $dealership = Dealership::query()->create([
+            'name' => 'Villareal/Almassora',
+            'google_maps_url' => 'https://maps.google.com/?q=villarreal',
+            'reviews_url' => 'https://example.com/resenas/villarreal',
+            'phone' => '+34 000 000 001',
+            'salesforce_id' => 'sf-villarreal',
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/117678944517959788740',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/117678944517959788740/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/villarreal',
+                        'title' => 'HR Motor || Villarreal',
+                        'storefrontAddress' => [
+                            'locality' => 'Villarreal',
+                            'administrativeArea' => 'Castellón',
+                            'postalCode' => '12540',
+                        ],
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/villarreal/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/villarreal/reviews/visible-villarreal',
+                        'reviewer' => [
+                            'displayName' => 'Cliente',
+                        ],
+                        'starRating' => 'FIVE',
+                        'comment' => 'Muy buena atención',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
+
+        $this->assertCount(1, $reviews);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/villarreal/reviews/visible-villarreal',
+            'dealership_id' => $dealership->id,
+        ]);
+        $this->assertSame('accounts/117678944517959788740/locations/villarreal', $dealership->fresh()->google_business_profile_location_name);
+        $this->assertSame('HR Motor || Villarreal', $dealership->fresh()->google_business_profile_location_title);
+    }
+
+    public function test_sync_prefers_exact_location_title_matches_over_broader_city_or_province_matches(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/117678944517959788740',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        $elche = Dealership::query()->create([
+            'name' => 'Elche',
+            'google_maps_url' => 'https://maps.google.com/?q=elche',
+            'reviews_url' => 'https://example.com/resenas/elche',
+            'phone' => '+34 000 000 002',
+            'salesforce_id' => 'sf-elche',
+        ]);
+
+        $malagaCentro = Dealership::query()->create([
+            'name' => 'Malaga Centro',
+            'google_maps_url' => 'https://maps.google.com/?q=malaga-centro',
+            'reviews_url' => 'https://example.com/resenas/malaga-centro',
+            'phone' => '+34 000 000 003',
+            'salesforce_id' => 'sf-malaga-centro',
+        ]);
+
+        $alcoy = Dealership::query()->create([
+            'name' => 'Alcoy',
+            'google_maps_url' => 'https://maps.google.com/?q=alcoy',
+            'reviews_url' => 'https://example.com/resenas/alcoy',
+            'phone' => '+34 000 000 004',
+            'salesforce_id' => 'sf-alcoy',
+        ]);
+
+        $provinceMatch = Dealership::query()->create([
+            'name' => 'Alicante',
+            'google_maps_url' => 'https://maps.google.com/?q=alicante',
+            'reviews_url' => 'https://example.com/resenas/alicante',
+            'phone' => '+34 000 000 005',
+            'salesforce_id' => 'sf-alicante',
+        ]);
+
+        $malaga = Dealership::query()->create([
+            'name' => 'Malaga',
+            'google_maps_url' => 'https://maps.google.com/?q=malaga',
+            'reviews_url' => 'https://example.com/resenas/malaga',
+            'phone' => '+34 000 000 006',
+            'salesforce_id' => 'sf-malaga',
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/117678944517959788740',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/117678944517959788740/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/elche',
+                        'title' => 'HR Motor || Elche',
+                        'storefrontAddress' => [
+                            'locality' => 'Elche',
+                            'administrativeArea' => 'Alicante',
+                            'postalCode' => '03201',
+                        ],
+                    ],
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/malaga-centro',
+                        'title' => 'HR Motor || Málaga Centro',
+                        'storefrontAddress' => [
+                            'locality' => 'Málaga',
+                            'administrativeArea' => 'Málaga',
+                            'postalCode' => '29001',
+                        ],
+                    ],
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/alcoy',
+                        'title' => 'HR Motor || Alcoy',
+                        'storefrontAddress' => [
+                            'locality' => 'Alcoy',
+                            'administrativeArea' => 'Alicante',
+                            'postalCode' => '03801',
+                        ],
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/elche/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/elche/reviews/elche-review',
+                        'reviewer' => [
+                            'displayName' => 'Cliente Elche',
+                        ],
+                        'starRating' => 'FIVE',
+                        'comment' => 'Muy buena atención en Elche',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/malaga-centro/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-review',
+                        'reviewer' => [
+                            'displayName' => 'Cliente Málaga',
+                        ],
+                        'starRating' => 'FOUR',
+                        'comment' => 'Muy buena atención en Málaga Centro',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/alcoy/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/alcoy/reviews/alcoy-review',
+                        'reviewer' => [
+                            'displayName' => 'Cliente Alcoy',
+                        ],
+                        'starRating' => 'FIVE',
+                        'comment' => 'Muy buena atención en Alcoy',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
+
+        $this->assertCount(3, $reviews);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/elche/reviews/elche-review',
+            'dealership_id' => $elche->id,
+        ]);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-review',
+            'dealership_id' => $malagaCentro->id,
+        ]);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/alcoy/reviews/alcoy-review',
+            'dealership_id' => $alcoy->id,
+        ]);
+        $this->assertDatabaseMissing('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/elche/reviews/elche-review',
+            'dealership_id' => $provinceMatch->id,
+        ]);
+        $this->assertDatabaseMissing('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-review',
+            'dealership_id' => $malaga->id,
+        ]);
+    }
 }
