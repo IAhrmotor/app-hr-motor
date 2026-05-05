@@ -14,20 +14,20 @@
                 <a href="{{ route('reviews.index') }}" class="text-sm font-semibold text-brand-primary">Volver a reseñas</a>
                 <h1 class="mt-2 text-3xl font-bold text-brand-secondary">{{ $dealership->name }}</h1>
                 <p class="mt-2 text-sm text-gray-600">
-                    {{ $dealership->google_business_profile_location_title ?? 'Delegacion sin vincular' }}
+                    {{ $dealership->google_business_profile_location_title ?? 'Delegación sin vincular' }}
                 </p>
             </div>
 
             <form method="POST" action="{{ route('reviews.refresh') }}">
                 @csrf
                 <button type="submit"
-                    class="inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white">
-                    Sincronizar delegacion
+                    class="inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white sm:w-auto">
+                    Sincronizar delegación
                 </button>
             </form>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p class="text-sm font-medium text-gray-500">Reseñas totales</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['total_reviews']) }}</p>
@@ -50,7 +50,7 @@
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-2">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-brand-secondary">Evolucion historica</h2>
+                        <h2 class="text-lg font-semibold text-brand-secondary">Evolución histórica</h2>
                         <p class="text-sm text-gray-500">Comparativa mensual desde el primer registro guardado.</p>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
                         </div>
                     @empty
                         <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-                            Aun no hay snapshots mensuales para esta delegacion.
+                            Aún no hay snapshots mensuales para esta delegación.
                         </div>
                     @endforelse
                 </div>
@@ -101,7 +101,7 @@
         <div class="mt-8 rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div class="border-b border-gray-100 px-5 py-4">
                 <h2 class="text-lg font-semibold text-brand-secondary">Reseñas y respuestas</h2>
-                <p class="text-sm text-gray-500">Responde desde aqui y la replica se enviara a Google Business Profile.</p>
+                <p class="text-sm text-gray-500">Responde desde aquí y la réplica se enviará a Google Business Profile.</p>
             </div>
 
             <div class="divide-y divide-gray-100">
@@ -114,7 +114,7 @@
                                         {{ strtoupper(substr($review->reviewer_name ?? 'A', 0, 1)) }}
                                     </div>
                                     <div>
-                                        <p class="font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'Anonimo' }}</p>
+                                        <p class="font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'Anónimo' }}</p>
                                         <p class="text-xs text-gray-500">{{ $review->review_created_at?->format('d/m/Y H:i') }}</p>
                                     </div>
                                     <span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
@@ -131,7 +131,7 @@
                                     </div>
                                 @else
                                     <div class="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4">
-                                        <p class="text-sm text-gray-500">Esta reseña aun no tiene respuesta.</p>
+                                        <p class="text-sm text-gray-500">Esta reseña aún no tiene respuesta.</p>
                                     </div>
                                 @endif
                             </div>
@@ -150,7 +150,7 @@
                     </div>
                 @empty
                     <div class="p-8 text-center text-sm text-gray-500">
-                        No hay reseñas para esta delegacion.
+                        No hay reseñas para esta delegación.
                     </div>
                 @endforelse
             </div>
