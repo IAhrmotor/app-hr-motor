@@ -191,18 +191,44 @@ class GoogleBusinessProfileReviewService
         $accounts = $this->listAccounts($connection);
         $targetName = Str::lower(trim((string) config('services.google_business_profile.account_group_name')));
 
-        $matchedAccount = collect($accounts)->first(function (array $account) use ($targetName): bool {
+        $matchedAccounts = collect($accounts)->filter(function (array $account) use ($targetName): bool {
+            $accountName = Str::lower(trim((string) data_get($account, 'accountName')));
+
+            return $accountName === $targetName;
+        });
+
+        $matchedAccount = $matchedAccounts->first(fn (array $account): bool => Str::upper(trim((string) data_get($account, 'type'))) === 'LOCATION_GROUP')
+            ?? $matchedAccounts->first();
+
+        if ($matchedAccount) {
+            Log::info('Google Business Profile account resolved from exact account name.', [
+                'target_name' => $targetName,
+                'account_name' => data_get($matchedAccount, 'accountName'),
+                'account_resource_name' => data_get($matchedAccount, 'name'),
+                'account_type' => data_get($matchedAccount, 'type'),
+            ]);
+
+            return $matchedAccount;
+        }
+
+        $fallbackAccount = collect($accounts)->first(function (array $account) use ($targetName): bool {
             $accountName = Str::lower(trim((string) data_get($account, 'accountName')));
 
             return $accountName !== '' && (
-                $accountName === $targetName
-                || str_contains($accountName, $targetName)
+                str_contains($accountName, $targetName)
                 || str_contains($targetName, $accountName)
             );
         });
 
-        if ($matchedAccount) {
-            return $matchedAccount;
+        if ($fallbackAccount) {
+            Log::warning('Google Business Profile account resolved by fallback name match.', [
+                'target_name' => $targetName,
+                'account_name' => data_get($fallbackAccount, 'accountName'),
+                'account_resource_name' => data_get($fallbackAccount, 'name'),
+                'account_type' => data_get($fallbackAccount, 'type'),
+            ]);
+
+            return $fallbackAccount;
         }
 
         if ($accounts !== []) {
