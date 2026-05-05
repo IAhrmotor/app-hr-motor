@@ -147,8 +147,16 @@
 
             <div x-show="open" x-cloak class="grid gap-3 px-5 py-4 md:grid-cols-2 xl:grid-cols-4">
                 @forelse ($latestUnanswered as $review)
-                    @if ($review->dealership_id)
-                        <a href="{{ route('reviews.show', $review->dealership_id) }}"
+                    @php
+                        $reviewAnchor = '#review-' . $review->id;
+                        $reviewUrl = $review->dealership_id
+                            ? route('reviews.show', $review->dealership_id) . $reviewAnchor
+                            : ($review->location_name
+                                ? route('reviews.location', rtrim(strtr(base64_encode($review->location_name), '+/', '-_'), '=')) . $reviewAnchor
+                                : null);
+                    @endphp
+                    @if ($reviewUrl)
+                        <a href="{{ $reviewUrl }}"
                             class="rounded-2xl border border-gray-100 bg-gray-50 p-4 transition hover:border-brand-primary/20 hover:bg-brand-primary/5">
                             <div class="flex items-start justify-between gap-4">
                                 <div>

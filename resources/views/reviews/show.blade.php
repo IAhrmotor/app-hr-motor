@@ -115,7 +115,7 @@
 
             <div class="divide-y divide-gray-100">
                 @forelse ($reviews as $review)
-                    <div class="px-6 py-6 sm:px-7">
+                    <div id="review-{{ $review->id }}" class="px-6 py-6 sm:px-7 scroll-mt-6">
                         <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-3">
