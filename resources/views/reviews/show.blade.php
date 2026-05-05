@@ -184,7 +184,12 @@
                                         <p class="mt-2 text-sm leading-6 text-gray-500">
                                             Redacta aquí una respuesta clara, breve y profesional para el cliente.
                                         </p>
-                                        <textarea name="comment" rows="7" class="mt-5 w-full rounded-2xl border-gray-200 text-sm focus:border-brand-primary focus:ring-brand-primary" placeholder="Escribe la respuesta para Google"></textarea>
+                                        <textarea
+                                            name="comment"
+                                            rows="7"
+                                            class="mt-5 w-full rounded-2xl border-gray-200 px-4 py-4 pt-6 text-sm placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                                            placeholder="Escribe la respuesta para Google"
+                                        ></textarea>
                                         <button type="submit" class="mt-4 inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-brand-primary/95">
                                             Publicar respuesta
                                         </button>
