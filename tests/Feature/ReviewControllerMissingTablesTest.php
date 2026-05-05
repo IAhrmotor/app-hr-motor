@@ -96,4 +96,100 @@ class ReviewControllerMissingTablesTest extends TestCase
             ->get(route('reviews.show', $hiddenDealership))
             ->assertNotFound();
     }
+
+    public function test_dealership_reviews_are_paginated_and_answered_reviews_do_not_show_the_reply_form(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_MARKETING,
+        ]);
+
+        $dealership = Dealership::query()->create([
+            'name' => 'HR Motor || Zaragoza',
+            'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+            'google_business_profile_location_title' => 'HR Motor || Zaragoza',
+        ]);
+
+        GoogleBusinessProfileReview::query()->create([
+            'dealership_id' => $dealership->id,
+            'location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+            'location_title' => 'HR Motor || Zaragoza',
+            'review_name' => 'accounts/117678944517959788740/locations/zaragoza/reviews/answered',
+            'reviewer_name' => 'Answered',
+            'rating' => 5,
+            'comment' => 'Answered review',
+            'reply_comment' => 'Respuesta ya publicada',
+            'review_created_at' => now()->addMinutes(11),
+            'review_updated_at' => now()->addMinutes(11),
+            'reply_updated_at' => now()->addMinutes(12),
+            'synced_at' => now(),
+            'raw_payload' => ['comment' => 'Answered review'],
+        ]);
+
+        for ($i = 1; $i <= 10; $i++) {
+            $label = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+
+            GoogleBusinessProfileReview::query()->create([
+                'dealership_id' => $dealership->id,
+                'location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+                'location_title' => 'HR Motor || Zaragoza',
+                'review_name' => 'accounts/117678944517959788740/locations/zaragoza/reviews/review-' . $label,
+                'reviewer_name' => 'Review ' . $label,
+                'rating' => 5,
+                'comment' => 'Review ' . $label,
+                'review_created_at' => now()->addMinutes($i),
+                'review_updated_at' => now()->addMinutes($i),
+                'synced_at' => now(),
+                'raw_payload' => ['comment' => 'Review ' . $label],
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get(route('reviews.show', $dealership))
+            ->assertOk()
+            ->assertSee('Ya respondida')
+            ->assertSee('Review 10')
+            ->assertDontSee('Review 01');
+
+        $this->actingAs($user)
+            ->get(route('reviews.show', $dealership) . '?page=2')
+            ->assertOk()
+            ->assertSee('Review 01')
+            ->assertDontSee('Review 10');
+    }
+
+    public function test_answered_reviews_do_not_show_the_reply_editor(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_MARKETING,
+        ]);
+
+        $dealership = Dealership::query()->create([
+            'name' => 'HR Motor || Zaragoza',
+            'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+            'google_business_profile_location_title' => 'HR Motor || Zaragoza',
+        ]);
+
+        GoogleBusinessProfileReview::query()->create([
+            'dealership_id' => $dealership->id,
+            'location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+            'location_title' => 'HR Motor || Zaragoza',
+            'review_name' => 'accounts/117678944517959788740/locations/zaragoza/reviews/answered-only',
+            'reviewer_name' => 'Answered',
+            'rating' => 5,
+            'comment' => 'Answered review',
+            'reply_comment' => 'Respuesta ya publicada',
+            'review_created_at' => now(),
+            'review_updated_at' => now(),
+            'reply_updated_at' => now(),
+            'synced_at' => now(),
+            'raw_payload' => ['comment' => 'Answered review'],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('reviews.show', $dealership))
+            ->assertOk()
+            ->assertSee('Ya respondida')
+            ->assertDontSee('Publicar respuesta')
+            ->assertDontSee('Responder');
+    }
 }
