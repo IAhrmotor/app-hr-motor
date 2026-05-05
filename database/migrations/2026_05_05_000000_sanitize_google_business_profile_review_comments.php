@@ -26,9 +26,11 @@ return new class extends Migration
 UPDATE google_business_profile_reviews
 SET
     comment = CASE
-        WHEN comment IS NULL THEN NULL
-        WHEN LOCATE('(Translated by Google)', comment) > 0 THEN TRIM(SUBSTRING_INDEX(comment, '(Translated by Google)', 1))
-        ELSE comment
+        WHEN JSON_VALID(raw_payload) = 0 THEN comment
+        WHEN JSON_UNQUOTE(JSON_EXTRACT(raw_payload, '$.comment')) IS NULL THEN NULL
+        WHEN LOCATE('(Translated by Google)', JSON_UNQUOTE(JSON_EXTRACT(raw_payload, '$.comment'))) > 0
+            THEN TRIM(SUBSTRING_INDEX(JSON_UNQUOTE(JSON_EXTRACT(raw_payload, '$.comment')), '(Translated by Google)', 1))
+        ELSE JSON_UNQUOTE(JSON_EXTRACT(raw_payload, '$.comment'))
     END,
     raw_payload = CASE
         WHEN raw_payload IS NULL THEN NULL
@@ -46,8 +48,8 @@ SET
     END,
     updated_at = CURRENT_TIMESTAMP
 WHERE
-    comment LIKE '%(Translated by Google)%'
-    OR JSON_UNQUOTE(JSON_EXTRACT(raw_payload, '$.comment')) LIKE '%(Translated by Google)%'
+    JSON_VALID(raw_payload) = 1
+    AND JSON_UNQUOTE(JSON_EXTRACT(raw_payload, '$.comment')) LIKE '%(Translated by Google)%'
 SQL
         );
     }
