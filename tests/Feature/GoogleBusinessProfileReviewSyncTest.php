@@ -144,6 +144,87 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
         ]);
     }
 
+    public function test_sync_skips_locations_that_refer_to_salamanca(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/117678944517959788740',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/117678944517959788740',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/117678944517959788740/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/zaragoza',
+                        'title' => 'HR Motor || Zaragoza',
+                    ],
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/salamanca',
+                        'title' => 'HR Motor || Salamanca',
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/zaragoza/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/zaragoza/reviews/visible-review',
+                        'reviewer' => [
+                            'displayName' => 'Visible',
+                        ],
+                        'starRating' => 'FIVE',
+                        'comment' => 'Visible review',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/salamanca/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/salamanca/reviews/hidden-review',
+                        'reviewer' => [
+                            'displayName' => 'Hidden',
+                        ],
+                        'starRating' => 'FIVE',
+                        'comment' => 'Hidden review',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
+
+        $this->assertCount(1, $reviews);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/zaragoza/reviews/visible-review',
+        ]);
+        $this->assertDatabaseMissing('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/salamanca/reviews/hidden-review',
+        ]);
+        Http::assertNotSent(function ($request): bool {
+            return str_contains($request->url(), '/locations/salamanca/reviews');
+        });
+    }
+
     public function test_sync_prefers_location_group_account_when_multiple_accounts_match_the_same_name(): void
     {
         config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');

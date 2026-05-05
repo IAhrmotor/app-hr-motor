@@ -92,7 +92,9 @@ class GoogleBusinessProfileReviewService
             );
         } else {
             $locations = $this->fetchLocations($connection, $account['name']);
-            $dealershipCount = Dealership::query()->count();
+            $dealershipCount = Dealership::query()
+                ->withoutSalamanca()
+                ->count();
 
             Log::info('Google Business Profile sync location scan started.', [
                 'locations_found' => count($locations),
@@ -138,6 +140,7 @@ class GoogleBusinessProfileReviewService
         });
 
         $query = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
             ->with('dealership')
             ->orderByDesc('review_created_at')
             ->orderByDesc('id');
@@ -154,6 +157,7 @@ class GoogleBusinessProfileReviewService
         $this->ensureRequiredTablesExist();
 
         $review = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
             ->where('review_name', $reviewName)
             ->firstOrFail();
 
@@ -452,12 +456,14 @@ class GoogleBusinessProfileReviewService
     {
         $snapshotMonth = $capturedAt->copy()->startOfMonth();
         $dealerships = Dealership::query()
+            ->withoutSalamanca()
             ->when($dealershipIds !== null, fn ($query) => $query->whereIn('id', $dealershipIds))
             ->orderBy('name')
             ->get();
 
         foreach ($dealerships as $dealership) {
             $reviewsQuery = GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
                 ->where('dealership_id', $dealership->id);
 
             $allReviews = (clone $reviewsQuery)->get();
@@ -501,6 +507,17 @@ class GoogleBusinessProfileReviewService
         }
 
         $locationTitle = $this->extractLocationTitle($location);
+
+        if ($this->shouldSkipSalamancaLocation($locationName, $locationTitle)) {
+            Log::info('Google Business Profile location skipped because it refers to Salamanca.', [
+                'account_resource_name' => data_get($account, 'name'),
+                'location_name' => $locationName,
+                'location_title' => $locationTitle,
+            ]);
+
+            return 0;
+        }
+
         $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle);
         $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
 
@@ -551,7 +568,28 @@ class GoogleBusinessProfileReviewService
         Carbon $syncedAt,
         Collection $mappedDealerships
     ): int {
+        if ($this->shouldSkipSalamancaDealership($dealership)) {
+            Log::info('Google Business Profile dealership sync skipped because the dealership itself refers to Salamanca.', [
+                'dealership_id' => $dealership->id,
+                'dealership_name' => $dealership->name,
+            ]);
+
+            return 0;
+        }
+
         [$locationName, $locationTitle] = $this->resolveLocationForDealership($connection, $account, $dealership);
+
+        if ($this->shouldSkipSalamancaDealership($dealership) || $this->shouldSkipSalamancaLocation($locationName, $locationTitle)) {
+            Log::info('Google Business Profile dealership sync skipped because it refers to Salamanca.', [
+                'dealership_id' => $dealership->id,
+                'dealership_name' => $dealership->name,
+                'location_name' => $locationName,
+                'location_title' => $locationTitle,
+            ]);
+
+            return 0;
+        }
+
         $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
 
         Log::info('Google Business Profile dealership sync started.', [
@@ -730,10 +768,30 @@ class GoogleBusinessProfileReviewService
         return $sanitized === '' ? null : $sanitized;
     }
 
+    private function shouldSkipSalamancaLocation(?string $locationName, ?string $locationTitle): bool
+    {
+        return $this->containsSalamanca($locationName) || $this->containsSalamanca($locationTitle);
+    }
+
+    private function shouldSkipSalamancaDealership(Dealership $dealership): bool
+    {
+        return $this->containsSalamanca($dealership->name)
+            || $this->containsSalamanca($dealership->google_business_profile_location_name)
+            || $this->containsSalamanca($dealership->google_business_profile_location_title);
+    }
+
+    private function containsSalamanca(?string $value): bool
+    {
+        $normalized = $this->normalizeText($value);
+
+        return $normalized !== '' && str_contains($normalized, 'salamanca');
+    }
+
     private function resolveDealershipForLocation(string $locationName, ?string $locationTitle): ?Dealership
     {
         if (Schema::hasColumn('dealerships', 'google_business_profile_location_name')) {
             $dealership = Dealership::query()
+                ->withoutSalamanca()
                 ->where('google_business_profile_location_name', $locationName)
                 ->first();
 
@@ -748,6 +806,7 @@ class GoogleBusinessProfileReviewService
         }
 
         $dealership = Dealership::query()
+            ->withoutSalamanca()
             ->get()
             ->first(function (Dealership $candidate) use ($normalizedLocationTitle): bool {
                 $normalizedCandidate = $this->normalizeText($candidate->name);
@@ -772,6 +831,7 @@ class GoogleBusinessProfileReviewService
             }
 
             $dealership = Dealership::query()
+                ->withoutSalamanca()
                 ->get()
                 ->first(function (Dealership $candidate) use ($normalizedSegment): bool {
                     $normalizedCandidate = $this->normalizeText($candidate->name);
@@ -826,6 +886,11 @@ class GoogleBusinessProfileReviewService
         foreach ($locations as $location) {
             $candidateLocationName = $this->stringOrNull(data_get($location, 'name'));
             $candidateLocationTitle = $this->extractLocationTitle($location);
+
+            if ($this->shouldSkipSalamancaLocation($candidateLocationName, $candidateLocationTitle)) {
+                continue;
+            }
+
             $matchedDealership = $candidateLocationName
                 ? $this->resolveDealershipForLocation($candidateLocationName, $candidateLocationTitle)
                 : null;

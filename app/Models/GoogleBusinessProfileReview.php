@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -45,6 +46,15 @@ class GoogleBusinessProfileReview extends Model
     public function isAnswered(): bool
     {
         return filled($this->reply_comment);
+    }
+
+    public function scopeWithoutSalamanca(Builder $query): Builder
+    {
+        return $query->where(function (Builder $builder): void {
+            $builder
+                ->whereRaw('LOWER(COALESCE(location_title, "")) NOT LIKE ?', ['%salamanca%'])
+                ->whereRaw('LOWER(COALESCE(location_name, "")) NOT LIKE ?', ['%salamanca%']);
+        });
     }
 
     public function getCommentAttribute(mixed $value): ?string
