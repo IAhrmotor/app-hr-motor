@@ -274,4 +274,77 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
             return str_contains($request->url(), 'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/222/locations');
         });
     }
+
+    public function test_sync_can_match_a_dealership_by_location_locality_when_the_title_is_generic(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/117678944517959788740',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        $dealership = Dealership::query()->create([
+            'name' => 'HR Motor || Bilbao',
+            'google_maps_url' => 'https://maps.google.com/?q=bilbao',
+            'reviews_url' => 'https://example.com/resenas/bilbao',
+            'phone' => '+34 000 000 000',
+            'salesforce_id' => 'sf-bilbao',
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/117678944517959788740',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/117678944517959788740/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/bilbao',
+                        'title' => 'HR Motor',
+                        'storefrontAddress' => [
+                            'locality' => 'Bilbao',
+                            'administrativeArea' => 'Bizkaia',
+                            'postalCode' => '48001',
+                        ],
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/bilbao/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/bilbao/reviews/visible-by-locality',
+                        'reviewer' => [
+                            'displayName' => 'Cliente',
+                        ],
+                        'starRating' => 'FIVE',
+                        'comment' => 'Muy buena atención',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
+
+        $this->assertCount(1, $reviews);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/bilbao/reviews/visible-by-locality',
+            'dealership_id' => $dealership->id,
+        ]);
+        $this->assertSame('accounts/117678944517959788740/locations/bilbao', $dealership->fresh()->google_business_profile_location_name);
+        $this->assertSame('HR Motor', $dealership->fresh()->google_business_profile_location_title);
+    }
 }

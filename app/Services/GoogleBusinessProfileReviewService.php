@@ -118,6 +118,8 @@ class GoogleBusinessProfileReviewService
             }
         }
 
+        $this->logUnmappedDealerships($mappedDealerships);
+
         DB::transaction(function () use ($connection, $syncedAt, $account, $mappedDealerships, $syncedReviewCount, $targetDealership): void {
             $this->refreshMonthlySnapshots($syncedAt, $targetDealership ? [$targetDealership->id] : null);
 
@@ -150,6 +152,36 @@ class GoogleBusinessProfileReviewService
         }
 
         return $query->get();
+    }
+
+    private function logUnmappedDealerships(Collection $mappedDealerships): void
+    {
+        $unmappedDealerships = Dealership::query()
+            ->withoutSalamanca()
+            ->select(['id', 'name', 'google_business_profile_location_title', 'google_business_profile_location_name'])
+            ->whereNotIn('id', $mappedDealerships->unique()->values()->all())
+            ->orderBy('name')
+            ->get();
+
+        if ($unmappedDealerships->isEmpty()) {
+            Log::info('Google Business Profile sync mapped all eligible dealerships.', [
+                'mapped_dealership_ids' => $mappedDealerships->unique()->values()->all(),
+            ]);
+
+            return;
+        }
+
+        Log::warning('Google Business Profile sync left some dealerships unmapped.', [
+            'unmapped_count' => $unmappedDealerships->count(),
+            'unmapped_dealerships' => $unmappedDealerships->map(function (Dealership $dealership): array {
+                return [
+                    'id' => $dealership->id,
+                    'name' => $dealership->name,
+                    'google_business_profile_location_name' => $dealership->google_business_profile_location_name,
+                    'google_business_profile_location_title' => $dealership->google_business_profile_location_title,
+                ];
+            })->values()->all(),
+        ]);
     }
 
     public function replyToReview(string $reviewName, string $comment): GoogleBusinessProfileReview
@@ -268,7 +300,7 @@ class GoogleBusinessProfileReviewService
             $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($accountResourceName, $nextPageToken) {
                 $query = [
                     'pageSize' => 100,
-                    'readMask' => 'name,title,storefrontAddress.locality,storefrontAddress.administrativeArea,storefrontAddress.postalCode',
+                    'readMask' => 'name,title,storeCode,storefrontAddress.locality,storefrontAddress.administrativeArea,storefrontAddress.postalCode',
                 ];
 
                 if ($nextPageToken) {
@@ -507,18 +539,20 @@ class GoogleBusinessProfileReviewService
         }
 
         $locationTitle = $this->extractLocationTitle($location);
+        $locationTerms = $this->extractLocationMatchTerms($location);
 
-        if ($this->shouldSkipSalamancaLocation($locationName, $locationTitle)) {
+        if ($this->shouldSkipSalamancaLocation($locationName, $locationTitle, $locationTerms)) {
             Log::info('Google Business Profile location skipped because it refers to Salamanca.', [
                 'account_resource_name' => data_get($account, 'name'),
                 'location_name' => $locationName,
                 'location_title' => $locationTitle,
+                'location_terms' => $locationTerms,
             ]);
 
             return 0;
         }
 
-        $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle);
+        $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle, $locationTerms);
         $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
 
         Log::info('Google Business Profile location processing started.', [
@@ -768,9 +802,22 @@ class GoogleBusinessProfileReviewService
         return $sanitized === '' ? null : $sanitized;
     }
 
-    private function shouldSkipSalamancaLocation(?string $locationName, ?string $locationTitle): bool
+    /**
+     * @param  array<int, string>  $locationTerms
+     */
+    private function shouldSkipSalamancaLocation(?string $locationName, ?string $locationTitle, array $locationTerms = []): bool
     {
-        return $this->containsSalamanca($locationName) || $this->containsSalamanca($locationTitle);
+        if ($this->containsSalamanca($locationName) || $this->containsSalamanca($locationTitle)) {
+            return true;
+        }
+
+        foreach ($locationTerms as $term) {
+            if ($this->containsSalamanca($term)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function shouldSkipSalamancaDealership(Dealership $dealership): bool
@@ -787,7 +834,10 @@ class GoogleBusinessProfileReviewService
         return $normalized !== '' && str_contains($normalized, 'salamanca');
     }
 
-    private function resolveDealershipForLocation(string $locationName, ?string $locationTitle): ?Dealership
+    /**
+     * @param  array<int, string>  $locationTerms
+     */
+    private function resolveDealershipForLocation(string $locationName, ?string $locationTitle, array $locationTerms = []): ?Dealership
     {
         if (Schema::hasColumn('dealerships', 'google_business_profile_location_name')) {
             $dealership = Dealership::query()
@@ -800,55 +850,30 @@ class GoogleBusinessProfileReviewService
             }
         }
 
-        $normalizedLocationTitle = $this->normalizeText($locationTitle);
-        if ($normalizedLocationTitle === '') {
-            return null;
-        }
+        $matchCandidates = collect(array_filter([
+            ...$locationTerms,
+            $locationTitle,
+        ], fn ($value): bool => is_string($value) && trim($value) !== ''))->unique()->values();
 
-        $dealership = Dealership::query()
-            ->withoutSalamanca()
-            ->get()
-            ->first(function (Dealership $candidate) use ($normalizedLocationTitle): bool {
-                $normalizedCandidate = $this->normalizeText($candidate->name);
+        foreach ($matchCandidates as $candidateValue) {
+            $normalizedCandidateValue = $this->normalizeText($candidateValue);
 
-                if ($normalizedCandidate === '') {
-                    return false;
-                }
-
-                return $normalizedCandidate === $normalizedLocationTitle
-                    || str_contains($normalizedLocationTitle, $normalizedCandidate)
-                    || str_contains($normalizedCandidate, $normalizedLocationTitle);
-            });
-
-        if ($dealership) {
-            return $dealership;
-        }
-
-        foreach ($this->extractLocationSegments($locationTitle) as $segment) {
-            $normalizedSegment = $this->normalizeText($segment);
-            if ($normalizedSegment === '') {
+            if ($normalizedCandidateValue === '') {
                 continue;
             }
 
             $dealership = Dealership::query()
                 ->withoutSalamanca()
                 ->get()
-                ->first(function (Dealership $candidate) use ($normalizedSegment): bool {
-                    $normalizedCandidate = $this->normalizeText($candidate->name);
-
-                    return $normalizedCandidate !== ''
-                        && (
-                            $normalizedCandidate === $normalizedSegment
-                            || str_contains($normalizedSegment, $normalizedCandidate)
-                            || str_contains($normalizedCandidate, $normalizedSegment)
-                        );
+                ->first(function (Dealership $candidate) use ($normalizedCandidateValue): bool {
+                    return $this->matchesDealershipToNormalizedValue($candidate, $normalizedCandidateValue);
                 });
 
             if ($dealership) {
-                Log::info('Google Business Profile dealership matched by segmented title.', [
+                Log::info('Google Business Profile dealership matched by location hint.', [
                     'location_name' => $locationName,
                     'location_title' => $locationTitle,
-                    'segment' => $segment,
+                    'matched_value' => $candidateValue,
                     'dealership_id' => $dealership->id,
                     'dealership_name' => $dealership->name,
                 ]);
@@ -860,7 +885,7 @@ class GoogleBusinessProfileReviewService
         Log::warning('Google Business Profile location could not be matched to a dealership.', [
             'location_name' => $locationName,
             'location_title' => $locationTitle,
-            'normalized_title' => $normalizedLocationTitle,
+            'location_terms' => $locationTerms,
         ]);
 
         return null;
@@ -886,13 +911,14 @@ class GoogleBusinessProfileReviewService
         foreach ($locations as $location) {
             $candidateLocationName = $this->stringOrNull(data_get($location, 'name'));
             $candidateLocationTitle = $this->extractLocationTitle($location);
+            $candidateLocationTerms = $this->extractLocationMatchTerms($location);
 
-            if ($this->shouldSkipSalamancaLocation($candidateLocationName, $candidateLocationTitle)) {
+            if ($this->shouldSkipSalamancaLocation($candidateLocationName, $candidateLocationTitle, $candidateLocationTerms)) {
                 continue;
             }
 
             $matchedDealership = $candidateLocationName
-                ? $this->resolveDealershipForLocation($candidateLocationName, $candidateLocationTitle)
+                ? $this->resolveDealershipForLocation($candidateLocationName, $candidateLocationTitle, $candidateLocationTerms)
                 : null;
 
             if ($matchedDealership?->is($dealership)) {
@@ -933,6 +959,50 @@ class GoogleBusinessProfileReviewService
                 ?? data_get($location, 'storeCode')
                 ?? data_get($location, 'name')
         );
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractLocationMatchTerms(array $location): array
+    {
+        $terms = [
+            data_get($location, 'storefrontAddress.locality'),
+            data_get($location, 'storefrontAddress.administrativeArea'),
+            data_get($location, 'storefrontAddress.postalCode'),
+            data_get($location, 'storeCode'),
+            data_get($location, 'title'),
+        ];
+
+        return array_values(array_unique(array_filter(array_map(
+            fn ($value): ?string => $this->stringOrNull($value),
+            $terms
+        ))));
+    }
+
+    private function matchesDealershipToNormalizedValue(Dealership $candidate, string $normalizedValue): bool
+    {
+        foreach ([
+            $candidate->name,
+            $candidate->google_business_profile_location_title,
+            $candidate->google_business_profile_location_name,
+        ] as $candidateName) {
+            $normalizedCandidate = $this->normalizeText($candidateName);
+
+            if ($normalizedCandidate === '') {
+                continue;
+            }
+
+            if (
+                $normalizedCandidate === $normalizedValue
+                || str_contains($normalizedValue, $normalizedCandidate)
+                || str_contains($normalizedCandidate, $normalizedValue)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function ratingToInteger(mixed $rating): ?int
