@@ -12,6 +12,10 @@ return new class extends Migration
             return;
         }
 
+        DB::statement(
+            'ALTER TABLE google_business_profile_reviews CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+        );
+
         DB::table('google_business_profile_reviews')
             ->select(['id', 'comment', 'raw_payload'])
             ->orderBy('id')
