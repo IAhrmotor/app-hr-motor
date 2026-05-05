@@ -719,10 +719,10 @@ class GoogleBusinessProfileReviewService
             return null;
         }
 
-        $sanitized = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+        $sanitized = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
 
         if ($sanitized === false) {
-            $sanitized = trim($value);
+            $sanitized = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
         } else {
             $sanitized = trim($sanitized);
         }
