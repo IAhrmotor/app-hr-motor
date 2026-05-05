@@ -282,6 +282,9 @@ class ReviewController extends Controller
             ->whereNotNull('google_business_profile_location_name')
             ->orderBy('name')
             ->get()
+            ->groupBy('google_business_profile_location_name')
+            ->map(fn (Collection $dealerships): Dealership => $dealerships->sortBy('id')->first())
+            ->values()
             ->map(function (Dealership $dealership): array {
                 $dealershipReviewsQuery = GoogleBusinessProfileReview::query()
                     ->withoutSalamanca()
@@ -320,51 +323,50 @@ class ReviewController extends Controller
             return collect();
         }
 
-        $linkedLocationNames = Dealership::query()
+        $linkedDealerships = Dealership::query()
             ->withoutSalamanca()
             ->whereNotNull('google_business_profile_location_name')
-            ->pluck('google_business_profile_location_name')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+            ->get();
 
         return GoogleBusinessProfileReview::query()
             ->withoutSalamanca()
             ->whereNull('dealership_id')
-            ->when($linkedLocationNames !== [], function ($query) use ($linkedLocationNames): void {
-                $query->whereNotIn('location_name', $linkedLocationNames);
-            })
-            ->select('location_name')
             ->whereNotNull('location_name')
-            ->distinct()
-            ->orderBy('location_name')
-            ->pluck('location_name')
-            ->map(function (string $locationName): array {
-                $locationReviewsQuery = GoogleBusinessProfileReview::query()
-                    ->withoutSalamanca()
-                    ->where('location_name', $locationName);
+            ->get()
+            ->groupBy(fn (GoogleBusinessProfileReview $review): string => $this->canonicalGoogleLocationKey($review->location_name))
+            ->map(function (Collection $locationReviews) use ($linkedDealerships): ?array {
+                $locationReviews = $locationReviews->values();
+                $firstReview = $locationReviews->sortByDesc('review_created_at')->first();
 
-                $locationTitle = (clone $locationReviewsQuery)
-                    ->orderByDesc('review_created_at')
-                    ->orderByDesc('id')
-                    ->value('location_title') ?? $locationName;
+                if (! $firstReview) {
+                    return null;
+                }
+
+                if ($this->isLocationLinkedToAnyDealership($firstReview->location_name, $firstReview->location_title, $linkedDealerships)) {
+                    return null;
+                }
+
+                $locationName = (string) $firstReview->location_name;
+                $locationTitle = $firstReview->location_title ?? $locationName;
                 $monthStart = now()->startOfMonth();
                 $monthEnd = now()->endOfMonth();
-                $monthlyReviewsQuery = (clone $locationReviewsQuery)
-                    ->whereBetween('review_created_at', [$monthStart, $monthEnd]);
+                $monthlyReviewsQuery = $locationReviews->filter(function (GoogleBusinessProfileReview $review) use ($monthStart, $monthEnd): bool {
+                    return $review->review_created_at
+                        && $review->review_created_at->betweenIncluded($monthStart, $monthEnd);
+                });
 
                 return [
                     'key' => $this->encodeLocationKey($locationName),
                     'location_name' => $locationName,
                     'location_title' => $locationTitle,
-                    'total_reviews' => $locationReviewsQuery->count(),
-                    'average_rating' => round((float) $locationReviewsQuery->avg('rating'), 2),
+                    'total_reviews' => $locationReviews->count(),
+                    'average_rating' => round((float) $locationReviews->avg('rating'), 2),
                     'monthly_reviews' => $monthlyReviewsQuery->count(),
                     'monthly_average_rating' => round((float) $monthlyReviewsQuery->avg('rating'), 2),
-                    'unanswered_reviews' => (clone $locationReviewsQuery)->whereNull('reply_comment')->count(),
+                    'unanswered_reviews' => $locationReviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
                 ];
             })
+            ->filter()
             ->values()
             ->sortByDesc('total_reviews')
             ->values();
@@ -467,5 +469,55 @@ class ReviewController extends Controller
     private function normalizeTextForFilter(?string $value): string
     {
         return strtolower(trim((string) $value));
+    }
+
+    private function canonicalGoogleLocationKey(?string $locationName): string
+    {
+        $locationName = trim((string) $locationName);
+
+        if ($locationName === '') {
+            return '';
+        }
+
+        if (preg_match('#(?:accounts/[^/]+/)?locations/([^/]+)$#i', $locationName, $matches) === 1) {
+            return 'locations/' . strtolower($matches[1]);
+        }
+
+        return strtolower($locationName);
+    }
+
+    /**
+     * @param  Collection<int, Dealership>  $linkedDealerships
+     */
+    private function isLocationLinkedToAnyDealership(?string $locationName, ?string $locationTitle, Collection $linkedDealerships): bool
+    {
+        $normalizedLocationName = $this->normalizeTextForFilter($locationName);
+        $normalizedLocationTitle = $this->normalizeTextForFilter($locationTitle);
+
+        foreach ($linkedDealerships as $dealership) {
+            $candidateValues = array_filter([
+                $dealership->name,
+                $dealership->google_business_profile_location_name,
+                $dealership->google_business_profile_location_title,
+            ]);
+
+            foreach ($candidateValues as $candidateValue) {
+                $normalizedCandidate = $this->normalizeTextForFilter((string) $candidateValue);
+
+                if ($normalizedCandidate === '') {
+                    continue;
+                }
+
+                if (
+                    str_contains($normalizedLocationName, $normalizedCandidate)
+                    || str_contains($normalizedLocationTitle, $normalizedCandidate)
+                    || str_contains($normalizedCandidate, $normalizedLocationTitle)
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
