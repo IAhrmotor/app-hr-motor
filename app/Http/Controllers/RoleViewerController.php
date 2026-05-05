@@ -26,7 +26,9 @@ class RoleViewerController extends Controller
             session(['role_viewer.active_role' => $validated['role']]);
         }
 
-        return back()->with('success', 'Rol cambiado a ' . (User::roleLabels()[$validated['role']] ?? 'Admin') . '.');
+        return redirect()
+            ->route('home')
+            ->with('success', 'Rol cambiado a ' . (User::roleLabels()[$validated['role']] ?? 'Admin') . '.');
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -42,6 +44,8 @@ class RoleViewerController extends Controller
             ? ($previousRole ? 'Has vuelto a admin.' : 'Ya estabas en admin.')
             : ($previousRole ? 'Has vuelto a tu rol.' : 'Ya estabas en tu rol.');
 
-        return back()->with('success', $resetMessage);
+        return redirect()
+            ->route('home')
+            ->with('success', $resetMessage);
     }
 }

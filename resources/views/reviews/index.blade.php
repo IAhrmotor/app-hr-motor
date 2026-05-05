@@ -4,7 +4,7 @@
     use Illuminate\Support\Str;
 
     $navTitle = 'Reseñas';
-    $starValue = fn ($value) => max(0, min(5, (int) round((float) $value)));
+    $starFillWidth = fn ($value) => max(0, min(100, ((float) $value / 5) * 100));
 @endphp
 
 @section('title', 'Reseñas')
@@ -160,9 +160,14 @@
                             <span class="font-semibold text-brand-secondary">{{ number_format($avg, 2) }}</span>
                         </div>
                         <div class="flex items-center gap-1">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <span class="{{ $i <= $starValue($avg) ? 'text-amber-400' : 'text-gray-200' }}">★</span>
-                            @endfor
+                            <div class="relative inline-flex text-2xl leading-none">
+                                <div class="flex text-gray-200" aria-hidden="true">
+                                    <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                </div>
+                                <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($avg) }}%;">
+                                    <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="flex items-center justify-between text-sm">
@@ -216,9 +221,14 @@
                                     <span class="font-semibold text-brand-secondary">{{ number_format($avg, 2) }}</span>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    @for ($i = 1; $i <= 5; $i++)
-                                        <span class="{{ $i <= $starValue($avg) ? 'text-amber-400' : 'text-gray-200' }}">★</span>
-                                    @endfor
+                                    <div class="relative inline-flex text-2xl leading-none">
+                                        <div class="flex text-gray-200" aria-hidden="true">
+                                            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                        </div>
+                                        <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($avg) }}%;">
+                                            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="flex items-center justify-between text-sm">
