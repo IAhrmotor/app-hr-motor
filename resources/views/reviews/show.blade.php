@@ -25,7 +25,8 @@
                     data-review-sync-loader-button
                     data-review-sync-loader-default="Sincronizar delegación"
                     data-review-sync-loader-loading="Sincronizando..."
-                    class="inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white sm:w-auto">
+                    class="inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white sm:w-auto"
+                >
                     <svg data-review-sync-loader-icon xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-1.636 10.26a9 9 0 11-2.867-9.668L21 9.348" />
                     </svg>
@@ -55,7 +56,7 @@
 
         <div class="mt-8 grid gap-6 xl:grid-cols-3">
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-2">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-brand-secondary">Evolución histórica</h2>
                         <p class="text-sm text-gray-500">Comparativa mensual desde el primer registro guardado.</p>
@@ -105,36 +106,41 @@
             </div>
         </div>
 
-        <div class="mt-8 rounded-3xl border border-gray-200 bg-white shadow-sm">
-            <div class="border-b border-gray-100 px-5 py-4">
+        <div class="mt-8 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-sm">
+            <div class="border-b border-gray-100 px-6 py-5 sm:px-7">
                 <h2 class="text-lg font-semibold text-brand-secondary">Reseñas y respuestas</h2>
-                <p class="text-sm text-gray-500">Responde desde aquí y la réplica se enviará a Google Business Profile.</p>
+                <p class="text-sm text-gray-500">Gestiona cada reseña desde aquí y envía la réplica directamente a Google Business Profile.</p>
             </div>
 
             <div class="divide-y divide-gray-100">
                 @forelse ($reviews as $review)
-                    <div class="p-5">
-                        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div class="max-w-4xl">
+                    <div class="px-6 py-6 sm:px-7">
+                        <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+                            <div class="min-w-0">
                                 <div class="flex items-center gap-3">
-                                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-primary/10 text-sm font-bold text-brand-primary">
+                                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-sm font-bold text-brand-primary ring-1 ring-brand-primary/10">
                                         {{ strtoupper(substr($review->reviewer_name ?? 'A', 0, 1)) }}
                                     </div>
-                                    <div>
-                                        <p class="font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'Anónimo' }}</p>
+                                    <div class="min-w-0">
+                                        <p class="truncate font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'Anónimo' }}</p>
                                         <p class="text-xs text-gray-500">{{ $review->review_created_at?->format('d/m/Y H:i') }}</p>
                                     </div>
-                                    <span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                                         {{ $review->rating ?? 0 }} / 5
                                     </span>
                                 </div>
 
-                                <p class="mt-4 text-sm leading-6 text-gray-700">{{ $review->comment ?? 'Sin texto de reseña.' }}</p>
+                                <div class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                                    <p class="text-sm leading-7 text-gray-700">{{ $review->comment ?? 'Sin texto de reseña.' }}</p>
+                                </div>
 
                                 @if ($review->reply_comment)
-                                    <div class="mt-4 rounded-2xl border border-brand-primary/10 bg-brand-primary/5 p-4">
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-brand-primary">Respuesta publicada</p>
-                                        <p class="mt-2 text-sm leading-6 text-gray-700">{{ $review->reply_comment }}</p>
+                                    <div class="mt-4 rounded-2xl border border-brand-primary/10 bg-brand-primary/5 p-5">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary">Respuesta publicada</p>
+                                            <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-primary ring-1 ring-brand-primary/10">Visible en Google</span>
+                                        </div>
+                                        <p class="mt-3 text-sm leading-7 text-gray-700">{{ $review->reply_comment }}</p>
                                     </div>
                                 @else
                                     <div class="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4">
@@ -143,20 +149,39 @@
                                 @endif
                             </div>
 
-                            <div class="w-full lg:max-w-md">
+                            <div class="w-full xl:sticky xl:top-6 xl:w-[24rem] xl:self-start">
                                 @if ($review->reply_comment)
-                                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                                        <p class="text-sm font-semibold text-emerald-700">Ya respondida</p>
-                                        <p class="mt-2 text-sm leading-6 text-emerald-900/80">
-                                            Esta reseña ya tiene respuesta publicada en Google Business Profile.
+                                    <div class="w-full rounded-[1.5rem] border border-emerald-200 bg-gradient-to-b from-emerald-50 to-white p-5 shadow-sm">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                                                Estado
+                                            </div>
+                                            <div class="h-2.5 w-2.5 rounded-full bg-emerald-500"></div>
+                                        </div>
+                                        <h3 class="mt-4 text-base font-semibold text-emerald-900">Ya respondida</h3>
+                                        <p class="mt-2 text-sm leading-6 text-emerald-900/75">
+                                            Esta reseña ya tiene una respuesta publicada en Google Business Profile. No hace falta volver a escribirla aquí.
                                         </p>
+                                        <div class="mt-4 rounded-2xl border border-emerald-200 bg-white p-4">
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Última respuesta</p>
+                                            <p class="mt-2 text-sm leading-6 text-gray-700">{{ $review->reply_comment }}</p>
+                                        </div>
                                     </div>
                                 @else
-                                    <form method="POST" action="{{ route('reviews.reply', $review) }}" class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                    <form method="POST" action="{{ route('reviews.reply', $review) }}" class="w-full rounded-[1.5rem] border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-5 shadow-sm">
                                         @csrf
-                                        <label class="mb-2 block text-sm font-semibold text-brand-secondary">Responder</label>
-                                        <textarea name="comment" rows="4" class="w-full rounded-xl border-gray-200 text-sm" placeholder="Escribe la respuesta para Google"></textarea>
-                                        <button type="submit" class="mt-3 w-full cursor-pointer rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">
+                                                Responder
+                                            </div>
+                                            <div class="h-2.5 w-2.5 rounded-full bg-brand-primary"></div>
+                                        </div>
+                                        <h3 class="mt-4 text-base font-semibold text-brand-secondary">Publicar respuesta</h3>
+                                        <p class="mt-2 text-sm leading-6 text-gray-500">
+                                            Redacta aquí una respuesta clara, breve y profesional para el cliente.
+                                        </p>
+                                        <textarea name="comment" rows="6" class="mt-4 w-full rounded-2xl border-gray-200 text-sm focus:border-brand-primary focus:ring-brand-primary" placeholder="Escribe la respuesta para Google"></textarea>
+                                        <button type="submit" class="mt-4 inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-brand-primary/95">
                                             Publicar respuesta
                                         </button>
                                     </form>
