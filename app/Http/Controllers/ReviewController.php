@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers;
 
@@ -180,10 +180,10 @@ class ReviewController extends Controller
         }
 
         if ($dealership) {
-            return back()->with('success', 'Sincronizacion en curso para ' . $dealership->name . '. En breve se actualizaran sus reseñas.');
+            return back()->with('success', 'Sincronización en curso para ' . $dealership->name . '. En breve se actualizarán sus reseñas.');
         }
 
-        return back()->with('success', 'Sincronización en curso. Se actualizaran las reseñas en segundo plano.');
+        return back()->with('success', 'Sincronización en curso. Se actualizarán las reseñas en segundo plano.');
     }
 
     public function reply(Request $request, GoogleBusinessProfileReviewService $service, GoogleBusinessProfileReview $review): RedirectResponse
@@ -197,7 +197,7 @@ class ReviewController extends Controller
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->with('error', 'No se ha podido responder a la reseÃ±a.');
+            return back()->with('error', 'No se ha podido responder a la reseÃƒÂ±a.');
         }
 
         return back()->with('success', 'Respuesta publicada correctamente.');
@@ -492,5 +492,6 @@ class ReviewController extends Controller
     }
 
 }
+
 
 
