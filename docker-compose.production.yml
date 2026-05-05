@@ -33,6 +33,24 @@ services:
       db:
         condition: service_healthy
 
+  queue-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel-prod-queue-worker
+    working_dir: /var/www
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1", "--timeout=0"]
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    volumes:
+      - ./:/var/www
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+
   nginx:
     image: nginx:stable-alpine
     container_name: laravel-prod-nginx
