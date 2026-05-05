@@ -325,50 +325,52 @@ class ReviewController extends Controller
             return collect();
         }
 
-        $linkedDealerships = Dealership::query()
+        $linkedLocationNames = Dealership::query()
             ->withoutSalamanca()
             ->whereNotNull('google_business_profile_location_name')
-            ->get();
+            ->pluck('google_business_profile_location_name')
+            ->filter()
+            ->map(fn (string $value): string => $this->canonicalGoogleLocationKey($value))
+            ->unique()
+            ->values()
+            ->all();
 
-        $locationSummaries = GoogleBusinessProfileReview::query()
+        $locationNames = GoogleBusinessProfileReview::query()
             ->withoutSalamanca()
             ->whereNull('dealership_id')
             ->whereNotNull('location_name')
-            ->get()
-            ->groupBy(fn (GoogleBusinessProfileReview $review): string => $this->canonicalGoogleLocationKey($review->location_name))
-            ->map(function (Collection $locationReviews) use ($linkedDealerships): ?array {
-                $locationReviews = $locationReviews->values();
-                $firstReview = $locationReviews->sortByDesc('review_created_at')->first();
-
-                if (! $firstReview) {
-                    return null;
-                }
-
-                if ($this->isLocationLinkedToAnyDealership($firstReview->location_name, $firstReview->location_title, $linkedDealerships)) {
-                    return null;
-                }
-
-                $locationName = (string) $firstReview->location_name;
-                $locationTitle = $firstReview->location_title ?? $locationName;
-                $monthStart = now()->startOfMonth();
-                $monthEnd = now()->endOfMonth();
-                $monthlyReviewsQuery = $locationReviews->filter(function (GoogleBusinessProfileReview $review) use ($monthStart, $monthEnd): bool {
-                    return $review->review_created_at
-                        && $review->review_created_at->betweenIncluded($monthStart, $monthEnd);
-                });
-
-                return [
-                    'key' => $this->encodeLocationKey($locationName),
-                    'location_name' => $locationName,
-                    'location_title' => $locationTitle,
-                    'total_reviews' => $locationReviews->count(),
-                    'average_rating' => round((float) $locationReviews->avg('rating'), 2),
-                    'monthly_reviews' => $monthlyReviewsQuery->count(),
-                    'monthly_average_rating' => round((float) $monthlyReviewsQuery->avg('rating'), 2),
-                    'unanswered_reviews' => $locationReviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
-                ];
-            })
+            ->distinct()
+            ->pluck('location_name')
             ->filter()
+            ->reject(fn (string $locationName): bool => in_array($this->canonicalGoogleLocationKey($locationName), $linkedLocationNames, true))
+            ->values();
+
+        $locationSummaries = $locationNames->map(function (string $locationName): array {
+            $locationReviewsQuery = GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
+                ->whereNull('dealership_id')
+                ->where('location_name', $locationName);
+
+            $locationTitle = (clone $locationReviewsQuery)
+                ->orderByDesc('review_created_at')
+                ->orderByDesc('id')
+                ->value('location_title') ?? $locationName;
+            $monthStart = now()->startOfMonth();
+            $monthEnd = now()->endOfMonth();
+            $monthlyReviewsQuery = (clone $locationReviewsQuery)
+                ->whereBetween('review_created_at', [$monthStart, $monthEnd]);
+
+            return [
+                'key' => $this->encodeLocationKey($locationName),
+                'location_name' => $locationName,
+                'location_title' => $locationTitle,
+                'total_reviews' => $locationReviewsQuery->count(),
+                'average_rating' => round((float) $locationReviewsQuery->avg('rating'), 2),
+                'monthly_reviews' => $monthlyReviewsQuery->count(),
+                'monthly_average_rating' => round((float) $monthlyReviewsQuery->avg('rating'), 2),
+                'unanswered_reviews' => (clone $locationReviewsQuery)->whereNull('reply_comment')->count(),
+            ];
+            })
             ->values();
 
         return $locationSummaries->sortByDesc('total_reviews')->values();
@@ -488,38 +490,4 @@ class ReviewController extends Controller
         return strtolower($locationName);
     }
 
-    /**
-     * @param  Collection<int, Dealership>  $linkedDealerships
-     */
-    private function isLocationLinkedToAnyDealership(?string $locationName, ?string $locationTitle, Collection $linkedDealerships): bool
-    {
-        $normalizedLocationName = $this->normalizeTextForFilter($locationName);
-        $normalizedLocationTitle = $this->normalizeTextForFilter($locationTitle);
-
-        foreach ($linkedDealerships as $dealership) {
-            $candidateValues = array_filter([
-                $dealership->name,
-                $dealership->google_business_profile_location_name,
-                $dealership->google_business_profile_location_title,
-            ]);
-
-            foreach ($candidateValues as $candidateValue) {
-                $normalizedCandidate = $this->normalizeTextForFilter((string) $candidateValue);
-
-                if ($normalizedCandidate === '') {
-                    continue;
-                }
-
-                if (
-                    str_contains($normalizedLocationName, $normalizedCandidate)
-                    || str_contains($normalizedLocationTitle, $normalizedCandidate)
-                    || str_contains($normalizedCandidate, $normalizedLocationTitle)
-                ) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
 }
