@@ -189,12 +189,13 @@ class GoogleBusinessProfileReviewService
     private function resolveAccount(GoogleBusinessProfileConnection $connection): array
     {
         $accounts = $this->listAccounts($connection);
-        $targetName = Str::lower(trim((string) config('services.google_business_profile.account_group_name')));
+        $targetName = (string) config('services.google_business_profile.account_group_name');
+        $normalizedTargetName = $this->normalizeText($targetName);
 
         $matchedAccounts = collect($accounts)->filter(function (array $account) use ($targetName): bool {
-            $accountName = Str::lower(trim((string) data_get($account, 'accountName')));
+            $accountName = (string) data_get($account, 'accountName');
 
-            return $accountName === $targetName;
+            return $this->normalizeText($accountName) === $this->normalizeText($targetName);
         });
 
         $matchedAccount = $matchedAccounts->first(fn (array $account): bool => Str::upper(trim((string) data_get($account, 'type'))) === 'LOCATION_GROUP')
@@ -203,6 +204,7 @@ class GoogleBusinessProfileReviewService
         if ($matchedAccount) {
             Log::info('Google Business Profile account resolved from exact account name.', [
                 'target_name' => $targetName,
+                'normalized_target_name' => $normalizedTargetName,
                 'account_name' => data_get($matchedAccount, 'accountName'),
                 'account_resource_name' => data_get($matchedAccount, 'name'),
                 'account_type' => data_get($matchedAccount, 'type'),
@@ -211,31 +213,15 @@ class GoogleBusinessProfileReviewService
             return $matchedAccount;
         }
 
-        $fallbackAccount = collect($accounts)->first(function (array $account) use ($targetName): bool {
-            $accountName = Str::lower(trim((string) data_get($account, 'accountName')));
+        $availableAccounts = collect($accounts)->map(function (array $account): array {
+            return [
+                'name' => data_get($account, 'name'),
+                'accountName' => data_get($account, 'accountName'),
+                'type' => data_get($account, 'type'),
+            ];
+        })->values()->all();
 
-            return $accountName !== '' && (
-                str_contains($accountName, $targetName)
-                || str_contains($targetName, $accountName)
-            );
-        });
-
-        if ($fallbackAccount) {
-            Log::warning('Google Business Profile account resolved by fallback name match.', [
-                'target_name' => $targetName,
-                'account_name' => data_get($fallbackAccount, 'accountName'),
-                'account_resource_name' => data_get($fallbackAccount, 'name'),
-                'account_type' => data_get($fallbackAccount, 'type'),
-            ]);
-
-            return $fallbackAccount;
-        }
-
-        if ($accounts !== []) {
-            return $accounts[0];
-        }
-
-        throw new RuntimeException('No se han encontrado cuentas de Google Business Profile para el usuario autenticado.');
+        throw new RuntimeException('No se ha encontrado la cuenta de grupo exacta "' . $targetName . '" en Google Business Profile. Cuentas disponibles: ' . json_encode($availableAccounts, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE));
     }
 
     /**
