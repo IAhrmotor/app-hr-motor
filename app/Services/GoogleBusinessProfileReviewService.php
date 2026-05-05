@@ -59,7 +59,7 @@ class GoogleBusinessProfileReviewService
         return $this->persistTokens($response->json());
     }
 
-    public function sync(): Collection
+    public function sync(?Dealership $targetDealership = null): Collection
     {
         $this->ensureRequiredTablesExist();
 
@@ -70,81 +70,54 @@ class GoogleBusinessProfileReviewService
         }
 
         $account = $this->resolveAccount($connection);
-        $locations = $this->fetchLocations($connection, $account['name']);
         $syncedAt = now();
         $mappedDealerships = collect();
-        $dealershipCount = Dealership::query()->count();
         $syncedReviewCount = 0;
 
         Log::info('Google Business Profile sync started.', [
             'connection_id' => $connection->id,
             'account_name' => data_get($account, 'accountName'),
             'account_resource_name' => data_get($account, 'name'),
-            'locations_found' => count($locations),
-            'dealership_count' => $dealershipCount,
+            'target_dealership_id' => $targetDealership?->id,
+            'target_dealership_name' => $targetDealership?->name,
         ]);
 
-        if ($dealershipCount === 0) {
-            Log::warning('Google Business Profile sync found no dealership records in the database.', [
-                'account_resource_name' => data_get($account, 'name'),
-            ]);
-        }
+        if ($targetDealership) {
+            $syncedReviewCount = $this->syncSingleDealership(
+                connection: $connection,
+                account: $account,
+                dealership: $targetDealership,
+                syncedAt: $syncedAt,
+                mappedDealerships: $mappedDealerships
+            );
+        } else {
+            $locations = $this->fetchLocations($connection, $account['name']);
+            $dealershipCount = Dealership::query()->count();
 
-        foreach ($locations as $location) {
-            $locationName = $this->stringOrNull(data_get($location, 'name'));
-            if (! $locationName) {
-                Log::warning('Google Business Profile location skipped because it has no resource name.', [
+            Log::info('Google Business Profile sync location scan started.', [
+                'locations_found' => count($locations),
+                'dealership_count' => $dealershipCount,
+            ]);
+
+            if ($dealershipCount === 0) {
+                Log::warning('Google Business Profile sync found no dealership records in the database.', [
                     'account_resource_name' => data_get($account, 'name'),
-                    'location_payload' => $location,
                 ]);
-                continue;
             }
 
-            $locationTitle = $this->extractLocationTitle($location);
-            $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle);
-            $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
-
-            Log::info('Google Business Profile location processing started.', [
-                'location_name' => $locationName,
-                'location_title' => $locationTitle,
-                'dealership_id' => $dealership?->id,
-                'dealership_name' => $dealership?->name,
-                'location_resource_name' => $locationResourceName,
-            ]);
-
-            if ($dealership) {
-                $mappedDealerships->push($dealership->id);
-                $dealership->forceFill([
-                    'google_business_profile_location_name' => $locationName,
-                    'google_business_profile_location_title' => $locationTitle,
-                ])->save();
-            }
-
-            $reviews = $this->fetchReviews($connection, $locationResourceName);
-
-            Log::info('Google Business Profile location reviews fetched.', [
-                'location_resource_name' => $locationResourceName,
-                'reviews_found' => count($reviews),
-            ]);
-
-            $reviewRows = [];
-
-            foreach ($reviews as $review) {
-                $reviewRows[] = $this->buildReviewRow(
-                    review: $review,
-                    locationName: $locationResourceName,
-                    locationTitle: $locationTitle,
-                    dealershipId: $dealership?->id,
-                    syncedAt: $syncedAt
+            foreach ($locations as $location) {
+                $syncedReviewCount += $this->syncLocation(
+                    connection: $connection,
+                    account: $account,
+                    location: $location,
+                    syncedAt: $syncedAt,
+                    mappedDealerships: $mappedDealerships
                 );
             }
-
-            $this->persistReviewRows($reviewRows);
-            $syncedReviewCount += count($reviewRows);
         }
 
-        DB::transaction(function () use ($connection, $syncedAt, $account, $mappedDealerships, $syncedReviewCount): void {
-            $this->refreshMonthlySnapshots($syncedAt);
+        DB::transaction(function () use ($connection, $syncedAt, $account, $mappedDealerships, $syncedReviewCount, $targetDealership): void {
+            $this->refreshMonthlySnapshots($syncedAt, $targetDealership ? [$targetDealership->id] : null);
 
             $connection->forceFill([
                 'account_name' => data_get($account, 'accountName'),
@@ -164,11 +137,16 @@ class GoogleBusinessProfileReviewService
             ]);
         });
 
-        return GoogleBusinessProfileReview::query()
+        $query = GoogleBusinessProfileReview::query()
             ->with('dealership')
             ->orderByDesc('review_created_at')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
+
+        if ($targetDealership) {
+            $query->where('dealership_id', $targetDealership->id);
+        }
+
+        return $query->get();
     }
 
     public function replyToReview(string $reviewName, string $comment): GoogleBusinessProfileReview
@@ -424,6 +402,7 @@ class GoogleBusinessProfileReviewService
     {
         $replyComment = data_get($review, 'reviewReply.comment');
         $replyUpdatedAt = $this->parseTimestamp(data_get($review, 'reviewReply.updateTime'));
+        $cleanComment = $this->sanitizeReviewComment(data_get($review, 'comment'));
 
         return [
             'dealership_id' => $dealershipId,
@@ -433,14 +412,14 @@ class GoogleBusinessProfileReviewService
             'reviewer_name' => $this->stringOrNull(data_get($review, 'reviewer.displayName') ?? data_get($review, 'reviewer.name')),
             'reviewer_photo_url' => $this->stringOrNull(data_get($review, 'reviewer.profilePhotoUrl')),
             'rating' => $this->ratingToInteger(data_get($review, 'starRating') ?? data_get($review, 'rating')),
-            'comment' => $this->stringOrNull(data_get($review, 'comment')),
+            'comment' => $cleanComment,
             'reply_name' => $this->stringOrNull(data_get($review, 'reviewReply.name')),
             'reply_comment' => $this->stringOrNull($replyComment),
             'reply_updated_at' => $replyUpdatedAt?->toDateTimeString(),
             'review_created_at' => $this->parseTimestamp(data_get($review, 'createTime'))?->toDateTimeString(),
             'review_updated_at' => $this->parseTimestamp(data_get($review, 'updateTime'))?->toDateTimeString(),
             'synced_at' => $syncedAt->toDateTimeString(),
-            'raw_payload' => $review,
+            'raw_payload' => $this->sanitizeReviewPayload($review),
             'created_at' => $syncedAt->toDateTimeString(),
             'updated_at' => $syncedAt->toDateTimeString(),
         ];
@@ -457,10 +436,13 @@ class GoogleBusinessProfileReviewService
         return rtrim($accountResourceName, '/') . '/' . $locationName;
     }
 
-    private function refreshMonthlySnapshots(Carbon $capturedAt): void
+    private function refreshMonthlySnapshots(Carbon $capturedAt, ?array $dealershipIds = null): void
     {
         $snapshotMonth = $capturedAt->copy()->startOfMonth();
-        $dealerships = Dealership::query()->orderBy('name')->get();
+        $dealerships = Dealership::query()
+            ->when($dealershipIds !== null, fn ($query) => $query->whereIn('id', $dealershipIds))
+            ->orderBy('name')
+            ->get();
 
         foreach ($dealerships as $dealership) {
             $reviewsQuery = GoogleBusinessProfileReview::query()
@@ -486,6 +468,118 @@ class GoogleBusinessProfileReviewService
                 ]
             );
         }
+    }
+
+    private function syncLocation(
+        GoogleBusinessProfileConnection $connection,
+        array $account,
+        array $location,
+        Carbon $syncedAt,
+        Collection $mappedDealerships
+    ): int {
+        $locationName = $this->stringOrNull(data_get($location, 'name'));
+
+        if (! $locationName) {
+            Log::warning('Google Business Profile location skipped because it has no resource name.', [
+                'account_resource_name' => data_get($account, 'name'),
+                'location_payload' => $location,
+            ]);
+
+            return 0;
+        }
+
+        $locationTitle = $this->extractLocationTitle($location);
+        $dealership = $this->resolveDealershipForLocation($locationName, $locationTitle);
+        $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
+
+        Log::info('Google Business Profile location processing started.', [
+            'location_name' => $locationName,
+            'location_title' => $locationTitle,
+            'dealership_id' => $dealership?->id,
+            'dealership_name' => $dealership?->name,
+            'location_resource_name' => $locationResourceName,
+        ]);
+
+        if ($dealership) {
+            $mappedDealerships->push($dealership->id);
+            $dealership->forceFill([
+                'google_business_profile_location_name' => $locationName,
+                'google_business_profile_location_title' => $locationTitle,
+            ])->save();
+        }
+
+        $reviews = $this->fetchReviews($connection, $locationResourceName);
+
+        Log::info('Google Business Profile location reviews fetched.', [
+            'location_resource_name' => $locationResourceName,
+            'reviews_found' => count($reviews),
+        ]);
+
+        $reviewRows = [];
+
+        foreach ($reviews as $review) {
+            $reviewRows[] = $this->buildReviewRow(
+                review: $review,
+                locationName: $locationResourceName,
+                locationTitle: $locationTitle,
+                dealershipId: $dealership?->id,
+                syncedAt: $syncedAt
+            );
+        }
+
+        $this->persistReviewRows($reviewRows);
+
+        return count($reviewRows);
+    }
+
+    private function syncSingleDealership(
+        GoogleBusinessProfileConnection $connection,
+        array $account,
+        Dealership $dealership,
+        Carbon $syncedAt,
+        Collection $mappedDealerships
+    ): int {
+        [$locationName, $locationTitle] = $this->resolveLocationForDealership($connection, $account, $dealership);
+        $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
+
+        Log::info('Google Business Profile dealership sync started.', [
+            'dealership_id' => $dealership->id,
+            'dealership_name' => $dealership->name,
+            'location_name' => $locationName,
+            'location_title' => $locationTitle,
+            'location_resource_name' => $locationResourceName,
+        ]);
+
+        $mappedDealerships->push($dealership->id);
+
+        $dealership->forceFill([
+            'google_business_profile_location_name' => $locationName,
+            'google_business_profile_location_title' => $locationTitle,
+        ])->save();
+
+        $reviews = $this->fetchReviews($connection, $locationResourceName);
+
+        Log::info('Google Business Profile dealership reviews fetched.', [
+            'dealership_id' => $dealership->id,
+            'location_resource_name' => $locationResourceName,
+            'reviews_found' => count($reviews),
+        ]);
+
+        $reviewRows = [];
+
+        foreach ($reviews as $review) {
+            $reviewRows[] = $this->buildReviewRow(
+                review: $review,
+                locationName: $locationResourceName,
+                locationTitle: $locationTitle,
+                dealershipId: $dealership->id,
+                syncedAt: $syncedAt
+            );
+        }
+
+        $this->persistReviewRows($reviewRows);
+
+        return count($reviewRows);
     }
 
     /**
@@ -545,6 +639,37 @@ class GoogleBusinessProfileReviewService
         }
 
         return $reviewRow;
+    }
+
+    /**
+     * @param  array<string, mixed>  $review
+     * @return array<string, mixed>
+     */
+    private function sanitizeReviewPayload(array $review): array
+    {
+        if (array_key_exists('comment', $review)) {
+            $review['comment'] = $this->sanitizeReviewComment($review['comment']);
+        }
+
+        return $review;
+    }
+
+    private function sanitizeReviewComment(mixed $comment): ?string
+    {
+        if (! is_string($comment)) {
+            return $this->stringOrNull($comment);
+        }
+
+        $comment = trim($comment);
+
+        if ($comment === '') {
+            return null;
+        }
+
+        $parts = preg_split('/\R*\(Translated by Google\)\R*/i', $comment, 2);
+        $cleanComment = trim((string) ($parts[0] ?? $comment));
+
+        return $cleanComment === '' ? null : $cleanComment;
     }
 
     private function resolveDealershipForLocation(string $locationName, ?string $locationTitle): ?Dealership
@@ -621,6 +746,44 @@ class GoogleBusinessProfileReviewService
         ]);
 
         return null;
+    }
+
+    /**
+     * @return array{0: string, 1: ?string}
+     */
+    private function resolveLocationForDealership(
+        GoogleBusinessProfileConnection $connection,
+        array $account,
+        Dealership $dealership
+    ): array {
+        $locationName = $this->stringOrNull($dealership->google_business_profile_location_name);
+        $locationTitle = $this->stringOrNull($dealership->google_business_profile_location_title) ?? $dealership->name;
+
+        if ($locationName) {
+            return [$locationName, $locationTitle];
+        }
+
+        $locations = $this->fetchLocations($connection, $account['name']);
+
+        foreach ($locations as $location) {
+            $candidateLocationName = $this->stringOrNull(data_get($location, 'name'));
+            $candidateLocationTitle = $this->extractLocationTitle($location);
+            $matchedDealership = $candidateLocationName
+                ? $this->resolveDealershipForLocation($candidateLocationName, $candidateLocationTitle)
+                : null;
+
+            if ($matchedDealership?->is($dealership)) {
+                return [
+                    $candidateLocationName,
+                    $candidateLocationTitle ?? $dealership->name,
+                ];
+            }
+        }
+
+        throw new RuntimeException(sprintf(
+            'No se ha podido resolver la ubicaciÃ³n de Google para %s.',
+            $dealership->name
+        ));
     }
 
     /**

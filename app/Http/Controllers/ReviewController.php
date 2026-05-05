@@ -143,14 +143,18 @@ class ReviewController extends Controller
         ]);
     }
 
-    public function refresh(GoogleBusinessProfileReviewService $service): RedirectResponse
+    public function refresh(Request $request, GoogleBusinessProfileReviewService $service, ?Dealership $dealership = null): RedirectResponse
     {
         try {
-            $reviews = $service->sync();
+            $reviews = $service->sync($dealership);
         } catch (Throwable $exception) {
             report($exception);
 
             return back()->with('error', $exception->getMessage());
+        }
+
+        if ($dealership) {
+            return back()->with('success', 'Sincronización completada para ' . $dealership->name . '. Se han cargado ' . number_format($reviews->count()) . ' reseñas.');
         }
 
         return back()->with('success', 'Sincronización completada. Se han cargado ' . number_format($reviews->count()) . ' reseñas.');
