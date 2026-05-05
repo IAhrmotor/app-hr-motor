@@ -51,29 +51,28 @@
                 </p>
             </form>
         </div>
-        </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-sm font-medium text-gray-500">Rese&ntilde;as totales</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['total_reviews']) }}</p>
             </div>
-            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-sm font-medium text-gray-500">Media actual</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}</p>
             </div>
-            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-sm font-medium text-gray-500">Rese&ntilde;as este mes</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['monthly_reviews']) }}</p>
             </div>
-            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-sm font-medium text-gray-500">Sin responder</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['unanswered_reviews']) }}</p>
             </div>
         </div>
 
         <div class="mt-8 grid gap-6 xl:grid-cols-3">
-            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-2">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-brand-secondary">Evoluci&oacute;n hist&oacute;rica</h2>
@@ -105,9 +104,9 @@
                 </div>
             </div>
 
-            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 class="text-lg font-semibold text-brand-secondary">Resumen mensual</h2>
-                <div class="mt-4 space-y-4">
+                <div class="mt-4 space-y-3">
                     <div class="rounded-2xl bg-gray-50 p-4">
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Media general</p>
                         <p class="mt-1 text-2xl font-bold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}</p>
@@ -133,19 +132,19 @@
             <div class="divide-y divide-gray-100">
                 @forelse ($reviews as $review)
                     <div id="review-{{ $review->id }}" class="px-6 py-6 sm:px-7 scroll-mt-6">
-                        <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+                        <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
                             <div class="min-w-0">
-                                <div class="flex items-center gap-3">
+                                <div class="flex flex-wrap items-center gap-3">
                                     <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-sm font-bold text-brand-primary ring-1 ring-brand-primary/10">
                                         {{ strtoupper(substr($review->reviewer_name ?? 'A', 0, 1)) }}
                                     </div>
-                                    <div class="min-w-0">
+                                    <div class="min-w-0 flex-1">
                                         <p class="truncate font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'An&oacute;nimo' }}</p>
                                         <p class="text-xs text-gray-500">{{ $review->review_created_at?->format('d/m/Y H:i') }}</p>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="ml-auto flex items-center gap-2">
                                         <div class="relative inline-flex text-xl leading-none sm:text-2xl">
-                                                                                        <div class="flex text-gray-200" aria-hidden="true">
+                                            <div class="flex text-gray-200" aria-hidden="true">
                                                 <span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span>
                                             </div>
                                             <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($review->rating ?? 0) }}%;">
@@ -174,9 +173,9 @@
                                 @endif
                             </div>
 
-                            <div class="w-full xl:sticky xl:top-6 xl:w-[24rem] xl:self-start">
+                            <div class="w-full xl:sticky xl:top-6 xl:w-[22rem] xl:self-start">
                                 @if ($review->reply_comment)
-                                    <div class="w-full rounded-[1.5rem] border border-emerald-200 bg-gradient-to-b from-emerald-50 to-white p-5 shadow-sm">
+                                    <div class="w-full rounded-[1.5rem] border border-emerald-200 bg-gradient-to-b from-emerald-50 to-white p-4 shadow-sm">
                                         <div class="flex items-center justify-between gap-3">
                                             <div class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
                                                 Estado
@@ -189,7 +188,7 @@
                                         </p>
                                     </div>
                                 @else
-                                    <form method="POST" action="{{ route('reviews.reply', $review) }}" class="w-full rounded-[1.5rem] border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-5 shadow-sm">
+                                    <form method="POST" action="{{ route('reviews.reply', $review) }}" class="w-full rounded-[1.5rem] border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-4 shadow-sm">
                                         @csrf
                                         <div class="flex items-center justify-between gap-3">
                                             <div class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">
@@ -197,17 +196,17 @@
                                             </div>
                                             <div class="h-2.5 w-2.5 rounded-full bg-brand-primary"></div>
                                         </div>
-                                        <h3 class="mt-5 text-base font-semibold text-brand-secondary">Publicar respuesta</h3>
+                                        <h3 class="mt-4 text-base font-semibold text-brand-secondary">Publicar respuesta</h3>
                                         <p class="mt-2 text-sm leading-6 text-gray-500">
                                             Redacta aqu&iacute; una respuesta clara, breve y profesional para el cliente.
                                         </p>
                                         <textarea
                                             name="comment"
                                             rows="7"
-                                            class="mt-5 w-full rounded-2xl border-gray-200 px-4 py-4 pt-6 text-sm placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                                            class="mt-4 w-full rounded-2xl border-gray-200 px-4 py-4 pt-6 text-sm placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
                                             placeholder="Escribe la respuesta para Google"
                                         ></textarea>
-                                        <button type="submit" class="mt-4 inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-brand-primary/95">
+                                        <button type="submit" class="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-brand-primary/95">
                                             Publicar respuesta
                                         </button>
                                     </form>
