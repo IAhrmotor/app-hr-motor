@@ -25,6 +25,7 @@ class ReviewController extends Controller
         $locationSummaries = $this->buildLocationSummaries();
         $latestUnanswered = $this->reviewTableExists()
             ? GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
                 ->with('dealership')
                 ->whereNull('reply_comment')
                 ->orderByDesc('review_created_at')
@@ -34,6 +35,7 @@ class ReviewController extends Controller
             : collect();
         $latestReviews = $this->reviewTableExists()
             ? GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
                 ->with('dealership')
                 ->orderByDesc('review_created_at')
                 ->orderByDesc('id')
@@ -41,6 +43,10 @@ class ReviewController extends Controller
                 ->get()
             : collect();
         $stats = $this->buildStats();
+        $dealerships = Dealership::query()
+            ->withoutSalamanca()
+            ->orderBy('name')
+            ->get();
 
         return view('reviews.index', [
             'connection' => $connection,
@@ -49,15 +55,18 @@ class ReviewController extends Controller
             'latestUnanswered' => $latestUnanswered,
             'latestReviews' => $latestReviews,
             'stats' => $stats,
-            'dealerships' => Dealership::query()->orderBy('name')->get(),
+            'dealerships' => $dealerships,
             'filters' => $request->only(['dealership_id', 'status', 'sort', 'search']),
         ]);
     }
 
     public function show(Request $request, Dealership $dealership): View
     {
+        abort_unless($this->isVisibleDealership($dealership), 404);
+
         $reviews = $this->reviewTableExists()
             ? GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
                 ->with('dealership')
                 ->where('dealership_id', $dealership->id)
                 ->when($request->filled('status'), function ($query) use ($request): void {
@@ -95,6 +104,7 @@ class ReviewController extends Controller
 
         $reviews = $this->reviewTableExists()
             ? GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
                 ->with('dealership')
                 ->where('location_name', $locationName)
                 ->when($request->filled('status'), function ($query) use ($request): void {
@@ -129,6 +139,9 @@ class ReviewController extends Controller
     {
         $snapshots = $this->monthlySnapshotsTableExists()
             ? GoogleBusinessProfileMonthlySnapshot::query()
+                ->whereHas('dealership', function ($query): void {
+                    $query->withoutSalamanca();
+                })
                 ->with('dealership')
                 ->orderBy('snapshot_month')
                 ->orderBy('dealership_id')
@@ -206,7 +219,7 @@ class ReviewController extends Controller
 
     private function reviewsQuery(Request $request)
     {
-        $query = GoogleBusinessProfileReview::query();
+        $query = GoogleBusinessProfileReview::query()->withoutSalamanca();
 
         $query->when($request->filled('dealership_id'), function ($builder) use ($request): void {
             $builder->where('dealership_id', $request->integer('dealership_id'));
@@ -253,10 +266,12 @@ class ReviewController extends Controller
     private function buildDealershipSummaries(): Collection
     {
         return Dealership::query()
+            ->withoutSalamanca()
             ->orderBy('name')
             ->get()
             ->map(function (Dealership $dealership): array {
                 $dealershipReviewsQuery = GoogleBusinessProfileReview::query()
+                    ->withoutSalamanca()
                     ->where('dealership_id', $dealership->id);
 
                 $monthStart = now()->startOfMonth();
@@ -293,6 +308,7 @@ class ReviewController extends Controller
         }
 
         return GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
             ->select('location_name')
             ->whereNotNull('location_name')
             ->distinct()
@@ -352,10 +368,11 @@ class ReviewController extends Controller
             ];
         }
 
-        $query = GoogleBusinessProfileReview::query();
+        $query = GoogleBusinessProfileReview::query()->withoutSalamanca();
         $monthStart = now()->startOfMonth();
         $monthEnd = now()->endOfMonth();
         $monthlyQuery = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
             ->whereBetween('review_created_at', [$monthStart, $monthEnd]);
 
         return [
@@ -377,5 +394,27 @@ class ReviewController extends Controller
         $decoded = base64_decode(strtr($locationKey, '-_', '+/'), true);
 
         return is_string($decoded) && $decoded !== '' ? $decoded : null;
+    }
+
+    private function isVisibleDealership(Dealership $dealership): bool
+    {
+        $normalizedValues = [
+            $this->normalizeTextForFilter($dealership->name),
+            $this->normalizeTextForFilter($dealership->google_business_profile_location_name),
+            $this->normalizeTextForFilter($dealership->google_business_profile_location_title),
+        ];
+
+        foreach ($normalizedValues as $normalizedValue) {
+            if ($normalizedValue !== '' && str_contains($normalizedValue, 'salamanca')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function normalizeTextForFilter(?string $value): string
+    {
+        return strtolower(trim((string) $value));
     }
 }
