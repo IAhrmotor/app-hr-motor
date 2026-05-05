@@ -107,6 +107,7 @@ class ReviewController extends Controller
         $locationName = $this->decodeLocationKey($locationKey);
 
         abort_unless(filled($locationName), 404);
+        abort_unless($this->isVisibleLocationName($locationName), 404);
 
         $reviewsQuery = GoogleBusinessProfileReview::query()
                 ->withoutSalamanca()
@@ -441,6 +442,11 @@ class ReviewController extends Controller
         }
 
         return true;
+    }
+
+    private function isVisibleLocationName(string $locationName): bool
+    {
+        return ! str_contains($this->normalizeTextForFilter($locationName), 'salamanca');
     }
 
     private function normalizeTextForFilter(?string $value): string

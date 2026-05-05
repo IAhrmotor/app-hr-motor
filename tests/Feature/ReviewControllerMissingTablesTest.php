@@ -95,6 +95,10 @@ class ReviewControllerMissingTablesTest extends TestCase
         $this->actingAs($user)
             ->get(route('reviews.show', $hiddenDealership))
             ->assertNotFound();
+
+        $this->actingAs($user)
+            ->get(route('reviews.location', ['locationKey' => rtrim(strtr(base64_encode('accounts/117678944517959788740/locations/salamanca'), '+/', '-_'), '=')]))
+            ->assertNotFound();
     }
 
     public function test_dealership_reviews_are_paginated_and_answered_reviews_do_not_show_the_reply_form(): void
