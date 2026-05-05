@@ -994,50 +994,56 @@ class GoogleBusinessProfileReviewService
     private function scoreDealershipMatch(Dealership $candidate, string $normalizedValue): int
     {
         $bestScore = 0;
+        $bestSpecificity = 0;
 
-        foreach ([
-            $candidate->name,
-        ] as $candidateName) {
-            $normalizedCandidate = $this->normalizeText($candidateName);
+        $candidateName = $candidate->name;
+        $normalizedCandidate = $this->normalizeText($candidateName);
 
-            if ($normalizedCandidate === '') {
+        if ($normalizedCandidate === '') {
+            return 0;
+        }
+
+        if (
+            $normalizedCandidate === $normalizedValue
+            || str_contains($normalizedValue, $normalizedCandidate)
+            || str_contains($normalizedCandidate, $normalizedValue)
+        ) {
+            $bestScore = 90;
+            $bestSpecificity = strlen($normalizedCandidate);
+        }
+
+        foreach ($this->extractDealershipNameSegments($candidateName) as $candidateSegment) {
+            $normalizedSegment = $this->normalizeText($candidateSegment);
+
+            if ($normalizedSegment === '') {
                 continue;
             }
 
+            $score = 0;
+
             if (
-                $normalizedCandidate === $normalizedValue
-                || str_contains($normalizedValue, $normalizedCandidate)
-                || str_contains($normalizedCandidate, $normalizedValue)
+                $normalizedSegment === $normalizedValue
+                || str_contains($normalizedValue, $normalizedSegment)
+                || str_contains($normalizedSegment, $normalizedValue)
             ) {
-                $bestScore = max($bestScore, 90);
-            }
-
-            foreach ($this->extractDealershipNameSegments($candidateName) as $candidateSegment) {
-                $normalizedSegment = $this->normalizeText($candidateSegment);
-
-                if ($normalizedSegment === '') {
-                    continue;
-                }
-
-                if (
-                    $normalizedSegment === $normalizedValue
-                    || str_contains($normalizedValue, $normalizedSegment)
-                    || str_contains($normalizedSegment, $normalizedValue)
-                ) {
-                    $bestScore = max($bestScore, 100);
-                    continue;
-                }
-
+                $score = 100;
+            } else {
                 $distance = levenshtein($normalizedSegment, $normalizedValue);
                 $longestLength = max(strlen($normalizedSegment), strlen($normalizedValue));
 
                 if ($longestLength >= 6 && $distance <= 1) {
-                    $bestScore = max($bestScore, 95);
-                    continue;
+                    $score = 95;
+                } elseif ($longestLength >= 10 && $distance <= 2) {
+                    $score = 85;
                 }
+            }
 
-                if ($longestLength >= 10 && $distance <= 2) {
-                    $bestScore = max($bestScore, 85);
+            if ($score > 0) {
+                $specificity = strlen($normalizedSegment);
+
+                if ($score > $bestScore || ($score === $bestScore && $specificity > $bestSpecificity)) {
+                    $bestScore = $score;
+                    $bestSpecificity = $specificity;
                 }
             }
         }
