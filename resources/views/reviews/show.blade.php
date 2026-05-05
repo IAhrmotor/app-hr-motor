@@ -6,6 +6,7 @@
     @php
         $maxMonthReviews = max(1, (int) $snapshots->max('monthly_reviews'));
         $maxAverage = max(1, (float) $snapshots->max('monthly_average_rating'));
+        $starFillWidth = fn ($value) => max(0, min(100, ((float) $value / 5) * 100));
     @endphp
 
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -125,9 +126,16 @@
                                         <p class="truncate font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'Anónimo' }}</p>
                                         <p class="text-xs text-gray-500">{{ $review->review_created_at?->format('d/m/Y H:i') }}</p>
                                     </div>
-                                    <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                                        {{ $review->rating ?? 0 }} / 5
-                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="relative inline-flex text-xl leading-none sm:text-2xl">
+                                            <div class="flex text-gray-200" aria-hidden="true">
+                                                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                            </div>
+                                            <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($review->rating ?? 0) }}%;">
+                                                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
@@ -162,10 +170,6 @@
                                         <p class="mt-2 text-sm leading-6 text-emerald-900/75">
                                             Esta reseña ya tiene una respuesta publicada en Google Business Profile. No hace falta volver a escribirla aquí.
                                         </p>
-                                        <div class="mt-4 rounded-2xl border border-emerald-200 bg-white p-4">
-                                            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Última respuesta</p>
-                                            <p class="mt-2 text-sm leading-6 text-gray-700">{{ $review->reply_comment }}</p>
-                                        </div>
                                     </div>
                                 @else
                                     <form method="POST" action="{{ route('reviews.reply', $review) }}" class="w-full rounded-[1.5rem] border border-gray-200 bg-gradient-to-b from-white to-gray-50 p-5 shadow-sm">
@@ -176,11 +180,11 @@
                                             </div>
                                             <div class="h-2.5 w-2.5 rounded-full bg-brand-primary"></div>
                                         </div>
-                                        <h3 class="mt-4 text-base font-semibold text-brand-secondary">Publicar respuesta</h3>
+                                        <h3 class="mt-5 text-base font-semibold text-brand-secondary">Publicar respuesta</h3>
                                         <p class="mt-2 text-sm leading-6 text-gray-500">
                                             Redacta aquí una respuesta clara, breve y profesional para el cliente.
                                         </p>
-                                        <textarea name="comment" rows="6" class="mt-4 w-full rounded-2xl border-gray-200 text-sm focus:border-brand-primary focus:ring-brand-primary" placeholder="Escribe la respuesta para Google"></textarea>
+                                        <textarea name="comment" rows="7" class="mt-5 w-full rounded-2xl border-gray-200 text-sm focus:border-brand-primary focus:ring-brand-primary" placeholder="Escribe la respuesta para Google"></textarea>
                                         <button type="submit" class="mt-4 inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-brand-primary/95">
                                             Publicar respuesta
                                         </button>
