@@ -997,8 +997,6 @@ class GoogleBusinessProfileReviewService
 
         foreach ([
             $candidate->name,
-            $candidate->google_business_profile_location_title,
-            $candidate->google_business_profile_location_name,
         ] as $candidateName) {
             $normalizedCandidate = $this->normalizeText($candidateName);
 
