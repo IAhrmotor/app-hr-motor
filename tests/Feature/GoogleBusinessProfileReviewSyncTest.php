@@ -143,4 +143,54 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
             'dealership_id' => $dealership->id,
         ]);
     }
+
+    public function test_sync_prefers_location_group_account_when_multiple_accounts_match_the_same_name(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/111',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/111',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'ORGANIZATION',
+                    ],
+                    [
+                        'name' => 'accounts/222',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/222/locations*' => Http::response([
+                'locations' => [],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/111/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/111/locations/should-not-be-used',
+                        'title' => 'Wrong account',
+                    ],
+                ],
+            ]),
+        ]);
+
+        app(GoogleBusinessProfileReviewService::class)->sync();
+
+        Http::assertSent(function ($request): bool {
+            return str_contains($request->url(), 'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/222/locations');
+        });
+    }
 }
