@@ -22,7 +22,10 @@ return new class extends Migration
 
                     $rawPayloadJson = null;
                     if ($rawPayload !== null) {
-                        $rawPayloadJson = json_encode($rawPayload, JSON_THROW_ON_ERROR);
+                        $rawPayloadJson = json_encode(
+                            $rawPayload,
+                            JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+                        );
                     }
 
                     $needsUpdate = $review->comment !== $cleanComment
@@ -63,7 +66,7 @@ return new class extends Migration
             $rawPayload['comment'] = $this->sanitizeReviewComment($rawPayload['comment']);
         }
 
-        return $rawPayload;
+        return $this->sanitizeUtf8Recursive($rawPayload);
     }
 
     private function sanitizeReviewComment(mixed $comment): ?string
@@ -82,5 +85,25 @@ return new class extends Migration
         $cleanComment = trim((string) ($parts[0] ?? $comment));
 
         return $cleanComment === '' ? null : $cleanComment;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function sanitizeUtf8Recursive(array $payload): array
+    {
+        foreach ($payload as $key => $value) {
+            if (is_string($value)) {
+                $payload[$key] = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+                continue;
+            }
+
+            if (is_array($value)) {
+                $payload[$key] = $this->sanitizeUtf8Recursive($value);
+            }
+        }
+
+        return $payload;
     }
 };
