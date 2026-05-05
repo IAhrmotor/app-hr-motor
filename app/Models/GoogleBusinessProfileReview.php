@@ -46,4 +46,22 @@ class GoogleBusinessProfileReview extends Model
     {
         return filled($this->reply_comment);
     }
+
+    public function getCommentAttribute(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return $value === null ? null : trim((string) $value);
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $parts = preg_split('/\R*\(Translated by Google\)\R*/i', $value, 2);
+        $cleanValue = trim((string) ($parts[0] ?? $value));
+
+        return $cleanValue === '' ? null : $cleanValue;
+    }
 }
