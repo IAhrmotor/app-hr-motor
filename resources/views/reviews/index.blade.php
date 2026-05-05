@@ -220,6 +220,10 @@
                 debouncedSearch: '',
                 isSearching: false,
                 searchTimeout: null,
+                locationSearchables: @js($locationSummaries->map(fn ($summary) => implode(' ', [
+                    $summary['location_title'],
+                    $summary['location_name'],
+                ]))->values()),
                 init() {
                     this.debouncedSearch = this.search;
 
@@ -248,6 +252,19 @@
                     }
 
                     return this.normalize(value).includes(term);
+                },
+                hasMatchingLocations() {
+                    const term = this.normalize(this.debouncedSearch).trim();
+
+                    if (! this.locationSearchables.length) {
+                        return false;
+                    }
+
+                    if (! term) {
+                        return true;
+                    }
+
+                    return this.locationSearchables.some((value) => this.normalize(value).includes(term));
                 },
             }"
         >
@@ -340,7 +357,7 @@
         </div>
 
         @if ($locationSummaries->isNotEmpty())
-            <div class="mt-10">
+            <div class="mt-10" x-show="hasMatchingLocations()" x-cloak>
                 <div class="mb-4">
                     <h2 class="text-lg font-semibold text-brand-secondary">Ubicaciones de Google</h2>
                     <p class="text-sm text-gray-500">Mostramos las ubicaciones reales de Google Business Profile para no depender de que la tabla de delegaciones esté completa.</p>
