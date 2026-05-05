@@ -279,6 +279,7 @@ class ReviewController extends Controller
     {
         return Dealership::query()
             ->withoutSalamanca()
+            ->whereNotNull('google_business_profile_location_name')
             ->orderBy('name')
             ->get()
             ->map(function (Dealership $dealership): array {
@@ -319,8 +320,21 @@ class ReviewController extends Controller
             return collect();
         }
 
+        $linkedLocationNames = Dealership::query()
+            ->withoutSalamanca()
+            ->whereNotNull('google_business_profile_location_name')
+            ->pluck('google_business_profile_location_name')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
         return GoogleBusinessProfileReview::query()
             ->withoutSalamanca()
+            ->whereNull('dealership_id')
+            ->when($linkedLocationNames !== [], function ($query) use ($linkedLocationNames): void {
+                $query->whereNotIn('location_name', $linkedLocationNames);
+            })
             ->select('location_name')
             ->whereNotNull('location_name')
             ->distinct()
@@ -328,6 +342,7 @@ class ReviewController extends Controller
             ->pluck('location_name')
             ->map(function (string $locationName): array {
                 $locationReviewsQuery = GoogleBusinessProfileReview::query()
+                    ->withoutSalamanca()
                     ->where('location_name', $locationName);
 
                 $locationTitle = (clone $locationReviewsQuery)
