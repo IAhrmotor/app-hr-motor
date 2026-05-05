@@ -12,6 +12,11 @@ return new class extends Migration
             return;
         }
 
+        DB::statement('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
+        DB::statement("SET SESSION character_set_connection = 'utf8mb4'");
+        DB::statement("SET SESSION character_set_results = 'utf8mb4'");
+        DB::statement("SET SESSION collation_connection = 'utf8mb4_unicode_ci'");
+
         DB::statement(
             'ALTER TABLE google_business_profile_reviews CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
         );
