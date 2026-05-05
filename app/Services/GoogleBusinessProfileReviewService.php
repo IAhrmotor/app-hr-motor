@@ -418,15 +418,15 @@ class GoogleBusinessProfileReviewService
 
         return [
             'dealership_id' => $dealershipId,
-            'location_name' => $locationName,
-            'location_title' => $locationTitle,
-            'review_name' => (string) data_get($review, 'name'),
-            'reviewer_name' => $this->stringOrNull(data_get($review, 'reviewer.displayName') ?? data_get($review, 'reviewer.name')),
-            'reviewer_photo_url' => $this->stringOrNull(data_get($review, 'reviewer.profilePhotoUrl')),
+            'location_name' => $this->sanitizeUtf8String($locationName),
+            'location_title' => $this->sanitizeUtf8String($locationTitle),
+            'review_name' => $this->sanitizeUtf8String((string) data_get($review, 'name')),
+            'reviewer_name' => $this->sanitizeUtf8String($this->stringOrNull(data_get($review, 'reviewer.displayName') ?? data_get($review, 'reviewer.name'))),
+            'reviewer_photo_url' => $this->sanitizeUtf8String($this->stringOrNull(data_get($review, 'reviewer.profilePhotoUrl'))),
             'rating' => $this->ratingToInteger(data_get($review, 'starRating') ?? data_get($review, 'rating')),
-            'comment' => $cleanComment,
-            'reply_name' => $this->stringOrNull(data_get($review, 'reviewReply.name')),
-            'reply_comment' => $this->stringOrNull($replyComment),
+            'comment' => $this->sanitizeUtf8String($cleanComment),
+            'reply_name' => $this->sanitizeUtf8String($this->stringOrNull(data_get($review, 'reviewReply.name'))),
+            'reply_comment' => $this->sanitizeUtf8String($this->stringOrNull($replyComment)),
             'reply_updated_at' => $replyUpdatedAt?->toDateTimeString(),
             'review_created_at' => $this->parseTimestamp(data_get($review, 'createTime'))?->toDateTimeString(),
             'review_updated_at' => $this->parseTimestamp(data_get($review, 'updateTime'))?->toDateTimeString(),
@@ -672,7 +672,7 @@ class GoogleBusinessProfileReviewService
     private function sanitizeReviewComment(mixed $comment): ?string
     {
         if (! is_string($comment)) {
-            return $this->stringOrNull($comment);
+            return $this->sanitizeUtf8String($this->stringOrNull($comment));
         }
 
         $comment = trim($comment);
@@ -684,7 +684,7 @@ class GoogleBusinessProfileReviewService
         $parts = preg_split('/\R*\(Translated by Google\)\R*/i', $comment, 2);
         $cleanComment = trim((string) ($parts[0] ?? $comment));
 
-        return $cleanComment === '' ? null : $cleanComment;
+        return $this->sanitizeUtf8String($cleanComment === '' ? null : $cleanComment);
     }
 
     /**
@@ -695,7 +695,7 @@ class GoogleBusinessProfileReviewService
     {
         foreach ($payload as $key => $value) {
             if (is_string($value)) {
-                $payload[$key] = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+                $payload[$key] = $this->sanitizeUtf8String($value);
                 continue;
             }
 
@@ -705,6 +705,29 @@ class GoogleBusinessProfileReviewService
         }
 
         return $payload;
+    }
+
+    private function sanitizeUtf8String(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = (string) $value;
+
+        if ($value === '') {
+            return null;
+        }
+
+        $sanitized = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+
+        if ($sanitized === false) {
+            $sanitized = trim($value);
+        } else {
+            $sanitized = trim($sanitized);
+        }
+
+        return $sanitized === '' ? null : $sanitized;
     }
 
     private function resolveDealershipForLocation(string $locationName, ?string $locationTitle): ?Dealership
