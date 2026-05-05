@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $dealership->name . ' | ReseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as')
+@section('title', $dealership->name . ' | ReseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as')
 
 @section('content')
     @php
@@ -12,23 +12,23 @@
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         @if (session('success'))
             <div class="mb-6 rounded-3xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-900 shadow-sm">
-                <p class="font-semibold">SincronizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n solicitada</p>
+                <p class="font-semibold">Sincronización solicitada</p>
                 <p class="mt-1 leading-6">{{ session('success') }}</p>
             </div>
         @endif
 
         @if (session('error'))
             <div class="mb-6 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-900 shadow-sm">
-                <p class="font-semibold">No se ha podido iniciar la sincronizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n</p>
+                <p class="font-semibold">No se ha podido iniciar la sincronización</p>
                 <p class="mt-1 leading-6">{{ session('error') }}</p>
             </div>
         @endif
         <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-                <a href="{{ route('reviews.index') }}" class="text-sm font-semibold text-brand-primary">Volver a reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as</a>
+                <a href="{{ route('reviews.index') }}" class="text-sm font-semibold text-brand-primary">Volver a reseñas</a>
                 <h1 class="mt-2 text-3xl font-bold text-brand-secondary">{{ $dealership->name }}</h1>
                 <p class="mt-2 text-sm text-gray-600">
-                    {{ $dealership->google_business_profile_location_title ?? 'DelegaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n sin vincular' }}
+                    {{ $dealership->google_business_profile_location_title ?? 'Delegación sin vincular' }}
                 </p>
             </div>
 
@@ -37,24 +37,25 @@
                 <button
                     type="submit"
                     data-review-sync-loader-button
-                    data-review-sync-loader-default="Sincronizar delegaciÃ³n"
+                    data-review-sync-loader-default="Sincronizar delegación"
                     data-review-sync-loader-loading="Sincronizando..."
                     class="inline-flex w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white sm:w-auto"
                 >
                     <svg data-review-sync-loader-icon xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-1.636 10.26a9 9 0 11-2.867-9.668L21 9.348" />
                     </svg>
-                    <span data-review-sync-loader-label>Sincronizar delegaciÃ³n</span>
+                    <span data-review-sync-loader-label>Sincronizar delegación</span>
                 </button>
                 <p class="mt-2 max-w-sm text-xs leading-5 text-gray-500">
-                    La sincronizaciÃ³n se procesa en segundo plano. Si hay muchas reseÃ±as, puede tardar unos minutos en reflejarse.
+                    La sincronización se procesa en segundo plano. Si hay muchas reseñas, puede tardar unos minutos en reflejarse.
                 </p>
             </form>
+        </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p class="text-sm font-medium text-gray-500">ReseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as totales</p>
+                <p class="text-sm font-medium text-gray-500">ReseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as totales</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['total_reviews']) }}</p>
             </div>
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -62,7 +63,7 @@
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}</p>
             </div>
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p class="text-sm font-medium text-gray-500">ReseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as este mes</p>
+                <p class="text-sm font-medium text-gray-500">ReseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as este mes</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['monthly_reviews']) }}</p>
             </div>
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -75,7 +76,7 @@
             <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-2">
                 <div class="flex items-center justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-brand-secondary">EvoluciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n histÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³rica</h2>
+                        <h2 class="text-lg font-semibold text-brand-secondary">EvoluciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n histÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³rica</h2>
                         <p class="text-sm text-gray-500">Comparativa mensual desde el primer registro guardado.</p>
                     </div>
                 </div>
@@ -85,7 +86,7 @@
                         <div>
                             <div class="mb-2 flex items-center justify-between text-sm">
                                 <span class="font-medium text-gray-600">{{ $snapshot->snapshot_month?->format('m/Y') }}</span>
-                                <span class="text-gray-500">{{ $snapshot->monthly_reviews }} reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as, media {{ number_format((float) $snapshot->monthly_average_rating, 2) }}</span>
+                                <span class="text-gray-500">{{ $snapshot->monthly_reviews }} reseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as, media {{ number_format((float) $snapshot->monthly_average_rating, 2) }}</span>
                             </div>
                             <div class="grid grid-cols-12 gap-2">
                                 <div class="col-span-8 rounded-full bg-gray-100">
@@ -98,7 +99,7 @@
                         </div>
                     @empty
                         <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-                            AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºn no hay snapshots mensuales para esta delegaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.
+                            AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºn no hay snapshots mensuales para esta delegaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.
                         </div>
                     @endforelse
                 </div>
@@ -116,7 +117,7 @@
                         <p class="mt-1 text-2xl font-bold text-brand-secondary">{{ number_format($stats['monthly_average_rating'], 2) }}</p>
                     </div>
                     <div class="rounded-2xl bg-gray-50 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">ReseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as sin responder</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">ReseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as sin responder</p>
                         <p class="mt-1 text-2xl font-bold text-brand-secondary">{{ number_format($stats['unanswered_reviews']) }}</p>
                     </div>
                 </div>
@@ -125,8 +126,8 @@
 
         <div class="mt-8 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-sm">
             <div class="border-b border-gray-100 px-6 py-5 sm:px-7">
-                <h2 class="text-lg font-semibold text-brand-secondary">ReseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as y respuestas</h2>
-                <p class="text-sm text-gray-500">Gestiona cada reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a desde aquÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ y envÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a la rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©plica directamente a Google Business Profile.</p>
+                <h2 class="text-lg font-semibold text-brand-secondary">ReseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as y respuestas</h2>
+                <p class="text-sm text-gray-500">Gestiona cada reseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a desde aquÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ y envÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a la rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©plica directamente a Google Business Profile.</p>
             </div>
 
             <div class="divide-y divide-gray-100">
@@ -139,23 +140,23 @@
                                         {{ strtoupper(substr($review->reviewer_name ?? 'A', 0, 1)) }}
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="truncate font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'AnÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³nimo' }}</p>
+                                        <p class="truncate font-semibold text-brand-secondary">{{ $review->reviewer_name ?? 'AnÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³nimo' }}</p>
                                         <p class="text-xs text-gray-500">{{ $review->review_created_at?->format('d/m/Y H:i') }}</p>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <div class="relative inline-flex text-xl leading-none sm:text-2xl">
                                             <div class="flex text-gray-200" aria-hidden="true">
-                                                <span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span>
+                                                <span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span>
                                             </div>
                                             <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($review->rating ?? 0) }}%;">
-                                                <span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span><span>ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span>
+                                                <span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
-                                    <p class="text-sm leading-7 text-gray-700">{{ $review->comment ?? 'Sin texto de reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a.' }}</p>
+                                    <p class="text-sm leading-7 text-gray-700">{{ $review->comment ?? 'Sin texto de reseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a.' }}</p>
                                 </div>
 
                                 @if ($review->reply_comment)
@@ -168,7 +169,7 @@
                                     </div>
                                 @else
                                     <div class="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4">
-                                        <p class="text-sm text-gray-500">Esta reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºn no tiene respuesta.</p>
+                                        <p class="text-sm text-gray-500">Esta reseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a aÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºn no tiene respuesta.</p>
                                     </div>
                                 @endif
                             </div>
@@ -184,7 +185,7 @@
                                         </div>
                                         <h3 class="mt-4 text-base font-semibold text-emerald-900">Ya respondida</h3>
                                         <p class="mt-2 text-sm leading-6 text-emerald-900/75">
-                                            Esta reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a ya tiene una respuesta publicada en Google Business Profile. No hace falta volver a escribirla aquÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­.
+                                            Esta reseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a ya tiene una respuesta publicada en Google Business Profile. No hace falta volver a escribirla aquÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­.
                                         </p>
                                     </div>
                                 @else
@@ -198,7 +199,7 @@
                                         </div>
                                         <h3 class="mt-5 text-base font-semibold text-brand-secondary">Publicar respuesta</h3>
                                         <p class="mt-2 text-sm leading-6 text-gray-500">
-                                            Redacta aquÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ una respuesta clara, breve y profesional para el cliente.
+                                            Redacta aquÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ una respuesta clara, breve y profesional para el cliente.
                                         </p>
                                         <textarea
                                             name="comment"
@@ -216,7 +217,7 @@
                     </div>
                 @empty
                     <div class="p-8 text-center text-sm text-gray-500">
-                        No hay reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as para esta delegaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.
+                        No hay reseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as para esta delegaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.
                     </div>
                 @endforelse
             </div>
@@ -237,9 +238,9 @@
             <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.18),rgba(255,255,255,0.95))] ring-1 ring-brand-primary/10">
                 <div class="h-8 w-8 animate-spin rounded-full border-[3px] border-brand-primary/20 border-t-brand-primary"></div>
             </div>
-            <h2 class="mt-5 text-xl font-semibold text-brand-secondary">Sincronizando reseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±as</h2>
+            <h2 class="mt-5 text-xl font-semibold text-brand-secondary">Sincronizando reseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±as</h2>
             <p class="mt-2 text-sm leading-6 text-brand-secondary/70">
-                Estamos actualizando la delegaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n y su historial. Esta pantalla se cerrarÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ sola al terminar.
+                Estamos actualizando la delegaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n y su historial. Esta pantalla se cerrarÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ sola al terminar.
             </p>
         </div>
     </div>
