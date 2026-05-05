@@ -214,14 +214,84 @@
             </div>
         </div>
 
+        <div
+            x-data="{
+                search: '',
+                debouncedSearch: '',
+                isSearching: false,
+                searchTimeout: null,
+                init() {
+                    this.debouncedSearch = this.search;
+
+                    this.$watch('search', (value) => {
+                        this.isSearching = true;
+
+                        clearTimeout(this.searchTimeout);
+
+                        this.searchTimeout = setTimeout(() => {
+                            this.debouncedSearch = value;
+                            this.isSearching = false;
+                        }, 180);
+                    });
+                },
+                normalize(value) {
+                    return String(value ?? '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '');
+                },
+                matchesText(value) {
+                    const term = this.normalize(this.debouncedSearch).trim();
+
+                    if (! term) {
+                        return true;
+                    }
+
+                    return this.normalize(value).includes(term);
+                },
+            }"
+        >
+            <div class="mt-8 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-brand-secondary">Buscar delegaciones</h2>
+                        <p class="text-sm text-gray-500">Filtra en tiempo real las delegaciones vinculadas y las ubicaciones de Google.</p>
+                    </div>
+
+                    <div class="w-full md:max-w-xl">
+                        <label for="reviews-search" class="sr-only">Buscar delegaciones</label>
+                        <div class="relative">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                id="reviews-search"
+                                x-model="search"
+                                type="text"
+                                placeholder="Buscar delegación, location o ciudad..."
+                                class="w-full rounded-2xl border-gray-200 bg-gray-50 py-3 pl-12 pr-4 text-sm placeholder:text-gray-400 focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             @forelse ($dealershipSummaries as $summary)
                 @php
                     $dealership = $summary['dealership'];
                     $avg = max(0, min(5, (float) $summary['average_rating']));
                     $monthlyAvg = max(0, min(5, (float) $summary['monthly_average_rating']));
+                    $searchable = implode(' ', [
+                        $dealership->name,
+                        $dealership->google_business_profile_location_title ?? '',
+                        $dealership->google_business_profile_location_name ?? '',
+                    ]);
                 @endphp
                 <a href="{{ route('reviews.show', $dealership) }}"
+                    x-show="matchesText(@js($searchable))"
                     class="group rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:shadow-md">
                     <div class="flex items-start justify-between gap-4">
                         <div>
@@ -277,12 +347,17 @@
                 </div>
 
                 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    @foreach ($locationSummaries as $summary)
+                @foreach ($locationSummaries as $summary)
                         @php
                             $avg = max(0, min(5, (float) $summary['average_rating']));
                             $monthlyAvg = max(0, min(5, (float) $summary['monthly_average_rating']));
+                            $searchable = implode(' ', [
+                                $summary['location_title'],
+                                $summary['location_name'],
+                            ]);
                         @endphp
                         <a href="{{ route('reviews.location', $summary['key']) }}"
+                            x-show="matchesText(@js($searchable))"
                             class="group rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:shadow-md">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
@@ -325,6 +400,7 @@
                 </div>
             </div>
         @endif
+        </div>
 
         <div class="mt-10 rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div class="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
