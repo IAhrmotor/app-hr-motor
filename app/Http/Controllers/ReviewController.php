@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -21,43 +22,46 @@ class ReviewController extends Controller
 {
     public function index(Request $request): View
     {
-        $connection = $this->getConnection();
-
-        $dealershipSummaries = $this->buildDealershipSummaries();
-        $locationSummaries = $this->buildLocationSummaries();
-        $latestUnanswered = $this->reviewTableExists()
-            ? GoogleBusinessProfileReview::query()
-                ->withoutSalamanca()
-                ->with('dealership')
-                ->whereNull('reply_comment')
-                ->orderByDesc('review_created_at')
-                ->orderByDesc('id')
-                ->limit(8)
-                ->get()
-            : collect();
-        $latestReviews = $this->reviewTableExists()
-            ? GoogleBusinessProfileReview::query()
-                ->withoutSalamanca()
-                ->with('dealership')
-                ->orderByDesc('review_created_at')
-                ->orderByDesc('id')
-                ->limit(18)
-                ->get()
-            : collect();
-        $stats = $this->buildStats();
-        $dealerships = Dealership::query()
-            ->withoutSalamanca()
-            ->orderBy('name')
-            ->get();
+        $payload = Cache::remember($this->reviewsIndexCacheKey(), now()->addMinutes(3), function (): array {
+            return [
+                'connection' => $this->getConnection(),
+                'dealershipSummaries' => $this->buildDealershipSummaries(),
+                'locationSummaries' => $this->buildLocationSummaries(),
+                'latestUnanswered' => $this->reviewTableExists()
+                    ? GoogleBusinessProfileReview::query()
+                        ->withoutSalamanca()
+                        ->with('dealership')
+                        ->whereNull('reply_comment')
+                        ->orderByDesc('review_created_at')
+                        ->orderByDesc('id')
+                        ->limit(8)
+                        ->get()
+                    : collect(),
+                'latestReviews' => $this->reviewTableExists()
+                    ? GoogleBusinessProfileReview::query()
+                        ->withoutSalamanca()
+                        ->with('dealership')
+                        ->orderByDesc('review_created_at')
+                        ->orderByDesc('id')
+                        ->limit(18)
+                        ->get()
+                    : collect(),
+                'stats' => $this->buildStats(),
+                'dealerships' => Dealership::query()
+                    ->withoutSalamanca()
+                    ->orderBy('name')
+                    ->get(),
+            ];
+        });
 
         return view('reviews.index', [
-            'connection' => $connection,
-            'dealershipSummaries' => $dealershipSummaries,
-            'locationSummaries' => $locationSummaries,
-            'latestUnanswered' => $latestUnanswered,
-            'latestReviews' => $latestReviews,
-            'stats' => $stats,
-            'dealerships' => $dealerships,
+            'connection' => $payload['connection'],
+            'dealershipSummaries' => $payload['dealershipSummaries'],
+            'locationSummaries' => $payload['locationSummaries'],
+            'latestUnanswered' => $payload['latestUnanswered'],
+            'latestReviews' => $payload['latestReviews'],
+            'stats' => $payload['stats'],
+            'dealerships' => $payload['dealerships'],
             'filters' => $request->only(['dealership_id', 'status', 'sort', 'search']),
         ]);
     }
@@ -199,7 +203,7 @@ class ReviewController extends Controller
             return back()->with('error', "No se ha podido responder a la rese\u{F1}a.");
         }
 
-        return back()->with('success', "Sincronizaci\u{F3}n en curso. Se actualizar\u{E1}n las rese\u{F1}as en segundo plano.");
+        return back()->with('success', "Respuesta publicada correctamente.");
     }
 
     private function getConnection(): ?GoogleBusinessProfileConnection
@@ -488,6 +492,11 @@ class ReviewController extends Controller
         }
 
         return strtolower($locationName);
+    }
+
+    private function reviewsIndexCacheKey(): string
+    {
+        return 'reviews.index.dashboard.v1';
     }
 
 }

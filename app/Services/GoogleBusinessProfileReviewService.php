@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -141,6 +142,8 @@ class GoogleBusinessProfileReviewService
             ]);
         });
 
+        Cache::forget('reviews.index.dashboard.v1');
+
         $query = GoogleBusinessProfileReview::query()
             ->withoutSalamanca()
             ->with('dealership')
@@ -215,6 +218,8 @@ class GoogleBusinessProfileReviewService
             'reply_updated_at' => $replyUpdatedAt,
             'synced_at' => now(),
         ])->save();
+
+        Cache::forget('reviews.index.dashboard.v1');
 
         return $review->fresh(['dealership']);
     }
