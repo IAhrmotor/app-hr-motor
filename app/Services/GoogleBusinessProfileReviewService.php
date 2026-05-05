@@ -851,8 +851,8 @@ class GoogleBusinessProfileReviewService
         }
 
         $matchCandidates = collect(array_filter([
-            ...$locationTerms,
             $locationTitle,
+            ...$locationTerms,
         ], fn ($value): bool => is_string($value) && trim($value) !== ''))->unique()->values();
 
         foreach ($matchCandidates as $candidateValue) {
@@ -862,23 +862,34 @@ class GoogleBusinessProfileReviewService
                 continue;
             }
 
-            $dealership = Dealership::query()
+            $dealerships = Dealership::query()
                 ->withoutSalamanca()
                 ->get()
-                ->first(function (Dealership $candidate) use ($normalizedCandidateValue): bool {
-                    return $this->matchesDealershipToNormalizedValue($candidate, $normalizedCandidateValue);
-                });
+                ->values();
 
-            if ($dealership) {
+            $bestMatch = null;
+            $bestScore = 0;
+
+            foreach ($dealerships as $candidate) {
+                $score = $this->scoreDealershipMatch($candidate, $normalizedCandidateValue);
+
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestMatch = $candidate;
+                }
+            }
+
+            if ($bestMatch && $bestScore >= 70) {
                 Log::info('Google Business Profile dealership matched by location hint.', [
                     'location_name' => $locationName,
                     'location_title' => $locationTitle,
                     'matched_value' => $candidateValue,
-                    'dealership_id' => $dealership->id,
-                    'dealership_name' => $dealership->name,
+                    'dealership_id' => $bestMatch->id,
+                    'dealership_name' => $bestMatch->name,
+                    'match_score' => $bestScore,
                 ]);
 
-                return $dealership;
+                return $bestMatch;
             }
         }
 
@@ -980,8 +991,10 @@ class GoogleBusinessProfileReviewService
         ))));
     }
 
-    private function matchesDealershipToNormalizedValue(Dealership $candidate, string $normalizedValue): bool
+    private function scoreDealershipMatch(Dealership $candidate, string $normalizedValue): int
     {
+        $bestScore = 0;
+
         foreach ([
             $candidate->name,
             $candidate->google_business_profile_location_title,
@@ -998,11 +1011,56 @@ class GoogleBusinessProfileReviewService
                 || str_contains($normalizedValue, $normalizedCandidate)
                 || str_contains($normalizedCandidate, $normalizedValue)
             ) {
-                return true;
+                $bestScore = max($bestScore, 90);
+            }
+
+            foreach ($this->extractDealershipNameSegments($candidateName) as $candidateSegment) {
+                $normalizedSegment = $this->normalizeText($candidateSegment);
+
+                if ($normalizedSegment === '') {
+                    continue;
+                }
+
+                if (
+                    $normalizedSegment === $normalizedValue
+                    || str_contains($normalizedValue, $normalizedSegment)
+                    || str_contains($normalizedSegment, $normalizedValue)
+                ) {
+                    $bestScore = max($bestScore, 100);
+                    continue;
+                }
+
+                $distance = levenshtein($normalizedSegment, $normalizedValue);
+                $longestLength = max(strlen($normalizedSegment), strlen($normalizedValue));
+
+                if ($longestLength >= 6 && $distance <= 1) {
+                    $bestScore = max($bestScore, 95);
+                    continue;
+                }
+
+                if ($longestLength >= 10 && $distance <= 2) {
+                    $bestScore = max($bestScore, 85);
+                }
             }
         }
 
-        return false;
+        return $bestScore;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractDealershipNameSegments(?string $dealershipName): array
+    {
+        $dealershipName = trim((string) $dealershipName);
+
+        if ($dealershipName === '') {
+            return [];
+        }
+
+        $segments = preg_split('/\s*\|\|\s*|\s*\|\s*|\s*-\s*|\/|·/', $dealershipName) ?: [];
+
+        return array_values(array_filter(array_map('trim', $segments), fn (string $segment): bool => $segment !== ''));
     }
 
     private function ratingToInteger(mixed $rating): ?int
