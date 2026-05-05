@@ -277,15 +277,17 @@ class ReviewController extends Controller
      */
     private function buildDealershipSummaries(): Collection
     {
-        return Dealership::query()
+        $dealerships = Dealership::query()
             ->withoutSalamanca()
             ->whereNotNull('google_business_profile_location_name')
             ->orderBy('name')
             ->get()
             ->groupBy('google_business_profile_location_name')
-            ->map(fn (Collection $dealerships): Dealership => $dealerships->sortBy('id')->first())
-            ->values()
-            ->map(function (Dealership $dealership): array {
+            ->map(fn (Collection $dealerships): ?Dealership => $dealerships->sortBy('id')->first())
+            ->filter()
+            ->values();
+
+        return $dealerships->map(function (Dealership $dealership): array {
                 $dealershipReviewsQuery = GoogleBusinessProfileReview::query()
                     ->withoutSalamanca()
                     ->where('dealership_id', $dealership->id);
@@ -311,7 +313,7 @@ class ReviewController extends Controller
                     'unanswered_reviews' => (clone $dealershipReviewsQuery)->whereNull('reply_comment')->count(),
                     'snapshot' => $snapshot,
                 ];
-            });
+        });
     }
 
     /**
@@ -328,7 +330,7 @@ class ReviewController extends Controller
             ->whereNotNull('google_business_profile_location_name')
             ->get();
 
-        return GoogleBusinessProfileReview::query()
+        $locationSummaries = GoogleBusinessProfileReview::query()
             ->withoutSalamanca()
             ->whereNull('dealership_id')
             ->whereNotNull('location_name')
@@ -367,9 +369,9 @@ class ReviewController extends Controller
                 ];
             })
             ->filter()
-            ->values()
-            ->sortByDesc('total_reviews')
             ->values();
+
+        return $locationSummaries->sortByDesc('total_reviews')->values();
     }
 
     /**
