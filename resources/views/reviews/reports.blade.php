@@ -8,7 +8,7 @@
             <div>
                 <a href="{{ route('reviews.index') }}" class="text-sm font-semibold text-brand-primary">Volver a reseñas</a>
                 <h1 class="mt-2 text-3xl font-bold text-brand-secondary">Informes mensuales</h1>
-                <p class="mt-2 text-sm text-gray-600">Historial consolidado por delegacion y mes.</p>
+                <p class="mt-2 text-sm text-gray-600">Historial consolidado por delegación y mes.</p>
             </div>
         </div>
 
@@ -18,7 +18,7 @@
                     <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                         <tr>
                             <th class="px-5 py-3">Mes</th>
-                            <th class="px-5 py-3">Delegacion</th>
+                            <th class="px-5 py-3">Delegación</th>
                             <th class="px-5 py-3">Total</th>
                             <th class="px-5 py-3">Media</th>
                             <th class="px-5 py-3">Este mes</th>
@@ -39,7 +39,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-5 py-10 text-center text-sm text-gray-500">Aun no hay informes mensuales guardados.</td>
+                                <td colspan="7" class="px-5 py-10 text-center text-sm text-gray-500">Aún no hay informes mensuales guardados.</td>
                             </tr>
                         @endforelse
                     </tbody>
