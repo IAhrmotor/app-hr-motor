@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dealership;
+use App\Jobs\SyncGoogleBusinessProfileReviewsJob;
 use App\Models\GoogleBusinessProfileConnection;
 use App\Models\GoogleBusinessProfileMonthlySnapshot;
 use App\Models\GoogleBusinessProfileReview;
@@ -171,7 +172,7 @@ class ReviewController extends Controller
     public function refresh(Request $request, GoogleBusinessProfileReviewService $service, ?Dealership $dealership = null): RedirectResponse
     {
         try {
-            $reviews = $service->sync($dealership);
+            SyncGoogleBusinessProfileReviewsJob::dispatch($dealership?->id);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -179,10 +180,10 @@ class ReviewController extends Controller
         }
 
         if ($dealership) {
-            return back()->with('success', 'SincronizaciÃ³n completada para ' . $dealership->name . '. Se han cargado ' . number_format($reviews->count()) . ' reseÃ±as.');
+            return back()->with('success', 'Sincronización en curso para ' . $dealership->name . '. En breve se actualizarán sus reseñas.');
         }
 
-        return back()->with('success', 'SincronizaciÃ³n completada. Se han cargado ' . number_format($reviews->count()) . ' reseÃ±as.');
+        return back()->with('success', 'Sincronización en curso. Se actualizarán las reseñas en segundo plano.');
     }
 
     public function reply(Request $request, GoogleBusinessProfileReviewService $service, GoogleBusinessProfileReview $review): RedirectResponse
@@ -491,3 +492,4 @@ class ReviewController extends Controller
     }
 
 }
+
