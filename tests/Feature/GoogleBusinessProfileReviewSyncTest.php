@@ -585,4 +585,88 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
             'dealership_id' => $malaga->id,
         ]);
     }
+
+    public function test_sync_ignores_stale_google_business_profile_fields_when_matching_dealerships(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/117678944517959788740',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        $madridLike = Dealership::query()->create([
+            'name' => 'Alcobendas',
+            'google_business_profile_location_title' => 'HR Motor || Málaga',
+            'google_maps_url' => 'https://maps.google.com/?q=alcobendas',
+            'reviews_url' => 'https://example.com/resenas/alcobendas',
+            'phone' => '+34 000 000 007',
+            'salesforce_id' => 'sf-alcobendas',
+        ]);
+
+        $malagaCentro = Dealership::query()->create([
+            'name' => 'Málaga Centro',
+            'google_maps_url' => 'https://maps.google.com/?q=malaga-centro',
+            'reviews_url' => 'https://example.com/resenas/malaga-centro',
+            'phone' => '+34 000 000 003',
+            'salesforce_id' => 'sf-malaga-centro-2',
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/117678944517959788740',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/117678944517959788740/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/malaga-centro',
+                        'title' => 'HR Motor || Málaga Centro',
+                        'storefrontAddress' => [
+                            'locality' => 'Málaga',
+                            'administrativeArea' => 'Málaga',
+                            'postalCode' => '29001',
+                        ],
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/malaga-centro/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
+                        'reviewer' => [
+                            'displayName' => 'Cliente Málaga Centro',
+                        ],
+                        'starRating' => 'FOUR',
+                        'comment' => 'Buena atención en Málaga Centro',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
+
+        $this->assertCount(1, $reviews);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
+            'dealership_id' => $malagaCentro->id,
+        ]);
+        $this->assertDatabaseMissing('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
+            'dealership_id' => $madridLike->id,
+        ]);
+    }
 }
