@@ -850,6 +850,16 @@ class GoogleBusinessProfileReviewService
             }
         }
 
+        $explicitDealership = $this->resolveExplicitDealershipMatch([
+            $locationName,
+            $locationTitle,
+            ...$locationTerms,
+        ]);
+
+        if ($explicitDealership) {
+            return $explicitDealership;
+        }
+
         $matchCandidates = collect(array_filter([
             $locationTitle,
             ...$locationTerms,
@@ -898,6 +908,54 @@ class GoogleBusinessProfileReviewService
             'location_title' => $locationTitle,
             'location_terms' => $locationTerms,
         ]);
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, string|null>  $locationValues
+     */
+    private function resolveExplicitDealershipMatch(array $locationValues): ?Dealership
+    {
+        $normalizedValues = array_values(array_unique(array_filter(array_map(
+            fn ($value): string => $this->normalizeText($value),
+            $locationValues
+        ))));
+
+        if ($normalizedValues === []) {
+            return null;
+        }
+
+        $explicitRules = [
+            'malagacentro' => ['malagacentro'],
+        ];
+
+        foreach ($explicitRules as $needle => $candidateNames) {
+            $matchedValue = collect($normalizedValues)->first(fn (string $value): bool => str_contains($value, $needle));
+
+            if (! $matchedValue) {
+                continue;
+            }
+
+            $dealership = Dealership::query()
+                ->withoutSalamanca()
+                ->get()
+                ->first(function (Dealership $candidate) use ($candidateNames): bool {
+                    $candidateNormalizedName = $this->normalizeText($candidate->name);
+
+                    return in_array($candidateNormalizedName, $candidateNames, true);
+                });
+
+            if ($dealership) {
+                Log::info('Google Business Profile dealership matched by explicit rule.', [
+                    'matched_value' => $matchedValue,
+                    'dealership_id' => $dealership->id,
+                    'dealership_name' => $dealership->name,
+                ]);
+
+                return $dealership;
+            }
+        }
 
         return null;
     }
