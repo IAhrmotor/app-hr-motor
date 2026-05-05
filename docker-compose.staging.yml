@@ -39,7 +39,7 @@ services:
       dockerfile: Dockerfile
     container_name: laravel-staging-queue-worker
     working_dir: /var/www
-    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1", "--timeout=0"]
+    command: ["php", "artisan", "queue:work", "--queue=google-business-profile-sync,default", "--sleep=1", "--tries=1", "--timeout=0"]
     restart: unless-stopped
     env_file:
       - .env.docker
