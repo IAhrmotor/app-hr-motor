@@ -144,14 +144,23 @@
                             </div>
 
                             <div class="w-full lg:max-w-md">
-                                <form method="POST" action="{{ route('reviews.reply', $review) }}" class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                                    @csrf
-                                    <label class="mb-2 block text-sm font-semibold text-brand-secondary">Responder</label>
-                                    <textarea name="comment" rows="4" class="w-full rounded-xl border-gray-200 text-sm" placeholder="Escribe la respuesta para Google">{{ $review->reply_comment ?? '' }}</textarea>
-                                    <button type="submit" class="mt-3 w-full cursor-pointer rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white">
-                                        Publicar respuesta
-                                    </button>
-                                </form>
+                                @if ($review->reply_comment)
+                                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                                        <p class="text-sm font-semibold text-emerald-700">Ya respondida</p>
+                                        <p class="mt-2 text-sm leading-6 text-emerald-900/80">
+                                            Esta reseña ya tiene respuesta publicada en Google Business Profile.
+                                        </p>
+                                    </div>
+                                @else
+                                    <form method="POST" action="{{ route('reviews.reply', $review) }}" class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                        @csrf
+                                        <label class="mb-2 block text-sm font-semibold text-brand-secondary">Responder</label>
+                                        <textarea name="comment" rows="4" class="w-full rounded-xl border-gray-200 text-sm" placeholder="Escribe la respuesta para Google"></textarea>
+                                        <button type="submit" class="mt-3 w-full cursor-pointer rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white">
+                                            Publicar respuesta
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -161,6 +170,12 @@
                     </div>
                 @endforelse
             </div>
+
+            @if (method_exists($reviews, 'hasPages') && $reviews->hasPages())
+                <div class="border-t border-gray-100 px-5 py-4">
+                    {{ $reviews->links() }}
+                </div>
+            @endif
         </div>
     </div>
 
