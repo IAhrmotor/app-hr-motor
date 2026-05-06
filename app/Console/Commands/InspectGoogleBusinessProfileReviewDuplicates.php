@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\GoogleBusinessProfileReview;
+use App\Services\GoogleBusinessProfileReviewService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -14,8 +15,10 @@ class InspectGoogleBusinessProfileReviewDuplicates extends Command
 
     protected $description = 'Muestra grupos de reseñas duplicadas para poder inspeccionarlas antes de eliminarlas.';
 
-    public function handle(): int
+    public function handle(GoogleBusinessProfileReviewService $service): int
     {
+        $this->line('Inspeccionando grupos duplicados de Google Business Profile...');
+
         if (! $this->reviewTableExists()) {
             $this->info('La tabla de reseñas no existe.');
 
@@ -70,6 +73,9 @@ class InspectGoogleBusinessProfileReviewDuplicates extends Command
         $this->line('');
         $this->warn('Duplicados por huella visible');
         $this->renderGroups($byFingerprint->take($limit));
+
+        $this->line('');
+        $this->info('Inspección completada.');
 
         return self::SUCCESS;
     }

@@ -3,17 +3,18 @@
 use App\Models\GoogleBusinessProfileReview;
 use App\Services\GoogleBusinessProfileReviewService;
 use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
 Artisan::command('google-business-profile:debug-duplicate-reviews {--limit=20}', function (GoogleBusinessProfileReviewService $service) {
+    $this->line('Inspeccionando grupos duplicados de Google Business Profile...');
+
     if (! Schema::hasTable('google_business_profile_reviews')) {
         $this->info('La tabla de reseñas no existe.');
 
@@ -48,7 +49,7 @@ Artisan::command('google-business-profile:debug-duplicate-reviews {--limit=20}',
         ->values();
 
     $this->info(sprintf('Filas analizadas: %d', $rows->count()));
-    $this->info(sprintf('Grupos duplicados por huella canónica: %d', $byCanonical->count()));
+    $this->info(sprintf('Grupos duplicados por huella canonica: %d', $byCanonical->count()));
     $this->line('');
 
     foreach ($byCanonical->take($limit) as $index => $group) {
@@ -56,11 +57,11 @@ Artisan::command('google-business-profile:debug-duplicate-reviews {--limit=20}',
         $first = $group->first();
 
         $this->warn(sprintf(
-            '%d) %d filas | delegación: %s | cliente: %s | rating: %s | fecha: %s',
+            '%d) %d filas | delegacion: %s | cliente: %s | rating: %s | fecha: %s',
             $index + 1,
             $group->count(),
             $first?->dealership?->name ?? $first?->location_title ?? 'Sin asignar',
-            $first?->reviewer_name ?? 'Anónimo',
+            $first?->reviewer_name ?? 'Anonimo',
             $first?->rating ?? 0,
             $first?->review_created_at?->format('d/m/Y H:i') ?? 'sin fecha'
         ));
@@ -81,13 +82,18 @@ Artisan::command('google-business-profile:debug-duplicate-reviews {--limit=20}',
     }
 
     if ($byCanonical->isEmpty()) {
-        $this->info('No hay grupos duplicados canónicos.');
+        $this->info('No hay grupos duplicados canonicos.');
     }
 
+    $this->line('');
+    $this->info('Inspeccion completada.');
+
     return self::SUCCESS;
-})->purpose('Muestra duplicados canónicos de reseñas de Google Business Profile.');
+})->purpose('Muestra duplicados canonicos de reseñas de Google Business Profile.');
 
 Artisan::command('google-business-profile:cleanup-duplicate-reviews', function (GoogleBusinessProfileReviewService $service) {
+    $this->line('Iniciando limpieza de duplicados de Google Business Profile...');
+
     $deletedCount = $service->dedupeDuplicateReviewRows();
 
     $this->info(sprintf('Limpieza completada. Filas duplicadas eliminadas: %d.', $deletedCount));
