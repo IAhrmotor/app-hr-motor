@@ -14,6 +14,8 @@ class DedupeGoogleBusinessProfileReviews extends Command
 
     public function handle(GoogleBusinessProfileReviewService $service): int
     {
+        $this->line('Iniciando limpieza de duplicados de Google Business Profile...');
+
         try {
             $deletedCount = $service->dedupeDuplicateReviewRows();
         } catch (Throwable $exception) {

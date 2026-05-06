@@ -190,7 +190,7 @@ class GoogleBusinessProfileReviewService
     public function buildDuplicateReviewKey(GoogleBusinessProfileReview $review): string
     {
         $parts = [
-            $this->normalizeFingerprintValue($review->dealership_id ?: $this->canonicalGoogleLocationKey($review->location_name) ?: $review->location_title),
+            $this->normalizeText((string) ($review->dealership_id ?: $this->canonicalGoogleLocationKey($review->location_name) ?: $review->location_title)),
             $this->normalizeText((string) $review->reviewer_name),
             $this->normalizeFingerprintValue($review->rating),
             $this->normalizeFingerprintValue($review->review_created_at?->format('Y-m-d H:i:s')),
