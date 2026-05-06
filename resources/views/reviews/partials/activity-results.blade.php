@@ -9,7 +9,7 @@
 
         <form
             method="GET"
-            action="{{ route('reviews.index') }}"
+            action="{{ $filterAction ?? route('reviews.all') }}"
             class="space-y-4"
             data-reviews-filter-form
         >
