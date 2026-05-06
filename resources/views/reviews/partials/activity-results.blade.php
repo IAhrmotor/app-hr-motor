@@ -196,8 +196,8 @@
                         <div class="absolute inset-8 rounded-full bg-white shadow-inner"></div>
                         <div class="absolute inset-0 flex items-center justify-center">
                             <div class="text-center">
-                                <p class="text-3xl font-bold text-brand-secondary">{{ number_format($ratingTotal, 0, ',', '.') }}</p>
-                                <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Filtradas</p>
+                                <p class="text-2xl font-bold text-brand-secondary">{{ number_format($ratingTotal, 0, ',', '.') }}</p>
+                                <p class="text-[9px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Filtradas</p>
                             </div>
                         </div>
                     </div>
