@@ -10,6 +10,7 @@ use App\Models\GoogleBusinessProfileReview;
 use App\Services\GoogleBusinessProfileReviewService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -21,7 +22,7 @@ use Throwable;
 
 class ReviewController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $dealershipSort = $this->normalizeDealershipSort($request->string('dealership_sort')->toString());
         $reviewsPaginator = $this->reviewTableExists()
