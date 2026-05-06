@@ -208,9 +208,6 @@
                                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Distribuci&oacute;n</p>
                                 <h3 class="mt-1 text-lg font-semibold text-brand-secondary">Valoraciones filtradas</h3>
                             </div>
-                            <span class="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
-                                {{ number_format($ratingTotal, 0, ',', '.') }} rese&ntilde;as
-                            </span>
                         </div>
 
                         <div class="mt-4 flex flex-wrap gap-3">
