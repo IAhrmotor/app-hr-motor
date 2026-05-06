@@ -28,6 +28,7 @@
                 'reviews' => $reviews,
                 'dealerships' => $dealerships,
                 'filters' => $filters,
+                'filterAction' => route('reviews.all'),
             ])
         </div>
     </div>
