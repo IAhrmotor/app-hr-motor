@@ -60,6 +60,17 @@
             <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-sm font-medium text-gray-500">Media actual</p>
                 <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}</p>
+                <div class="mt-3 flex items-center gap-2">
+                    <div class="relative inline-flex text-2xl leading-none" aria-label="Valoración media en Google Maps {{ number_format($stats['average_rating'], 2) }} de 5">
+                        <div class="flex text-gray-200" aria-hidden="true">
+                            <span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span>
+                        </div>
+                        <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($stats['average_rating'] ?? 0) }}%;">
+                            <span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span>
+                        </div>
+                    </div>
+                    <span class="text-sm font-semibold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}/5</span>
+                </div>
             </div>
             <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-sm font-medium text-gray-500">Rese&ntilde;as este mes</p>
