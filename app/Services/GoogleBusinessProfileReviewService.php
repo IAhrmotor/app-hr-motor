@@ -190,7 +190,7 @@ class GoogleBusinessProfileReviewService
     public function buildDuplicateReviewKey(GoogleBusinessProfileReview $review): string
     {
         $parts = [
-            $this->normalizeText((string) ($review->dealership_id ?: $this->canonicalGoogleLocationKey($review->location_name) ?: $review->location_title)),
+            $this->normalizeText((string) ($this->canonicalGoogleLocationKey($review->location_name) ?: $review->location_title)),
             $this->normalizeText((string) $review->reviewer_name),
             $this->normalizeFingerprintValue($review->rating),
             $this->normalizeFingerprintValue($review->review_created_at?->format('Y-m-d H:i:s')),
@@ -219,6 +219,7 @@ class GoogleBusinessProfileReviewService
         foreach ($duplicateReviewNames as $reviewName) {
             $rows = GoogleBusinessProfileReview::query()
                 ->where('review_name', $reviewName)
+                ->orderByRaw('CASE WHEN dealership_id IS NULL THEN 0 ELSE 1 END DESC')
                 ->orderByDesc('synced_at')
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
@@ -273,6 +274,7 @@ class GoogleBusinessProfileReviewService
                 'synced_at',
                 'updated_at',
             ])
+            ->orderByRaw('CASE WHEN dealership_id IS NULL THEN 0 ELSE 1 END DESC')
             ->orderByDesc('synced_at')
             ->orderByDesc('updated_at')
             ->orderByDesc('id');
