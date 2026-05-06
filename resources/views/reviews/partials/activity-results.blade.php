@@ -190,9 +190,9 @@
 
     <div class="border-t border-gray-100 px-6 py-6 lg:px-8" data-reviews-results>
         <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="relative h-40 w-40 shrink-0 rounded-full" style="{{ $ratingChartStyle }}">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-center xl:min-w-0">
+                    <div class="relative h-36 w-36 shrink-0 rounded-full sm:h-40 sm:w-40" style="{{ $ratingChartStyle }}">
                         <div class="absolute inset-8 rounded-full bg-white shadow-inner"></div>
                         <div class="absolute inset-0 flex items-center justify-center">
                             <div class="text-center">
@@ -202,36 +202,32 @@
                         </div>
                     </div>
 
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-3">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Distribuci&oacute;n</p>
-                                <h3 class="mt-1 text-lg font-semibold text-brand-secondary">Valoraciones filtradas</h3>
-                            </div>
-                        </div>
+                    <div class="min-w-0 text-center sm:text-left">
+                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Distribuci&oacute;n</p>
+                        <h3 class="mt-1 text-lg font-semibold text-brand-secondary">Valoraciones filtradas</h3>
+                    </div>
+                </div>
 
-                        <div class="mt-4 flex flex-wrap gap-3">
-                            <div class="flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2">
-                                <span class="h-3 w-3 rounded-full bg-red-500"></span>
-                                <span class="text-sm font-semibold text-red-700">1 y 2 estrellas</span>
-                                <span class="text-sm font-bold text-red-700">{{ number_format($ratingRed, 0, ',', '.') }}</span>
-                                <span class="text-xs text-red-600/80">{{ $ratingRedPercent }}%</span>
-                            </div>
+                <div class="flex flex-col gap-3 xl:items-end xl:justify-center">
+                    <div class="flex w-full max-w-[19rem] items-center gap-2 rounded-full border border-red-100 bg-red-50 px-3 py-2">
+                        <span class="h-3 w-3 rounded-full bg-red-500"></span>
+                        <span class="text-sm font-semibold text-red-700">1 y 2 estrellas</span>
+                        <span class="text-sm font-bold text-red-700">{{ number_format($ratingRed, 0, ',', '.') }}</span>
+                        <span class="text-xs text-red-600/80">{{ $ratingRedPercent }}%</span>
+                    </div>
 
-                            <div class="flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-3 py-2">
-                                <span class="h-3 w-3 rounded-full bg-amber-400"></span>
-                                <span class="text-sm font-semibold text-amber-700">3 estrellas</span>
-                                <span class="text-sm font-bold text-amber-700">{{ number_format($ratingOrange, 0, ',', '.') }}</span>
-                                <span class="text-xs text-amber-600/80">{{ $ratingOrangePercent }}%</span>
-                            </div>
+                    <div class="flex w-full max-w-[19rem] items-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-3 py-2">
+                        <span class="h-3 w-3 rounded-full bg-amber-400"></span>
+                        <span class="text-sm font-semibold text-amber-700">3 estrellas</span>
+                        <span class="text-sm font-bold text-amber-700">{{ number_format($ratingOrange, 0, ',', '.') }}</span>
+                        <span class="text-xs text-amber-600/80">{{ $ratingOrangePercent }}%</span>
+                    </div>
 
-                            <div class="flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2">
-                                <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
-                                <span class="text-sm font-semibold text-emerald-700">4 y 5 estrellas</span>
-                                <span class="text-sm font-bold text-emerald-700">{{ number_format($ratingGreen, 0, ',', '.') }}</span>
-                                <span class="text-xs text-emerald-600/80">{{ $ratingGreenPercent }}%</span>
-                            </div>
-                        </div>
+                    <div class="flex w-full max-w-[19rem] items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2">
+                        <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
+                        <span class="text-sm font-semibold text-emerald-700">4 y 5 estrellas</span>
+                        <span class="text-sm font-bold text-emerald-700">{{ number_format($ratingGreen, 0, ',', '.') }}</span>
+                        <span class="text-xs text-emerald-600/80">{{ $ratingGreenPercent }}%</span>
                     </div>
                 </div>
             </div>
