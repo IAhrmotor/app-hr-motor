@@ -76,9 +76,14 @@ class ReviewController extends Controller
     }
     public function all(Request $request): View|JsonResponse
     {
-        $reviewsPaginator = $this->reviewTableExists()
-            ? $this->reviewsQuery($request)
-                ->with('dealership')
+        $reviewsQuery = $this->reviewTableExists()
+            ? $this->reviewsQuery($request)->with('dealership')
+            : null;
+
+        $reviewsRatingDistribution = $this->buildReviewsRatingDistribution($reviewsQuery);
+
+        $reviewsPaginator = $reviewsQuery
+            ? (clone $reviewsQuery)
                 ->paginate(10)
                 ->withQueryString()
             : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1, [
@@ -93,6 +98,7 @@ class ReviewController extends Controller
                 ->orderBy('name')
                 ->get(),
             'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
+            'reviewsRatingDistribution' => $reviewsRatingDistribution,
         ];
 
         if ($request->boolean('ajax')) {
@@ -337,6 +343,39 @@ class ReviewController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * @return array{total:int,red:int,orange:int,green:int,red_percent:float,orange_percent:float,green_percent:float}
+     */
+    private function buildReviewsRatingDistribution(?EloquentBuilder $query): array
+    {
+        if (! $query) {
+            return [
+                'total' => 0,
+                'red' => 0,
+                'orange' => 0,
+                'green' => 0,
+                'red_percent' => 0.0,
+                'orange_percent' => 0.0,
+                'green_percent' => 0.0,
+            ];
+        }
+
+        $total = (clone $query)->count();
+        $red = (clone $query)->whereBetween('rating', [1, 2])->count();
+        $orange = (clone $query)->where('rating', 3)->count();
+        $green = (clone $query)->whereBetween('rating', [4, 5])->count();
+
+        return [
+            'total' => $total,
+            'red' => $red,
+            'orange' => $orange,
+            'green' => $green,
+            'red_percent' => $total > 0 ? round(($red / $total) * 100, 1) : 0.0,
+            'orange_percent' => $total > 0 ? round(($orange / $total) * 100, 1) : 0.0,
+            'green_percent' => $total > 0 ? round(($green / $total) * 100, 1) : 0.0,
+        ];
     }
 
     /**

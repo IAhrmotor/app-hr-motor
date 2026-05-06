@@ -63,7 +63,7 @@
                             <select
                                 id="reviews-table-dealership"
                                 name="dealership_id"
-                            class="h-11 w-full rounded-xl border-gray-200 bg-white px-4 text-sm text-brand-secondary transition hover:cursor-pointer focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                                class="h-11 w-full rounded-xl border-gray-200 bg-white px-4 text-sm text-brand-secondary transition hover:cursor-pointer focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
                             >
                                 <option value="">Todas las delegaciones</option>
                                 @foreach ($dealerships as $dealership)
@@ -81,7 +81,7 @@
                             <select
                                 id="reviews-table-status"
                                 name="status"
-                            class="h-11 w-full rounded-xl border-gray-200 bg-white px-4 text-sm text-brand-secondary transition hover:cursor-pointer focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                                class="h-11 w-full rounded-xl border-gray-200 bg-white px-4 text-sm text-brand-secondary transition hover:cursor-pointer focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
                             >
                                 <option value="">Todas</option>
                                 <option value="answered" @selected(($filters['status'] ?? '') === 'answered')>Respondidas</option>
@@ -165,71 +165,155 @@
                     </div>
                 </div>
             </div>
-
-            <p class="text-xs text-brand-secondary/45">
-                Los filtros se aplican en tiempo real y la tabla se actualiza sin recargar la p&aacute;gina.
-            </p>
         </form>
     </div>
 
-    <div class="border-t border-gray-100" data-reviews-results>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-100">
-                <thead class="bg-gray-50 text-left">
-                    <tr>
-                        <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Delegaci&oacute;n</th>
-                        <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Cliente</th>
-                        <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Puntuaci&oacute;n</th>
-                        <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Rese&ntilde;a</th>
-                        <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Respuesta</th>
-                        <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Fecha</th>
-                    </tr>
-                </thead>
+    @php
+        $ratingDistribution = $reviewsRatingDistribution ?? ['total' => 0, 'red' => 0, 'orange' => 0, 'green' => 0, 'red_percent' => 0, 'orange_percent' => 0, 'green_percent' => 0];
+        $ratingTotal = (int) ($ratingDistribution['total'] ?? 0);
+        $ratingRed = (int) ($ratingDistribution['red'] ?? 0);
+        $ratingOrange = (int) ($ratingDistribution['orange'] ?? 0);
+        $ratingGreen = (int) ($ratingDistribution['green'] ?? 0);
+        $ratingRedPercent = (float) ($ratingDistribution['red_percent'] ?? 0);
+        $ratingOrangePercent = (float) ($ratingDistribution['orange_percent'] ?? 0);
+        $ratingGreenPercent = (float) ($ratingDistribution['green_percent'] ?? 0);
+        $ratingChartStyle = $ratingTotal > 0
+            ? sprintf(
+                'background: conic-gradient(#ef4444 0%% %s%%, #f59e0b %s%% %s%%, #16a34a %s%% 100%%);',
+                $ratingRedPercent,
+                $ratingRedPercent,
+                $ratingRedPercent + $ratingOrangePercent,
+                $ratingRedPercent + $ratingOrangePercent
+            )
+            : 'background: conic-gradient(#e5e7eb 0% 100%);';
+    @endphp
 
-                <tbody class="divide-y divide-gray-100 bg-white">
-                    @forelse ($reviews as $review)
-                        @php
-                            $reviewLocationLabel = $review->dealership?->name ?? $review->location_title ?? 'Sin asignar';
-                        @endphp
-                        <tr class="align-top">
-                            <td class="px-6 py-5 text-sm font-semibold text-brand-secondary">
-                                {{ $reviewLocationLabel }}
-                            </td>
-                            <td class="px-6 py-5 text-sm text-brand-secondary/75">
-                                {{ $review->reviewer_name ?? 'An&oacute;nimo' }}
-                            </td>
-                            <td class="px-6 py-5 text-sm text-brand-secondary/75">
-                                <span class="font-semibold text-brand-secondary">{{ $review->rating ?? 0 }}</span>/5
-                            </td>
-                            <td class="px-6 py-5 text-sm text-brand-secondary/75">
-                                <p class="max-w-xl line-clamp-2">{{ $review->comment ?? 'Sin texto' }}</p>
-                            </td>
-                            <td class="px-6 py-5 text-sm text-brand-secondary/75">
-                                @if ($review->reply_comment)
-                                    <p class="max-w-xl line-clamp-2">{{ $review->reply_comment }}</p>
-                                @else
-                                    <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">Sin responder</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-5 text-sm text-brand-secondary/60">
-                                {{ $review->review_created_at?->format('d/m/Y H:i') ?? $review->created_at?->format('d/m/Y H:i') }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-sm text-brand-secondary/65">
-                                No hay rese&ntilde;as con los filtros seleccionados.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+    <div class="border-t border-gray-100 px-6 py-6 lg:px-8" data-reviews-results>
+        <div class="grid gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
+            <div class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Distribución</p>
+                        <h3 class="mt-1 text-lg font-semibold text-brand-secondary">Valoraciones filtradas</h3>
+                    </div>
+                    <span class="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
+                        {{ number_format($ratingTotal, 0, ',', '.') }} reseñas
+                    </span>
+                </div>
 
-        @if ($reviews->hasPages())
-            <div class="border-t border-gray-100 px-4 py-4" data-reviews-pagination>
-                {{ $reviews->links() }}
+                <div class="mt-5 flex items-center justify-center">
+                    <div class="relative h-40 w-40 rounded-full" style="{{ $ratingChartStyle }}">
+                        <div class="absolute inset-8 rounded-full bg-white shadow-inner"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center">
+                                <p class="text-3xl font-bold text-brand-secondary">{{ number_format($ratingTotal, 0, ',', '.') }}</p>
+                                <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-secondary/45">Filtradas</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 space-y-3">
+                    <div class="flex items-center justify-between rounded-2xl bg-red-50 px-3 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="h-3 w-3 rounded-full bg-red-500"></span>
+                            <span class="text-sm font-semibold text-red-700">1 y 2 estrellas</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-red-700">{{ number_format($ratingRed, 0, ',', '.') }}</p>
+                            <p class="text-[11px] text-red-600/80">{{ $ratingRedPercent }}%</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded-2xl bg-amber-50 px-3 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="h-3 w-3 rounded-full bg-amber-400"></span>
+                            <span class="text-sm font-semibold text-amber-700">3 estrellas</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-amber-700">{{ number_format($ratingOrange, 0, ',', '.') }}</p>
+                            <p class="text-[11px] text-amber-600/80">{{ $ratingOrangePercent }}%</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded-2xl bg-emerald-50 px-3 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
+                            <span class="text-sm font-semibold text-emerald-700">4 y 5 estrellas</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-emerald-700">{{ number_format($ratingGreen, 0, ',', '.') }}</p>
+                            <p class="text-[11px] text-emerald-600/80">{{ $ratingGreenPercent }}%</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        @endif
+
+            <div class="rounded-3xl border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-100 px-6 py-5">
+                    <h2 class="text-lg font-semibold text-brand-secondary">Tabla filtrada</h2>
+                    <p class="text-sm text-gray-500">La tabla se actualiza sin recargar y la dona refleja exactamente el resultado visible.</p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100">
+                        <thead class="bg-gray-50 text-left">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Delegación</th>
+                                <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Cliente</th>
+                                <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Puntuación</th>
+                                <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Reseña</th>
+                                <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Respuesta</th>
+                                <th class="px-6 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Fecha</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-gray-100 bg-white">
+                            @forelse ($reviews as $review)
+                                @php
+                                    $reviewLocationLabel = $review->dealership?->name ?? $review->location_title ?? 'Sin asignar';
+                                @endphp
+                                <tr class="align-top">
+                                    <td class="px-6 py-5 text-sm font-semibold text-brand-secondary">
+                                        {{ $reviewLocationLabel }}
+                                    </td>
+                                    <td class="px-6 py-5 text-sm text-brand-secondary/75">
+                                        {{ $review->reviewer_name ?? 'Anónimo' }}
+                                    </td>
+                                    <td class="px-6 py-5 text-sm text-brand-secondary/75">
+                                        <span class="font-semibold text-brand-secondary">{{ $review->rating ?? 0 }}</span>/5
+                                    </td>
+                                    <td class="px-6 py-5 text-sm text-brand-secondary/75">
+                                        <p class="max-w-xl line-clamp-2">{{ $review->comment ?? 'Sin texto' }}</p>
+                                    </td>
+                                    <td class="px-6 py-5 text-sm text-brand-secondary/75">
+                                        @if ($review->reply_comment)
+                                            <p class="max-w-xl line-clamp-2">{{ $review->reply_comment }}</p>
+                                        @else
+                                            <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">Sin responder</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-5 text-sm text-brand-secondary/60">
+                                        {{ $review->review_created_at?->format('d/m/Y H:i') ?? $review->created_at?->format('d/m/Y H:i') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center text-sm text-brand-secondary/65">
+                                        No hay reseñas con los filtros seleccionados.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if ($reviews->hasPages())
+                    <div class="border-t border-gray-100 px-4 py-4" data-reviews-pagination>
+                        {{ $reviews->links() }}
+                    </div>
+                @endif
+            </div>
+        </div>
     </div>
 </div>
