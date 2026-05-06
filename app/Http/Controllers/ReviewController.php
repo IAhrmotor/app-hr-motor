@@ -77,13 +77,26 @@ class ReviewController extends Controller
             : collect();
 
         if ($request->boolean('ajax')) {
-            return response()->json([
-                'html' => view('reviews.partials.activity-results', [
-                    'reviews' => $reviewsPaginator,
-                    'dealerships' => $payload['dealerships'],
+            try {
+                return response()->json([
+                    'html' => view('reviews.partials.activity-results', [
+                        'reviews' => $reviewsPaginator,
+                        'dealerships' => $payload['dealerships'],
+                        'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
+                    ])->render(),
+                ]);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                logger()->error('Google Business Profile reviews AJAX render failed.', [
                     'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
-                ])->render(),
-            ]);
+                    'message' => $exception->getMessage(),
+                ]);
+
+                return response()->json([
+                    'message' => 'No se ha podido filtrar la tabla de reseñas.',
+                ], 500);
+            }
         }
 
         return view('reviews.index', [
