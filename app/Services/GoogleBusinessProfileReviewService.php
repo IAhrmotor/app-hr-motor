@@ -174,6 +174,21 @@ class GoogleBusinessProfileReviewService
             return 0;
         }
 
+        $deletedCount = 0;
+
+        $deletedCount += $this->dedupeDuplicateReviewRowsByReviewName();
+        $deletedCount += $this->dedupeDuplicateReviewRowsByFingerprint();
+
+        return $deletedCount;
+    }
+
+    private function reviewTableExists(): bool
+    {
+        return Schema::hasTable('google_business_profile_reviews');
+    }
+
+    private function dedupeDuplicateReviewRowsByReviewName(): int
+    {
         $duplicateReviewNames = GoogleBusinessProfileReview::query()
             ->select('review_name')
             ->whereNotNull('review_name')
@@ -224,9 +239,100 @@ class GoogleBusinessProfileReviewService
         return $deletedCount;
     }
 
-    private function reviewTableExists(): bool
+    private function dedupeDuplicateReviewRowsByFingerprint(): int
     {
-        return Schema::hasTable('google_business_profile_reviews');
+        $rows = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
+            ->with('dealership')
+            ->select([
+                'id',
+                'dealership_id',
+                'location_name',
+                'location_title',
+                'review_name',
+                'reviewer_name',
+                'rating',
+                'comment',
+                'reply_comment',
+                'reply_updated_at',
+                'review_created_at',
+                'review_updated_at',
+                'synced_at',
+                'updated_at',
+            ])
+            ->orderByDesc('synced_at')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return 0;
+        }
+
+        $seenFingerprints = [];
+        $idsToDelete = [];
+
+        foreach ($rows as $row) {
+            $fingerprint = $this->buildReviewFingerprint($row);
+
+            if ($fingerprint === '') {
+                continue;
+            }
+
+            if (isset($seenFingerprints[$fingerprint])) {
+                $idsToDelete[] = $row->id;
+                continue;
+            }
+
+            $seenFingerprints[$fingerprint] = $row->id;
+        }
+
+        if ($idsToDelete === []) {
+            return 0;
+        }
+
+        GoogleBusinessProfileReview::query()
+            ->whereIn('id', $idsToDelete)
+            ->delete();
+
+        Cache::forget('reviews.index.dashboard.v1');
+
+        Log::info('Google Business Profile review rows pruned by visible fingerprint.', [
+            'deleted_count' => count($idsToDelete),
+        ]);
+
+        return count($idsToDelete);
+    }
+
+    private function buildReviewFingerprint(GoogleBusinessProfileReview $review): string
+    {
+        $parts = [
+            $this->normalizeFingerprintValue($review->dealership_id),
+            $this->normalizeFingerprintValue($review->location_name),
+            $this->normalizeFingerprintValue($review->location_title),
+            $this->normalizeFingerprintValue($review->reviewer_name),
+            $this->normalizeFingerprintValue($review->rating),
+            $this->normalizeFingerprintValue($review->review_created_at?->format('Y-m-d H:i:s')),
+            $this->normalizeFingerprintValue($review->comment),
+            $this->normalizeFingerprintValue($review->reply_comment),
+        ];
+
+        return implode('|', $parts);
+    }
+
+    private function normalizeFingerprintValue(mixed $value): string
+    {
+        $value = is_scalar($value) ? (string) $value : '';
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        $value = Str::lower($value);
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return trim($value);
     }
 
     private function logUnmappedDealerships(Collection $mappedDealerships): void
