@@ -441,15 +441,8 @@
                     @endforeach
                 </div>
             </div>
-        </div>
+        @endif
 
-        <div class="mt-10" data-reviews-root>
-            @include('reviews.partials.activity-results', [
-                'reviews' => $reviews,
-                'dealerships' => $dealerships,
-                'filters' => $filters,
-            ])
-        </div>
     </div>
 
     <script>
