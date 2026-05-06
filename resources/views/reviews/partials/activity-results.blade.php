@@ -110,6 +110,7 @@
                                     name="date_from"
                                     value="{{ $filters['date_from'] ?? '' }}"
                                     data-date-input="from"
+                                    max="{{ $filters['date_to'] ?? '' }}"
                                     class="pointer-events-none absolute inset-0 opacity-0"
                                     tabindex="-1"
                                 >
@@ -129,6 +130,7 @@
                                     name="date_to"
                                     value="{{ $filters['date_to'] ?? '' }}"
                                     data-date-input="to"
+                                    min="{{ $filters['date_from'] ?? '' }}"
                                     class="pointer-events-none absolute inset-0 opacity-0"
                                     tabindex="-1"
                                 >

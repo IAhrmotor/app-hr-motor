@@ -526,6 +526,19 @@
                 }
             };
 
+            const syncDateConstraints = () => {
+                const inputs = getDateInputs();
+
+                if (inputs.from && inputs.to) {
+                    inputs.from.max = inputs.to.value || '';
+                    inputs.to.min = inputs.from.value || '';
+
+                    if (inputs.from.value && inputs.to.value && inputs.to.value < inputs.from.value) {
+                        inputs.to.value = inputs.from.value;
+                    }
+                }
+            };
+
             const buildUrlFromForm = (page = null) => {
                 const form = getForm();
 
@@ -581,6 +594,7 @@
                     }
 
                     root.innerHTML = payload.html;
+                    syncDateConstraints();
                     refreshDateLabels();
                     syncUrl(url);
                 } catch (error) {
@@ -609,6 +623,7 @@
                     return;
                 }
 
+                syncDateConstraints();
                 refreshDateLabels();
             });
 
@@ -631,6 +646,7 @@
                         select.selectedIndex = 0;
                     });
 
+                    syncDateConstraints();
                     refreshDateLabels();
                     renderReviews(buildUrlFromForm());
                     return;
@@ -672,6 +688,7 @@
                 renderReviews(new URL(window.location.href));
             });
 
+            syncDateConstraints();
             refreshDateLabels();
         })();
     </script>
