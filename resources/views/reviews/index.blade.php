@@ -217,7 +217,7 @@
 
         <div
             x-data="{
-                search: '',
+                search: @js(request('search', '')),
                 debouncedSearch: '',
                 isSearching: false,
                 searchTimeout: null,
@@ -275,6 +275,25 @@
                         <h2 class="text-lg font-semibold text-brand-secondary">Buscar delegaciones</h2>
                         <p class="text-sm text-gray-500">Filtra en tiempo real las delegaciones vinculadas y las ubicaciones de Google.</p>
                     </div>
+
+                    <form method="GET" class="w-full md:max-w-[18rem]">
+                        <label for="dealership-sort" class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Ordenar</label>
+                        <input type="hidden" name="search" x-model="search">
+                        <select
+                            id="dealership-sort"
+                            name="dealership_sort"
+                            x-on:change="$el.form.submit()"
+                            class="w-full rounded-2xl border-gray-200 bg-gray-50 py-3 text-sm focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                        >
+                            <option value="alpha" @selected(($dealershipSort ?? 'alpha') === 'alpha')>A - Z</option>
+                            <option value="reviews_asc" @selected(($dealershipSort ?? 'alpha') === 'reviews_asc')>Reseñas ↑</option>
+                            <option value="reviews_desc" @selected(($dealershipSort ?? 'alpha') === 'reviews_desc')>Reseñas ↓</option>
+                            <option value="rating_asc" @selected(($dealershipSort ?? 'alpha') === 'rating_asc')>Valoración ↑</option>
+                            <option value="rating_desc" @selected(($dealershipSort ?? 'alpha') === 'rating_desc')>Valoración ↓</option>
+                            <option value="monthly_rating_asc" @selected(($dealershipSort ?? 'alpha') === 'monthly_rating_asc')>Este mes ↑</option>
+                            <option value="monthly_rating_desc" @selected(($dealershipSort ?? 'alpha') === 'monthly_rating_desc')>Este mes ↓</option>
+                        </select>
+                    </form>
 
                     <div class="w-full md:max-w-xl">
                         <label for="reviews-search" class="sr-only">Buscar delegaciones</label>
