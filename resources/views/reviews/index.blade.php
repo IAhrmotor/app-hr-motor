@@ -457,7 +457,6 @@
                 return;
             }
 
-            let debounceTimer = null;
             let requestToken = 0;
 
             const getForm = () => root.querySelector('[data-reviews-filter-form]');
@@ -594,13 +593,6 @@
                 }
             };
 
-            const scheduleRender = (page = null) => {
-                clearTimeout(debounceTimer);
-                debounceTimer = window.setTimeout(() => {
-                    renderReviews(buildUrlFromForm(page));
-                }, 220);
-            };
-
             root.addEventListener('submit', (event) => {
                 const form = event.target.closest('[data-reviews-filter-form]');
 
@@ -612,21 +604,12 @@
                 renderReviews(buildUrlFromForm());
             });
 
-            root.addEventListener('input', (event) => {
-                if (!event.target.closest('[name="search"]')) {
-                    return;
-                }
-
-                scheduleRender();
-            });
-
             root.addEventListener('change', (event) => {
                 if (!event.target.closest('[data-reviews-filter-form] select, [data-reviews-filter-form] input[type="date"]')) {
                     return;
                 }
 
                 refreshDateLabels();
-                renderReviews(buildUrlFromForm());
             });
 
             root.addEventListener('click', (event) => {
