@@ -440,99 +440,256 @@
         @endif
         </div>
 
-        <div class="mt-10 rounded-3xl border border-gray-200 bg-white shadow-sm">
-            <div class="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-brand-secondary">Filtros y actividad reciente</h2>
-                    <p class="text-sm text-gray-500">Busca por texto, delegación, estado o puntuación.</p>
-                </div>
-
-                <form method="GET" class="grid gap-3 md:grid-cols-4">
-                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Buscar..."
-                        class="rounded-xl border-gray-200 text-sm">
-                    <select name="dealership_id" class="rounded-xl border-gray-200 text-sm">
-                        <option value="">Todas las delegaciones</option>
-                        @foreach ($dealerships as $dealership)
-                            <option value="{{ $dealership->id }}" @selected((string) ($filters['dealership_id'] ?? '') === (string) $dealership->id)>{{ $dealership->name }}</option>
-                        @endforeach
-                    </select>
-                    <select name="status" class="rounded-xl border-gray-200 text-sm">
-                        <option value="">Todas</option>
-                        <option value="answered" @selected(($filters['status'] ?? '') === 'answered')>Respondidas</option>
-                        <option value="unanswered" @selected(($filters['status'] ?? '') === 'unanswered')>Sin responder</option>
-                    </select>
-                    <select name="sort" class="rounded-xl border-gray-200 text-sm">
-                        <option value="">Mas recientes</option>
-                        <option value="rating_desc" @selected(($filters['sort'] ?? '') === 'rating_desc')>Mejor valoradas</option>
-                        <option value="rating_asc" @selected(($filters['sort'] ?? '') === 'rating_asc')>Peor valoradas</option>
-                    </select>
-                    <div class="md:col-span-4 flex justify-end">
-                        <button type="submit" class="cursor-pointer rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white">
-                            Aplicar filtros
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-100">
-                    <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-                        <tr>
-                            <th class="px-5 py-3">Delegación</th>
-                            <th class="px-5 py-3">Cliente</th>
-                            <th class="px-5 py-3">Puntuación</th>
-                            <th class="px-5 py-3">Reseña</th>
-                            <th class="px-5 py-3">Respuesta</th>
-                            <th class="px-5 py-3">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 bg-white">
-                        @forelse ($latestReviews as $review)
-                            @php
-                                $reviewLocationLabel = $review->dealership?->name ?? $review->location_title ?? 'Sin asignar';
-                            @endphp
-                            <tr>
-                                <td class="px-5 py-4 text-sm font-medium text-brand-secondary">
-                                    {{ $reviewLocationLabel }}
-                                </td>
-                                <td class="px-5 py-4 text-sm text-gray-600">
-                                    {{ $review->reviewer_name ?? 'Anónimo' }}
-                                </td>
-                                <td class="px-5 py-4 text-sm text-gray-600">
-                                    <span class="font-semibold text-brand-secondary">{{ $review->rating ?? 0 }}</span>/5
-                                </td>
-                                <td class="px-5 py-4 text-sm text-gray-600">
-                                    <p class="line-clamp-2 max-w-xl">{{ $review->comment ?? 'Sin texto' }}</p>
-                                </td>
-                                <td class="px-5 py-4 text-sm text-gray-600">
-                                    @if ($review->reply_comment)
-                                        <p class="line-clamp-2 max-w-xl">{{ $review->reply_comment }}</p>
-                                    @else
-                                        <span class="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">Sin responder</span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-4 text-sm text-gray-500">
-                                    {{ $review->review_created_at?->format('d/m/Y H:i') ?? $review->created_at?->format('d/m/Y H:i') }}
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="px-5 py-10 text-center text-sm text-gray-500">
-                                    No hay reseñas con los filtros actuales.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+        <div class="mt-10" data-reviews-root>
+            @include('reviews.partials.activity-results', [
+                'reviews' => $reviews,
+                'dealerships' => $dealerships,
+                'filters' => $filters,
+            ])
         </div>
     </div>
 
     <script>
-        window.setInterval(() => {
-            if (document.visibilityState === 'visible') {
-                window.location.reload();
+        (function () {
+            const root = document.querySelector('[data-reviews-root]');
+
+            if (!root) {
+                return;
             }
-        }, 60000);
+
+            let debounceTimer = null;
+            let requestToken = 0;
+
+            const getForm = () => root.querySelector('[data-reviews-filter-form]');
+            const getDateInputs = () => ({
+                from: root.querySelector('[data-date-input="from"]'),
+                to: root.querySelector('[data-date-input="to"]'),
+            });
+
+            const getDateDisplays = () => ({
+                from: root.querySelector('[data-display-date-from]'),
+                to: root.querySelector('[data-display-date-to]'),
+            });
+
+            const normalizeUrl = (url) => {
+                const cleanUrl = new URL(url.toString());
+                cleanUrl.searchParams.delete('ajax');
+                return cleanUrl;
+            };
+
+            const setLoadingState = (isLoading) => {
+                root.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+                const loading = root.querySelector('[data-reviews-loading]');
+                if (loading) {
+                    loading.hidden = !isLoading;
+                }
+            };
+
+            const setFormDisabled = (disabled) => {
+                const form = getForm();
+                if (!form) {
+                    return;
+                }
+
+                form.querySelectorAll('input, select, button').forEach((control) => {
+                    if (control.dataset.keepEnabled === '1') {
+                        return;
+                    }
+
+                    control.disabled = disabled;
+                });
+            };
+
+            const formatDateLabel = (value) => {
+                if (!value) {
+                    return '';
+                }
+
+                const [year, month, day] = value.split('-');
+                if (!year || !month || !day) {
+                    return value;
+                }
+
+                return `${day}/${month}/${year}`;
+            };
+
+            const refreshDateLabels = () => {
+                const inputs = getDateInputs();
+                const displays = getDateDisplays();
+
+                if (inputs.from && displays.from) {
+                    displays.from.textContent = inputs.from.value ? formatDateLabel(inputs.from.value) : 'Desde';
+                }
+
+                if (inputs.to && displays.to) {
+                    displays.to.textContent = inputs.to.value ? formatDateLabel(inputs.to.value) : 'Hasta';
+                }
+            };
+
+            const buildUrlFromForm = (page = null) => {
+                const form = getForm();
+
+                if (!form) {
+                    return new URL(window.location.href);
+                }
+
+                const url = new URL(form.action, window.location.origin);
+                const params = new URLSearchParams(new FormData(form));
+
+                params.delete('ajax');
+
+                if (page) {
+                    params.set('page', page);
+                } else {
+                    params.delete('page');
+                }
+
+                url.search = params.toString();
+
+                return url;
+            };
+
+            const syncUrl = (url) => {
+                const cleanUrl = normalizeUrl(url);
+                window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}`);
+            };
+
+            const renderReviews = async (url) => {
+                const currentToken = ++requestToken;
+                const fetchUrl = new URL(url.toString());
+                fetchUrl.searchParams.set('ajax', '1');
+
+                setLoadingState(true);
+                setFormDisabled(true);
+
+                try {
+                    const response = await fetch(fetchUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const payload = await response.json();
+
+                    if (currentToken !== requestToken) {
+                        return;
+                    }
+
+                    root.innerHTML = payload.html;
+                    refreshDateLabels();
+                    syncUrl(url);
+                } catch (error) {
+                    console.error('No se ha podido actualizar la tabla de reseñas.', error);
+                } finally {
+                    if (currentToken === requestToken) {
+                        setLoadingState(false);
+                        setFormDisabled(false);
+                    }
+                }
+            };
+
+            const scheduleRender = (page = null) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = window.setTimeout(() => {
+                    renderReviews(buildUrlFromForm(page));
+                }, 220);
+            };
+
+            root.addEventListener('submit', (event) => {
+                const form = event.target.closest('[data-reviews-filter-form]');
+
+                if (!form) {
+                    return;
+                }
+
+                event.preventDefault();
+                renderReviews(buildUrlFromForm());
+            });
+
+            root.addEventListener('input', (event) => {
+                if (!event.target.closest('[name="search"]')) {
+                    return;
+                }
+
+                scheduleRender();
+            });
+
+            root.addEventListener('change', (event) => {
+                if (!event.target.closest('[data-reviews-filter-form] select, [data-reviews-filter-form] input[type="date"]')) {
+                    return;
+                }
+
+                refreshDateLabels();
+                renderReviews(buildUrlFromForm());
+            });
+
+            root.addEventListener('click', (event) => {
+                const resetButton = event.target.closest('[data-reviews-reset]');
+
+                if (resetButton) {
+                    event.preventDefault();
+
+                    const form = getForm();
+                    if (!form) {
+                        return;
+                    }
+
+                    form.querySelectorAll('input[type="text"], input[type="date"]').forEach((input) => {
+                        input.value = '';
+                    });
+
+                    form.querySelectorAll('select').forEach((select) => {
+                        select.selectedIndex = 0;
+                    });
+
+                    refreshDateLabels();
+                    renderReviews(buildUrlFromForm());
+                    return;
+                }
+
+                const paginationLink = event.target.closest('[data-reviews-pagination] a');
+                if (!paginationLink) {
+                    return;
+                }
+
+                event.preventDefault();
+                renderReviews(new URL(paginationLink.href));
+            });
+
+            root.addEventListener('click', (event) => {
+                const trigger = event.target.closest('[data-date-trigger]');
+
+                if (!trigger) {
+                    return;
+                }
+
+                const inputs = getDateInputs();
+                const key = trigger.getAttribute('data-date-trigger');
+                const input = key === 'from' ? inputs.from : inputs.to;
+
+                if (!input) {
+                    return;
+                }
+
+                if (typeof input.showPicker === 'function') {
+                    input.showPicker();
+                    return;
+                }
+
+                input.click();
+            });
+
+            window.addEventListener('popstate', () => {
+                renderReviews(new URL(window.location.href));
+            });
+
+            refreshDateLabels();
+        })();
     </script>
 @endsection

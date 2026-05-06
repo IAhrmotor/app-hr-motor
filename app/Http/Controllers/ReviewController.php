@@ -24,6 +24,15 @@ class ReviewController extends Controller
     public function index(Request $request): View
     {
         $dealershipSort = $this->normalizeDealershipSort($request->string('dealership_sort')->toString());
+        $reviewsPaginator = $this->reviewTableExists()
+            ? $this->reviewsQuery($request)
+                ->with('dealership')
+                ->paginate(10)
+                ->withQueryString()
+            : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
 
         $payload = Cache::remember($this->reviewsIndexCacheKey(), now()->addMinutes(3), function (): array {
             return [
@@ -67,15 +76,26 @@ class ReviewController extends Controller
                 ->get()
             : collect();
 
+        if ($request->boolean('ajax')) {
+            return response()->json([
+                'html' => view('reviews.partials.activity-results', [
+                    'reviews' => $reviewsPaginator,
+                    'dealerships' => $payload['dealerships'],
+                    'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
+                ])->render(),
+            ]);
+        }
+
         return view('reviews.index', [
             'connection' => $payload['connection'],
             'dealershipSummaries' => $dealershipSummaries,
             'locationSummaries' => $payload['locationSummaries'],
             'latestUnanswered' => $latestUnanswered,
             'latestReviews' => $latestReviews,
+            'reviews' => $reviewsPaginator,
             'stats' => $payload['stats'],
             'dealerships' => $payload['dealerships'],
-            'filters' => $request->only(['dealership_id', 'status', 'sort', 'search']),
+            'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
             'dealershipSort' => $dealershipSort,
         ]);
     }
@@ -262,7 +282,11 @@ class ReviewController extends Controller
                 $subquery->where('reviewer_name', 'like', '%' . $search . '%')
                     ->orWhere('comment', 'like', '%' . $search . '%')
                     ->orWhere('reply_comment', 'like', '%' . $search . '%')
-                    ->orWhere('location_title', 'like', '%' . $search . '%');
+                    ->orWhere('location_title', 'like', '%' . $search . '%')
+                    ->orWhere('location_name', 'like', '%' . $search . '%')
+                    ->orWhereHas('dealership', function (EloquentBuilder $dealershipQuery) use ($search): void {
+                        $dealershipQuery->where('name', 'like', '%' . $search . '%');
+                    });
             });
         });
 
@@ -276,6 +300,14 @@ class ReviewController extends Controller
             if ($status === 'unanswered') {
                 $builder->whereNull('reply_comment');
             }
+        });
+
+        $query->when($request->filled('date_from'), function ($builder) use ($request): void {
+            $builder->whereDate('review_created_at', '>=', Carbon::parse($request->string('date_from'))->toDateString());
+        });
+
+        $query->when($request->filled('date_to'), function ($builder) use ($request): void {
+            $builder->whereDate('review_created_at', '<=', Carbon::parse($request->string('date_to'))->toDateString());
         });
 
         $sort = $request->string('sort')->toString();
