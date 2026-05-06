@@ -100,11 +100,16 @@ class DealershipController extends Controller
         $dealership->load(['users' => fn ($query) => $query->orderBy('name')]);
 
         $monthlyPerformance = $this->buildMonthlyPerformanceData($dealership);
+        $googleReviewsQuery = $dealership->googleBusinessProfileReviews()->withoutSalamanca();
 
         return view('dealerships.show', [
             'dealership' => $dealership,
             'userMonthlyStats' => $monthlyPerformance['user_stats'],
             'dealershipMonthlyRankings' => $monthlyPerformance['dealership_rankings'],
+            'googleBusinessProfileStats' => [
+                'total_reviews' => (clone $googleReviewsQuery)->count(),
+                'average_rating' => round((float) (clone $googleReviewsQuery)->avg('rating'), 2),
+            ],
         ]);
     }
 

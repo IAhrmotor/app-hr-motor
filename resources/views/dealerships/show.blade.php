@@ -4,6 +4,9 @@
     @php
         $salesRank = $dealershipMonthlyRankings['sales'] ?? null;
         $purchasesRank = $dealershipMonthlyRankings['purchases'] ?? null;
+        $googleRating = (float) ($googleBusinessProfileStats['average_rating'] ?? 0);
+        $googleRatingCount = (int) ($googleBusinessProfileStats['total_reviews'] ?? 0);
+        $starFillWidth = fn ($value) => max(0, min(100, ((float) $value / 5) * 100));
     @endphp
     <main
         x-data="imageLightbox()"
@@ -38,6 +41,22 @@
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Delegación</p>
                         <h1 class="mt-2 text-3xl font-bold tracking-tight text-brand-secondary">{{ $dealership->name }}</h1>
                         <p class="mt-2 text-sm text-brand-secondary/65">{{ $dealership->phone }}</p>
+                        <div class="mt-4 flex flex-wrap items-center gap-3">
+                            <div class="relative inline-flex text-2xl leading-none" aria-label="Valoración media en Google Maps {{ number_format($googleRating, 2) }} de 5">
+                                <div class="flex text-gray-200" aria-hidden="true">
+                                    <span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span>
+                                </div>
+                                <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($googleRating) }}%;">
+                                    <span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-brand-secondary">{{ number_format($googleRating, 2) }}/5</span>
+                                <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">
+                                    {{ number_format($googleRatingCount, 0, ',', '.') }} reseñas en Google
+                                </span>
+                            </div>
+                        </div>
                         @if ($salesRank || $purchasesRank)
                             <div class="mt-4 flex flex-wrap gap-2">
                                 @if ($salesRank)
