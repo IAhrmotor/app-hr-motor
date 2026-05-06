@@ -224,6 +224,11 @@ class GoogleBusinessProfileReviewService
         return $deletedCount;
     }
 
+    private function reviewTableExists(): bool
+    {
+        return Schema::hasTable('google_business_profile_reviews');
+    }
+
     private function logUnmappedDealerships(Collection $mappedDealerships): void
     {
         $unmappedDealerships = Dealership::query()
