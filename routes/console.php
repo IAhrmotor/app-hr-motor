@@ -17,9 +17,7 @@ Artisan::command('google-business-profile:debug-duplicate-reviews {--limit=20}',
 
     Artisan::call('google-business-profile:inspect-duplicate-reviews', [
         '--limit' => $this->option('limit'),
-    ]);
-
-    $this->output->write(Artisan::output());
+    ], $this->output);
 
     return self::SUCCESS;
 })->purpose('Muestra duplicados canonicos de reseñas de Google Business Profile.');
