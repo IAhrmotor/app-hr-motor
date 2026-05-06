@@ -116,7 +116,8 @@ class InspectGoogleBusinessProfileReviewDuplicates extends Command
     {
         $parts = [
             $this->normalizeFingerprintValue($review->dealership_id),
-            $this->normalizeFingerprintValue($review->location_name),
+            $this->normalizeFingerprintValue($this->canonicalGoogleLocationKey($review->location_name)),
+            $this->normalizeFingerprintValue($this->canonicalGoogleReviewKey($review->review_name)),
             $this->normalizeFingerprintValue($review->location_title),
             $this->normalizeFingerprintValue($review->reviewer_name),
             $this->normalizeFingerprintValue($review->rating),
@@ -141,6 +142,36 @@ class InspectGoogleBusinessProfileReviewDuplicates extends Command
         $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
 
         return trim($value);
+    }
+
+    private function canonicalGoogleLocationKey(?string $locationName): string
+    {
+        $locationName = trim((string) $locationName);
+
+        if ($locationName === '') {
+            return '';
+        }
+
+        if (preg_match('#(?:accounts/[^/]+/)?locations/([^/]+)$#i', $locationName, $matches) === 1) {
+            return Str::lower('locations/' . $matches[1]);
+        }
+
+        return Str::lower($locationName);
+    }
+
+    private function canonicalGoogleReviewKey(?string $reviewName): string
+    {
+        $reviewName = trim((string) $reviewName);
+
+        if ($reviewName === '') {
+            return '';
+        }
+
+        if (preg_match('#(?:accounts/[^/]+/)?locations/([^/]+)/reviews/([^/]+)$#i', $reviewName, $matches) === 1) {
+            return Str::lower('locations/' . $matches[1] . '/reviews/' . $matches[2]);
+        }
+
+        return Str::lower($reviewName);
     }
 
     private function reviewTableExists(): bool
