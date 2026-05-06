@@ -277,13 +277,14 @@
                     </div>
 
                     <form method="GET" class="w-full md:max-w-[18rem]">
-                        <label for="dealership-sort" class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Ordenar</label>
+                        <label for="dealership-sort" class="sr-only">Ordenar delegaciones</label>
                         <input type="hidden" name="search" x-model="search">
                         <select
                             id="dealership-sort"
                             name="dealership_sort"
                             x-on:change="$el.form.submit()"
-                            class="w-full rounded-2xl border-gray-200 bg-gray-50 py-3 text-sm focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                            aria-label="Ordenar delegaciones"
+                            class="h-12 w-full rounded-2xl border-gray-200 bg-gray-50 px-4 text-sm focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
                         >
                             <option value="alpha" @selected(($dealershipSort ?? 'alpha') === 'alpha')>A - Z</option>
                             <option value="reviews_asc" @selected(($dealershipSort ?? 'alpha') === 'reviews_asc')>Reseñas ↑</option>
