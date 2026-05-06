@@ -39,6 +39,9 @@ class ReviewController extends Controller
             ? GoogleBusinessProfileReview::query()
                 ->withoutSalamanca()
                 ->with('dealership')
+                ->whereHas('dealership', function ($query): void {
+                    $query->withoutSalamanca();
+                })
                 ->whereNull('reply_comment')
                 ->orderByDesc('review_created_at')
                 ->orderByDesc('id')
@@ -50,6 +53,9 @@ class ReviewController extends Controller
             ? GoogleBusinessProfileReview::query()
                 ->withoutSalamanca()
                 ->with('dealership')
+                ->whereHas('dealership', function ($query): void {
+                    $query->withoutSalamanca();
+                })
                 ->orderByDesc('review_created_at')
                 ->orderByDesc('id')
                 ->limit(18)

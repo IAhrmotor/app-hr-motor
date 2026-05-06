@@ -93,6 +93,12 @@ class GoogleBusinessProfileReviewService
             );
         } else {
             $locations = $this->fetchLocations($connection, $account['name']);
+            $currentLocationNames = collect($locations)
+                ->pluck('name')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
             $dealershipCount = Dealership::query()
                 ->withoutSalamanca()
                 ->count();
@@ -117,6 +123,8 @@ class GoogleBusinessProfileReviewService
                     mappedDealerships: $mappedDealerships
                 );
             }
+
+            $this->pruneReviewsForMissingGoogleLocations($currentLocationNames);
         }
 
         $this->logUnmappedDealerships($mappedDealerships);
@@ -753,6 +761,28 @@ class GoogleBusinessProfileReviewService
             'location_name' => $locationName,
             'deleted_count' => $deletedCount,
             'remaining_review_count' => count($reviewNames),
+        ]);
+    }
+
+    /**
+     * @param  array<int, string>  $currentLocationNames
+     */
+    private function pruneReviewsForMissingGoogleLocations(array $currentLocationNames): void
+    {
+        if ($currentLocationNames === []) {
+            Log::warning('Google Business Profile sync skipped stale review pruning because no Google locations were found.');
+
+            return;
+        }
+
+        $deletedCount = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
+            ->whereNotIn('location_name', $currentLocationNames)
+            ->delete();
+
+        Log::info('Google Business Profile stale reviews pruned after full sync.', [
+            'deleted_count' => $deletedCount,
+            'current_location_count' => count($currentLocationNames),
         ]);
     }
 
