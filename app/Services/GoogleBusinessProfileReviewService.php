@@ -255,9 +255,8 @@ class GoogleBusinessProfileReviewService
 
     private function dedupeDuplicateReviewRowsByFingerprint(): int
     {
-        $rows = GoogleBusinessProfileReview::query()
+        $query = GoogleBusinessProfileReview::query()
             ->withoutSalamanca()
-            ->with('dealership')
             ->select([
                 'id',
                 'dealership_id',
@@ -276,17 +275,14 @@ class GoogleBusinessProfileReviewService
             ])
             ->orderByDesc('synced_at')
             ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->get();
-
-        if ($rows->isEmpty()) {
-            return 0;
-        }
+            ->orderByDesc('id');
 
         $seenFingerprints = [];
         $idsToDelete = [];
+        $rowsProcessed = 0;
 
-        foreach ($rows as $row) {
+        foreach ($query->cursor() as $row) {
+            $rowsProcessed++;
             $fingerprint = $this->buildDuplicateReviewKey($row);
 
             if ($fingerprint === '') {
@@ -312,6 +308,7 @@ class GoogleBusinessProfileReviewService
         Cache::forget('reviews.index.dashboard.v1');
 
         Log::info('Google Business Profile review rows pruned by visible fingerprint.', [
+            'rows_processed' => $rowsProcessed,
             'deleted_count' => count($idsToDelete),
         ]);
 

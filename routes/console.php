@@ -15,78 +15,11 @@ Artisan::command('inspire', function () {
 Artisan::command('google-business-profile:debug-duplicate-reviews {--limit=20}', function (GoogleBusinessProfileReviewService $service) {
     $this->line('Inspeccionando grupos duplicados de Google Business Profile...');
 
-    if (! Schema::hasTable('google_business_profile_reviews')) {
-        $this->info('La tabla de reseñas no existe.');
+    Artisan::call('google-business-profile:inspect-duplicate-reviews', [
+        '--limit' => $this->option('limit'),
+    ]);
 
-        return self::SUCCESS;
-    }
-
-    $limit = max(1, (int) $this->option('limit'));
-
-    $rows = GoogleBusinessProfileReview::query()
-        ->withoutSalamanca()
-        ->select([
-            'id',
-            'dealership_id',
-            'location_name',
-            'location_title',
-            'review_name',
-            'reviewer_name',
-            'rating',
-            'comment',
-            'reply_comment',
-            'review_created_at',
-            'synced_at',
-        ])
-        ->orderByDesc('synced_at')
-        ->orderByDesc('id')
-        ->get();
-
-    $byCanonical = $rows
-        ->groupBy(fn (GoogleBusinessProfileReview $review): string => $service->buildDuplicateReviewKey($review))
-        ->filter(fn (Collection $group): bool => $group->count() > 1)
-        ->sortByDesc(fn (Collection $group): int => $group->count())
-        ->values();
-
-    $this->info(sprintf('Filas analizadas: %d', $rows->count()));
-    $this->info(sprintf('Grupos duplicados por huella canonica: %d', $byCanonical->count()));
-    $this->line('');
-
-    foreach ($byCanonical->take($limit) as $index => $group) {
-        /** @var Collection<int, GoogleBusinessProfileReview> $group */
-        $first = $group->first();
-
-        $this->warn(sprintf(
-            '%d) %d filas | delegacion: %s | cliente: %s | rating: %s | fecha: %s',
-            $index + 1,
-            $group->count(),
-            $first?->dealership?->name ?? $first?->location_title ?? 'Sin asignar',
-            $first?->reviewer_name ?? 'Anonimo',
-            $first?->rating ?? 0,
-            $first?->review_created_at?->format('d/m/Y H:i') ?? 'sin fecha'
-        ));
-
-        foreach ($group as $review) {
-            $this->line(sprintf(
-                '   - ID %d | review_name=%s | location_name=%s | reviewer=%s | rating=%s | fecha=%s',
-                $review->id,
-                $review->review_name ?? '-',
-                $review->location_name ?? '-',
-                $review->reviewer_name ?? '-',
-                $review->rating ?? 0,
-                $review->review_created_at?->format('d/m/Y H:i') ?? '-'
-            ));
-        }
-
-        $this->line('');
-    }
-
-    if ($byCanonical->isEmpty()) {
-        $this->info('No hay grupos duplicados canonicos.');
-    }
-
-    $this->line('');
-    $this->info('Inspeccion completada.');
+    $this->output->write(Artisan::output());
 
     return self::SUCCESS;
 })->purpose('Muestra duplicados canonicos de reseñas de Google Business Profile.');
