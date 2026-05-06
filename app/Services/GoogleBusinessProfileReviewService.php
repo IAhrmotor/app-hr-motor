@@ -336,7 +336,7 @@ class GoogleBusinessProfileReviewService
         return trim($value);
     }
 
-    private function canonicalGoogleReviewKey(?string $reviewName): string
+    public function canonicalGoogleReviewKey(?string $reviewName): string
     {
         $reviewName = trim((string) $reviewName);
 
@@ -1430,6 +1430,21 @@ class GoogleBusinessProfileReviewService
         $value = Str::ascii(Str::lower(trim((string) $value)));
 
         return preg_replace('/[^a-z0-9]+/', '', $value) ?? '';
+    }
+
+    public function canonicalGoogleLocationKey(?string $locationName): string
+    {
+        $locationName = trim((string) $locationName);
+
+        if ($locationName === '') {
+            return '';
+        }
+
+        if (preg_match('#(?:accounts/[^/]+/)?locations/([^/]+)$#i', $locationName, $matches) === 1) {
+            return Str::lower('locations/' . $matches[1]);
+        }
+
+        return Str::lower($locationName);
     }
 
     private function ensureRequiredTablesExist(): void
