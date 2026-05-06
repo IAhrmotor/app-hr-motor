@@ -320,7 +320,6 @@
                 </div>
             </div>
 
-        @if (false)
         <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             @forelse ($dealershipSummaries as $summary)
                 @php
@@ -442,7 +441,6 @@
                     @endforeach
                 </div>
             </div>
-        @endif
         </div>
 
         <div class="mt-10" data-reviews-root>
@@ -697,5 +695,4 @@
             refreshDateLabels();
         })();
     </script>
-        @endif
 @endsection

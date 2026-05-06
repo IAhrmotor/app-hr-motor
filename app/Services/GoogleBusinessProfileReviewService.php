@@ -127,6 +127,7 @@ class GoogleBusinessProfileReviewService
             $this->pruneReviewsForMissingGoogleLocations($currentLocationNames);
         }
 
+        $this->dedupeDuplicateReviewRows();
         $this->logUnmappedDealerships($mappedDealerships);
 
         DB::transaction(function () use ($connection, $syncedAt, $account, $mappedDealerships, $syncedReviewCount, $targetDealership): void {
@@ -163,6 +164,64 @@ class GoogleBusinessProfileReviewService
         }
 
         return $query->get();
+    }
+
+    public function dedupeDuplicateReviewRows(): int
+    {
+        $this->ensureRequiredTablesExist();
+
+        if (! $this->reviewTableExists()) {
+            return 0;
+        }
+
+        $duplicateReviewNames = GoogleBusinessProfileReview::query()
+            ->select('review_name')
+            ->whereNotNull('review_name')
+            ->groupBy('review_name')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('review_name');
+
+        if ($duplicateReviewNames->isEmpty()) {
+            return 0;
+        }
+
+        $deletedCount = 0;
+
+        foreach ($duplicateReviewNames as $reviewName) {
+            $rows = GoogleBusinessProfileReview::query()
+                ->where('review_name', $reviewName)
+                ->orderByDesc('synced_at')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->get();
+
+            if ($rows->count() <= 1) {
+                continue;
+            }
+
+            $idsToDelete = $rows->slice(1)->pluck('id')->all();
+
+            if ($idsToDelete === []) {
+                continue;
+            }
+
+            GoogleBusinessProfileReview::query()
+                ->whereIn('id', $idsToDelete)
+                ->delete();
+
+            $deletedCount += count($idsToDelete);
+        }
+
+        if ($deletedCount > 0) {
+            Cache::forget('reviews.index.dashboard.v1');
+
+            Log::info('Google Business Profile duplicate review rows pruned.', [
+                'deleted_count' => $deletedCount,
+                'duplicate_review_names' => $duplicateReviewNames->count(),
+            ]);
+        }
+
+        return $deletedCount;
     }
 
     private function logUnmappedDealerships(Collection $mappedDealerships): void
