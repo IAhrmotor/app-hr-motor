@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:marketing')->group(function () {
         Route::get('/resenas', [ReviewController::class, 'index'])->name('reviews.index');
+        Route::get('/resenas/todas', [ReviewController::class, 'all'])->name('reviews.all');
         Route::get('/resenas/informes', [ReviewController::class, 'reports'])->name('reviews.reports');
         Route::get('/resenas/delegacion/{dealership}', [ReviewController::class, 'show'])
             ->whereNumber('dealership')

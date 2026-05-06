@@ -22,18 +22,9 @@ use Throwable;
 
 class ReviewController extends Controller
 {
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): View
     {
         $dealershipSort = $this->normalizeDealershipSort($request->string('dealership_sort')->toString());
-        $reviewsPaginator = $this->reviewTableExists()
-            ? $this->reviewsQuery($request)
-                ->with('dealership')
-                ->paginate(10)
-                ->withQueryString()
-            : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1, [
-                'path' => $request->url(),
-                'query' => $request->query(),
-            ]);
 
         $payload = Cache::remember($this->reviewsIndexCacheKey(), now()->addMinutes(3), function (): array {
             return [
@@ -41,10 +32,6 @@ class ReviewController extends Controller
                 'dealershipSummaries' => $this->buildDealershipSummaries(),
                 'locationSummaries' => $this->buildLocationSummaries(),
                 'stats' => $this->buildStats(),
-                'dealerships' => Dealership::query()
-                    ->withoutSalamanca()
-                    ->orderBy('name')
-                    ->get(),
             ];
         });
 
@@ -77,20 +64,47 @@ class ReviewController extends Controller
                 ->get()
             : collect();
 
+        return view('reviews.index', [
+            'connection' => $payload['connection'],
+            'dealershipSummaries' => $dealershipSummaries,
+            'locationSummaries' => $payload['locationSummaries'],
+            'latestUnanswered' => $latestUnanswered,
+            'latestReviews' => $latestReviews,
+            'stats' => $payload['stats'],
+            'dealershipSort' => $dealershipSort,
+        ]);
+    }
+    public function all(Request $request): View|JsonResponse
+    {
+        $reviewsPaginator = $this->reviewTableExists()
+            ? $this->reviewsQuery($request)
+                ->with('dealership')
+                ->paginate(10)
+                ->withQueryString()
+            : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+
+        $tableData = [
+            'reviews' => $reviewsPaginator,
+            'dealerships' => Dealership::query()
+                ->withoutSalamanca()
+                ->orderBy('name')
+                ->get(),
+            'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
+        ];
+
         if ($request->boolean('ajax')) {
             try {
                 return response()->json([
-                    'html' => view('reviews.partials.activity-results', [
-                        'reviews' => $reviewsPaginator,
-                        'dealerships' => $payload['dealerships'],
-                        'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
-                    ])->render(),
+                    'html' => view('reviews.partials.activity-results', $tableData)->render(),
                 ]);
             } catch (Throwable $exception) {
                 report($exception);
 
                 logger()->error('Google Business Profile reviews AJAX render failed.', [
-                    'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
+                    'filters' => $tableData['filters'],
                     'message' => $exception->getMessage(),
                 ]);
 
@@ -100,18 +114,7 @@ class ReviewController extends Controller
             }
         }
 
-        return view('reviews.index', [
-            'connection' => $payload['connection'],
-            'dealershipSummaries' => $dealershipSummaries,
-            'locationSummaries' => $payload['locationSummaries'],
-            'latestUnanswered' => $latestUnanswered,
-            'latestReviews' => $latestReviews,
-            'reviews' => $reviewsPaginator,
-            'stats' => $payload['stats'],
-            'dealerships' => $payload['dealerships'],
-            'filters' => $request->only(['dealership_id', 'status', 'sort', 'search', 'date_from', 'date_to']),
-            'dealershipSort' => $dealershipSort,
-        ]);
+        return view('reviews.all', $tableData);
     }
 
     public function show(Request $request, Dealership $dealership): View
@@ -590,6 +593,7 @@ class ReviewController extends Controller
     }
 
 }
+
 
 
 

@@ -25,11 +25,11 @@
                 <div class="grid gap-3 sm:grid-cols-2">
                 @if (auth()->user()?->role === \App\Models\User::ROLE_ADMIN || auth()->user()?->role === \App\Models\User::ROLE_MANAGER)
                     <a href="{{ route('google-business-profile.connect') }}"
-                        class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-brand-primary/20 bg-brand-primary/5 px-4 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary/10">
+                        class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-brand-primary/20 bg-brand-primary/5 px-4 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary/10 sm:col-span-2">
                         Conectar Google
                     </a>
                 @endif
-                <form method="POST" action="{{ route('reviews.refresh') }}" data-review-sync-loader-form>
+                <form method="POST" action="{{ route('reviews.refresh') }}" data-review-sync-loader-form class="sm:col-span-2">
                     @csrf
                     <button
                         type="submit"
@@ -44,8 +44,12 @@
                     </button>
                 </form>
                 <a href="{{ route('reviews.reports') }}"
-                    class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 sm:col-span-2">
+                    class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                     Informes mensuales
+                </a>
+                <a href="{{ route('reviews.all') }}"
+                    class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                    Todas las reseñas
                 </a>
                 </div>
             </div>
@@ -316,6 +320,7 @@
                 </div>
             </div>
 
+        @if (false)
         <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             @forelse ($dealershipSummaries as $summary)
                 @php
@@ -692,4 +697,5 @@
             refreshDateLabels();
         })();
     </script>
+        @endif
 @endsection
