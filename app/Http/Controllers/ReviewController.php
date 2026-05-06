@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -22,6 +23,8 @@ class ReviewController extends Controller
 {
     public function index(Request $request): View
     {
+        $dealershipSort = $this->normalizeDealershipSort($request->string('dealership_sort')->toString());
+
         $payload = Cache::remember($this->reviewsIndexCacheKey(), now()->addMinutes(3), function (): array {
             return [
                 'connection' => $this->getConnection(),
@@ -34,6 +37,8 @@ class ReviewController extends Controller
                     ->get(),
             ];
         });
+
+        $dealershipSummaries = $this->sortDealershipSummaries($payload['dealershipSummaries'], $dealershipSort);
 
         $latestUnanswered = $this->reviewTableExists()
             ? GoogleBusinessProfileReview::query()
@@ -64,13 +69,14 @@ class ReviewController extends Controller
 
         return view('reviews.index', [
             'connection' => $payload['connection'],
-            'dealershipSummaries' => $payload['dealershipSummaries'],
+            'dealershipSummaries' => $dealershipSummaries,
             'locationSummaries' => $payload['locationSummaries'],
             'latestUnanswered' => $latestUnanswered,
             'latestReviews' => $latestReviews,
             'stats' => $payload['stats'],
             'dealerships' => $payload['dealerships'],
             'filters' => $request->only(['dealership_id', 'status', 'sort', 'search']),
+            'dealershipSort' => $dealershipSort,
         ]);
     }
 
@@ -300,9 +306,9 @@ class ReviewController extends Controller
             ->values();
 
         return $dealerships->map(function (Dealership $dealership): array {
-                $dealershipReviewsQuery = GoogleBusinessProfileReview::query()
-                    ->withoutSalamanca()
-                    ->where('dealership_id', $dealership->id);
+            $dealershipReviewsQuery = GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
+                ->where('dealership_id', $dealership->id);
 
                 $monthStart = now()->startOfMonth();
                 $monthEnd = now()->endOfMonth();
@@ -324,8 +330,38 @@ class ReviewController extends Controller
                     'monthly_average_rating' => round((float) $monthlyReviewsQuery->avg('rating'), 2),
                     'unanswered_reviews' => (clone $dealershipReviewsQuery)->whereNull('reply_comment')->count(),
                     'snapshot' => $snapshot,
-                ];
+            ];
         });
+    }
+
+    private function sortDealershipSummaries(Collection $summaries, string $sort): Collection
+    {
+        $sorted = match ($sort) {
+            'reviews_asc' => $summaries->sortBy(fn (array $summary): int => (int) ($summary['total_reviews'] ?? 0)),
+            'reviews_desc' => $summaries->sortByDesc(fn (array $summary): int => (int) ($summary['total_reviews'] ?? 0)),
+            'rating_asc' => $summaries->sortBy(fn (array $summary): float => (float) ($summary['average_rating'] ?? 0)),
+            'rating_desc' => $summaries->sortByDesc(fn (array $summary): float => (float) ($summary['average_rating'] ?? 0)),
+            'monthly_rating_asc' => $summaries->sortBy(fn (array $summary): float => (float) ($summary['monthly_average_rating'] ?? 0)),
+            'monthly_rating_desc' => $summaries->sortByDesc(fn (array $summary): float => (float) ($summary['monthly_average_rating'] ?? 0)),
+            default => $summaries->sortBy(function (array $summary): string {
+                return Str::ascii(Str::lower((string) data_get($summary, 'dealership.name', '')));
+            }),
+        };
+
+        return $sorted->values();
+    }
+
+    private function normalizeDealershipSort(string $sort): string
+    {
+        return in_array($sort, [
+            'alpha',
+            'reviews_asc',
+            'reviews_desc',
+            'rating_asc',
+            'rating_desc',
+            'monthly_rating_asc',
+            'monthly_rating_desc',
+        ], true) ? $sort : 'alpha';
     }
 
     /**
