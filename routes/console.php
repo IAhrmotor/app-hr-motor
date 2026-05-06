@@ -42,17 +42,7 @@ Artisan::command('google-business-profile:debug-duplicate-reviews {--limit=20}',
         ->get();
 
     $byCanonical = $rows
-        ->groupBy(fn (GoogleBusinessProfileReview $review): string => implode('|', [
-            (string) $review->dealership_id,
-            $service->canonicalGoogleLocationKey($review->location_name),
-            $service->canonicalGoogleReviewKey($review->review_name),
-            Str::lower(trim((string) $review->location_title)),
-            Str::lower(trim((string) $review->reviewer_name)),
-            (string) $review->rating,
-            (string) $review->review_created_at?->format('Y-m-d H:i:s'),
-            Str::lower(trim((string) $review->comment)),
-            Str::lower(trim((string) $review->reply_comment)),
-        ]))
+        ->groupBy(fn (GoogleBusinessProfileReview $review): string => $service->buildDuplicateReviewKey($review))
         ->filter(fn (Collection $group): bool => $group->count() > 1)
         ->sortByDesc(fn (Collection $group): int => $group->count())
         ->values();

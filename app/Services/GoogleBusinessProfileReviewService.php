@@ -187,6 +187,20 @@ class GoogleBusinessProfileReviewService
         return Schema::hasTable('google_business_profile_reviews');
     }
 
+    public function buildDuplicateReviewKey(GoogleBusinessProfileReview $review): string
+    {
+        $parts = [
+            $this->normalizeFingerprintValue($review->dealership_id ?: $this->canonicalGoogleLocationKey($review->location_name) ?: $review->location_title),
+            $this->normalizeText((string) $review->reviewer_name),
+            $this->normalizeFingerprintValue($review->rating),
+            $this->normalizeFingerprintValue($review->review_created_at?->format('Y-m-d H:i:s')),
+            $this->normalizeText((string) $review->comment),
+            $this->normalizeText((string) $review->reply_comment),
+        ];
+
+        return implode('|', $parts);
+    }
+
     private function dedupeDuplicateReviewRowsByReviewName(): int
     {
         $duplicateReviewNames = GoogleBusinessProfileReview::query()
@@ -273,7 +287,7 @@ class GoogleBusinessProfileReviewService
         $idsToDelete = [];
 
         foreach ($rows as $row) {
-            $fingerprint = $this->buildReviewFingerprint($row);
+            $fingerprint = $this->buildDuplicateReviewKey($row);
 
             if ($fingerprint === '') {
                 continue;
@@ -302,23 +316,6 @@ class GoogleBusinessProfileReviewService
         ]);
 
         return count($idsToDelete);
-    }
-
-    private function buildReviewFingerprint(GoogleBusinessProfileReview $review): string
-    {
-        $parts = [
-            $this->normalizeFingerprintValue($review->dealership_id),
-            $this->normalizeFingerprintValue($this->canonicalGoogleLocationKey($review->location_name)),
-            $this->normalizeFingerprintValue($this->canonicalGoogleReviewKey($review->review_name)),
-            $this->normalizeFingerprintValue($review->location_title),
-            $this->normalizeFingerprintValue($review->reviewer_name),
-            $this->normalizeFingerprintValue($review->rating),
-            $this->normalizeFingerprintValue($review->review_created_at?->format('Y-m-d H:i:s')),
-            $this->normalizeFingerprintValue($review->comment),
-            $this->normalizeFingerprintValue($review->reply_comment),
-        ];
-
-        return implode('|', $parts);
     }
 
     private function normalizeFingerprintValue(mixed $value): string
