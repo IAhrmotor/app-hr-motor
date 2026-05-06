@@ -149,6 +149,7 @@
                 @forelse ($latestUnanswered as $review)
                     @php
                         $reviewAnchor = '#review-' . $review->id;
+                        $reviewLocationLabel = $review->dealership?->name ?? $review->location_title ?? 'Delegación sin asignar';
                         $reviewUrl = $review->dealership_id
                             ? route('reviews.show', $review->dealership_id) . $reviewAnchor
                             : ($review->location_name
@@ -161,7 +162,7 @@
                             <div class="flex items-start justify-between gap-4">
                                 <div>
                                     <p class="text-sm font-semibold text-brand-secondary">
-                                        {{ $review->dealership?->name ?? $review->location_title ?? 'Delegación sin asignar' }}
+                                        {{ $reviewLocationLabel }}
                                     </p>
                                     <p class="mt-1 text-xs text-gray-500">{{ $review->reviewer_name ?? 'Cliente anónimo' }}</p>
                                 </div>
@@ -176,7 +177,7 @@
                             <div class="flex items-start justify-between gap-4">
                                 <div>
                                     <p class="text-sm font-semibold text-brand-secondary">
-                                        {{ $review->dealership?->name ?? $review->location_title ?? 'Delegación sin asignar' }}
+                                        {{ $reviewLocationLabel }}
                                     </p>
                                     <p class="mt-1 text-xs text-gray-500">{{ $review->reviewer_name ?? 'Cliente anónimo' }}</p>
                                 </div>
@@ -467,9 +468,12 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">
                         @forelse ($latestReviews as $review)
+                            @php
+                                $reviewLocationLabel = $review->dealership?->name ?? $review->location_title ?? 'Sin asignar';
+                            @endphp
                             <tr>
                                 <td class="px-5 py-4 text-sm font-medium text-brand-secondary">
-                                    {{ $review->dealership?->name ?? $review->location_title ?? 'Sin asignar' }}
+                                    {{ $reviewLocationLabel }}
                                 </td>
                                 <td class="px-5 py-4 text-sm text-gray-600">
                                     {{ $review->reviewer_name ?? 'Anónimo' }}

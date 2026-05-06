@@ -27,25 +27,6 @@ class ReviewController extends Controller
                 'connection' => $this->getConnection(),
                 'dealershipSummaries' => $this->buildDealershipSummaries(),
                 'locationSummaries' => $this->buildLocationSummaries(),
-                'latestUnanswered' => $this->reviewTableExists()
-                    ? GoogleBusinessProfileReview::query()
-                        ->withoutSalamanca()
-                        ->with('dealership')
-                        ->whereNull('reply_comment')
-                        ->orderByDesc('review_created_at')
-                        ->orderByDesc('id')
-                        ->limit(8)
-                        ->get()
-                    : collect(),
-                'latestReviews' => $this->reviewTableExists()
-                    ? GoogleBusinessProfileReview::query()
-                        ->withoutSalamanca()
-                        ->with('dealership')
-                        ->orderByDesc('review_created_at')
-                        ->orderByDesc('id')
-                        ->limit(18)
-                        ->get()
-                    : collect(),
                 'stats' => $this->buildStats(),
                 'dealerships' => Dealership::query()
                     ->withoutSalamanca()
@@ -54,12 +35,33 @@ class ReviewController extends Controller
             ];
         });
 
+        $latestUnanswered = $this->reviewTableExists()
+            ? GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
+                ->with('dealership')
+                ->whereNull('reply_comment')
+                ->orderByDesc('review_created_at')
+                ->orderByDesc('id')
+                ->limit(8)
+                ->get()
+            : collect();
+
+        $latestReviews = $this->reviewTableExists()
+            ? GoogleBusinessProfileReview::query()
+                ->withoutSalamanca()
+                ->with('dealership')
+                ->orderByDesc('review_created_at')
+                ->orderByDesc('id')
+                ->limit(18)
+                ->get()
+            : collect();
+
         return view('reviews.index', [
             'connection' => $payload['connection'],
             'dealershipSummaries' => $payload['dealershipSummaries'],
             'locationSummaries' => $payload['locationSummaries'],
-            'latestUnanswered' => $payload['latestUnanswered'],
-            'latestReviews' => $payload['latestReviews'],
+            'latestUnanswered' => $latestUnanswered,
+            'latestReviews' => $latestReviews,
             'stats' => $payload['stats'],
             'dealerships' => $payload['dealerships'],
             'filters' => $request->only(['dealership_id', 'status', 'sort', 'search']),
