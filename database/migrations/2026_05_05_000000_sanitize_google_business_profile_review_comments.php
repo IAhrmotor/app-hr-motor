@@ -12,6 +12,10 @@ return new class extends Migration
             return;
         }
 
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return;
+        }
+
         DB::statement('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
         DB::statement("SET SESSION character_set_connection = 'utf8mb4'");
         DB::statement("SET SESSION character_set_results = 'utf8mb4'");
