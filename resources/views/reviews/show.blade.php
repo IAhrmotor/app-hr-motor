@@ -89,38 +89,8 @@
             </form>
         </div>
 
-        <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
-                <p class="text-sm font-medium text-gray-500">Rese&ntilde;as totales</p>
-                <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['total_reviews']) }}</p>
-            </div>
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
-                <p class="text-sm font-medium text-gray-500">Media actual</p>
-                <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}</p>
-                <div class="mt-3 flex items-center gap-2">
-                    <div class="relative inline-flex text-2xl leading-none" aria-label="ValoraciÃ³n media en Google Maps {{ number_format($stats['average_rating'], 2) }} de 5">
-                        <div class="flex text-gray-200" aria-hidden="true">
-                            <span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span>
-                        </div>
-                        <div class="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400" aria-hidden="true" style="width: {{ $starFillWidth($stats['average_rating'] ?? 0) }}%;">
-                            <span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span><span>&#9733;</span>
-                        </div>
-                    </div>
-                    <span class="text-sm font-semibold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}/5</span>
-                </div>
-            </div>
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
-                <p class="text-sm font-medium text-gray-500">Rese&ntilde;as este mes</p>
-                <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['monthly_reviews']) }}</p>
-            </div>
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
-                <p class="text-sm font-medium text-gray-500">Sin responder</p>
-                <p class="mt-3 text-3xl font-bold text-brand-secondary">{{ number_format($stats['unanswered_reviews']) }}</p>
-            </div>
-        </div>
-
-        <div class="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-stretch">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm h-full">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-brand-secondary">Evoluci&oacute;n hist&oacute;rica</h2>
@@ -187,7 +157,7 @@
                 @endif
             </div>
 
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm h-full">
                 <h2 class="text-lg font-semibold text-brand-secondary">Resumen mensual</h2>
                 <div class="mt-4 grid gap-3">
                     <div class="rounded-2xl bg-gray-50 p-4">
@@ -219,7 +189,9 @@
                     </div>
                 </div>
             </div>
-        </div>        <div class="mt-8 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-sm">
+        </div>
+
+        <div class="mt-8 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-sm">
             <div class="border-b border-gray-100 px-6 py-5 sm:px-7">
                 <h2 class="text-lg font-semibold text-brand-secondary">Rese&ntilde;as y respuestas</h2>
                 <p class="text-sm text-gray-500">Gestiona cada rese&ntilde;a desde aqu&iacute; y env&iacute;a la r&eacute;plica directamente a Google Business Profile.</p>
