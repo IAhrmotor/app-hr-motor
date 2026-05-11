@@ -117,7 +117,7 @@
                 </div>
 
                 @if ($historicalHasData)
-                    <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_15rem] xl:items-center">
+                    <div class="mt-6">
                         <div class="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5">
                             <svg viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" class="h-auto w-full" role="img" aria-label="Evoluci&oacute;n hist&oacute;rica de la media mensual de rese&ntilde;as">
                                 <title>Evoluci&oacute;n hist&oacute;rica de la media mensual de rese&ntilde;as</title>
@@ -166,31 +166,6 @@
                                     </text>
                                 @endforeach
                             </svg>
-                        </div>
-
-                        <div class="flex h-full flex-col justify-center gap-3">
-                            @foreach ($chartPoints as $point)
-                                <div class="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-                                    <span class="h-3 w-3 shrink-0 rounded-full {{ $point['has_data'] ? 'bg-brand-primary' : 'bg-gray-300' }}"></span>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-sm font-semibold text-brand-secondary">{{ $point['label'] }}</p>
-                                        <p class="text-xs text-gray-500">
-                                            @if ($point['has_data'])
-                                                Media {{ $point['formatted_average'] }} / 5
-                                            @else
-                                                Sin rese&ntilde;as en este mes
-                                            @endif
-                                        </p>
-                                    </div>
-                                    <span class="text-sm font-bold text-brand-secondary">
-                                        @if ($point['has_data'])
-                                            {{ $point['formatted_average'] }}
-                                        @else
-                                            --
-                                        @endif
-                                    </span>
-                                </div>
-                            @endforeach
                         </div>
                     </div>
                 @else
