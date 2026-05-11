@@ -346,6 +346,7 @@ class ReviewReportsNavigationTest extends TestCase
                 ->get(route('reviews.reports.semiannual.charts'))
                 ->assertOk()
                 ->assertSee('Gráficas comparativas')
+                ->assertSee('Buscar gráficas')
                 ->assertSee('Zaragoza')
                 ->assertSee('Valencia')
                 ->assertSee('05/2026')

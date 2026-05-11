@@ -49,7 +49,39 @@
 @endphp
 
 @section('content')
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div
+        class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+        x-data="{
+            search: '',
+            debouncedSearch: '',
+            searchTimeout: null,
+            init() {
+                this.debouncedSearch = this.search;
+
+                this.$watch('search', (value) => {
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        this.debouncedSearch = value;
+                    }, 180);
+                });
+            },
+            normalize(value) {
+                return String(value ?? '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+            },
+            matchesText(value) {
+                const term = this.normalize(this.debouncedSearch).trim();
+
+                if (! term) {
+                    return true;
+                }
+
+                return this.normalize(value).includes(term);
+            },
+        }"
+    >
         <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
@@ -63,6 +95,26 @@
             </a>
         </div>
 
+        <div class="mb-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <label for="semiannual-charts-search" class="mb-2 block text-sm font-semibold text-brand-secondary">
+                Buscar gráficas
+            </label>
+            <div class="relative">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input
+                    id="semiannual-charts-search"
+                    x-model="search"
+                    type="text"
+                    placeholder="Buscar delegación..."
+                    class="w-full rounded-2xl border-gray-200 bg-gray-50 py-3 pl-12 pr-4 text-sm placeholder:text-gray-400 focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                >
+            </div>
+        </div>
+
         @if ($charts->isNotEmpty())
             <div class="grid gap-6 xl:grid-cols-2">
                 @foreach ($charts as $chart)
@@ -73,7 +125,11 @@
                         $linePoints = $chartPoints->map(fn (array $point): string => number_format((float) $point['x'], 2, '.', '') . ',' . number_format((float) $point['y'], 2, '.', ''))->implode(' ');
                     @endphp
 
-                    <article class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
+                    <article
+                        x-cloak
+                        x-show="matchesText(@js($chart['title'] ?? ''))"
+                        class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm"
+                    >
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <h2 class="text-lg font-semibold text-brand-secondary">{{ $chart['title'] }}</h2>
