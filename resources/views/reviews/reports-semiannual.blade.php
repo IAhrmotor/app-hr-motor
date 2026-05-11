@@ -3,27 +3,31 @@
 @section('title', 'Informes semestrales')
 
 @section('content')
-    @include('reviews.partials.reports-hub', [
-        'heading' => 'Informes semestrales',
-        'description' => 'Portal de informes del periodo semestral.',
-        'cards' => [
-            [
-                'title' => 'Resumen semestral',
-                'description' => 'Bloque pendiente de desarrollo.',
-                'url' => null,
-                'cta' => 'Próximamente',
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
+                <h1 class="mt-2 text-3xl font-bold text-brand-secondary">Informes semestrales</h1>
+                <p class="mt-2 text-sm text-gray-600">Portal de informes del periodo semestral.</p>
+            </div>
+
+            <a href="{{ $hubUrl }}"
+                class="inline-flex h-11 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:text-gray-800">
+                Volver
+            </a>
+        </div>
+
+        @include('reviews.partials.reports-hub', [
+            'heading' => 'Informes semestrales',
+            'description' => 'Selecciona el informe disponible para el periodo semestral.',
+            'cards' => [
+                [
+                    'title' => 'Resumen semestral',
+                    'description' => 'Bloque pendiente de desarrollo.',
+                    'url' => null,
+                    'cta' => 'Próximamente',
+                ],
             ],
-            [
-                'title' => 'Volver a informes',
-                'description' => 'Regresa al selector principal de informes.',
-                'url' => $hubUrl,
-                'cta' => 'Volver',
-            ],
-            [
-                'title' => 'Informes mensuales',
-                'description' => 'Accede al informe mensual.',
-                'url' => $monthlyUrl,
-            ],
-        ],
-    ])
+        ])
+    </div>
 @endsection
