@@ -2,6 +2,22 @@
 
 @php
     use Carbon\Carbon;
+
+    $persistedQuery = request()->except(['month', 'sort', 'direction']);
+    $sortDirection = function (string $column, string $sort, string $direction): string {
+        if ($sort !== $column) {
+            return 'asc';
+        }
+
+        return $direction === 'asc' ? 'desc' : 'asc';
+    };
+    $sortLink = function (string $column) use ($persistedQuery, $sort, $direction, $sortDirection): string {
+        return route('reviews.reports.monthly.comparison', array_merge($persistedQuery, [
+            'month' => request('month'),
+            'sort' => $column,
+            'direction' => $sortDirection($column, $sort, $direction),
+        ]));
+    };
 @endphp
 
 @section('title', 'Comparativa delegaciones')
@@ -29,6 +45,16 @@
                 </div>
 
                 <div class="flex w-full gap-3 sm:w-auto">
+                    @foreach ($persistedQuery as $queryKey => $queryValue)
+                        @if (is_array($queryValue))
+                            @foreach ($queryValue as $nestedValue)
+                                <input type="hidden" name="{{ $queryKey }}[]" value="{{ $nestedValue }}">
+                            @endforeach
+                        @else
+                            <input type="hidden" name="{{ $queryKey }}" value="{{ $queryValue }}">
+                        @endif
+                    @endforeach
+
                     <select id="reports-month" name="month"
                         class="h-12 w-full min-w-[12rem] rounded-2xl border-gray-200 bg-gray-50 px-4 text-sm focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
                         onchange="this.form.submit()">
@@ -60,13 +86,24 @@
                 <table class="min-w-full divide-y divide-gray-100">
                     <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                         <tr>
-                            <th class="px-5 py-3">Mes</th>
-                            <th class="px-5 py-3">Delegación</th>
-                            <th class="px-5 py-3">Total</th>
-                            <th class="px-5 py-3">Media</th>
-                            <th class="px-5 py-3">Este mes</th>
-                            <th class="px-5 py-3">Media mes</th>
-                            <th class="px-5 py-3">Sin responder</th>
+                            @foreach ([
+                                'month' => 'Mes',
+                                'dealership' => 'Delegación',
+                                'total_reviews' => 'Total',
+                                'average_rating' => 'Media',
+                                'monthly_reviews' => 'Este mes',
+                                'monthly_average_rating' => 'Media mes',
+                                'unanswered_reviews' => 'Sin responder',
+                            ] as $column => $label)
+                                <th class="px-5 py-3">
+                                    <a href="{{ $sortLink($column) }}" class="inline-flex items-center gap-1.5 transition hover:text-brand-primary">
+                                        <span>{{ $label }}</span>
+                                        @if (($sort ?? 'dealership') === $column)
+                                            <span class="text-[10px] font-semibold tracking-[0.2em] text-brand-primary">{{ $direction === 'asc' ? '↑' : '↓' }}</span>
+                                        @endif
+                                    </a>
+                                </th>
+                            @endforeach
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">

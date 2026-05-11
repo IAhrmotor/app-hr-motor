@@ -75,6 +75,11 @@ class ReviewReportsNavigationTest extends TestCase
             'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/zaragoza',
             'google_business_profile_location_title' => 'HR Motor || Zaragoza',
         ]);
+        $dealershipMayTwo = Dealership::query()->create([
+            'name' => 'HR Motor || Valencia',
+            'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/valencia',
+            'google_business_profile_location_title' => 'HR Motor || Valencia',
+        ]);
         $dealershipApril = Dealership::query()->create([
             'name' => 'HR Motor || Sevilla',
             'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/sevilla',
@@ -96,6 +101,17 @@ class ReviewReportsNavigationTest extends TestCase
             ]);
 
             GoogleBusinessProfileMonthlySnapshot::query()->create([
+                'dealership_id' => $dealershipMayTwo->id,
+                'snapshot_month' => Carbon::parse('2026-05-01'),
+                'total_reviews' => 130,
+                'average_rating' => 4.80,
+                'monthly_reviews' => 15,
+                'monthly_average_rating' => 4.90,
+                'unanswered_reviews' => 2,
+                'captured_at' => Carbon::parse('2026-05-11 12:00:00'),
+            ]);
+
+            GoogleBusinessProfileMonthlySnapshot::query()->create([
                 'dealership_id' => $dealershipApril->id,
                 'snapshot_month' => Carbon::parse('2026-04-01'),
                 'total_reviews' => 90,
@@ -111,11 +127,24 @@ class ReviewReportsNavigationTest extends TestCase
                 ->assertOk()
                 ->assertSee('Comparativa delegaciones')
                 ->assertSee('Zaragoza')
+                ->assertSee('Valencia')
                 ->assertSee('120')
                 ->assertSee('4.35')
+                ->assertSee('130')
+                ->assertSee('4.80')
                 ->assertSee('18')
                 ->assertSee('4.50')
-                ->assertSee('3');
+                ->assertSee('3')
+                ->assertSee('15')
+                ->assertSee('4.90')
+                ->assertSee('2')
+                ->assertSeeInOrder(['Valencia', 'Zaragoza']);
+
+            $this->actingAs($user)
+                ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-05', 'sort' => 'average_rating', 'direction' => 'desc']))
+                ->assertOk()
+                ->assertSeeInOrder(['Valencia', 'Zaragoza'])
+                ->assertSee(route('reviews.reports.monthly.comparison', ['month' => '2026-05', 'sort' => 'average_rating', 'direction' => 'asc']));
 
             $this->actingAs($user)
                 ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-04']))
