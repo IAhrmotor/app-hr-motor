@@ -243,7 +243,7 @@
                             <button
                                 type="button"
                                 @click="setSort('{{ $column }}')"
-                                class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition"
+                                class="inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition"
                                 :class="sort === '{{ $column }}' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100'"
                             >
                                 <span>{{ $label }}</span>
