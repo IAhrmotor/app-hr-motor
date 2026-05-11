@@ -253,11 +253,17 @@ class ReviewController extends Controller
             })->values();
         }
 
+        $sort = $this->normalizeMonthlyComparisonSort(request()->string('sort')->toString());
+        $direction = $this->normalizeSortDirection(request()->string('direction')->toString());
+        $snapshots = $this->sortMonthlyComparisonSnapshots($snapshots, $sort, $direction);
+
         return view('reviews.reports-monthly-comparison', [
             'snapshots' => $snapshots,
             'hubUrl' => route('reviews.reports.monthly'),
             'availableMonths' => $availableMonths,
             'selectedMonth' => $selectedMonth,
+            'sort' => $sort,
+            'direction' => $direction,
         ]);
     }
 
@@ -414,6 +420,44 @@ class ReviewController extends Controller
         }
 
         return sprintf('%04d-%02d', (int) $year, (int) $monthNumber);
+    }
+
+    private function normalizeMonthlyComparisonSort(string $sort): string
+    {
+        return in_array($sort, [
+            'month',
+            'dealership',
+            'total_reviews',
+            'average_rating',
+            'monthly_reviews',
+            'monthly_average_rating',
+            'unanswered_reviews',
+        ], true) ? $sort : 'dealership';
+    }
+
+    private function normalizeSortDirection(string $direction): string
+    {
+        return $direction === 'desc' ? 'desc' : 'asc';
+    }
+
+    private function sortMonthlyComparisonSnapshots(Collection $snapshots, string $sort, string $direction): Collection
+    {
+        $sorter = fn (GoogleBusinessProfileMonthlySnapshot $snapshot) => match ($sort) {
+            'month' => $snapshot->snapshot_month?->format('Y-m') ?? '',
+            'dealership' => strtolower((string) $snapshot->dealership?->name),
+            'total_reviews' => (int) $snapshot->total_reviews,
+            'average_rating' => (float) $snapshot->average_rating,
+            'monthly_reviews' => (int) $snapshot->monthly_reviews,
+            'monthly_average_rating' => (float) $snapshot->monthly_average_rating,
+            'unanswered_reviews' => (int) $snapshot->unanswered_reviews,
+            default => strtolower((string) $snapshot->dealership?->name),
+        };
+
+        $sorted = $direction === 'desc'
+            ? $snapshots->sortByDesc($sorter)
+            : $snapshots->sortBy($sorter);
+
+        return $sorted->values();
     }
 
     /**
