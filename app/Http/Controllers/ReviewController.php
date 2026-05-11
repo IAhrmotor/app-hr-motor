@@ -240,7 +240,13 @@ class ReviewController extends Controller
     public function reportsMonthlyComparisonRoscos(): View
     {
         $monthContext = $this->resolveMonthlyComparisonMonthContext();
-        $roscos = $this->buildMonthlyRoscosCards($monthContext['selectedMonth']);
+        $sort = $this->normalizeMonthlyRoscosSort(request()->string('sort')->toString());
+        $direction = $this->normalizeSortDirection(request()->string('direction')->toString());
+        $roscos = $this->sortMonthlyRoscosCards(
+            $this->buildMonthlyRoscosCards($monthContext['selectedMonth']),
+            $sort,
+            $direction
+        );
 
         return view('reviews.reports-monthly-roscos', [
             'comparisonTitle' => 'Comparativa delegaciones roscos',
@@ -248,6 +254,8 @@ class ReviewController extends Controller
             'availableMonths' => $monthContext['availableMonths'],
             'selectedMonth' => $monthContext['selectedMonth'],
             'roscos' => $roscos,
+            'sort' => $sort,
+            'direction' => $direction,
         ]);
     }
 
@@ -375,6 +383,89 @@ class ReviewController extends Controller
             })
             ->sortByDesc('total')
             ->values();
+    }
+
+    private function normalizeMonthlyRoscosSort(string $sort): string
+    {
+        return in_array($sort, [
+            'total',
+            'title',
+            'red',
+            'yellow',
+            'green',
+            'dominant_color',
+        ], true) ? $sort : 'total';
+    }
+
+    /**
+     * @param Collection<int, array{
+     *     key:string,
+     *     title:string,
+     *     total:int,
+     *     red:int,
+     *     yellow:int,
+     *     green:int,
+     *     red_percent:float,
+     *     yellow_percent:float,
+     *     green_percent:float,
+     *     red_angle:float,
+     *     yellow_angle:float,
+     *     green_angle:float
+     * }> $roscos
+     */
+    private function sortMonthlyRoscosCards(Collection $roscos, string $sort, string $direction): Collection
+    {
+        $sorter = function (array $rosco) use ($sort): array|float|int|string {
+            return match ($sort) {
+                'title' => strtolower((string) ($rosco['title'] ?? '')),
+                'red' => (int) ($rosco['red'] ?? 0),
+                'yellow' => (int) ($rosco['yellow'] ?? 0),
+                'green' => (int) ($rosco['green'] ?? 0),
+                'dominant_color' => $this->dominantRoscoColorPriority($rosco),
+                default => (int) ($rosco['total'] ?? 0),
+            };
+        };
+
+        $sorted = $direction === 'desc'
+            ? $roscos->sortByDesc($sorter)
+            : $roscos->sortBy($sorter);
+
+        return $sorted->values();
+    }
+
+    /**
+     * @param array{
+     *     red?:int,
+     *     yellow?:int,
+     *     green?:int,
+     *     title?:string
+     * } $rosco
+     */
+    private function dominantRoscoColorPriority(array $rosco): string
+    {
+        $red = (int) ($rosco['red'] ?? 0);
+        $yellow = (int) ($rosco['yellow'] ?? 0);
+        $green = (int) ($rosco['green'] ?? 0);
+        $title = strtolower((string) ($rosco['title'] ?? ''));
+
+        $dominant = 'green';
+        $dominantCount = $green;
+
+        if ($red >= $dominantCount && $red >= $yellow) {
+            $dominant = 'red';
+            $dominantCount = $red;
+        } elseif ($yellow >= $dominantCount && $yellow >= $red) {
+            $dominant = 'yellow';
+            $dominantCount = $yellow;
+        }
+
+        $priority = match ($dominant) {
+            'red' => 1,
+            'yellow' => 2,
+            default => 3,
+        };
+
+        return sprintf('%d|%010d|%s', $priority, 999999999 - $dominantCount, $title);
     }
 
     public function reportsSemiannual(): View

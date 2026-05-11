@@ -239,6 +239,16 @@ class ReviewReportsNavigationTest extends TestCase
                 ->assertDontSee('Sin responder');
 
             $this->actingAs($user)
+                ->get(route('reviews.reports.monthly.roscos', ['month' => '2026-05', 'sort' => 'title', 'direction' => 'asc']))
+                ->assertOk()
+                ->assertSeeInOrder(['Valencia', 'Zaragoza']);
+
+            $this->actingAs($user)
+                ->get(route('reviews.reports.monthly.roscos', ['month' => '2026-05', 'sort' => 'dominant_color', 'direction' => 'asc']))
+                ->assertOk()
+                ->assertSeeInOrder(['Zaragoza', 'Valencia']);
+
+            $this->actingAs($user)
                 ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-04']))
                 ->assertOk()
                 ->assertSee('04/2026')
