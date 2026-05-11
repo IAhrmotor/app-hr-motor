@@ -107,8 +107,7 @@
             </div>
         </div>
 
-        <div class="mt-8 grid gap-6 xl:grid-cols-3">
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <div class="mt-8 rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-brand-secondary">Evoluci&oacute;n hist&oacute;rica</h2>
@@ -174,25 +173,6 @@
                     </div>
                 @endif
             </div>
-
-            <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 class="text-lg font-semibold text-brand-secondary">Resumen mensual</h2>
-                <div class="mt-4 space-y-3">
-                    <div class="rounded-2xl bg-gray-50 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Media general</p>
-                        <p class="mt-1 text-2xl font-bold text-brand-secondary">{{ number_format($stats['average_rating'], 2) }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-gray-50 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Media este mes</p>
-                        <p class="mt-1 text-2xl font-bold text-brand-secondary">{{ number_format($stats['monthly_average_rating'], 2) }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-gray-50 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Rese&ntilde;as sin responder</p>
-                        <p class="mt-1 text-2xl font-bold text-brand-secondary">{{ number_format($stats['unanswered_reviews']) }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <div class="mt-8 overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-sm">
             <div class="border-b border-gray-100 px-6 py-5 sm:px-7">
