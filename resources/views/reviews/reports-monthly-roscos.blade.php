@@ -4,8 +4,24 @@
     use Carbon\Carbon;
 
     $comparisonTitle = $comparisonTitle ?? 'Comparativa delegaciones roscos';
-    $persistedQuery = request()->except(['month']);
+    $persistedQuery = request()->except(['month', 'sort', 'direction']);
     $selectedMonthLabel = $selectedMonth ? Carbon::createFromFormat('Y-m', $selectedMonth)->format('m/Y') : null;
+    $sort = $sort ?? 'total';
+    $direction = $direction ?? 'desc';
+    $sortDirection = function (string $column, string $sort, string $direction): string {
+        if ($sort !== $column) {
+            return $column === 'title' ? 'asc' : 'desc';
+        }
+
+        return $direction === 'asc' ? 'desc' : 'asc';
+    };
+    $sortLink = function (string $column) use ($persistedQuery, $selectedMonth, $sort, $direction, $sortDirection): string {
+        return route('reviews.reports.monthly.roscos', array_merge($persistedQuery, [
+            'month' => $selectedMonth,
+            'sort' => $column,
+            'direction' => $sortDirection($column, $sort, $direction),
+        ]));
+    };
     $buildGradient = function (array $rosco): string {
         $redEnd = (float) ($rosco['red_angle'] ?? 0);
         $yellowEnd = $redEnd + (float) ($rosco['yellow_angle'] ?? 0);
@@ -87,15 +103,37 @@
             </div>
         @endif
 
+        <div class="mb-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-brand-secondary">Ordenar rosco</p>
+                    <p class="text-sm text-gray-500">Puedes ordenar por total, nombre o por el color dominante.</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    @foreach ([
+                        'total' => 'Total',
+                        'title' => 'Nombre',
+                        'dominant_color' => 'Color dominante',
+                        'red' => 'Rojo',
+                        'yellow' => 'Amarillo',
+                        'green' => 'Verde',
+                    ] as $column => $label)
+                        <a href="{{ $sortLink($column) }}"
+                            class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition {{ $sort === $column ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100' }}">
+                            <span>{{ $label }}</span>
+                            @if ($sort === $column)
+                                <span class="text-[10px] tracking-[0.18em]">{{ $direction === 'asc' ? '↑' : '↓' }}</span>
+                            @endif
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
         @if ($roscos->isNotEmpty())
             <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 @foreach ($roscos as $rosco)
-                    @php
-                        $redEnd = (float) $rosco['red_angle'];
-                        $yellowEnd = $redEnd + (float) $rosco['yellow_angle'];
-                        $greenEnd = $yellowEnd + (float) $rosco['green_angle'];
-                    @endphp
-
                     <article class="rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-sm">
                         <div class="text-center">
                             <p class="text-lg font-semibold text-brand-secondary">{{ $rosco['title'] }}</p>
