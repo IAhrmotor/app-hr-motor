@@ -1,0 +1,138 @@
+@extends('layouts.app')
+
+@php
+    use Carbon\Carbon;
+
+    $comparisonTitle = $comparisonTitle ?? 'Comparativa delegaciones roscos';
+    $persistedQuery = request()->except(['month']);
+    $selectedMonthLabel = $selectedMonth ? Carbon::createFromFormat('Y-m', $selectedMonth)->format('m/Y') : null;
+    $buildGradient = function (array $rosco): string {
+        $redEnd = (float) ($rosco['red_angle'] ?? 0);
+        $yellowEnd = $redEnd + (float) ($rosco['yellow_angle'] ?? 0);
+        $greenEnd = $yellowEnd + (float) ($rosco['green_angle'] ?? 0);
+
+        if ((int) ($rosco['total'] ?? 0) === 0) {
+            return 'background: #e5e7eb;';
+        }
+
+        return sprintf(
+            'background: conic-gradient(from -90deg, #ef4444 0deg %.2fdeg, #f59e0b %.2fdeg %.2fdeg, #10b981 %.2fdeg %.2fdeg);',
+            $redEnd,
+            $redEnd,
+            $yellowEnd,
+            $yellowEnd,
+            $greenEnd
+        );
+    };
+@endphp
+
+@section('title', $comparisonTitle)
+
+@section('content')
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
+                <h1 class="mt-2 text-3xl font-bold text-brand-secondary">{{ $comparisonTitle }}</h1>
+                <p class="mt-2 text-sm text-gray-600">Selecciona un mes para ver los roscos por delegación.</p>
+            </div>
+
+            <a href="{{ $hubUrl }}"
+                class="inline-flex h-12 items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                Volver
+            </a>
+        </div>
+
+        <div class="mb-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <form method="GET" class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div class="min-w-0 flex-1">
+                    <label for="reports-month" class="text-sm font-semibold text-brand-secondary">Mes a comparar</label>
+                    <p class="mt-1 text-sm text-gray-500">Selecciona el mes que quieres visualizar.</p>
+                </div>
+
+                <div class="flex w-full gap-3 sm:w-auto">
+                    @foreach ($persistedQuery as $queryKey => $queryValue)
+                        @if (is_array($queryValue))
+                            @foreach ($queryValue as $nestedValue)
+                                <input type="hidden" name="{{ $queryKey }}[]" value="{{ $nestedValue }}">
+                            @endforeach
+                        @else
+                            <input type="hidden" name="{{ $queryKey }}" value="{{ $queryValue }}">
+                        @endif
+                    @endforeach
+
+                    <select id="reports-month" name="month"
+                        class="h-12 w-full min-w-[12rem] rounded-2xl border-gray-200 bg-gray-50 px-4 text-sm focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                        onchange="this.form.submit()">
+                        @foreach ($availableMonths as $month)
+                            <option value="{{ $month->format('Y-m') }}" @selected($selectedMonth === $month->format('Y-m'))>
+                                {{ $month->format('m/Y') }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <noscript>
+                        <button type="submit"
+                            class="inline-flex h-12 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                            Filtrar
+                        </button>
+                    </noscript>
+                </div>
+            </form>
+        </div>
+
+        @if ($selectedMonthLabel)
+            <div class="mb-6 rounded-3xl border border-brand-primary/15 bg-brand-primary/5 px-5 py-4 text-sm text-brand-secondary">
+                Estás comparando el mes de <span class="font-semibold">{{ $selectedMonthLabel }}</span>.
+            </div>
+        @endif
+
+        @if ($roscos->isNotEmpty())
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                @foreach ($roscos as $rosco)
+                    @php
+                        $redEnd = (float) $rosco['red_angle'];
+                        $yellowEnd = $redEnd + (float) $rosco['yellow_angle'];
+                        $greenEnd = $yellowEnd + (float) $rosco['green_angle'];
+                    @endphp
+
+                    <article class="rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-sm">
+                        <div class="text-center">
+                            <p class="text-lg font-semibold text-brand-secondary">{{ $rosco['title'] }}</p>
+                            <p class="mt-1 text-sm text-gray-500">Total: {{ number_format($rosco['total']) }}</p>
+                        </div>
+
+                        <div class="mt-5 flex justify-center">
+                            <div class="relative h-48 w-48">
+                                <div class="absolute inset-0 rounded-full" style="{{ $buildGradient($rosco) }}"></div>
+                                <div class="absolute inset-[22%] rounded-full bg-white shadow-inner"></div>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="text-center">
+                                        <p class="text-3xl font-bold text-brand-secondary">{{ number_format($rosco['total']) }}</p>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Reseñas</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 flex flex-wrap justify-center gap-2">
+                            <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                                1-2: {{ number_format($rosco['red']) }}
+                            </span>
+                            <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                                3: {{ number_format($rosco['yellow']) }}
+                            </span>
+                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                4-5: {{ number_format($rosco['green']) }}
+                            </span>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @else
+            <div class="rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-500">
+                No hay reseñas de delegación para el mes seleccionado.
+            </div>
+        @endif
+    </div>
+@endsection
