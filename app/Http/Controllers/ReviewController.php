@@ -239,32 +239,24 @@ class ReviewController extends Controller
 
     public function reportsMonthlyComparisonRoscos(): View
     {
-        return $this->renderMonthlyComparison(
-            'reviews.reports-monthly-comparison',
-            'Comparativa delegaciones roscos',
-            'reviews.reports.monthly.roscos'
-        );
+        $monthContext = $this->resolveMonthlyComparisonMonthContext();
+        $roscos = $this->buildMonthlyRoscosCards($monthContext['selectedMonth']);
+
+        return view('reviews.reports-monthly-roscos', [
+            'comparisonTitle' => 'Comparativa delegaciones roscos',
+            'hubUrl' => route('reviews.reports.monthly'),
+            'availableMonths' => $monthContext['availableMonths'],
+            'selectedMonth' => $monthContext['selectedMonth'],
+            'roscos' => $roscos,
+        ]);
     }
 
     private function renderMonthlyComparison(string $view, string $title, string $routeName): View
     {
-        $snapshots = $this->monthlySnapshotsTableExists()
-            ? $this->monthlySnapshotsQuery()->get()
-            : collect();
-
-        $availableMonths = $snapshots
-            ->pluck('snapshot_month')
-            ->filter()
-            ->unique(fn ($date): string => $date->format('Y-m'))
-            ->sortDesc()
-            ->values();
-
-        $requestedMonth = request()->string('month')->toString();
-        $selectedMonth = $this->normalizeMonthFilter($requestedMonth);
-
-        if ($selectedMonth === null) {
-            $selectedMonth = $availableMonths->first()?->format('Y-m');
-        }
+        $monthContext = $this->resolveMonthlyComparisonMonthContext();
+        $snapshots = $monthContext['snapshots'];
+        $availableMonths = $monthContext['availableMonths'];
+        $selectedMonth = $monthContext['selectedMonth'];
 
         if ($selectedMonth !== null) {
             $snapshots = $snapshots->filter(function (GoogleBusinessProfileMonthlySnapshot $snapshot) use ($selectedMonth): bool {
@@ -286,6 +278,103 @@ class ReviewController extends Controller
             'sort' => $sort,
             'direction' => $direction,
         ]);
+    }
+
+    /**
+     * @return array{snapshots:\Illuminate\Support\Collection<int, GoogleBusinessProfileMonthlySnapshot>, availableMonths:\Illuminate\Support\Collection<int, \Carbon\CarbonInterface>, selectedMonth:?string}
+     */
+    private function resolveMonthlyComparisonMonthContext(): array
+    {
+        $snapshots = $this->monthlySnapshotsTableExists()
+            ? $this->monthlySnapshotsQuery()->get()
+            : collect();
+
+        $availableMonths = $snapshots
+            ->pluck('snapshot_month')
+            ->filter()
+            ->unique(fn ($date): string => $date->format('Y-m'))
+            ->sortDesc()
+            ->values();
+
+        $requestedMonth = request()->string('month')->toString();
+        $selectedMonth = $this->normalizeMonthFilter($requestedMonth);
+
+        if ($selectedMonth === null) {
+            $selectedMonth = $availableMonths->first()?->format('Y-m');
+        }
+
+        return [
+            'snapshots' => $snapshots,
+            'availableMonths' => $availableMonths,
+            'selectedMonth' => $selectedMonth,
+        ];
+    }
+
+    /**
+     * @return Collection<int, array{
+     *     key:string,
+     *     title:string,
+     *     total:int,
+     *     red:int,
+     *     yellow:int,
+     *     green:int,
+     *     red_percent:float,
+     *     yellow_percent:float,
+     *     green_percent:float,
+     *     red_angle:float,
+     *     yellow_angle:float,
+     *     green_angle:float
+     * }>
+     */
+    private function buildMonthlyRoscosCards(?string $selectedMonth): Collection
+    {
+        if (! $this->reviewTableExists() || $selectedMonth === null) {
+            return collect();
+        }
+
+        $monthStart = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        $reviews = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
+            ->with('dealership')
+            ->whereNotNull('dealership_id')
+            ->whereHas('dealership', function (EloquentBuilder $query): void {
+                $query->withoutSalamanca();
+            })
+            ->whereBetween('review_created_at', [$monthStart, $monthEnd])
+            ->get(['id', 'dealership_id', 'rating', 'review_created_at']);
+
+        return $reviews
+            ->groupBy('dealership_id')
+            ->map(function (Collection $dealershipReviews): array {
+                /** @var GoogleBusinessProfileReview $firstReview */
+                $firstReview = $dealershipReviews->first();
+                $total = $dealershipReviews->count();
+                $red = $dealershipReviews->filter(fn (GoogleBusinessProfileReview $review): bool => in_array((int) $review->rating, [1, 2], true))->count();
+                $yellow = $dealershipReviews->filter(fn (GoogleBusinessProfileReview $review): bool => (int) $review->rating === 3)->count();
+                $green = $dealershipReviews->filter(fn (GoogleBusinessProfileReview $review): bool => in_array((int) $review->rating, [4, 5], true))->count();
+                $redPercent = $total > 0 ? round(($red / $total) * 100, 2) : 0.0;
+                $yellowPercent = $total > 0 ? round(($yellow / $total) * 100, 2) : 0.0;
+                $greenPercent = $total > 0 ? round(($green / $total) * 100, 2) : 0.0;
+
+                return [
+                    'key' => $firstReview->dealership_id ? (string) $firstReview->dealership_id : '',
+                    'title' => (string) $firstReview->dealership?->name,
+                    'total' => $total,
+                    'red' => $red,
+                    'yellow' => $yellow,
+                    'green' => $green,
+                    'red_percent' => $redPercent,
+                    'yellow_percent' => $yellowPercent,
+                    'green_percent' => $greenPercent,
+                    'red_angle' => round(($red / max(1, $total)) * 360, 2),
+                    'yellow_angle' => round(($yellow / max(1, $total)) * 360, 2),
+                    'green_angle' => round(($green / max(1, $total)) * 360, 2),
+                ];
+            })
+            ->sortByDesc('total')
+            ->values();
     }
 
     public function reportsSemiannual(): View
