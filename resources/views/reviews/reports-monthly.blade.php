@@ -8,7 +8,7 @@
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
                 <h1 class="mt-2 text-3xl font-bold text-brand-secondary">Informes mensuales</h1>
-                <p class="mt-2 text-sm text-gray-600">Portal de informes del periodo mensual.</p>
+                <p class="mt-2 text-sm text-gray-600">Selecciona el informe disponible para el periodo mensual.</p>
             </div>
 
             <a href="{{ $hubUrl }}"
@@ -18,8 +18,7 @@
         </div>
 
         @include('reviews.partials.reports-hub', [
-            'heading' => 'Informes mensuales',
-            'description' => 'Selecciona el informe disponible para el periodo mensual.',
+            'showHeader' => false,
             'cards' => [
                 [
                     'title' => 'Comparativa delegaciones',

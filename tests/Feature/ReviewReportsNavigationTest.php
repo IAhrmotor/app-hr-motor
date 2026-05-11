@@ -42,6 +42,7 @@ class ReviewReportsNavigationTest extends TestCase
         $this->actingAs($user)
             ->get(route('reviews.reports'))
             ->assertOk()
+            ->assertSee('Volver a reseñas')
             ->assertSee('Informes')
             ->assertSee('Informes mensuales')
             ->assertSee('Informes semestrales');

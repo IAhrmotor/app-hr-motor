@@ -8,7 +8,7 @@
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
                 <h1 class="mt-2 text-3xl font-bold text-brand-secondary">Informes semestrales</h1>
-                <p class="mt-2 text-sm text-gray-600">Portal de informes del periodo semestral.</p>
+                <p class="mt-2 text-sm text-gray-600">Selecciona el informe disponible para el periodo semestral.</p>
             </div>
 
             <a href="{{ $hubUrl }}"
@@ -18,8 +18,7 @@
         </div>
 
         @include('reviews.partials.reports-hub', [
-            'heading' => 'Informes semestrales',
-            'description' => 'Selecciona el informe disponible para el periodo semestral.',
+            'showHeader' => false,
             'cards' => [
                 [
                     'title' => 'Resumen semestral',
