@@ -237,7 +237,8 @@ class ReviewReportsNavigationTest extends TestCase
                 ->assertSee('3: 0')
                 ->assertSee('4-5: 3')
                 ->assertDontSee('Media mes')
-                ->assertDontSee('Sin responder');
+                ->assertDontSee('Sin responder')
+                ->assertDontSee('Color dominante');
 
             $this->actingAs($user)
                 ->get(route('reviews.reports.monthly.roscos', ['month' => '2026-05', 'sort' => 'title', 'direction' => 'asc']))
@@ -245,9 +246,9 @@ class ReviewReportsNavigationTest extends TestCase
                 ->assertSeeInOrder(['Valencia', 'Zaragoza']);
 
             $this->actingAs($user)
-                ->get(route('reviews.reports.monthly.roscos', ['month' => '2026-05', 'sort' => 'dominant_color', 'direction' => 'asc']))
+                ->get(route('reviews.reports.monthly.roscos', ['month' => '2026-05', 'sort' => 'title', 'direction' => 'asc']))
                 ->assertOk()
-                ->assertSeeInOrder(['Zaragoza', 'Valencia']);
+                ->assertSeeInOrder(['Valencia', 'Zaragoza']);
 
             $this->actingAs($user)
                 ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-04']))
@@ -275,9 +276,87 @@ class ReviewReportsNavigationTest extends TestCase
             ->get(route('reviews.reports.semiannual'))
             ->assertOk()
             ->assertSee('Informes semestrales')
-            ->assertSee('Resumen semestral')
-            ->assertSee('Próximamente')
+            ->assertSee('Gráficas comparativas')
             ->assertSee('Volver')
             ->assertDontSee('Informes mensuales');
+    }
+
+    public function test_semiannual_comparative_charts_show_last_six_months_for_each_dealership(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_MARKETING,
+        ]);
+
+        $dealershipOne = Dealership::query()->create([
+            'name' => 'HR Motor || Zaragoza',
+            'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+            'google_business_profile_location_title' => 'HR Motor || Zaragoza',
+        ]);
+        $dealershipTwo = Dealership::query()->create([
+            'name' => 'HR Motor || Valencia',
+            'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/valencia',
+            'google_business_profile_location_title' => 'HR Motor || Valencia',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-05-11 12:00:00'));
+
+        try {
+            GoogleBusinessProfileReview::query()->create([
+                'dealership_id' => $dealershipOne->id,
+                'location_name' => 'locations/zaragoza',
+                'location_title' => 'HR Motor || Zaragoza',
+                'review_name' => 'semiannual-zaragoza-1',
+                'reviewer_name' => 'Cliente 1',
+                'rating' => 5,
+                'review_created_at' => Carbon::parse('2026-05-02 10:00:00'),
+                'synced_at' => Carbon::parse('2026-05-11 12:00:00'),
+            ]);
+            GoogleBusinessProfileReview::query()->create([
+                'dealership_id' => $dealershipOne->id,
+                'location_name' => 'locations/zaragoza',
+                'location_title' => 'HR Motor || Zaragoza',
+                'review_name' => 'semiannual-zaragoza-2',
+                'reviewer_name' => 'Cliente 2',
+                'rating' => 4,
+                'review_created_at' => Carbon::parse('2026-04-02 10:00:00'),
+                'synced_at' => Carbon::parse('2026-05-11 12:00:00'),
+            ]);
+            GoogleBusinessProfileReview::query()->create([
+                'dealership_id' => $dealershipTwo->id,
+                'location_name' => 'locations/valencia',
+                'location_title' => 'HR Motor || Valencia',
+                'review_name' => 'semiannual-valencia-1',
+                'reviewer_name' => 'Cliente 3',
+                'rating' => 2,
+                'review_created_at' => Carbon::parse('2026-05-03 10:00:00'),
+                'synced_at' => Carbon::parse('2026-05-11 12:00:00'),
+            ]);
+            GoogleBusinessProfileReview::query()->create([
+                'dealership_id' => $dealershipTwo->id,
+                'location_name' => 'locations/valencia',
+                'location_title' => 'HR Motor || Valencia',
+                'review_name' => 'semiannual-valencia-2',
+                'reviewer_name' => 'Cliente 4',
+                'rating' => 3,
+                'review_created_at' => Carbon::parse('2026-03-03 10:00:00'),
+                'synced_at' => Carbon::parse('2026-05-11 12:00:00'),
+            ]);
+
+            $this->actingAs($user)
+                ->get(route('reviews.reports.semiannual.charts'))
+                ->assertOk()
+                ->assertSee('Gráficas comparativas')
+                ->assertSee('Zaragoza')
+                ->assertSee('Valencia')
+                ->assertSee('05/2026')
+                ->assertSee('04/2026')
+                ->assertSee('03/2026')
+                ->assertSee('5.00')
+                ->assertSee('4.00')
+                ->assertSee('3.00')
+                ->assertSee('2.00');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
