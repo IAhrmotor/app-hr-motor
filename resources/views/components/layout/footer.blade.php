@@ -9,6 +9,10 @@
                 return false;
             }
 
+            if (($item['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews()) {
+                return false;
+            }
+
             if (in_array($item['route'] ?? null, ['leaderboard.sales', 'leaderboard.purchases', 'leaderboard.vehicles'], true) && ! app_can_access_rankings()) {
                 return false;
             }

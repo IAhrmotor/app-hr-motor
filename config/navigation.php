@@ -60,6 +60,10 @@ return [
                 'route' => 'forum.index',
             ],
             [
+                'label' => 'Reseñas',
+                'route' => 'reviews.index',
+            ],
+            [
                 'label' => 'Ranking ventas',
                 'route' => 'leaderboard.sales',
             ],
