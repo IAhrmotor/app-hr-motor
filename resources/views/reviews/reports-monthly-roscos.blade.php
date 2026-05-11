@@ -45,7 +45,39 @@
 @section('title', $comparisonTitle)
 
 @section('content')
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div
+        class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+        x-data="{
+            search: '',
+            debouncedSearch: '',
+            searchTimeout: null,
+            init() {
+                this.debouncedSearch = this.search;
+
+                this.$watch('search', (value) => {
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        this.debouncedSearch = value;
+                    }, 180);
+                });
+            },
+            normalize(value) {
+                return String(value ?? '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+            },
+            matchesText(value) {
+                const term = this.normalize(this.debouncedSearch).trim();
+
+                if (! term) {
+                    return true;
+                }
+
+                return this.normalize(value).includes(term);
+            },
+        }"
+    >
         <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
@@ -110,7 +142,28 @@
                     <p class="text-sm text-gray-500">Puedes ordenar por total, nombre o por color.</p>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="w-full lg:max-w-md">
+                        <label for="roscos-search" class="mb-2 block text-sm font-semibold text-brand-secondary">
+                            Buscar roscos
+                        </label>
+                        <div class="relative">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                id="roscos-search"
+                                x-model="search"
+                                type="text"
+                                placeholder="Buscar delegación..."
+                                class="w-full rounded-2xl border-gray-200 bg-gray-50 py-3 pl-12 pr-4 text-sm placeholder:text-gray-400 focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
                     @foreach ([
                         'total' => 'Total',
                         'title' => 'Nombre',
@@ -126,6 +179,7 @@
                             @endif
                         </a>
                     @endforeach
+                    </div>
                 </div>
             </div>
         </div>
@@ -133,7 +187,7 @@
         @if ($roscos->isNotEmpty())
             <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 @foreach ($roscos as $rosco)
-                    <article class="rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-sm">
+                    <article x-cloak x-show="matchesText(@js($rosco['title'] ?? ''))" class="rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-sm">
                         <div class="text-center">
                             <p class="text-lg font-semibold text-brand-secondary">{{ $rosco['title'] }}</p>
                             <p class="mt-1 text-sm text-gray-500">Total: {{ number_format($rosco['total']) }}</p>
