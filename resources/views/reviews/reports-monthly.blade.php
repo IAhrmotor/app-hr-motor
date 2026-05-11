@@ -21,9 +21,14 @@
             'showHeader' => false,
             'cards' => [
                 [
-                    'title' => 'Comparativa delegaciones',
+                    'title' => 'Comparativa delegaciones tabla',
                     'description' => 'Tabla consolidada por delegación y mes.',
-                    'url' => $comparisonUrl,
+                    'url' => $comparisonTableUrl,
+                ],
+                [
+                    'title' => 'Comparativa delegaciones roscos',
+                    'description' => 'Vista alternativa para el periodo mensual.',
+                    'url' => $comparisonRoscosUrl,
                 ],
             ],
         ])

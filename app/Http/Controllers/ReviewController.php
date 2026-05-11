@@ -221,13 +221,32 @@ class ReviewController extends Controller
     public function reportsMonthly(): View
     {
         return view('reviews.reports-monthly', [
-            'comparisonUrl' => route('reviews.reports.monthly.comparison'),
+            'comparisonTableUrl' => route('reviews.reports.monthly.comparison'),
+            'comparisonRoscosUrl' => route('reviews.reports.monthly.roscos'),
             'hubUrl' => route('reviews.reports'),
             'semiannualUrl' => route('reviews.reports.semiannual'),
         ]);
     }
 
     public function reportsMonthlyComparison(): View
+    {
+        return $this->renderMonthlyComparison(
+            'reviews.reports-monthly-comparison',
+            'Comparativa delegaciones tabla',
+            'reviews.reports.monthly.comparison'
+        );
+    }
+
+    public function reportsMonthlyComparisonRoscos(): View
+    {
+        return $this->renderMonthlyComparison(
+            'reviews.reports-monthly-comparison',
+            'Comparativa delegaciones roscos',
+            'reviews.reports.monthly.roscos'
+        );
+    }
+
+    private function renderMonthlyComparison(string $view, string $title, string $routeName): View
     {
         $snapshots = $this->monthlySnapshotsTableExists()
             ? $this->monthlySnapshotsQuery()->get()
@@ -257,8 +276,10 @@ class ReviewController extends Controller
         $direction = $this->normalizeSortDirection(request()->string('direction')->toString());
         $snapshots = $this->sortMonthlyComparisonSnapshots($snapshots, $sort, $direction);
 
-        return view('reviews.reports-monthly-comparison', [
+        return view($view, [
             'snapshots' => $snapshots,
+            'comparisonTitle' => $title,
+            'comparisonRouteName' => $routeName,
             'hubUrl' => route('reviews.reports.monthly'),
             'availableMonths' => $availableMonths,
             'selectedMonth' => $selectedMonth,
