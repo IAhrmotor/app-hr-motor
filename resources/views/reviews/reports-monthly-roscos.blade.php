@@ -48,11 +48,17 @@
     <div
         class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
         x-data="{
+            roscos: @js($roscos->values()),
             search: '',
             debouncedSearch: '',
             searchTimeout: null,
+            sort: @js($sort),
+            direction: @js($direction),
+            orderedRoscoKeys: [],
+            month: @js($selectedMonth),
             init() {
                 this.debouncedSearch = this.search;
+                this.refreshOrdering();
 
                 this.$watch('search', (value) => {
                     clearTimeout(this.searchTimeout);
@@ -60,6 +66,9 @@
                         this.debouncedSearch = value;
                     }, 180);
                 });
+
+                this.$watch('sort', () => this.refreshOrdering());
+                this.$watch('direction', () => this.refreshOrdering());
             },
             normalize(value) {
                 return String(value ?? '')
@@ -75,6 +84,66 @@
                 }
 
                 return this.normalize(value).includes(term);
+            },
+            sortValue(rosco) {
+                switch (this.sort) {
+                    case 'title':
+                        return this.normalize(rosco.title);
+                    case 'red':
+                        return Number(rosco.red ?? 0);
+                    case 'yellow':
+                        return Number(rosco.yellow ?? 0);
+                    case 'green':
+                        return Number(rosco.green ?? 0);
+                    default:
+                        return Number(rosco.total ?? 0);
+                }
+            },
+            compareRoscos(a, b) {
+                const left = this.sortValue(a);
+                const right = this.sortValue(b);
+
+                if (left === right) {
+                    return 0;
+                }
+
+                if (left < right) {
+                    return -1;
+                }
+
+                return 1;
+            },
+            refreshOrdering() {
+                this.orderedRoscoKeys = [...this.roscos]
+                    .sort((a, b) => {
+                        const comparison = this.compareRoscos(a, b);
+
+                        return this.direction === 'asc' ? comparison : comparison * -1;
+                    })
+                    .map((rosco) => rosco.key);
+            },
+            syncUrl() {
+                const url = new URL(window.location.href);
+                url.searchParams.set('month', this.month);
+                url.searchParams.set('sort', this.sort);
+                url.searchParams.set('direction', this.direction);
+                window.history.replaceState({}, '', url);
+            },
+            setSort(column) {
+                if (this.sort === column) {
+                    this.direction = this.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sort = column;
+                    this.direction = column === 'title' ? 'asc' : 'desc';
+                }
+
+                this.refreshOrdering();
+                this.syncUrl();
+            },
+            roscoOrder(key) {
+                const index = this.orderedRoscoKeys.indexOf(key);
+
+                return index === -1 ? 9999 : index;
             },
         }"
     >
@@ -164,21 +233,23 @@
                     </div>
 
                     <div class="flex flex-wrap gap-2">
-                    @foreach ([
-                        'total' => 'Total',
-                        'title' => 'Nombre',
-                        'red' => 'Rojo',
-                        'yellow' => 'Amarillo',
-                        'green' => 'Verde',
-                    ] as $column => $label)
-                        <a href="{{ $sortLink($column) }}"
-                            class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition {{ $sort === $column ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100' }}">
-                            <span>{{ $label }}</span>
-                            @if ($sort === $column)
-                                <span class="text-[10px] tracking-[0.18em]">{{ $direction === 'asc' ? '↑' : '↓' }}</span>
-                            @endif
-                        </a>
-                    @endforeach
+                        @foreach ([
+                            'total' => 'Total',
+                            'title' => 'Nombre',
+                            'red' => 'Rojo',
+                            'yellow' => 'Amarillo',
+                            'green' => 'Verde',
+                        ] as $column => $label)
+                            <button
+                                type="button"
+                                @click="setSort('{{ $column }}')"
+                                class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition"
+                                :class="sort === '{{ $column }}' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100'"
+                            >
+                                <span>{{ $label }}</span>
+                                <span x-cloak x-show="sort === '{{ $column }}'" class="text-[10px] tracking-[0.18em]" x-text="direction === 'asc' ? '↑' : '↓'"></span>
+                            </button>
+                        @endforeach
                     </div>
                 </div>
             </div>
@@ -187,7 +258,12 @@
         @if ($roscos->isNotEmpty())
             <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 @foreach ($roscos as $rosco)
-                    <article x-cloak x-show="matchesText(@js($rosco['title'] ?? ''))" class="rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-sm">
+                    <article
+                        x-cloak
+                        x-show="matchesText(@js($rosco['title'] ?? ''))"
+                        x-bind:style="{ order: roscoOrder(@js($rosco['key'] ?? $rosco['title'] ?? '')) }"
+                        class="rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-sm"
+                    >
                         <div class="text-center">
                             <p class="text-lg font-semibold text-brand-secondary">{{ $rosco['title'] }}</p>
                             <p class="mt-1 text-sm text-gray-500">Total: {{ number_format($rosco['total']) }}</p>
