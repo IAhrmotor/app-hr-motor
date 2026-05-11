@@ -233,12 +233,31 @@ class ReviewController extends Controller
             ? $this->monthlySnapshotsQuery()->get()
             : collect();
 
-        $grouped = $snapshots->groupBy(fn (GoogleBusinessProfileMonthlySnapshot $snapshot): string => $snapshot->snapshot_month?->format('Y-m') ?? 'sin-fecha');
+        $availableMonths = $snapshots
+            ->pluck('snapshot_month')
+            ->filter()
+            ->unique(fn ($date): string => $date->format('Y-m'))
+            ->sortDesc()
+            ->values();
+
+        $requestedMonth = request()->string('month')->toString();
+        $selectedMonth = $this->normalizeMonthFilter($requestedMonth);
+
+        if ($selectedMonth === null) {
+            $selectedMonth = $availableMonths->first()?->format('Y-m');
+        }
+
+        if ($selectedMonth !== null) {
+            $snapshots = $snapshots->filter(function (GoogleBusinessProfileMonthlySnapshot $snapshot) use ($selectedMonth): bool {
+                return $snapshot->snapshot_month?->format('Y-m') === $selectedMonth;
+            })->values();
+        }
 
         return view('reviews.reports-monthly-comparison', [
             'snapshots' => $snapshots,
-            'groupedSnapshots' => $grouped,
             'hubUrl' => route('reviews.reports.monthly'),
+            'availableMonths' => $availableMonths,
+            'selectedMonth' => $selectedMonth,
         ]);
     }
 
@@ -374,6 +393,27 @@ class ReviewController extends Controller
             ->with('dealership')
             ->orderBy('snapshot_month')
             ->orderBy('dealership_id');
+    }
+
+    private function normalizeMonthFilter(?string $month): ?string
+    {
+        $month = trim((string) $month);
+
+        if ($month === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\\d{4})-(\\d{2})$/', $month, $matches) !== 1) {
+            return null;
+        }
+
+        [$all, $year, $monthNumber] = $matches;
+
+        if ((int) $monthNumber < 1 || (int) $monthNumber > 12) {
+            return null;
+        }
+
+        return sprintf('%04d-%02d', (int) $year, (int) $monthNumber);
     }
 
     /**
