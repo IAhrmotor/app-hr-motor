@@ -241,7 +241,10 @@ class ReviewController extends Controller
     {
         $monthContext = $this->resolveMonthlyComparisonMonthContext();
         $sort = $this->normalizeMonthlyRoscosSort(request()->string('sort')->toString());
-        $direction = $this->normalizeSortDirection(request()->string('direction')->toString());
+        $requestedDirection = request()->string('direction')->toString();
+        $direction = $requestedDirection !== ''
+            ? $this->normalizeSortDirection($requestedDirection)
+            : 'desc';
         $roscos = $this->sortMonthlyRoscosCards(
             $this->buildMonthlyRoscosCards($monthContext['selectedMonth']),
             $sort,

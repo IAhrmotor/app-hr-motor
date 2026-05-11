@@ -225,6 +225,7 @@ class ReviewReportsNavigationTest extends TestCase
                 ->get(route('reviews.reports.monthly.roscos', ['month' => '2026-05']))
                 ->assertOk()
                 ->assertSee('Comparativa delegaciones roscos')
+                ->assertSeeInOrder(['Zaragoza', 'Valencia'])
                 ->assertSee('Zaragoza')
                 ->assertSee('Valencia')
                 ->assertSee('Total: 4')
