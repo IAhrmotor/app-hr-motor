@@ -21,10 +21,9 @@
             'showHeader' => false,
             'cards' => [
                 [
-                    'title' => 'Resumen semestral',
-                    'description' => 'Bloque pendiente de desarrollo.',
-                    'url' => null,
-                    'cta' => 'Próximamente',
+                    'title' => 'Gráficas comparativas',
+                    'description' => 'Evolución de la media mensual por delegación en los últimos seis meses.',
+                    'url' => $chartsUrl,
                 ],
             ],
         ])

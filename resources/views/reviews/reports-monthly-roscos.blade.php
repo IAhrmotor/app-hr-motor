@@ -107,14 +107,13 @@
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <p class="text-sm font-semibold text-brand-secondary">Ordenar rosco</p>
-                    <p class="text-sm text-gray-500">Puedes ordenar por total, nombre o por el color dominante.</p>
+                    <p class="text-sm text-gray-500">Puedes ordenar por total, nombre o por color.</p>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
                     @foreach ([
                         'total' => 'Total',
                         'title' => 'Nombre',
-                        'dominant_color' => 'Color dominante',
                         'red' => 'Rojo',
                         'yellow' => 'Amarillo',
                         'green' => 'Verde',

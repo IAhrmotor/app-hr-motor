@@ -79,6 +79,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/resenas/informes/mensuales/comparativa-delegaciones', [ReviewController::class, 'reportsMonthlyComparison'])->name('reviews.reports.monthly.comparison');
         Route::get('/resenas/informes/mensuales/comparativa-delegaciones-roscos', [ReviewController::class, 'reportsMonthlyComparisonRoscos'])->name('reviews.reports.monthly.roscos');
         Route::get('/resenas/informes/semestrales', [ReviewController::class, 'reportsSemiannual'])->name('reviews.reports.semiannual');
+        Route::get('/resenas/informes/semestrales/graficas-comparativas', [ReviewController::class, 'reportsSemiannualCharts'])->name('reviews.reports.semiannual.charts');
         Route::get('/resenas/delegacion/{dealership}', [ReviewController::class, 'show'])
             ->whereNumber('dealership')
             ->name('reviews.show');

@@ -396,7 +396,6 @@ class ReviewController extends Controller
             'red',
             'yellow',
             'green',
-            'dominant_color',
         ], true) ? $sort : 'total';
     }
 
@@ -424,7 +423,6 @@ class ReviewController extends Controller
                 'red' => (int) ($rosco['red'] ?? 0),
                 'yellow' => (int) ($rosco['yellow'] ?? 0),
                 'green' => (int) ($rosco['green'] ?? 0),
-                'dominant_color' => $this->dominantRoscoColorPriority($rosco),
                 default => (int) ($rosco['total'] ?? 0),
             };
         };
@@ -436,46 +434,20 @@ class ReviewController extends Controller
         return $sorted->values();
     }
 
-    /**
-     * @param array{
-     *     red?:int,
-     *     yellow?:int,
-     *     green?:int,
-     *     title?:string
-     * } $rosco
-     */
-    private function dominantRoscoColorPriority(array $rosco): string
-    {
-        $red = (int) ($rosco['red'] ?? 0);
-        $yellow = (int) ($rosco['yellow'] ?? 0);
-        $green = (int) ($rosco['green'] ?? 0);
-        $title = strtolower((string) ($rosco['title'] ?? ''));
-
-        $dominant = 'green';
-        $dominantCount = $green;
-
-        if ($red >= $dominantCount && $red >= $yellow) {
-            $dominant = 'red';
-            $dominantCount = $red;
-        } elseif ($yellow >= $dominantCount && $yellow >= $red) {
-            $dominant = 'yellow';
-            $dominantCount = $yellow;
-        }
-
-        $priority = match ($dominant) {
-            'red' => 1,
-            'yellow' => 2,
-            default => 3,
-        };
-
-        return sprintf('%d|%010d|%s', $priority, 999999999 - $dominantCount, $title);
-    }
-
     public function reportsSemiannual(): View
     {
         return view('reviews.reports-semiannual', [
             'hubUrl' => route('reviews.reports'),
             'monthlyUrl' => route('reviews.reports.monthly'),
+            'chartsUrl' => route('reviews.reports.semiannual.charts'),
+        ]);
+    }
+
+    public function reportsSemiannualCharts(): View
+    {
+        return view('reviews.reports-semiannual-charts', [
+            'hubUrl' => route('reviews.reports.semiannual'),
+            'charts' => $this->buildSemiannualComparativeCharts(),
         ]);
     }
     public function refresh(Request $request, GoogleBusinessProfileReviewService $service, ?Dealership $dealership = null): RedirectResponse
@@ -923,6 +895,66 @@ class ReviewController extends Controller
                 'has_data' => array_key_exists($monthKey, $monthlyAverages->all()),
             ];
         });
+    }
+
+    /**
+     * @return Collection<int, array{
+     *     key:string,
+     *     title:string,
+     *     total_reviews:int,
+     *     series:Collection<int, array{key:string,label:string,average:float,has_data:bool}>
+     * }>
+     */
+    private function buildSemiannualComparativeCharts(): Collection
+    {
+        if (! $this->reviewTableExists()) {
+            return collect();
+        }
+
+        $monthCount = 6;
+        $startMonth = now()->startOfMonth()->subMonths($monthCount - 1);
+        $endMonth = now()->endOfMonth();
+
+        $reviews = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
+            ->with('dealership')
+            ->whereNotNull('dealership_id')
+            ->whereHas('dealership', function (EloquentBuilder $query): void {
+                $query->withoutSalamanca();
+            })
+            ->whereBetween('review_created_at', [$startMonth, $endMonth])
+            ->get(['dealership_id', 'review_created_at', 'rating']);
+
+        return $reviews
+            ->groupBy('dealership_id')
+            ->map(function (Collection $dealershipReviews) use ($startMonth, $monthCount): array {
+                /** @var GoogleBusinessProfileReview $firstReview */
+                $firstReview = $dealershipReviews->first();
+                $series = collect(range(0, $monthCount - 1))->map(function (int $offset) use ($startMonth, $dealershipReviews): array {
+                    $month = $startMonth->copy()->addMonths($offset);
+                    $monthKey = $month->format('Y-m');
+                    $monthReviews = $dealershipReviews->filter(function (GoogleBusinessProfileReview $review) use ($monthKey): bool {
+                        return $review->review_created_at?->format('Y-m') === $monthKey;
+                    });
+                    $average = round((float) $monthReviews->avg('rating'), 2);
+
+                    return [
+                        'key' => $monthKey,
+                        'label' => $month->format('m/Y'),
+                        'average' => $average,
+                        'has_data' => $monthReviews->isNotEmpty(),
+                    ];
+                });
+
+                return [
+                    'key' => (string) $firstReview->dealership_id,
+                    'title' => (string) $firstReview->dealership?->name,
+                    'total_reviews' => $dealershipReviews->count(),
+                    'series' => $series,
+                ];
+            })
+            ->sortByDesc('total_reviews')
+            ->values();
     }
 
     private function encodeLocationKey(string $locationName): string
