@@ -152,6 +152,8 @@ class ReviewControllerMissingTablesTest extends TestCase
             ->get(route('reviews.show', $dealership))
             ->assertOk()
             ->assertSee('Ya respondida')
+            ->assertSee('Pendiente de responder')
+            ->assertSee('Publicar respuesta')
             ->assertSee('Review 10')
             ->assertDontSee('Review 01');
 
@@ -254,6 +256,7 @@ class ReviewControllerMissingTablesTest extends TestCase
             ->get(route('reviews.show', $dealership))
             ->assertOk()
             ->assertSee('Ya respondida')
+            ->assertDontSee('Pendiente de responder')
             ->assertDontSee('Publicar respuesta')
             ->assertDontSee('Responder');
     }
