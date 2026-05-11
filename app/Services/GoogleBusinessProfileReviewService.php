@@ -96,6 +96,7 @@ class GoogleBusinessProfileReviewService
             $currentLocationNames = collect($locations)
                 ->pluck('name')
                 ->filter()
+                ->map(fn (string $value): string => $this->canonicalGoogleLocationKey($value))
                 ->unique()
                 ->values()
                 ->all();
@@ -152,16 +153,6 @@ class GoogleBusinessProfileReviewService
         });
 
         Cache::forget('reviews.index.dashboard.v1');
-
-        $query = GoogleBusinessProfileReview::query()
-            ->withoutSalamanca()
-            ->with('dealership')
-            ->orderByDesc('review_created_at')
-            ->orderByDesc('id');
-
-        if ($targetDealership) {
-            $query->where('dealership_id', $targetDealership->id);
-        }
 
         return $syncedReviewCount;
     }
@@ -729,6 +720,7 @@ class GoogleBusinessProfileReviewService
         Collection $mappedDealerships
     ): int {
         $locationName = $this->stringOrNull(data_get($location, 'name'));
+        $canonicalLocationName = $this->canonicalGoogleLocationKey($locationName);
 
         if (! $locationName) {
             Log::warning('Google Business Profile location skipped because it has no resource name.', [
@@ -767,7 +759,7 @@ class GoogleBusinessProfileReviewService
         if ($dealership) {
             $mappedDealerships->push($dealership->id);
             $dealership->forceFill([
-                'google_business_profile_location_name' => $locationName,
+                'google_business_profile_location_name' => $canonicalLocationName,
                 'google_business_profile_location_title' => $locationTitle,
             ])->save();
         }
@@ -784,7 +776,7 @@ class GoogleBusinessProfileReviewService
         foreach ($reviews as $review) {
             $reviewRows[] = $this->buildReviewRow(
                 review: $review,
-                locationName: $locationName,
+                locationName: $canonicalLocationName,
                 locationTitle: $locationTitle,
                 dealershipId: $dealership?->id,
                 syncedAt: $syncedAt
@@ -792,7 +784,7 @@ class GoogleBusinessProfileReviewService
         }
 
         $this->persistReviewRows($reviewRows);
-        $this->pruneMissingReviews($locationName, $reviewRows);
+        $this->pruneMissingReviews($canonicalLocationName, $reviewRows);
 
         return count($reviewRows);
     }
@@ -814,6 +806,7 @@ class GoogleBusinessProfileReviewService
         }
 
         [$locationName, $locationTitle] = $this->resolveLocationForDealership($connection, $account, $dealership);
+        $canonicalLocationName = $this->canonicalGoogleLocationKey($locationName);
 
         if ($this->shouldSkipSalamancaDealership($dealership) || $this->shouldSkipSalamancaLocation($locationName, $locationTitle)) {
             Log::info('Google Business Profile dealership sync skipped because it refers to Salamanca.', [
@@ -839,7 +832,7 @@ class GoogleBusinessProfileReviewService
         $mappedDealerships->push($dealership->id);
 
         $dealership->forceFill([
-            'google_business_profile_location_name' => $locationName,
+            'google_business_profile_location_name' => $canonicalLocationName,
             'google_business_profile_location_title' => $locationTitle,
         ])->save();
 
@@ -856,7 +849,7 @@ class GoogleBusinessProfileReviewService
         foreach ($reviews as $review) {
             $reviewRows[] = $this->buildReviewRow(
                 review: $review,
-                locationName: $locationName,
+                locationName: $canonicalLocationName,
                 locationTitle: $locationTitle,
                 dealershipId: $dealership->id,
                 syncedAt: $syncedAt
@@ -864,7 +857,7 @@ class GoogleBusinessProfileReviewService
         }
 
         $this->persistReviewRows($reviewRows);
-        $this->pruneMissingReviews($locationName, $reviewRows);
+        $this->pruneMissingReviews($canonicalLocationName, $reviewRows);
 
         return count($reviewRows);
     }
@@ -1101,15 +1094,29 @@ class GoogleBusinessProfileReviewService
      */
     private function resolveDealershipForLocation(string $locationName, ?string $locationTitle, array $locationTerms = []): ?Dealership
     {
-        if (Schema::hasColumn('dealerships', 'google_business_profile_location_name')) {
+        $canonicalLocationName = $this->canonicalGoogleLocationKey($locationName);
+
+        if ($canonicalLocationName !== '' && Schema::hasColumn('dealerships', 'google_business_profile_location_name')) {
             $dealership = Dealership::query()
                 ->withoutSalamanca()
-                ->where('google_business_profile_location_name', $locationName)
-                ->first();
+                ->get()
+                ->first(function (Dealership $candidate) use ($canonicalLocationName): bool {
+                    return $this->canonicalGoogleLocationKey($candidate->google_business_profile_location_name) === $canonicalLocationName;
+                });
 
             if ($dealership) {
                 return $dealership;
             }
+        }
+
+        if ($this->shouldTreatLocationAsStandalone($locationName, $locationTitle, $locationTerms)) {
+            Log::info('Google Business Profile location kept as standalone because it looks like a renting location.', [
+                'location_name' => $locationName,
+                'location_title' => $locationTitle,
+                'location_terms' => $locationTerms,
+            ]);
+
+            return null;
         }
 
         $explicitDealership = $this->resolveExplicitDealershipMatch([
@@ -1172,6 +1179,29 @@ class GoogleBusinessProfileReviewService
         ]);
 
         return null;
+    }
+
+    /**
+     * @param  array<int, string>  $locationTerms
+     */
+    private function shouldTreatLocationAsStandalone(string $locationName, ?string $locationTitle, array $locationTerms = []): bool
+    {
+        $normalizedValues = array_values(array_filter(array_map(
+            fn ($value): string => $this->normalizeText($value),
+            array_filter([
+                $locationName,
+                $locationTitle,
+                ...$locationTerms,
+            ], fn ($value): bool => is_string($value) && trim($value) !== '')
+        )));
+
+        foreach ($normalizedValues as $normalizedValue) {
+            if (str_contains($normalizedValue, 'renting')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

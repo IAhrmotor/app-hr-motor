@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\GoogleBusinessProfileConnection;
 use App\Models\Dealership;
 use App\Models\GoogleBusinessProfileReview;
+use App\Models\User;
 use App\Services\GoogleBusinessProfileReviewService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -75,7 +76,7 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
 
-        $this->assertCount(1, $reviews);
+        $this->assertSame(1, $reviews);
 
         $review = GoogleBusinessProfileReview::query()->firstOrFail();
 
@@ -136,8 +137,8 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync($dealership);
 
-        $this->assertCount(1, $reviews);
-        $this->assertSame($dealership->id, $reviews->firstOrFail()->dealership_id);
+        $this->assertSame(1, $reviews);
+        $this->assertSame($dealership->id, GoogleBusinessProfileReview::query()->firstOrFail()->dealership_id);
         $this->assertDatabaseHas('google_business_profile_reviews', [
             'review_name' => 'accounts/113830072386405282091/locations/11867554981017401239/reviews/AbFvOqsingle',
             'dealership_id' => $dealership->id,
@@ -213,7 +214,7 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
 
-        $this->assertCount(1, $reviews);
+        $this->assertSame(1, $reviews);
         $this->assertDatabaseHas('google_business_profile_reviews', [
             'review_name' => 'accounts/117678944517959788740/locations/zaragoza/reviews/visible-review',
         ]);
@@ -339,12 +340,12 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
 
-        $this->assertCount(1, $reviews);
+        $this->assertSame(1, $reviews);
         $this->assertDatabaseHas('google_business_profile_reviews', [
             'review_name' => 'accounts/117678944517959788740/locations/bilbao/reviews/visible-by-locality',
             'dealership_id' => $dealership->id,
         ]);
-        $this->assertSame('accounts/117678944517959788740/locations/bilbao', $dealership->fresh()->google_business_profile_location_name);
+        $this->assertSame('locations/bilbao', $dealership->fresh()->google_business_profile_location_name);
         $this->assertSame('HR Motor', $dealership->fresh()->google_business_profile_location_title);
     }
 
@@ -412,13 +413,96 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
 
-        $this->assertCount(1, $reviews);
+        $this->assertSame(1, $reviews);
         $this->assertDatabaseHas('google_business_profile_reviews', [
             'review_name' => 'accounts/117678944517959788740/locations/villarreal/reviews/visible-villarreal',
             'dealership_id' => $dealership->id,
         ]);
-        $this->assertSame('accounts/117678944517959788740/locations/villarreal', $dealership->fresh()->google_business_profile_location_name);
+        $this->assertSame('locations/villarreal', $dealership->fresh()->google_business_profile_location_name);
         $this->assertSame('HR Motor || Villarreal', $dealership->fresh()->google_business_profile_location_title);
+    }
+
+    public function test_sync_keeps_renting_locations_as_standalone_google_locations_even_when_the_city_matches_a_dealership(): void
+    {
+        config()->set('services.google_business_profile.account_group_name', 'Tiendas HR Motor');
+
+        GoogleBusinessProfileConnection::query()->create([
+            'provider' => 'google_business_profile',
+            'account_name' => 'Tiendas HR Motor',
+            'account_resource_name' => 'accounts/117678944517959788740',
+            'access_token' => 'dummy-access-token',
+            'refresh_token' => 'dummy-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'https://www.googleapis.com/auth/business.manage',
+            'metadata' => [],
+        ]);
+
+        $dealership = Dealership::query()->create([
+            'name' => 'Torrejón de Ardoz',
+            'google_maps_url' => 'https://maps.google.com/?q=torrejon-de-ardoz',
+            'reviews_url' => 'https://example.com/resenas/torrejon-de-ardoz',
+            'phone' => '+34 000 000 007',
+            'salesforce_id' => 'sf-torrejon-de-ardoz',
+        ]);
+
+        Http::fake([
+            'https://mybusinessaccountmanagement.googleapis.com/v1/accounts*' => Http::response([
+                'accounts' => [
+                    [
+                        'name' => 'accounts/117678944517959788740',
+                        'accountName' => 'Tiendas HR Motor',
+                        'type' => 'LOCATION_GROUP',
+                    ],
+                ],
+            ]),
+            'https://mybusinessbusinessinformation.googleapis.com/v1/accounts/117678944517959788740/locations*' => Http::response([
+                'locations' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/hr-renting-torrejon',
+                        'title' => 'HR Renting || Torrejón de Ardoz',
+                        'storefrontAddress' => [
+                            'locality' => 'Torrejón de Ardoz',
+                            'administrativeArea' => 'Madrid',
+                            'postalCode' => '28850',
+                        ],
+                    ],
+                ],
+            ]),
+            'https://mybusiness.googleapis.com/v4/accounts/117678944517959788740/locations/hr-renting-torrejon/reviews*' => Http::response([
+                'reviews' => [
+                    [
+                        'name' => 'accounts/117678944517959788740/locations/hr-renting-torrejon/reviews/standalone-review',
+                        'reviewer' => [
+                            'displayName' => 'Cliente Renting',
+                        ],
+                        'starRating' => 'FOUR',
+                        'comment' => 'Buena atencion en renting',
+                        'createTime' => '2026-05-04T11:24:53Z',
+                        'updateTime' => '2026-05-04T11:31:16Z',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
+
+        $this->assertSame(1, $reviews);
+        $this->assertDatabaseHas('google_business_profile_reviews', [
+            'review_name' => 'accounts/117678944517959788740/locations/hr-renting-torrejon/reviews/standalone-review',
+            'dealership_id' => null,
+            'location_name' => 'locations/hr-renting-torrejon',
+        ]);
+        $this->assertNull($dealership->fresh()->google_business_profile_location_name);
+        $this->assertNull($dealership->fresh()->google_business_profile_location_title);
+
+        $user = User::factory()->create([
+            'role' => User::ROLE_MARKETING,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('reviews.index'))
+            ->assertOk()
+            ->assertSee('HR Renting || Torrejón de Ardoz');
     }
 
     public function test_sync_prefers_exact_location_title_matches_over_broader_city_or_province_matches(): void
@@ -563,7 +647,7 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
 
-        $this->assertCount(3, $reviews);
+        $this->assertSame(3, $reviews);
         $this->assertDatabaseHas('google_business_profile_reviews', [
             'review_name' => 'accounts/117678944517959788740/locations/elche/reviews/elche-review',
             'dealership_id' => $elche->id,
@@ -659,7 +743,7 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
 
-        $this->assertCount(1, $reviews);
+        $this->assertSame(1, $reviews);
         $this->assertDatabaseHas('google_business_profile_reviews', [
             'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
             'dealership_id' => $malagaCentro->id,
@@ -742,7 +826,7 @@ class GoogleBusinessProfileReviewSyncTest extends TestCase
 
         $reviews = app(GoogleBusinessProfileReviewService::class)->sync();
 
-        $this->assertCount(1, $reviews);
+        $this->assertSame(1, $reviews);
         $this->assertDatabaseHas('google_business_profile_reviews', [
             'review_name' => 'accounts/117678944517959788740/locations/malaga-centro/reviews/malaga-centro-review',
             'dealership_id' => $malagaCentro->id,
