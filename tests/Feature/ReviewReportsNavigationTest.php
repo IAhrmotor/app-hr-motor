@@ -58,8 +58,10 @@ class ReviewReportsNavigationTest extends TestCase
             ->get(route('reviews.reports.monthly'))
             ->assertOk()
             ->assertSee('Informes mensuales')
-            ->assertSee('Comparativa delegaciones')
+            ->assertSee('Comparativa delegaciones tabla')
+            ->assertSee('Comparativa delegaciones roscos')
             ->assertSee(route('reviews.reports.monthly.comparison'))
+            ->assertSee(route('reviews.reports.monthly.roscos'))
             ->assertSee('Volver')
             ->assertDontSee('Informes semestrales');
     }
@@ -125,7 +127,7 @@ class ReviewReportsNavigationTest extends TestCase
             $this->actingAs($user)
                 ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-05']))
                 ->assertOk()
-                ->assertSee('Comparativa delegaciones')
+                ->assertSee('Comparativa delegaciones tabla')
                 ->assertSee('Zaragoza')
                 ->assertSee('Valencia')
                 ->assertSee('120')
@@ -145,6 +147,15 @@ class ReviewReportsNavigationTest extends TestCase
                 ->assertOk()
                 ->assertSeeInOrder(['Valencia', 'Zaragoza'])
                 ->assertSee(route('reviews.reports.monthly.comparison', ['month' => '2026-05', 'sort' => 'average_rating', 'direction' => 'asc']));
+
+            $this->actingAs($user)
+                ->get(route('reviews.reports.monthly.roscos', ['month' => '2026-05']))
+                ->assertOk()
+                ->assertSee('Comparativa delegaciones roscos')
+                ->assertSee('Zaragoza')
+                ->assertSee('Valencia')
+                ->assertSee('120')
+                ->assertSee('130');
 
             $this->actingAs($user)
                 ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-04']))

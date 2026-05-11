@@ -11,8 +11,10 @@
 
         return $direction === 'asc' ? 'desc' : 'asc';
     };
-    $sortLink = function (string $column) use ($persistedQuery, $sort, $direction, $sortDirection): string {
-        return route('reviews.reports.monthly.comparison', array_merge($persistedQuery, [
+    $comparisonRouteName = $comparisonRouteName ?? 'reviews.reports.monthly.comparison';
+    $comparisonTitle = $comparisonTitle ?? 'Comparativa delegaciones tabla';
+    $sortLink = function (string $column) use ($persistedQuery, $sort, $direction, $sortDirection, $comparisonRouteName): string {
+        return route($comparisonRouteName, array_merge($persistedQuery, [
             'month' => request('month'),
             'sort' => $column,
             'direction' => $sortDirection($column, $sort, $direction),
@@ -20,14 +22,14 @@
     };
 @endphp
 
-@section('title', 'Comparativa delegaciones')
+@section('title', $comparisonTitle)
 
 @section('content')
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
-                <h1 class="mt-2 text-3xl font-bold text-brand-secondary">Comparativa delegaciones</h1>
+                <h1 class="mt-2 text-3xl font-bold text-brand-secondary">{{ $comparisonTitle }}</h1>
                 <p class="mt-2 text-sm text-gray-600">Historial consolidado por delegación y mes.</p>
             </div>
 
