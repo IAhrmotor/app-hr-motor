@@ -212,23 +212,29 @@ class ReviewController extends Controller
 
     public function reports(): View
     {
+        return view('reviews.reports', [
+            'monthlyReportsUrl' => route('reviews.reports.monthly'),
+            'semiannualReportsUrl' => route('reviews.reports.semiannual'),
+        ]);
+    }
+
+    public function reportsMonthly(): View
+    {
         $snapshots = $this->monthlySnapshotsTableExists()
-            ? GoogleBusinessProfileMonthlySnapshot::query()
-                ->whereHas('dealership', function ($query): void {
-                    $query->withoutSalamanca();
-                })
-                ->with('dealership')
-                ->orderBy('snapshot_month')
-                ->orderBy('dealership_id')
-                ->get()
+            ? $this->monthlySnapshotsQuery()->get()
             : collect();
 
         $grouped = $snapshots->groupBy(fn (GoogleBusinessProfileMonthlySnapshot $snapshot): string => $snapshot->snapshot_month?->format('Y-m') ?? 'sin-fecha');
 
-        return view('reviews.reports', [
+        return view('reviews.reports-monthly', [
             'snapshots' => $snapshots,
             'groupedSnapshots' => $grouped,
         ]);
+    }
+
+    public function reportsSemiannual(): View
+    {
+        return view('reviews.reports-semiannual');
     }
     public function refresh(Request $request, GoogleBusinessProfileReviewService $service, ?Dealership $dealership = null): RedirectResponse
     {
@@ -344,6 +350,17 @@ class ReviewController extends Controller
         }
 
         return $query;
+    }
+
+    private function monthlySnapshotsQuery()
+    {
+        return GoogleBusinessProfileMonthlySnapshot::query()
+            ->whereHas('dealership', function ($query): void {
+                $query->withoutSalamanca();
+            })
+            ->with('dealership')
+            ->orderBy('snapshot_month')
+            ->orderBy('dealership_id');
     }
 
     /**
