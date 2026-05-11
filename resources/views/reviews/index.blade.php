@@ -45,7 +45,7 @@
                 </form>
                 <a href="{{ route('reviews.reports') }}"
                     class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                    Informes mensuales
+                    Informes
                 </a>
                 <a href="{{ route('reviews.all') }}"
                     class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">

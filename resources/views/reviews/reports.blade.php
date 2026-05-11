@@ -7,49 +7,37 @@
         <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">Marketing</p>
-                <h1 class="mt-2 text-3xl font-bold text-brand-secondary">Informes mensuales</h1>
-                <p class="mt-2 text-sm text-gray-600">Historial consolidado por delegación y mes.</p>
+                <h1 class="mt-2 text-3xl font-bold text-brand-secondary">Informes</h1>
+                <p class="mt-2 text-sm text-gray-600">Accede a los distintos informes de reseñas disponibles.</p>
             </div>
-
-            <a href="{{ route('reviews.index') }}"
-                class="inline-flex h-12 items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                Volver a reseñas
-            </a>
         </div>
 
-        <div class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-100">
-                    <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-                        <tr>
-                            <th class="px-5 py-3">Mes</th>
-                            <th class="px-5 py-3">Delegación</th>
-                            <th class="px-5 py-3">Total</th>
-                            <th class="px-5 py-3">Media</th>
-                            <th class="px-5 py-3">Este mes</th>
-                            <th class="px-5 py-3">Media mes</th>
-                            <th class="px-5 py-3">Sin responder</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 bg-white">
-                        @forelse ($snapshots as $snapshot)
-                            <tr>
-                                <td class="px-5 py-4 text-sm text-gray-600">{{ $snapshot->snapshot_month?->format('m/Y') }}</td>
-                                <td class="px-5 py-4 text-sm font-medium text-brand-secondary">{{ $snapshot->dealership?->name }}</td>
-                                <td class="px-5 py-4 text-sm text-gray-600">{{ $snapshot->total_reviews }}</td>
-                                <td class="px-5 py-4 text-sm text-gray-600">{{ number_format((float) $snapshot->average_rating, 2) }}</td>
-                                <td class="px-5 py-4 text-sm text-gray-600">{{ $snapshot->monthly_reviews }}</td>
-                                <td class="px-5 py-4 text-sm text-gray-600">{{ number_format((float) $snapshot->monthly_average_rating, 2) }}</td>
-                                <td class="px-5 py-4 text-sm text-gray-600">{{ $snapshot->unanswered_reviews }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="px-5 py-10 text-center text-sm text-gray-500">Aún no hay informes mensuales guardados.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+        <div class="grid gap-4 md:grid-cols-2">
+            <a href="{{ $monthlyReportsUrl }}"
+                class="group rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:shadow-md">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-lg font-semibold text-brand-secondary">Informes mensuales</p>
+                        <p class="mt-1 text-sm text-gray-500">Resumen detallado por mes.</p>
+                    </div>
+                    <span class="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
+                        Abrir
+                    </span>
+                </div>
+            </a>
+
+            <a href="{{ $semiannualReportsUrl }}"
+                class="group rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:shadow-md">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-lg font-semibold text-brand-secondary">Informes semestrales</p>
+                        <p class="mt-1 text-sm text-gray-500">Resumen comparativo por semestre.</p>
+                    </div>
+                    <span class="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
+                        Abrir
+                    </span>
+                </div>
+            </a>
         </div>
     </div>
 @endsection
