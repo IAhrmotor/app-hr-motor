@@ -24,6 +24,7 @@
             $y = $chartPadding['top'] + ($plotHeight - ($plotHeight * $normalized));
             $labelX = $x;
             $labelAnchor = 'middle';
+            $labelY = $y <= $chartPadding['top'] + 26 ? $y + 22 : max(16, $y - 14);
 
             if ($index === 0) {
                 $labelX = $x + 12;
@@ -38,6 +39,7 @@
                 'y' => $y,
                 'label_x' => $labelX,
                 'label_anchor' => $labelAnchor,
+                'label_y' => $labelY,
                 'formatted_average' => number_format($average, 2),
             ];
         });
@@ -126,14 +128,14 @@
 
                                 @foreach ($chartPoints as $point)
                                     <circle cx="{{ $point['x'] }}" cy="{{ $point['y'] }}" r="6" fill="#fff" stroke="#c2410c" stroke-width="3" />
-                                    <text
-                                        x="{{ $point['x'] }}"
-                                        y="{{ max(16, $point['y'] - 14) }}"
-                                        fill="#111827"
-                                        font-size="12"
-                                        font-weight="700"
-                                        text-anchor="middle"
-                                    >
+                                        <text
+                                            x="{{ $point['x'] }}"
+                                            y="{{ $point['label_y'] }}"
+                                            fill="#111827"
+                                            font-size="12"
+                                            font-weight="700"
+                                            text-anchor="middle"
+                                        >
                                         {{ $point['formatted_average'] }}
                                     </text>
                                     <text
