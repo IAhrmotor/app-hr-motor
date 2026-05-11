@@ -47,7 +47,7 @@ class ReviewReportsNavigationTest extends TestCase
             ->assertSee('Informes semestrales');
     }
 
-    public function test_monthly_reports_show_a_button_to_the_comparativa_delegaciones_view(): void
+    public function test_monthly_reports_show_only_the_comparativa_delegaciones_option(): void
     {
         $user = User::factory()->create([
             'role' => User::ROLE_MARKETING,
@@ -59,7 +59,8 @@ class ReviewReportsNavigationTest extends TestCase
             ->assertSee('Informes mensuales')
             ->assertSee('Comparativa delegaciones')
             ->assertSee(route('reviews.reports.monthly.comparison'))
-            ->assertDontSee('Historial consolidado por delegación y mes.');
+            ->assertSee('Volver')
+            ->assertDontSee('Informes semestrales');
     }
 
     public function test_monthly_comparativa_delegaciones_view_shows_the_current_table(): void
@@ -103,7 +104,7 @@ class ReviewReportsNavigationTest extends TestCase
         }
     }
 
-    public function test_semiannual_reports_show_a_placeholder_view(): void
+    public function test_semiannual_reports_show_only_the_semiannual_option(): void
     {
         $user = User::factory()->create([
             'role' => User::ROLE_MARKETING,
@@ -114,6 +115,8 @@ class ReviewReportsNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('Informes semestrales')
             ->assertSee('Resumen semestral')
-            ->assertSee('Próximamente');
+            ->assertSee('Próximamente')
+            ->assertSee('Volver')
+            ->assertDontSee('Informes mensuales');
     }
 }
