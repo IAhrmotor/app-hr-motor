@@ -60,7 +60,7 @@ class GoogleBusinessProfileReviewService
         return $this->persistTokens($response->json());
     }
 
-    public function sync(?Dealership $targetDealership = null): Collection
+    public function sync(?Dealership $targetDealership = null): int
     {
         $this->ensureRequiredTablesExist();
 
@@ -163,7 +163,7 @@ class GoogleBusinessProfileReviewService
             $query->where('dealership_id', $targetDealership->id);
         }
 
-        return $query->get();
+        return $syncedReviewCount;
     }
 
     public function dedupeDuplicateReviewRows(): int

@@ -21,7 +21,7 @@ class SyncGoogleBusinessProfileReviews extends Command
         }
 
         try {
-            $reviews = $service->sync();
+            $syncedCount = $service->sync();
         } catch (Throwable $exception) {
             report($exception);
             $this->error($exception->getMessage());
@@ -29,7 +29,7 @@ class SyncGoogleBusinessProfileReviews extends Command
             return self::FAILURE;
         }
 
-        $this->info(sprintf('Reseñas sincronizadas correctamente. Registros actuales: %d.', $reviews->count()));
+        $this->info(sprintf('Reseñas sincronizadas correctamente. Registros procesados: %d.', $syncedCount));
 
         return self::SUCCESS;
     }
