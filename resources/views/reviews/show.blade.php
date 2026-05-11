@@ -4,8 +4,33 @@
 
 @section('content')
     @php
-        $maxMonthReviews = max(1, (int) $snapshots->max('monthly_reviews'));
-        $maxAverage = max(1, (float) $snapshots->max('monthly_average_rating'));
+        $historicalSeries = collect($historicalSeries ?? []);
+        $historicalHasData = $historicalSeries->contains(fn (array $point): bool => (bool) ($point['has_data'] ?? false));
+        $chartWidth = 760;
+        $chartHeight = 300;
+        $chartPadding = [
+            'top' => 20,
+            'right' => 18,
+            'bottom' => 54,
+            'left' => 48,
+        ];
+        $plotWidth = $chartWidth - $chartPadding['left'] - $chartPadding['right'];
+        $plotHeight = $chartHeight - $chartPadding['top'] - $chartPadding['bottom'];
+        $chartPoints = $historicalSeries->values()->map(function (array $point, int $index) use ($historicalSeries, $chartPadding, $plotWidth, $plotHeight): array {
+            $count = max(1, $historicalSeries->count());
+            $x = $chartPadding['left'] + ($count === 1 ? $plotWidth / 2 : ($plotWidth * $index) / ($count - 1));
+            $average = (float) ($point['average'] ?? 0);
+            $normalized = max(0, min(5, $average)) / 5;
+            $y = $chartPadding['top'] + ($plotHeight - ($plotHeight * $normalized));
+
+            return $point + [
+                'x' => $x,
+                'y' => $y,
+                'formatted_average' => number_format($average, 2),
+            ];
+        });
+        $linePoints = $chartPoints->map(fn (array $point): string => number_format((float) $point['x'], 2, '.', '') . ',' . number_format((float) $point['y'], 2, '.', ''))->implode(' ');
+        $gridValues = [5, 4, 3, 2, 1, 0];
         $starFillWidth = fn ($value) => max(0, min(100, ((float) $value / 5) * 100));
     @endphp
 
@@ -87,32 +112,92 @@
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-brand-secondary">Evoluci&oacute;n hist&oacute;rica</h2>
-                        <p class="text-sm text-gray-500">Comparativa mensual desde el primer registro guardado.</p>
+                        <p class="text-sm text-gray-500">Media mensual de los &uacute;ltimos seis meses, incluyendo el actual.</p>
                     </div>
                 </div>
 
-                <div class="mt-6 space-y-4">
-                    @forelse ($snapshots as $snapshot)
-                        <div>
-                            <div class="mb-2 flex items-center justify-between text-sm">
-                                <span class="font-medium text-gray-600">{{ $snapshot->snapshot_month?->format('m/Y') }}</span>
-                                <span class="text-gray-500">{{ $snapshot->monthly_reviews }} rese&ntilde;as, media {{ number_format((float) $snapshot->monthly_average_rating, 2) }}</span>
-                            </div>
-                            <div class="grid grid-cols-12 gap-2">
-                                <div class="col-span-8 rounded-full bg-gray-100">
-                                    <div class="h-3 rounded-full bg-brand-primary" style="width: {{ $maxMonthReviews ? min(100, ($snapshot->monthly_reviews / $maxMonthReviews) * 100) : 0 }}%"></div>
-                                </div>
-                                <div class="col-span-4 rounded-full bg-gray-100">
-                                    <div class="h-3 rounded-full bg-amber-400" style="width: {{ $maxAverage ? min(100, ((float) $snapshot->monthly_average_rating / $maxAverage) * 100) : 0 }}%"></div>
-                                </div>
-                            </div>
+                @if ($historicalHasData)
+                    <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_15rem] xl:items-center">
+                        <div class="overflow-hidden rounded-[1.5rem] border border-gray-100 bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5">
+                            <svg viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" class="h-auto w-full" role="img" aria-label="Evoluci&oacute;n hist&oacute;rica de la media mensual de rese&ntilde;as">
+                                <title>Evoluci&oacute;n hist&oacute;rica de la media mensual de rese&ntilde;as</title>
+                                <desc>Gr&aacute;fica de l&iacute;neas con la media mensual de las &uacute;ltimas seis mensualidades.</desc>
+
+                                @foreach ($gridValues as $gridValue)
+                                    @php
+                                        $gridY = $chartPadding['top'] + ($plotHeight - ($plotHeight * ($gridValue / 5)));
+                                    @endphp
+                                    <line x1="{{ $chartPadding['left'] }}" y1="{{ $gridY }}" x2="{{ $chartWidth - $chartPadding['right'] }}" y2="{{ $gridY }}" stroke="#e5e7eb" stroke-dasharray="4 5" stroke-width="1" />
+                                    <text x="16" y="{{ $gridY + 4 }}" fill="#6b7280" font-size="12" font-weight="600">{{ $gridValue }}</text>
+                                @endforeach
+
+                                <line x1="{{ $chartPadding['left'] }}" y1="{{ $chartPadding['top'] + $plotHeight }}" x2="{{ $chartWidth - $chartPadding['right'] }}" y2="{{ $chartPadding['top'] + $plotHeight }}" stroke="#d1d5db" stroke-width="1.25" />
+
+                                <polyline
+                                    fill="none"
+                                    stroke="#c2410c"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="4"
+                                    points="{{ $linePoints }}"
+                                />
+
+                                @foreach ($chartPoints as $point)
+                                    <circle cx="{{ $point['x'] }}" cy="{{ $point['y'] }}" r="6" fill="#fff" stroke="#c2410c" stroke-width="3" />
+                                    <text
+                                        x="{{ $point['x'] }}"
+                                        y="{{ max(16, $point['y'] - 14) }}"
+                                        fill="#111827"
+                                        font-size="12"
+                                        font-weight="700"
+                                        text-anchor="middle"
+                                    >
+                                        {{ $point['formatted_average'] }}
+                                    </text>
+                                    <text
+                                        x="{{ $point['x'] }}"
+                                        y="{{ $chartHeight - 18 }}"
+                                        fill="#4b5563"
+                                        font-size="12"
+                                        font-weight="600"
+                                        text-anchor="middle"
+                                    >
+                                        {{ $point['label'] }}
+                                    </text>
+                                @endforeach
+                            </svg>
                         </div>
-                    @empty
-                        <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-                            A&uacute;n no hay snapshots mensuales para esta delegaci&oacute;n.
+
+                        <div class="flex h-full flex-col justify-center gap-3">
+                            @foreach ($chartPoints as $point)
+                                <div class="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                    <span class="h-3 w-3 shrink-0 rounded-full {{ $point['has_data'] ? 'bg-brand-primary' : 'bg-gray-300' }}"></span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-semibold text-brand-secondary">{{ $point['label'] }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            @if ($point['has_data'])
+                                                Media {{ $point['formatted_average'] }} / 5
+                                            @else
+                                                Sin rese&ntilde;as en este mes
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <span class="text-sm font-bold text-brand-secondary">
+                                        @if ($point['has_data'])
+                                            {{ $point['formatted_average'] }}
+                                        @else
+                                            --
+                                        @endif
+                                    </span>
+                                </div>
+                            @endforeach
                         </div>
-                    @endforelse
-                </div>
+                    </div>
+                @else
+                    <div class="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+                        A&uacute;n no hay datos suficientes para mostrar la evoluci&oacute;n hist&oacute;rica de esta delegaci&oacute;n.
+                    </div>
+                @endif
             </div>
 
             <div class="rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm">

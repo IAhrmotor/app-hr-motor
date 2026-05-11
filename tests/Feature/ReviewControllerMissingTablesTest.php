@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Dealership;
 use App\Models\GoogleBusinessProfileReview;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -159,6 +160,66 @@ class ReviewControllerMissingTablesTest extends TestCase
             ->assertOk()
             ->assertSee('Review 01')
             ->assertDontSee('Review 10');
+    }
+
+    public function test_dealership_show_page_renders_a_six_month_historical_line_chart(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_MARKETING,
+        ]);
+
+        $dealership = Dealership::query()->create([
+            'name' => 'HR Motor || Zaragoza',
+            'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+            'google_business_profile_location_title' => 'HR Motor || Zaragoza',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-05-11 12:00:00'));
+
+        try {
+            $ratingsByMonth = [
+                '2025-12-15 10:00:00' => 2,
+                '2026-01-15 10:00:00' => 3,
+                '2026-02-15 10:00:00' => 4,
+                '2026-03-15 10:00:00' => 5,
+                '2026-04-15 10:00:00' => 4,
+                '2026-05-15 10:00:00' => 3,
+            ];
+
+            foreach ($ratingsByMonth as $date => $rating) {
+                GoogleBusinessProfileReview::query()->create([
+                    'dealership_id' => $dealership->id,
+                    'location_name' => 'accounts/117678944517959788740/locations/zaragoza',
+                    'location_title' => 'HR Motor || Zaragoza',
+                    'review_name' => 'accounts/117678944517959788740/locations/zaragoza/reviews/' . str_replace([' ', ':'], ['-', ''], $date),
+                    'reviewer_name' => 'Review ' . $rating,
+                    'rating' => $rating,
+                    'comment' => 'Review for ' . $date,
+                    'review_created_at' => Carbon::parse($date),
+                    'review_updated_at' => Carbon::parse($date),
+                    'synced_at' => now(),
+                    'raw_payload' => ['comment' => 'Review for ' . $date],
+                ]);
+            }
+
+            $this->actingAs($user)
+                ->get(route('reviews.show', $dealership))
+                ->assertOk()
+                ->assertSee('Evoluci&oacute;n hist&oacute;rica', false)
+                ->assertSee('Media mensual de los &uacute;ltimos seis meses, incluyendo el actual.', false)
+                ->assertSee('12/2025')
+                ->assertSee('01/2026')
+                ->assertSee('02/2026')
+                ->assertSee('03/2026')
+                ->assertSee('04/2026')
+                ->assertSee('05/2026')
+                ->assertSee('2.00')
+                ->assertSee('3.00')
+                ->assertSee('4.00')
+                ->assertSee('5.00');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_answered_reviews_do_not_show_the_reply_editor(): void

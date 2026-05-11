@@ -149,17 +149,14 @@ class ReviewController extends Controller
             ? $this->buildStatsFromReviewQuery($reviewsQuery)
             : $this->buildStats();
 
-        $snapshots = $this->monthlySnapshotsTableExists()
-            ? GoogleBusinessProfileMonthlySnapshot::query()
-                ->where('dealership_id', $dealership->id)
-                ->orderBy('snapshot_month')
-                ->get()
+        $historicalSeries = $this->reviewTableExists()
+            ? $this->buildHistoricalMonthlyAverageSeries($reviewsQuery)
             : collect();
 
         return view('reviews.show', [
             'dealership' => $dealership,
             'reviews' => $reviews,
-            'snapshots' => $snapshots,
+            'historicalSeries' => $historicalSeries,
             'stats' => $stats,
         ]);
     }
@@ -201,10 +198,14 @@ class ReviewController extends Controller
             ? $this->buildStatsFromReviewQuery($reviewsQuery)
             : $this->buildStats();
 
+        $historicalSeries = $this->reviewTableExists()
+            ? $this->buildHistoricalMonthlyAverageSeries($reviewsQuery)
+            : collect();
+
         return view('reviews.show', [
             'dealership' => $location,
             'reviews' => $reviews,
-            'snapshots' => $snapshots,
+            'historicalSeries' => $historicalSeries,
             'stats' => $stats,
         ]);
     }
@@ -570,6 +571,40 @@ class ReviewController extends Controller
             'monthly_average_rating' => round((float) $monthlyQuery->avg('rating'), 2),
             'unanswered_reviews' => (clone $query)->whereNull('reply_comment')->count(),
         ];
+    }
+
+    /**
+     * @param  EloquentBuilder<GoogleBusinessProfileReview>  $query
+     * @return Collection<int, array{key:string,label:string,average:float,has_data:bool}>
+     */
+    private function buildHistoricalMonthlyAverageSeries(EloquentBuilder $query): Collection
+    {
+        $monthCount = 6;
+        $startMonth = now()->startOfMonth()->subMonths($monthCount - 1);
+        $endMonth = now()->endOfMonth();
+
+        $monthlyAverages = (clone $query)
+            ->whereBetween('review_created_at', [$startMonth, $endMonth])
+            ->get(['review_created_at', 'rating'])
+            ->groupBy(function (GoogleBusinessProfileReview $review): string {
+                return $review->review_created_at?->format('Y-m') ?? 'sin-fecha';
+            })
+            ->map(function (Collection $reviews): float {
+                return round((float) $reviews->avg('rating'), 2);
+            });
+
+        return collect(range(0, $monthCount - 1))->map(function (int $offset) use ($startMonth, $monthlyAverages): array {
+            $month = $startMonth->copy()->addMonths($offset);
+            $monthKey = $month->format('Y-m');
+            $average = (float) ($monthlyAverages[$monthKey] ?? 0);
+
+            return [
+                'key' => $monthKey,
+                'label' => $month->format('m/Y'),
+                'average' => $average,
+                'has_data' => array_key_exists($monthKey, $monthlyAverages->all()),
+            ];
+        });
     }
 
     private function encodeLocationKey(string $locationName): string
