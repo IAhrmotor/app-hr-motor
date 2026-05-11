@@ -64,7 +64,7 @@ class ReviewReportsNavigationTest extends TestCase
             ->assertDontSee('Informes semestrales');
     }
 
-    public function test_monthly_comparativa_delegaciones_view_shows_the_current_table(): void
+    public function test_monthly_comparativa_delegaciones_view_filters_by_selected_month(): void
     {
         $user = User::factory()->create([
             'role' => User::ROLE_MARKETING,
@@ -74,6 +74,11 @@ class ReviewReportsNavigationTest extends TestCase
             'name' => 'HR Motor || Zaragoza',
             'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/zaragoza',
             'google_business_profile_location_title' => 'HR Motor || Zaragoza',
+        ]);
+        $dealershipApril = Dealership::query()->create([
+            'name' => 'HR Motor || Sevilla',
+            'google_business_profile_location_name' => 'accounts/117678944517959788740/locations/sevilla',
+            'google_business_profile_location_title' => 'HR Motor || Sevilla',
         ]);
 
         Carbon::setTestNow(Carbon::parse('2026-05-11 12:00:00'));
@@ -90,8 +95,19 @@ class ReviewReportsNavigationTest extends TestCase
                 'captured_at' => Carbon::parse('2026-05-11 12:00:00'),
             ]);
 
+            GoogleBusinessProfileMonthlySnapshot::query()->create([
+                'dealership_id' => $dealershipApril->id,
+                'snapshot_month' => Carbon::parse('2026-04-01'),
+                'total_reviews' => 90,
+                'average_rating' => 4.10,
+                'monthly_reviews' => 12,
+                'monthly_average_rating' => 4.00,
+                'unanswered_reviews' => 5,
+                'captured_at' => Carbon::parse('2026-05-11 12:00:00'),
+            ]);
+
             $this->actingAs($user)
-                ->get(route('reviews.reports.monthly.comparison'))
+                ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-05']))
                 ->assertOk()
                 ->assertSee('Comparativa delegaciones')
                 ->assertSee('Zaragoza')
@@ -100,6 +116,18 @@ class ReviewReportsNavigationTest extends TestCase
                 ->assertSee('18')
                 ->assertSee('4.50')
                 ->assertSee('3');
+
+            $this->actingAs($user)
+                ->get(route('reviews.reports.monthly.comparison', ['month' => '2026-04']))
+                ->assertOk()
+                ->assertSee('04/2026')
+                ->assertSee('Sevilla')
+                ->assertSee('90')
+                ->assertSee('4.10')
+                ->assertSee('12')
+                ->assertSee('4.00')
+                ->assertSee('5')
+                ->assertDontSee('Zaragoza');
         } finally {
             Carbon::setTestNow();
         }

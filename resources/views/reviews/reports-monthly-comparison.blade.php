@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@php
+    use Carbon\Carbon;
+@endphp
+
 @section('title', 'Comparativa delegaciones')
 
 @section('content')
@@ -16,6 +20,40 @@
                 Volver a informes mensuales
             </a>
         </div>
+
+        <div class="mb-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <form method="GET" class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div class="min-w-0 flex-1">
+                    <label for="reports-month" class="text-sm font-semibold text-brand-secondary">Mes a comparar</label>
+                    <p class="mt-1 text-sm text-gray-500">Selecciona el mes que quieres ver en la comparativa.</p>
+                </div>
+
+                <div class="flex w-full gap-3 sm:w-auto">
+                    <select id="reports-month" name="month"
+                        class="h-12 w-full min-w-[12rem] rounded-2xl border-gray-200 bg-gray-50 px-4 text-sm focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                        onchange="this.form.submit()">
+                        @foreach ($availableMonths as $month)
+                            <option value="{{ $month->format('Y-m') }}" @selected($selectedMonth === $month->format('Y-m'))>
+                                {{ $month->format('m/Y') }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <noscript>
+                        <button type="submit"
+                            class="inline-flex h-12 items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                            Filtrar
+                        </button>
+                    </noscript>
+                </div>
+            </form>
+        </div>
+
+        @if ($selectedMonth)
+            <div class="mb-6 rounded-3xl border border-brand-primary/15 bg-brand-primary/5 px-5 py-4 text-sm text-brand-secondary">
+                Estás comparando el mes de <span class="font-semibold">{{ Carbon::createFromFormat('Y-m', $selectedMonth)->format('m/Y') }}</span>.
+            </div>
+        @endif
 
         <div class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div class="overflow-x-auto">
