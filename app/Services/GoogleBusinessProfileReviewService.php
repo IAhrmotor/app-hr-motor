@@ -778,7 +778,7 @@ class GoogleBusinessProfileReviewService
         foreach ($reviews as $review) {
             $reviewRows[] = $this->buildReviewRow(
                 review: $review,
-                locationName: $locationResourceName,
+                locationName: $locationName,
                 locationTitle: $locationTitle,
                 dealershipId: $dealership?->id,
                 syncedAt: $syncedAt
@@ -786,7 +786,7 @@ class GoogleBusinessProfileReviewService
         }
 
         $this->persistReviewRows($reviewRows);
-        $this->pruneMissingReviews($locationResourceName, $reviewRows);
+        $this->pruneMissingReviews($locationName, $reviewRows);
 
         return count($reviewRows);
     }
@@ -850,7 +850,7 @@ class GoogleBusinessProfileReviewService
         foreach ($reviews as $review) {
             $reviewRows[] = $this->buildReviewRow(
                 review: $review,
-                locationName: $locationResourceName,
+                locationName: $locationName,
                 locationTitle: $locationTitle,
                 dealershipId: $dealership->id,
                 syncedAt: $syncedAt
@@ -858,7 +858,7 @@ class GoogleBusinessProfileReviewService
         }
 
         $this->persistReviewRows($reviewRows);
-        $this->pruneMissingReviews($locationResourceName, $reviewRows);
+        $this->pruneMissingReviews($locationName, $reviewRows);
 
         return count($reviewRows);
     }
