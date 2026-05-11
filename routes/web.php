@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/resenas/todas', [ReviewController::class, 'all'])->name('reviews.all');
         Route::get('/resenas/informes', [ReviewController::class, 'reports'])->name('reviews.reports');
         Route::get('/resenas/informes/mensuales', [ReviewController::class, 'reportsMonthly'])->name('reviews.reports.monthly');
+        Route::get('/resenas/informes/mensuales/comparativa-delegaciones', [ReviewController::class, 'reportsMonthlyComparison'])->name('reviews.reports.monthly.comparison');
         Route::get('/resenas/informes/semestrales', [ReviewController::class, 'reportsSemiannual'])->name('reviews.reports.semiannual');
         Route::get('/resenas/delegacion/{dealership}', [ReviewController::class, 'show'])
             ->whereNumber('dealership')

@@ -220,21 +220,34 @@ class ReviewController extends Controller
 
     public function reportsMonthly(): View
     {
+        return view('reviews.reports-monthly', [
+            'comparisonUrl' => route('reviews.reports.monthly.comparison'),
+            'hubUrl' => route('reviews.reports'),
+            'semiannualUrl' => route('reviews.reports.semiannual'),
+        ]);
+    }
+
+    public function reportsMonthlyComparison(): View
+    {
         $snapshots = $this->monthlySnapshotsTableExists()
             ? $this->monthlySnapshotsQuery()->get()
             : collect();
 
         $grouped = $snapshots->groupBy(fn (GoogleBusinessProfileMonthlySnapshot $snapshot): string => $snapshot->snapshot_month?->format('Y-m') ?? 'sin-fecha');
 
-        return view('reviews.reports-monthly', [
+        return view('reviews.reports-monthly-comparison', [
             'snapshots' => $snapshots,
             'groupedSnapshots' => $grouped,
+            'hubUrl' => route('reviews.reports.monthly'),
         ]);
     }
 
     public function reportsSemiannual(): View
     {
-        return view('reviews.reports-semiannual');
+        return view('reviews.reports-semiannual', [
+            'hubUrl' => route('reviews.reports'),
+            'monthlyUrl' => route('reviews.reports.monthly'),
+        ]);
     }
     public function refresh(Request $request, GoogleBusinessProfileReviewService $service, ?Dealership $dealership = null): RedirectResponse
     {

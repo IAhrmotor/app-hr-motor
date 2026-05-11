@@ -47,7 +47,22 @@ class ReviewReportsNavigationTest extends TestCase
             ->assertSee('Informes semestrales');
     }
 
-    public function test_monthly_reports_show_the_current_comparativa_delegaciones_table(): void
+    public function test_monthly_reports_show_a_button_to_the_comparativa_delegaciones_view(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_MARKETING,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('reviews.reports.monthly'))
+            ->assertOk()
+            ->assertSee('Informes mensuales')
+            ->assertSee('Comparativa delegaciones')
+            ->assertSee(route('reviews.reports.monthly.comparison'))
+            ->assertDontSee('Historial consolidado por delegación y mes.');
+    }
+
+    public function test_monthly_comparativa_delegaciones_view_shows_the_current_table(): void
     {
         $user = User::factory()->create([
             'role' => User::ROLE_MARKETING,
@@ -74,9 +89,8 @@ class ReviewReportsNavigationTest extends TestCase
             ]);
 
             $this->actingAs($user)
-                ->get(route('reviews.reports.monthly'))
+                ->get(route('reviews.reports.monthly.comparison'))
                 ->assertOk()
-                ->assertSee('Informes mensuales')
                 ->assertSee('Comparativa delegaciones')
                 ->assertSee('Zaragoza')
                 ->assertSee('120')
@@ -99,6 +113,7 @@ class ReviewReportsNavigationTest extends TestCase
             ->get(route('reviews.reports.semiannual'))
             ->assertOk()
             ->assertSee('Informes semestrales')
-            ->assertSee('Informe semestral en preparación');
+            ->assertSee('Resumen semestral')
+            ->assertSee('Próximamente');
     }
 }
