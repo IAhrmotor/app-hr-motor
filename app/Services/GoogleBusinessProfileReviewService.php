@@ -274,12 +274,17 @@ class GoogleBusinessProfileReviewService
                 'synced_at',
                 'updated_at',
             ])
-            ->orderByRaw('CASE WHEN dealership_id IS NULL THEN 0 ELSE 1 END DESC')
-            ->orderByDesc('synced_at')
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id');
+            ->orderByRaw('CASE WHEN dealership_id IS NULL THEN 1 ELSE 0 END ASC')
+            ->orderBy('location_name')
+            ->orderBy('location_title')
+            ->orderBy('reviewer_name')
+            ->orderBy('rating')
+            ->orderBy('review_created_at')
+            ->orderBy('comment')
+            ->orderBy('reply_comment')
+            ->orderBy('id');
 
-        $seenFingerprints = [];
+        $previousFingerprint = null;
         $idsToDelete = [];
         $rowsProcessed = 0;
 
@@ -291,12 +296,13 @@ class GoogleBusinessProfileReviewService
                 continue;
             }
 
-            if (isset($seenFingerprints[$fingerprint])) {
+            if ($previousFingerprint === $fingerprint) {
                 $idsToDelete[] = $row->id;
                 continue;
             }
 
-            $seenFingerprints[$fingerprint] = $row->id;
+            $previousFingerprint = $fingerprint;
+            
         }
 
         if ($idsToDelete === []) {
