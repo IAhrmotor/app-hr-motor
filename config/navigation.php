@@ -32,6 +32,10 @@ return [
             'route' => 'tools.web',
         ],
         [
+            'label' => 'Reseñas',
+            'route' => 'reviews.index',
+        ],
+        [
             'label' => 'Vídeos',
             'route' => 'videos',
         ],
@@ -54,6 +58,10 @@ return [
             [
                 'label' => 'Foro',
                 'route' => 'forum.index',
+            ],
+            [
+                'label' => 'Reseñas',
+                'route' => 'reviews.index',
             ],
             [
                 'label' => 'Ranking ventas',

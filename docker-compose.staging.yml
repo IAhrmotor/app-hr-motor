@@ -7,10 +7,13 @@ services:
       dockerfile: Dockerfile
     container_name: laravel-staging-app
     working_dir: /var/www
+    env_file:
+      - .env.docker
     volumes:
       - ./:/var/www
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   scheduler:
     build:
@@ -20,11 +23,33 @@ services:
     working_dir: /var/www
     command: ["php", "artisan", "schedule:work"]
     restart: unless-stopped
+    env_file:
+      - .env.docker
     volumes:
       - ./:/var/www
     depends_on:
-      - app
-      - db
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+
+  queue-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel-staging-queue-worker
+    working_dir: /var/www
+    command: ["php", "artisan", "queue:work", "--queue=google-business-profile-sync,default", "--sleep=1", "--tries=1", "--timeout=0"]
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    volumes:
+      - ./:/var/www
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
 
   nginx:
     image: nginx:stable-alpine
@@ -50,6 +75,12 @@ services:
       - staging_db_data:/var/lib/mysql
     ports:
       - "3307:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 40s
 
 volumes:
   staging_db_data:

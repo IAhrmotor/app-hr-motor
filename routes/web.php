@@ -8,9 +8,11 @@ use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AdminNotificationLogController;
 use App\Http\Controllers\AdminMonthlyMagazineController;
 use App\Http\Controllers\AdminLogController;
+use App\Http\Controllers\GoogleBusinessProfileAuthController;
 use App\Http\Controllers\RoleViewerController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ForumThreadController;
 use App\Http\Controllers\ForumTagController;
 use App\Http\Controllers\NotificationController;
@@ -63,6 +65,34 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
+
+    Route::get('/integraciones/google-business-profile/conectar', [GoogleBusinessProfileAuthController::class, 'redirect'])
+        ->name('google-business-profile.connect');
+    Route::get('/integraciones/google-business-profile/callback', [GoogleBusinessProfileAuthController::class, 'callback'])
+        ->name('google-business-profile.callback');
+
+    Route::middleware('role:marketing')->group(function () {
+        Route::get('/resenas', [ReviewController::class, 'index'])->name('reviews.index');
+        Route::get('/resenas/todas', [ReviewController::class, 'all'])->name('reviews.all');
+        Route::get('/resenas/informes', [ReviewController::class, 'reports'])->name('reviews.reports');
+        Route::get('/resenas/informes/mensuales', [ReviewController::class, 'reportsMonthly'])->name('reviews.reports.monthly');
+        Route::get('/resenas/informes/mensuales/comparativa-delegaciones', [ReviewController::class, 'reportsMonthlyComparison'])->name('reviews.reports.monthly.comparison');
+        Route::get('/resenas/informes/mensuales/comparativa-delegaciones-roscos', [ReviewController::class, 'reportsMonthlyComparisonRoscos'])->name('reviews.reports.monthly.roscos');
+        Route::get('/resenas/informes/semestrales', [ReviewController::class, 'reportsSemiannual'])->name('reviews.reports.semiannual');
+        Route::get('/resenas/informes/semestrales/graficas-comparativas', [ReviewController::class, 'reportsSemiannualCharts'])->name('reviews.reports.semiannual.charts');
+        Route::get('/resenas/delegacion/{dealership}', [ReviewController::class, 'show'])
+            ->whereNumber('dealership')
+            ->name('reviews.show');
+        Route::get('/resenas/ubicacion/{locationKey}', [ReviewController::class, 'location'])
+            ->where('locationKey', '[A-Za-z0-9\-_]+')
+            ->name('reviews.location');
+        Route::post('/resenas/sincronizar/{dealership?}', [ReviewController::class, 'refresh'])
+            ->whereNumber('dealership')
+            ->name('reviews.refresh');
+        Route::post('/resenas/reply/{review}', [ReviewController::class, 'reply'])
+            ->whereNumber('review')
+            ->name('reviews.reply');
+    });
 
     Route::get('/', function (LeaderboardTrendService $trendService) {
         $authUser = request()->user();
@@ -1083,6 +1113,11 @@ Route::middleware('auth')->group(function () {
                     [
                         'label' => 'Inventario Equipos',
                         'url' => 'https://axiumsoluciones.sharepoint.com/:x:/r/sites/ITportal/_layouts/15/Doc.aspx?sourcedoc=%7BBD76EE28-FCEE-405D-A3DC-4249A61C33BB%7D&file=Inventario-Equipos-HRMOTOR.ods&action=default&mobileredirect=true',
+                        'image' => asset('images/tools/tareas-asignadas.webp'),
+                    ],
+                    [
+                        'label' => 'Enreach Maestro',
+                        'url' => 'https://axiumsoluciones-my.sharepoint.com/:x:/r/personal/g1_departamentoit_hrmotor_es/_layouts/15/Doc.aspx?sourcedoc=%7BABBA7BDB-0644-4B15-BBE0-90E7FD47E8E1%7D&file=ENREACH%20MAESTRO.xlsx&action=default&mobileredirect=true',
                         'image' => asset('images/tools/tareas-asignadas.webp'),
                     ],
                 ],

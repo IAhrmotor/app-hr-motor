@@ -64,4 +64,15 @@ return [
         ))),
     ],
 
+    'google_business_profile' => [
+        'client_id' => env('GOOGLE_BUSINESS_PROFILE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET'),
+        'authorize_url' => env('GOOGLE_BUSINESS_PROFILE_AUTHORIZE_URL', 'https://accounts.google.com/o/oauth2/v2/auth'),
+        'token_url' => env('GOOGLE_BUSINESS_PROFILE_TOKEN_URL', 'https://oauth2.googleapis.com/token'),
+        'redirect_uri' => env('GOOGLE_BUSINESS_PROFILE_REDIRECT_URI'),
+        'scope' => env('GOOGLE_BUSINESS_PROFILE_SCOPE', 'https://www.googleapis.com/auth/business.manage'),
+        'account_group_name' => env('GOOGLE_BUSINESS_PROFILE_ACCOUNT_GROUP_NAME', 'Tiendas HR Motor'),
+        'login_hint' => env('GOOGLE_BUSINESS_PROFILE_LOGIN_HINT'),
+    ],
+
 ];
