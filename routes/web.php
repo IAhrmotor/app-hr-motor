@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
         $itSupportUrl = app_it_support_url_for($authUser);
         $webHrMotorUrl = app_can_access_web($authUser) ? route('tools.web') : 'https://www.hrmotor.com/';
         $webHrMotorOpenInNewTab = ! app_can_access_web($authUser);
+        $defaultToolImage = asset('images/tools/tareas-asignadas.webp');
 
         $buttonSections = [
             [
@@ -125,6 +126,36 @@ Route::middleware('auth')->group(function () {
                         'url' => $webHrMotorUrl,
                         'image' => asset('images/tools/hrmotor.webp'),
                         'open_in_new_tab' => $webHrMotorOpenInNewTab,
+                    ],
+                    [
+                        'label' => 'ChatGPT',
+                        'url' => 'https://chatgpt.com/',
+                        'image' => asset('images/tools/chatgpt.webp'),
+                    ],
+                    [
+                        'label' => 'CaixaBank',
+                        'url' => 'https://www.caixabank.es/particular/home/particulares_es.html',
+                        'image' => asset('images/tools/caixabank.webp'),
+                    ],
+                    [
+                        'label' => 'Calculadora Vacaciones',
+                        'url' => 'https://calculadoravacaciones.com/',
+                        'image' => asset('images/tools/calculadora.webp'),
+                    ],
+                    [
+                        'label' => 'Docusign',
+                        'url' => 'https://apps.docusign.com/send/documents?view=sent&type=envelopes',
+                        'image' => asset('images/tools/docusign.webp'),
+                    ],
+                    [
+                        'label' => 'iLovePDF',
+                        'url' => 'https://www.ilovepdf.com/es',
+                        'image' => asset('images/tools/ilovepdf.webp'),
+                    ],
+                    [
+                        'label' => 'Mi IP',
+                        'url' => 'https://www.cual-es-mi-ip.net/',
+                        'image' => asset('images/tools/ip.webp'),
                     ],
                     [
                         'label' => 'Google Drive',
@@ -525,6 +556,27 @@ Route::middleware('auth')->group(function () {
                     'Chat ServiceForm',
                 ];
 
+                $humanResourcesButtonLabels = [
+                    'ChatGPT',
+                    'CaixaBank',
+                    'Unión de Mutuas',
+                    'Calculadora Vacaciones',
+                    'Docusign',
+                    'Sede',
+                    'Seguridad Social',
+                    'Convenios Colectivos',
+                    'Sistema Delta',
+                    'Sede SEPE',
+                    'iLovePDF',
+                    'Sepe',
+                    'Sepe usuarios',
+                    'Trámites Navarra',
+                    'Dehú',
+                    'Registro Electrónico',
+                    'Mi IP',
+                    'Seguridad Social Portal',
+                ];
+
                 $rentingButtonLabels = [
                     'Rent2click',
                     'HR Renting',
@@ -629,6 +681,9 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, $callCenterGeneralButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_CALL_CENTER])
+                    ) || (
+                        in_array($button['label'] ?? null, $humanResourcesButtonLabels, true)
+                        && app_user_has_any_role($authUser, [User::ROLE_HUMAN_RESOURCES])
                     ) || (
                         ($button['label'] ?? null) === 'Tareas asignadas'
                         && app_user_has_any_role($authUser, [User::ROLE_MARKETING])
@@ -898,6 +953,69 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Informe fotografía',
                         'url' => 'https://docs.google.com/spreadsheets/d/1OMiDqfiTeHWagtXNJagFpNVqxZjuOa5i/edit?gid=374625686#gid=374625686',
                         'image' => asset('images/tools/tareas-asignadas.webp'),
+                    ],
+                ],
+            ]
+            : null;
+
+        $humanResourcesOtherResourcesSection = app_user_has_any_role($authUser, [User::ROLE_HUMAN_RESOURCES])
+            ? [
+                'title' => 'Otros recursos',
+                'buttons' => [
+                    [
+                        'label' => 'Poder Judicial',
+                        'url' => 'https://www.poderjudicial.es/cgpj/es/Servicios/Utilidades/Calculo-de-indemnizaciones-por-extincion-de-contrato-de-trabajo/',
+                        'image' => asset('images/tools/poder-judicial.webp'),
+                    ],
+                    [
+                        'label' => 'Sepe',
+                        'url' => 'https://www.sepe.es:444/ccomunicacto/comunicacto/jsp/menuprincipal.jsp?Comunidad=99&Idioma=14',
+                        'image' => asset('images/tools/sepe.webp'),
+                    ],
+                    [
+                        'label' => 'Sepe usuarios',
+                        'url' => 'https://sede.sepe.gob.es/GesUsuariosSEDE/GestionUsuariosTrabajaWeb/login_recurso_protegido.do?acceso=empresa&tipoemp=na&CSRFFormToken=null&GAREASONCODE=-1&GARESOURCEID=emp_DCertificadosWeb&GAURI=https://sede.sepe.gob.es/DCertificadosWeb/ActionNavegacion.do%3Faccion%3Dnavegacion&Reason=-1&APPID=emp_DCertificadosWeb&URI=https://sede.sepe.gob.es/DCertificadosWeb/ActionNavegacion.do%3Faccion%3Dnavegacion',
+                        'image' => asset('images/tools/sepe.webp'),
+                    ],
+                    [
+                        'label' => 'Trámites Navarra',
+                        'url' => 'https://www.navarra.es/es/tramites/on/-/line/Busqueda-de-trabajadores-y-trabajadoras',
+                        'image' => asset('images/tools/navarra.webp'),
+                    ],
+                    [
+                        'label' => 'Seguridad Social',
+                        'url' => 'https://www.seg-social.es/wps/portal/wss/internet/Inicio',
+                        'image' => asset('images/tools/seguridad-social.webp'),
+                    ],
+                    [
+                        'label' => 'Sede',
+                        'url' => 'https://sede.mites.gob.es/inicio/detalleProcedimiento/12',
+                        'image' => asset('images/tools/sede.webp'),
+                    ],
+                    [
+                        'label' => 'Convenios Colectivos',
+                        'url' => 'https://expinterweb.mites.gob.es/regcon/',
+                        'image' => asset('images/tools/ministerio-trabajo.webp'),
+                    ],
+                    [
+                        'label' => 'Sistema Delta',
+                        'url' => 'https://delta.mites.gob.es/Delta2Web/main/principal.jsp',
+                        'image' => asset('images/tools/delta.webp'),
+                    ],
+                    [
+                        'label' => 'Dehú',
+                        'url' => 'https://dehu.redsara.es/es/notifications',
+                        'image' => asset('images/tools/dehu.webp'),
+                    ],
+                    [
+                        'label' => 'Registro Electrónico',
+                        'url' => 'https://reg.redsara.es/es/',
+                        'image' => asset('images/tools/registro-electronico-general.webp'),
+                    ],
+                    [
+                        'label' => 'Unión de Mutuas',
+                        'url' => 'https://empresas.uniondemutuas.es/portal-empresas/inicio',
+                        'image' => asset('images/tools/union-mutuas.webp'),
                     ],
                 ],
             ]
@@ -1186,7 +1304,7 @@ Route::middleware('auth')->group(function () {
         $magazine = MonthlyMagazineSetting::current();
         $homeLeaderboardMovements = $trendService->buildMovementMap($homeLeaderboardEntries);
 
-        return view('home', compact('buttonSections', 'otherResourcesSection', 'informaticaOtherResourcesSection', 'informaticaAccessSection', 'legalOtherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'logisticsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
+        return view('home', compact('buttonSections', 'otherResourcesSection', 'humanResourcesOtherResourcesSection', 'informaticaOtherResourcesSection', 'informaticaAccessSection', 'legalOtherResourcesSection', 'callCenterResourcesSection', 'sparePartsResourcesSection', 'financingOtherResourcesSection', 'logisticsResourcesSection', 'videos', 'homeLeaderboardEntries', 'homeLeaderboardMovements', 'itSupportUrl', 'magazine'));
     })->name('home');
 
     Route::get('/videos', function () {
