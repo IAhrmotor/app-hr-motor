@@ -23,7 +23,7 @@ return [
             'onedrive' => 'https://www.office.com/launch/onedrive',
             'word' => 'https://www.office.com/launch/word',
             'excel' => 'https://www.office.com/launch/excel',
-            '3cx' => 'https://hrmotor.3cx.es:5001/#/chat',
+            'enreach' => 'https://manager.masvoz.es/',
         ],
     ],
 ];

@@ -150,6 +150,7 @@ if (! function_exists('app_can_access_reviews')) {
 
         $allowedRoles = [
             User::ROLE_MARKETING,
+            User::ROLE_MANAGEMENT,
         ];
 
         return app_user_has_any_role($user, $allowedRoles);

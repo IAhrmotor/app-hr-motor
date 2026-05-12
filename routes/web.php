@@ -71,7 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/integraciones/google-business-profile/callback', [GoogleBusinessProfileAuthController::class, 'callback'])
         ->name('google-business-profile.callback');
 
-    Route::middleware('role:marketing')->group(function () {
+    Route::middleware('role:marketing,gerencia')->group(function () {
         Route::get('/resenas', [ReviewController::class, 'index'])->name('reviews.index');
         Route::get('/resenas/todas', [ReviewController::class, 'all'])->name('reviews.all');
         Route::get('/resenas/informes', [ReviewController::class, 'reports'])->name('reviews.reports');
@@ -501,9 +501,9 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/whatsapp.webp'),
                     ],
                     [
-                        'label' => '3CX',
-                        'url' => config('portal.links.tools.3cx'),
-                        'image' => asset('images/tools/3cx.webp'),
+                        'label' => 'Enreach',
+                        'url' => config('portal.links.tools.enreach'),
+                        'image' => asset('images/tools/enreach.webp'),
                     ],
                     [
                         'label' => 'Webmail',
