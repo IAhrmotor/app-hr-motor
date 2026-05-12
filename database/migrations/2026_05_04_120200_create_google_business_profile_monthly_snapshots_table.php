@@ -23,7 +23,7 @@ return new class extends Migration
             $table->unsignedInteger('unanswered_reviews')->default(0);
             $table->timestamp('captured_at')->nullable();
             $table->timestamps();
-            $table->unique(['dealership_id', 'snapshot_month']);
+            $table->unique(['dealership_id', 'snapshot_month'], 'gbp_monthly_snapshots_dealer_month_unique');
         });
     }
 
