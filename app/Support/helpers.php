@@ -139,6 +139,21 @@ if (! function_exists('app_can_access_web')) {
     }
 }
 
+if (! function_exists('app_can_access_chat_beta')) {
+    function app_can_access_chat_beta(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return app_user_has_any_role($user, [
+            User::ROLE_INFORMATION_TECHNOLOGY,
+        ]);
+    }
+}
+
 if (! function_exists('app_can_access_reviews')) {
     function app_can_access_reviews(?User $user = null): bool
     {

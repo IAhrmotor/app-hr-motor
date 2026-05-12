@@ -10,6 +10,10 @@
                 return null;
             }
 
+            if (($item['route'] ?? null) === 'chat.beta' && ! app_can_access_chat_beta($authUser)) {
+                return null;
+            }
+
             if (($item['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
                 return null;
             }

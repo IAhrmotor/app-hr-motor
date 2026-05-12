@@ -32,6 +32,10 @@ return [
             'route' => 'tools.web',
         ],
         [
+            'label' => 'Chat beta',
+            'route' => 'chat.beta',
+        ],
+        [
             'label' => 'Reseñas',
             'route' => 'reviews.index',
         ],
