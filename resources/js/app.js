@@ -2,6 +2,32 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
+window.bodyScrollLock = {
+    locks: new Set(),
+
+    update() {
+        if (typeof document === 'undefined' || !document.body) {
+            return;
+        }
+
+        document.body.classList.toggle('overflow-hidden', this.locks.size > 0);
+    },
+
+    set(key, locked) {
+        if (locked) {
+            this.locks.add(key);
+        } else {
+            this.locks.delete(key);
+        }
+
+        this.update();
+    },
+
+    release(key) {
+        this.locks.delete(key);
+        this.update();
+    },
+};
 window.imageLightbox = () => ({
     isImageOpen: false,
     imageUrl: '',

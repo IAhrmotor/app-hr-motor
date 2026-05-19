@@ -7,14 +7,11 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="flex min-h-screen flex-col bg-slate-50 text-brand-secondary">
+<body class="flex h-screen flex-col overflow-hidden bg-slate-50 text-brand-secondary">
     <x-layout.navbar />
 
-    <main class="flex-1">
+    <main class="flex-1 min-h-0 overflow-hidden">
         @yield('content')
     </main>
-
-    <x-layout.footer />
-    <x-layout.feedback-widget />
 </body>
 </html>

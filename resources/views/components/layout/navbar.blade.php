@@ -10,6 +10,10 @@
                 return null;
             }
 
+            if (($item['route'] ?? null) === 'chat.beta' && ! app_can_access_chat_beta($authUser)) {
+                return null;
+            }
+
             if (($item['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
                 return null;
             }
@@ -58,7 +62,7 @@
 @endphp
 
 <nav x-data="{ open: false, profileOpen: false, notificationsOpen: false, roleViewerOpen: false, activeDropdown: null }"
-    x-effect="document.body.classList.toggle('overflow-hidden', open || (roleViewerOpen && window.matchMedia('(max-width: 1279px)').matches))"
+    x-effect="window.bodyScrollLock?.set('navbar', open || (roleViewerOpen && window.matchMedia('(max-width: 1279px)').matches))"
     @keydown.escape.window="profileOpen = false; notificationsOpen = false; roleViewerOpen = false; activeDropdown = null; open = false"
     class="sticky top-0 z-50 border-b border-gray-200 bg-white">
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
