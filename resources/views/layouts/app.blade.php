@@ -15,5 +15,6 @@
     </main>
 
     <x-layout.footer />
+    <x-layout.feedback-widget />
 </body>
 </html>

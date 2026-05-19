@@ -16,6 +16,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ForumThreadController;
 use App\Http\Controllers\ForumTagController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\FeedbackReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
@@ -73,6 +74,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
+    Route::post('/feedback', [FeedbackReportController::class, 'store'])->name('feedback.store');
 
     Route::get('/integraciones/google-business-profile/conectar', [GoogleBusinessProfileAuthController::class, 'redirect'])
         ->name('google-business-profile.connect');
