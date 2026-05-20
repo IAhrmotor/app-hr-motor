@@ -161,11 +161,7 @@ if (! function_exists('app_chat_role_label')) {
             return 'Usuario';
         }
 
-        if (filled($user->extra_role)) {
-            return User::extraRoleLabels()[$user->extra_role] ?? ucfirst((string) $user->extra_role);
-        }
-
-        return User::roleLabels()[$user->role] ?? 'Usuario';
+        return $user->chat_role_label;
     }
 }
 

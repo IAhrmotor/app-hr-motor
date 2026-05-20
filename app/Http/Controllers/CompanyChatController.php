@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatMessage;
 use App\Models\User;
+use App\Notifications\CompanyChatMessageNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,7 @@ class CompanyChatController extends Controller
             ]);
 
             $this->markConversationAsRead($selectedConversation, $authUser);
+            $this->markConversationNotificationsAsRead($selectedConversation, $authUser);
             $selectedConversation->refresh();
             $selectedConversation->load([
                 'userOne',
@@ -113,7 +115,7 @@ class CompanyChatController extends Controller
             $message = $conversation->messages()->create([
                 'sender_id' => $request->user()->id,
                 'body' => $validated['body'],
-                'read_at' => now(),
+                'read_at' => null,
             ]);
 
             $conversation->forceFill([
@@ -124,6 +126,10 @@ class CompanyChatController extends Controller
             return $message->load('sender');
         });
 
+        if ($recipient = $conversation->otherParticipant($request->user())) {
+            $recipient->notify(new CompanyChatMessageNotification($conversation, $message, $request->user()));
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => [
@@ -131,7 +137,7 @@ class CompanyChatController extends Controller
                     'body' => $message->body,
                     'sender_id' => $message->sender_id,
                     'sender_name' => $message->sender?->name,
-                    'sender_role_label' => app_chat_role_label($message->sender),
+                    'sender_chat_role_label' => app_chat_role_label($message->sender),
                     'is_mine' => true,
                     'created_at' => $message->created_at?->toIso8601String(),
                     'created_at_label' => $message->created_at?->translatedFormat('H:i'),
@@ -156,6 +162,7 @@ class CompanyChatController extends Controller
         $authUser = $request->user();
 
         $this->markConversationAsRead($conversation, $authUser);
+        $this->markConversationNotificationsAsRead($conversation, $authUser);
 
         $messages = $conversation->messages()
             ->with('sender')
@@ -166,7 +173,7 @@ class CompanyChatController extends Controller
                 'body' => $message->body,
                 'sender_id' => $message->sender_id,
                 'sender_name' => $message->sender?->name,
-                'sender_role_label' => app_chat_role_label($message->sender),
+                'sender_chat_role_label' => app_chat_role_label($message->sender),
                 'is_mine' => $message->sender_id === $authUser->id,
                 'created_at' => $message->created_at?->toIso8601String(),
                 'created_at_label' => $message->created_at?->translatedFormat('H:i'),
@@ -205,7 +212,7 @@ class CompanyChatController extends Controller
                     'id' => $conversation->id,
                     'partner_name' => $partner?->name,
                     'partner_avatar_url' => $partner?->avatar_url,
-                    'partner_role_label' => app_chat_role_label($partner),
+                    'partner_chat_role_label' => app_chat_role_label($partner),
                     'last_message_excerpt' => $conversation->last_message_excerpt,
                     'last_message_at_label' => $conversation->last_message_at?->translatedFormat('d/m H:i'),
                     'unread_messages_count' => (int) ($conversation->unread_messages_count ?? 0),
@@ -235,6 +242,14 @@ class CompanyChatController extends Controller
         $conversation->messages()
             ->where('sender_id', '!=', $user->id)
             ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+    }
+
+    private function markConversationNotificationsAsRead(CompanyChatConversation $conversation, User $user): void
+    {
+        $user->unreadNotifications()
+            ->where('type', CompanyChatMessageNotification::class)
+            ->where('data->conversation_id', $conversation->id)
             ->update(['read_at' => now()]);
     }
 }

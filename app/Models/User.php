@@ -270,6 +270,15 @@ class User extends Authenticatable
         return $baseLabel . ' · ' . $extraLabel;
     }
 
+    public function getChatRoleLabelAttribute(): string
+    {
+        if (filled($this->extra_role)) {
+            return self::extraRoleLabels()[$this->extra_role] ?? ucfirst((string) $this->extra_role);
+        }
+
+        return self::baseRoleLabels()[$this->role] ?? 'Usuario';
+    }
+
     public function getIsStoreManagerAttribute(): bool
     {
         return $this->isStoreManager();
