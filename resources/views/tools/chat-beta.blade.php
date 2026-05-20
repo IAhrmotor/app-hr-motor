@@ -7,7 +7,16 @@
         $selectedConversationMessages = $selectedConversation?->messages ?? collect();
     @endphp
 
-    <section class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100" data-chat-root data-chat-summary-url="{{ route('chat.beta.summary') }}" data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}">
+    <section
+        x-data="imageLightbox()"
+        x-effect="document.body.classList.toggle('overflow-hidden', isImageOpen)"
+        @keydown.escape.window="closeImage()"
+        @keydown.window="handleKeydown($event)"
+        class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100"
+        data-chat-root
+        data-chat-summary-url="{{ route('chat.beta.summary') }}"
+        data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}"
+    >
         <aside class="flex h-full w-[21rem] min-w-[21rem] max-w-[21rem] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)]" data-chat-sidebar>
             <div class="flex min-h-[4.75rem] items-center border-b border-slate-200 px-4 py-2">
                 <div class="flex w-full items-center gap-2">
@@ -173,9 +182,20 @@
                                                         @endphp
 
                                                         @if ($isImageAttachment)
-                                                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-[1rem] border border-black/5 bg-white/50">
-                                                                <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover">
-                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                data-chat-image-src="{{ $attachmentUrl }}"
+                                                                data-chat-image-alt="{{ $attachmentName }}"
+                                                                data-chat-image-title="{{ $attachmentName }}"
+                                                                @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
+                                                                class="group relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                                                aria-label="Ver {{ $attachmentName }}"
+                                                            >
+                                                                <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
+                                                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/30 group-hover:opacity-100">
+                                                                    Ver
+                                                                </span>
+                                                            </button>
                                                         @else
                                                             <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
                                                                 <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
@@ -305,6 +325,84 @@
                 </div>
             @endif
         </section>
+
+        <div
+            x-cloak
+            x-show="isImageOpen"
+            x-transition.opacity
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-6 py-8 backdrop-blur-sm"
+            @click.self="closeImage()"
+        >
+            <div class="inline-flex max-w-[calc(100vw-3rem)] flex-col items-center">
+                <div
+                    x-ref="imageViewport"
+                    class="relative touch-none overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl"
+                    :class="imageScale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'"
+                    @wheel.prevent="handleWheel($event)"
+                    @pointerdown="handlePointerDown($event)"
+                    @pointermove="handlePointerMove($event)"
+                    @pointerup="handlePointerUp($event)"
+                    @pointercancel="handlePointerCancel($event)"
+                >
+                    <button
+                        type="button"
+                        @pointerdown.stop
+                        @click.stop="closeImage()"
+                        class="absolute right-3 top-3 z-10 inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/90 text-brand-secondary shadow-lg transition hover:bg-white"
+                        aria-label="Cerrar imagen ampliada"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <img
+                        :src="imageUrl"
+                        :alt="imageAlt"
+                        @dblclick="toggleZoom($event.clientX, $event.clientY)"
+                        draggable="false"
+                        @dragstart.prevent
+                        class="block max-h-[80vh] w-auto max-w-[calc(100vw-3rem)] select-none object-contain bg-slate-900 will-change-transform"
+                        :class="isDragging ? 'transition-none' : 'transition-transform duration-200'"
+                        :style="`transform: translate3d(${translateX}px, ${translateY}px, 0) scale(${imageScale}); transform-origin: center center;`"
+                    >
+                </div>
+
+                <div class="mt-4 flex items-center justify-center gap-2">
+                    <button
+                        type="button"
+                        @click="zoomOut()"
+                        class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/90 text-brand-secondary shadow-lg transition hover:bg-white"
+                        aria-label="Reducir zoom"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+                        </svg>
+                    </button>
+                    <button
+                        type="button"
+                        @click="resetZoom()"
+                        class="inline-flex h-10 min-w-20 items-center justify-center rounded-full bg-white/90 px-3 text-sm font-semibold text-brand-secondary shadow-lg"
+                        aria-label="Restablecer zoom"
+                    >
+                        <span x-text="`${imageScale.toFixed(2).replace(/\.00$/, '')}x`"></span>
+                    </button>
+                    <button
+                        type="button"
+                        @click="zoomIn()"
+                        class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/90 text-brand-secondary shadow-lg transition hover:bg-white"
+                        aria-label="Aumentar zoom"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                </div>
+
+                <p class="mt-4 text-center text-sm font-medium text-white/80" x-text="imageTitle"></p>
+            </div>
+        </div>
+
     </section>
 
     @if ($selectedConversation && $selectedParticipant)
@@ -442,9 +540,20 @@
 
                     if (attachment?.is_image) {
                         return `
-                            <a href="${url}" target="_blank" rel="noopener" class="block overflow-hidden rounded-[1rem] border border-black/5 bg-white/50">
-                                <img src="${url}" alt="${name}" class="max-h-72 w-full object-cover">
-                            </a>
+                            <button
+                                type="button"
+                                data-chat-image-src="${url}"
+                                data-chat-image-alt="${name}"
+                                data-chat-image-title="${name}"
+                                @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
+                                class="group relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                aria-label="Ver ${name}"
+                            >
+                                <img src="${url}" alt="${name}" class="max-h-72 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
+                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/30 group-hover:opacity-100">
+                                    Ver
+                                </span>
+                            </button>
                         `;
                     }
 
@@ -580,6 +689,7 @@
                         setSelectedConversation(activeConversationId);
                         updateHeader(payload);
                         renderMessages(messages);
+                        autoScroll();
                         refreshSidebar();
 
                         if (pushState) {
@@ -607,6 +717,7 @@
 
                         if (conversationId) {
                             await loadConversation(conversationId);
+                            autoScroll();
                         }
                     } catch (error) {
                         console.error(error);
@@ -670,6 +781,7 @@
                         const compactTop = Boolean(previousMessage) && previousMessage.created_at_label === message.created_at_label;
                         return renderMessage(message, compactTop);
                     }).join('');
+                    window.Alpine?.initTree(messagesContainer);
                     latestMessageId = Math.max(...messages.map((message) => Number(message.id) || 0));
                     autoScroll();
                 };
@@ -765,6 +877,7 @@
 
                         if (newLatestId !== latestMessageId) {
                             renderMessages(messages);
+                            autoScroll();
                             refreshSidebar();
                             return;
                         }
@@ -774,6 +887,7 @@
 
                         if (currentDomMessages.length !== messages.length) {
                             renderMessages(messages);
+                            autoScroll();
                             return;
                         }
 
@@ -836,6 +950,7 @@
                             const previousTime = previousNode?.querySelector('[data-message-time]')?.textContent?.trim();
                             const compactTop = previousTime === (message.created_at_label ?? '');
                             messagesContainer.insertAdjacentHTML('beforeend', renderMessage(message, compactTop));
+                            window.Alpine?.initTree(messagesContainer.lastElementChild);
                             updatePreviousTimeVisibility(message);
                             latestMessageId = Number(message.id) || latestMessageId;
                             autoScroll();
