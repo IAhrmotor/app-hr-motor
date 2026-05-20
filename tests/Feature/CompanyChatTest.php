@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatMessage;
 use App\Models\User;
+use App\Notifications\CompanyChatMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -72,10 +73,18 @@ class CompanyChatTest extends TestCase
             ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
 
         $conversation->refresh();
+        $sentMessage = CompanyChatMessage::query()->latest('id')->first();
 
         $this->assertSame('Si, lo miro ahora mismo.', $conversation->last_message_excerpt);
         $this->assertNotNull($conversation->last_message_at);
         $this->assertDatabaseCount('company_chat_messages', 2);
+        $this->assertNotNull($sentMessage);
+        $this->assertNull($sentMessage->read_at);
+        $this->assertDatabaseHas('notifications', [
+            'type' => CompanyChatMessageNotification::class,
+            'notifiable_type' => User::class,
+            'notifiable_id' => $sender->id,
+        ]);
     }
 
     public function test_chat_messages_endpoint_returns_json_and_marks_incoming_messages_as_read(): void
@@ -103,11 +112,12 @@ class CompanyChatTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('messages.0.body', 'Mensaje de prueba')
-            ->assertJsonPath('messages.0.sender_role_label', 'Informática');
+            ->assertJsonPath('messages.0.sender_chat_role_label', 'Informática');
 
         $message->refresh();
 
         $this->assertNotNull($message->read_at);
+        $this->assertSame(0, $recipient->unreadNotifications()->count());
     }
 
     public function test_chat_summary_returns_conversation_metadata_and_unread_counts(): void
@@ -124,19 +134,21 @@ class CompanyChatTest extends TestCase
             'user_two_id' => max($sender->id, $recipient->id),
         ]);
 
-        CompanyChatMessage::query()->create([
-            'company_chat_conversation_id' => $conversation->id,
-            'sender_id' => $sender->id,
-            'body' => 'Mensaje sin leer',
-        ]);
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Mensaje sin leer',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
 
         $response = $this->actingAs($recipient)->getJson(route('chat.beta.summary'));
 
         $response
             ->assertOk()
             ->assertJsonPath('conversations.0.partner_name', $sender->name)
-            ->assertJsonPath('conversations.0.partner_role_label', 'Informática')
+            ->assertJsonPath('conversations.0.partner_chat_role_label', 'Informática')
             ->assertJsonPath('conversations.0.unread_messages_count', 1)
             ->assertJsonPath('unread_messages_total', 1);
+
+        $this->assertSame(1, $recipient->unreadNotifications()->count());
     }
 }

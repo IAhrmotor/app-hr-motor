@@ -48,7 +48,7 @@
                                     <img src="{{ $person->avatar_url }}" alt="Avatar de {{ $person->name }}" class="h-10 w-10 rounded-2xl object-cover">
                                     <div class="min-w-0 flex-1">
                                         <p class="truncate text-sm font-semibold text-brand-secondary">{{ $person->name }}</p>
-                                        <p class="truncate text-xs text-slate-500">{{ app_chat_role_label($person) }}</p>
+                                        <p class="truncate text-xs text-slate-500">{{ $person->chat_role_label }}</p>
                                     </div>
                                 </a>
                             @empty
@@ -92,6 +92,7 @@
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="min-w-0">
                                             <p class="truncate text-sm font-semibold text-brand-secondary" data-chat-partner-name>{{ $partner?->name ?? 'Conversación' }}</p>
+                                            <p class="truncate text-xs text-slate-500" data-chat-partner-role>{{ $partner?->chat_role_label ?? '' }}</p>
                                             <p class="truncate text-xs text-slate-500" data-chat-last-message>
                                                 {{ $conversation->last_message_excerpt ?: 'Empieza la conversación' }}
                                             </p>
@@ -127,27 +128,10 @@
                         <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover">
                         <div class="min-w-0">
                             <h1 class="truncate text-base font-semibold text-brand-secondary">{{ $selectedParticipant->name }}</h1>
-                            <p class="truncate text-xs text-slate-500">{{ app_chat_role_label($selectedParticipant) }} · {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}</p>
+                            <p class="truncate text-xs text-slate-500">{{ $selectedParticipant->chat_role_label }} · {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}</p>
                         </div>
                     </div>
 
-                    <div class="hidden items-center gap-2 text-slate-400 md:flex">
-                        <button type="button" class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition hover:bg-slate-100 hover:text-brand-primary" aria-label="Añadir persona">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 9l-6-6m0 0-6 6m6-6v18" />
-                            </svg>
-                        </button>
-                        <button type="button" class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition hover:bg-slate-100 hover:text-brand-primary" aria-label="Llamar">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M6.62 10.79a15.53 15.53 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.56.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A18 18 0 0 1 4 6a1 1 0 0 1 1-1h2.49a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.56 1 1 0 0 1-.24 1.02Z" />
-                            </svg>
-                        </button>
-                        <button type="button" class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition hover:bg-slate-100 hover:text-brand-primary" aria-label="Más opciones">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M5 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm5 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm7-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
-                            </svg>
-                        </button>
-                    </div>
                 </header>
 
                 <div
@@ -163,9 +147,11 @@
                                     $isMine = $message->sender_id === $authUser->id;
                                 @endphp
                                 <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }}" data-message-id="{{ $message->id }}">
-                                    <div class="max-w-[78%] rounded-[1.25rem] px-4 py-3 shadow-sm {{ $isMine ? 'bg-[#d9fdd3] text-slate-800' : 'bg-white text-brand-secondary border border-slate-200' }}">
-                                        <p class="whitespace-pre-line text-[15px] leading-6">{{ $message->body }}</p>
-                                        <div class="mt-1 flex items-center justify-end gap-1 text-[11px] {{ $isMine ? 'text-slate-500' : 'text-slate-400' }}">
+                                    <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
+                                        <div class="rounded-[1.1rem] px-3 py-2 shadow-sm {{ $isMine ? 'bg-[#d9fdd3] text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary' }}">
+                                            <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                        </div>
+                                        <div class="mt-1 flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
                                             <span>{{ $message->created_at->translatedFormat('H:i') }}</span>
                                             @if ($isMine)
                                                 <span class="inline-flex items-center gap-0.5 {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
@@ -279,9 +265,11 @@
 
                     return `
                         <div class="flex ${mine ? 'justify-end' : 'justify-start'}" data-message-id="${message.id}">
-                            <div class="max-w-[78%] rounded-[1.25rem] px-4 py-3 shadow-sm ${mine ? 'bg-[#d9fdd3] text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
-                                <p class="whitespace-pre-line text-[15px] leading-6">${escapeHtml(message.body)}</p>
-                                <div class="mt-1 flex items-center justify-end gap-1 text-[11px] ${mine ? 'text-slate-500' : 'text-slate-400'}">
+                            <div class="flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}">
+                                <div class="rounded-[1.1rem] px-3 py-2 shadow-sm ${mine ? 'bg-[#d9fdd3] text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
+                                    <p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(message.body)}</p>
+                                </div>
+                                <div class="mt-1 flex items-center gap-1 text-[11px] ${mine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
                                     <span>${escapeHtml(message.created_at_label ?? '')}</span>
                                     ${mine ? `<span class="inline-flex items-center gap-0.5 ${readClass}" data-message-checks><span>✓</span><span>✓</span></span>` : ''}
                                 </div>
@@ -315,6 +303,7 @@
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-brand-secondary" data-chat-partner-name>${escapeHtml(conversation.partner_name || 'Conversación')}</p>
+                                        <p class="truncate text-xs text-slate-500" data-chat-partner-role>${escapeHtml(conversation.partner_chat_role_label || '')}</p>
                                         <p class="truncate text-xs text-slate-500" data-chat-last-message>${escapeHtml(conversation.last_message_excerpt || 'Empieza la conversación')}</p>
                                     </div>
                                     <span class="shrink-0 text-[11px] text-slate-400" data-chat-last-message-at>${escapeHtml(conversation.last_message_at_label || '')}</span>
