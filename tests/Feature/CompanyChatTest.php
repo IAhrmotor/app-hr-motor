@@ -7,6 +7,7 @@ use App\Models\CompanyChatMessage;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class CompanyChatTest extends TestCase
@@ -194,5 +195,45 @@ class CompanyChatTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(0, $recipient->unreadNotifications()->count());
+    }
+
+    public function test_chat_messages_in_the_same_minute_only_show_the_time_on_the_last_message(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-20 10:15:00'));
+
+        try {
+            $sender = User::factory()->create([
+                'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            ]);
+            $recipient = User::factory()->create([
+                'extra_role' => User::ROLE_HUMAN_RESOURCES,
+            ]);
+
+            $conversation = CompanyChatConversation::query()->create([
+                'user_one_id' => min($sender->id, $recipient->id),
+                'user_two_id' => max($sender->id, $recipient->id),
+            ]);
+
+            $this->actingAs($sender)
+                ->post(route('chat.beta.messages.store', $conversation), [
+                    'body' => 'Primer mensaje',
+                ])
+                ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+            $this->actingAs($sender)
+                ->post(route('chat.beta.messages.store', $conversation), [
+                    'body' => 'Segundo mensaje',
+                ])
+                ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+            $response = $this->actingAs($recipient)->getJson(route('chat.beta.messages.index', $conversation));
+
+            $response
+                ->assertOk()
+                ->assertJsonPath('messages.0.show_time', false)
+                ->assertJsonPath('messages.1.show_time', true);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
