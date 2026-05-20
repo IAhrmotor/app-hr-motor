@@ -151,4 +151,48 @@ class CompanyChatTest extends TestCase
 
         $this->assertSame(1, $recipient->unreadNotifications()->count());
     }
+
+    public function test_chat_notifications_are_grouped_in_the_notifications_summary_and_marked_read_together(): void
+    {
+        $sender = User::factory()->create([
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+        ]);
+        $recipient = User::factory()->create([
+            'extra_role' => User::ROLE_HUMAN_RESOURCES,
+        ]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Primer mensaje',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Segundo mensaje',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $summaryResponse = $this->actingAs($recipient)->getJson(route('notifications.summary'));
+
+        $summaryResponse
+            ->assertOk()
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('notifications.0.message_count', 2);
+
+        $notification = $recipient->unreadNotifications()->latest()->first();
+
+        $this->assertNotNull($notification);
+
+        $this->actingAs($recipient)
+            ->get(route('notifications.show', $notification->id))
+            ->assertRedirect();
+
+        $this->assertSame(0, $recipient->unreadNotifications()->count());
+    }
 }

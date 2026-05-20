@@ -38,6 +38,7 @@ class CompanyChatMessageNotification extends Notification
             'conversation_id' => $this->conversation->id,
             'message_id' => $this->message->id,
             'sender_id' => $this->sender->id,
+            'chat_group_key' => $this->conversation->id . ':' . $this->sender->id,
         ];
     }
 }

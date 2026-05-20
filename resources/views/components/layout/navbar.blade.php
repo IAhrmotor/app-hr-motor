@@ -44,16 +44,28 @@
     $roleViewerOptions = app_role_viewer_options($authUser);
     $forumUnreadNotifications = $authUser
         ? $authUser->unreadNotifications()
+            ->latest()
             ->get()
-            ->sortByDesc(function ($notification) {
-                $priority = data_get($notification->data, 'priority', false) ? 1 : 0;
-                $createdAt = $notification->created_at?->timestamp ?? 0;
+            ->groupBy(function ($notification): string {
+                if ($notification->type === \App\Notifications\CompanyChatMessageNotification::class) {
+                    $groupKey = data_get($notification->data, 'chat_group_key');
+                    $conversationId = data_get($notification->data, 'conversation_id');
+                    $senderId = data_get($notification->data, 'sender_id');
 
-                return sprintf('%d-%010d', $priority, $createdAt);
+                    return 'chat:' . ($groupKey ?: ($conversationId . ':' . $senderId));
+                }
+
+                return 'notification:' . $notification->id;
             })
+            ->map(function ($group) {
+                $notification = $group->first();
+                $notification->message_count = $group->count();
+                return $notification;
+            })
+            ->sortByDesc(fn ($notification) => $notification->created_at?->timestamp ?? 0)
             ->take(8)
         : collect();
-    $forumUnreadNotificationCount = $authUser ? $authUser->unreadNotifications()->count() : 0;
+    $forumUnreadNotificationCount = $forumUnreadNotifications->count();
 @endphp
 @php
     $navItemClass = 'inline-flex h-10 items-center whitespace-nowrap px-2 text-sm font-medium leading-none transition';
@@ -228,13 +240,13 @@
 
                         @if ($forumUnreadNotificationCount > 0)
                             <span
-                                class="absolute -right-0.5 -top-0.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm ring-2 ring-white"
+                                class="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-center text-[11px] font-semibold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
                                 data-notification-badge>
                                 {{ $forumUnreadNotificationCount > 9 ? '+9' : $forumUnreadNotificationCount }}
                             </span>
                         @else
                             <span
-                                class="absolute -right-0.5 -top-0.5 hidden min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm ring-2 ring-white"
+                                class="absolute -right-0.5 -top-0.5 hidden h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-center text-[11px] font-semibold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
                                 data-notification-badge></span>
                         @endif
                     </button>
@@ -278,9 +290,16 @@
 
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-start justify-between gap-3">
-                                                <p class="text-sm font-semibold {{ $isPriorityNotification ? 'text-amber-950' : 'text-brand-secondary' }}">
-                                                    {{ $notificationTitle }}
-                                                </p>
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-semibold {{ $isPriorityNotification ? 'text-amber-950' : 'text-brand-secondary' }}">
+                                                        {{ $notificationTitle }}
+                                                    </p>
+                                                    @if (($notification->message_count ?? 1) > 1)
+                                                        <span class="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none {{ $isPriorityNotification ? 'bg-amber-100 text-amber-700' : 'bg-brand-primary/10 text-brand-primary' }}">
+                                                            {{ $notification->message_count > 9 ? '+9' : $notification->message_count }} mensajes
+                                                        </span>
+                                                    @endif
+                                                </div>
 
                                                 @if ($isPriorityNotification)
                                                     <span class="inline-flex shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
@@ -345,6 +364,10 @@
                             const timeClass = 'text-brand-secondary/40';
                             const linkClass = notification.priority ? 'text-amber-700' : 'text-brand-primary';
                             const linkLabel = escapeHtml(notification.link_label ?? 'Abrir');
+                            const groupedCount = Number(notification.message_count || 1);
+                            const groupedCountHtml = groupedCount > 1
+                                ? `<span class="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none ${notification.priority ? 'bg-amber-100 text-amber-700' : 'bg-brand-primary/10 text-brand-primary'}">${groupedCount > 9 ? '+9' : groupedCount} mensajes</span>`
+                                : '';
 
                             return `
                                 <a href="/notificaciones/${notification.id}"
@@ -359,7 +382,10 @@
 
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-start justify-between gap-3">
-                                                <p class="text-sm font-semibold ${titleClass}">${escapeHtml(notification.title)}</p>
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-semibold ${titleClass}">${escapeHtml(notification.title)}</p>
+                                                    ${groupedCountHtml}
+                                                </div>
                                                 ${notification.priority ? '<span class="inline-flex shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">Prioritaria</span>' : ''}
                                             </div>
                                             ${notification.description ? `<p class="mt-1 text-sm ${descriptionClass}">${escapeHtml(notification.description)}</p>` : ''}
