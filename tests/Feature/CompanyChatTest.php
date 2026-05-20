@@ -77,4 +77,66 @@ class CompanyChatTest extends TestCase
         $this->assertNotNull($conversation->last_message_at);
         $this->assertDatabaseCount('company_chat_messages', 2);
     }
+
+    public function test_chat_messages_endpoint_returns_json_and_marks_incoming_messages_as_read(): void
+    {
+        $sender = User::factory()->create([
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+        ]);
+        $recipient = User::factory()->create([
+            'extra_role' => User::ROLE_HUMAN_RESOURCES,
+        ]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $message = CompanyChatMessage::query()->create([
+            'company_chat_conversation_id' => $conversation->id,
+            'sender_id' => $sender->id,
+            'body' => 'Mensaje de prueba',
+        ]);
+
+        $response = $this->actingAs($recipient)->getJson(route('chat.beta.messages.index', $conversation));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('messages.0.body', 'Mensaje de prueba')
+            ->assertJsonPath('messages.0.sender_role_label', 'Informática');
+
+        $message->refresh();
+
+        $this->assertNotNull($message->read_at);
+    }
+
+    public function test_chat_summary_returns_conversation_metadata_and_unread_counts(): void
+    {
+        $sender = User::factory()->create([
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+        ]);
+        $recipient = User::factory()->create([
+            'extra_role' => User::ROLE_HUMAN_RESOURCES,
+        ]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        CompanyChatMessage::query()->create([
+            'company_chat_conversation_id' => $conversation->id,
+            'sender_id' => $sender->id,
+            'body' => 'Mensaje sin leer',
+        ]);
+
+        $response = $this->actingAs($recipient)->getJson(route('chat.beta.summary'));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('conversations.0.partner_name', $sender->name)
+            ->assertJsonPath('conversations.0.partner_role_label', 'Informática')
+            ->assertJsonPath('conversations.0.unread_messages_count', 1)
+            ->assertJsonPath('unread_messages_total', 1);
+    }
 }

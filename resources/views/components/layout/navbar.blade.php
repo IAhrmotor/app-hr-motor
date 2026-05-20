@@ -216,7 +216,7 @@
                     </div>
                 @endif
 
-                <div class="relative" @click.outside="notificationsOpen = false">
+                <div class="relative" @click.outside="notificationsOpen = false" data-notification-summary-url="{{ route('notifications.summary') }}">
                     <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false"
                         class="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
                         aria-label="Ver notificaciones" :aria-expanded="notificationsOpen.toString()">
@@ -228,9 +228,14 @@
 
                         @if ($forumUnreadNotificationCount > 0)
                             <span
-                                class="absolute -right-0.5 -top-0.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm ring-2 ring-white">
+                                class="absolute -right-0.5 -top-0.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm ring-2 ring-white"
+                                data-notification-badge>
                                 {{ $forumUnreadNotificationCount > 9 ? '+9' : $forumUnreadNotificationCount }}
                             </span>
+                        @else
+                            <span
+                                class="absolute -right-0.5 -top-0.5 hidden min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm ring-2 ring-white"
+                                data-notification-badge></span>
                         @endif
                     </button>
 
@@ -247,7 +252,7 @@
                             </div>
                         </div>
 
-                        <div class="max-h-[28rem] overflow-y-auto p-2">
+                        <div class="max-h-[28rem] overflow-y-auto p-2" data-notification-list>
                             @forelse ($forumUnreadNotifications as $notification)
                                 @php
                                     $isPriorityNotification = (bool) data_get($notification->data, 'priority', false);
@@ -303,13 +308,111 @@
                                     </div>
                                 </a>
                             @empty
-                                <div class="rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center">
+                                <div class="rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center" data-notification-empty>
                                     <p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p>
                                 </div>
                             @endforelse
                         </div>
                     </div>
                 </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const root = document.querySelector('[data-notification-summary-url]');
+
+                        if (!root) {
+                            return;
+                        }
+
+                        const summaryUrl = root.dataset.notificationSummaryUrl;
+                        const badge = root.querySelector('[data-notification-badge]');
+                        const list = root.querySelector('[data-notification-list]');
+                        const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
+
+                        const escapeHtml = (value) => {
+                            const span = document.createElement('span');
+                            span.textContent = value ?? '';
+                            return span.innerHTML;
+                        };
+
+                        const renderNotification = (notification) => {
+                            const priorityClass = notification.priority
+                                ? 'mb-3 border border-amber-200 bg-amber-50/80 hover:bg-amber-100/80'
+                                : 'mb-1 hover:bg-brand-secondary/5';
+                            const iconClass = notification.priority ? 'bg-amber-500 text-white shadow-sm' : 'bg-brand-primary/10 text-brand-primary';
+                            const titleClass = notification.priority ? 'text-amber-950' : 'text-brand-secondary';
+                            const descriptionClass = notification.priority ? 'text-amber-900/75' : 'text-brand-secondary/70';
+                            const timeClass = 'text-brand-secondary/40';
+                            const linkClass = notification.priority ? 'text-amber-700' : 'text-brand-primary';
+                            const linkLabel = escapeHtml(notification.link_label ?? 'Abrir');
+
+                            return `
+                                <a href="/notificaciones/${notification.id}"
+                                    class="block rounded-2xl px-3 py-3 transition ${priorityClass}">
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconClass}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="block h-3.5 w-3.5 shrink-0"
+                                                viewBox="0 0 24 24" fill="none">
+                                                <path d="M9.15316 5.40838C10.4198 3.13613 11.0531 2 12 2C12.9469 2 13.5802 3.13612 14.8468 5.40837L15.1745 5.99623C15.5345 6.64193 15.7144 6.96479 15.9951 7.17781C16.2757 7.39083 16.6251 7.4699 17.3241 7.62805L17.9605 7.77203C20.4201 8.32856 21.65 8.60682 21.9426 9.54773C22.2352 10.4886 21.3968 11.4691 19.7199 13.4299L19.2861 13.9372C18.8096 14.4944 18.5713 14.773 18.4641 15.1177C18.357 15.4624 18.393 15.8341 18.465 16.5776L18.5306 17.2544C18.7841 19.8706 18.9109 21.1787 18.1449 21.7602C17.3788 22.3417 16.2273 21.8115 13.9243 20.7512L13.3285 20.4768C12.6741 20.1755 12.3469 20.0248 12 20.0248C11.6531 20.0248 11.3259 20.1755 10.6715 20.4768L10.0757 20.7512C7.77268 21.8115 6.62118 22.3417 5.85515 21.7602C5.08912 21.1787 5.21588 19.8706 5.4694 17.2544L5.53498 16.5776C5.60703 15.8341 5.64305 15.4624 5.53586 15.1177C5.42868 14.773 5.19043 14.4944 4.71392 13.9372L4.2801 13.4299C2.60325 11.4691 1.76482 10.4886 2.05742 9.54773C2.35002 8.60682 3.57986 8.32856 6.03954 7.77203L6.67589 7.62805C7.37485 7.4699 7.72433 7.39083 8.00494 7.17781C8.28555 6.96479 8.46553 6.64194 8.82547 5.99623L9.15316 5.40838Z" fill="currentColor"/>
+                                            </svg>
+                                        </div>
+
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <p class="text-sm font-semibold ${titleClass}">${escapeHtml(notification.title)}</p>
+                                                ${notification.priority ? '<span class="inline-flex shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">Prioritaria</span>' : ''}
+                                            </div>
+                                            ${notification.description ? `<p class="mt-1 text-sm ${descriptionClass}">${escapeHtml(notification.description)}</p>` : ''}
+                                            <p class="mt-1 text-xs ${timeClass}">${escapeHtml(notification.created_at_label ?? '')}</p>
+                                            ${notification.link_url ? `<span class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold ${linkClass}">${linkLabel}<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>` : ''}
+                                        </div>
+                                    </div>
+                                </a>
+                            `;
+                        };
+
+                        const refreshNotifications = async () => {
+                            try {
+                                const response = await fetch(summaryUrl, {
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        Accept: 'application/json',
+                                    },
+                                });
+
+                                if (!response.ok) {
+                                    return;
+                                }
+
+                                const payload = await response.json();
+                                const count = Number(payload.count || 0);
+
+                                if (badge) {
+                                    if (count > 0) {
+                                        badge.textContent = count > 9 ? '+9' : String(count);
+                                        badge.classList.remove('hidden');
+                                    } else {
+                                        badge.textContent = '';
+                                        badge.classList.add('hidden');
+                                    }
+                                }
+
+                                if (list && Array.isArray(payload.notifications)) {
+                                    if (payload.notifications.length === 0) {
+                                        list.innerHTML = `<div class="${emptyStateClass}"><p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p></div>`;
+                                    } else {
+                                        list.innerHTML = payload.notifications.map(renderNotification).join('');
+                                    }
+                                }
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        };
+
+                        refreshNotifications();
+                        setInterval(refreshNotifications, 15000);
+                    });
+                </script>
 
                 <div class="relative hidden xl:block" @click.outside="profileOpen = false">
                     <button type="button" @click="profileOpen = !profileOpen"

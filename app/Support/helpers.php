@@ -152,6 +152,23 @@ if (! function_exists('app_can_access_chat_beta')) {
     }
 }
 
+if (! function_exists('app_chat_role_label')) {
+    function app_chat_role_label(?User $user = null): string
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return 'Usuario';
+        }
+
+        if (filled($user->extra_role)) {
+            return User::extraRoleLabels()[$user->extra_role] ?? ucfirst((string) $user->extra_role);
+        }
+
+        return User::roleLabels()[$user->role] ?? 'Usuario';
+    }
+}
+
 if (! function_exists('app_can_access_reviews')) {
     function app_can_access_reviews(?User $user = null): bool
     {
