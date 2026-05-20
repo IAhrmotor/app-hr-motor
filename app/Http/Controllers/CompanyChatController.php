@@ -10,6 +10,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CompanyChatController extends Controller
@@ -108,19 +112,31 @@ class CompanyChatController extends Controller
         abort_unless($conversation->involves($request->user()), 403);
 
         $validated = $request->validate([
-            'body' => ['required', 'string', 'min:1', 'max:4000'],
+            'body' => ['nullable', 'string', 'max:4000'],
+            'attachments' => ['nullable', 'array', 'max:4'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,svg,pdf,txt,md,csv,doc,docx,xls,xlsx,ppt,pptx,zip,rar'],
         ]);
 
-        $message = DB::transaction(function () use ($conversation, $request, $validated): CompanyChatMessage {
+        $body = trim((string) ($validated['body'] ?? ''));
+        $attachments = $this->storeAttachments($request);
+
+        if ($body === '' && $attachments === []) {
+            throw ValidationException::withMessages([
+                'body' => 'Escribe un mensaje o adjunta un archivo.',
+            ]);
+        }
+
+        $message = DB::transaction(function () use ($conversation, $request, $body, $attachments): CompanyChatMessage {
             $message = $conversation->messages()->create([
                 'sender_id' => $request->user()->id,
-                'body' => $validated['body'],
+                'body' => $body,
+                'attachments' => $attachments,
                 'read_at' => null,
             ]);
 
             $conversation->forceFill([
                 'last_message_at' => $message->created_at ?? now(),
-                'last_message_excerpt' => str($message->body)->squish()->limit(120)->toString(),
+                'last_message_excerpt' => $message->preview_text,
             ])->save();
 
             return $message->load('sender');
@@ -135,6 +151,7 @@ class CompanyChatController extends Controller
                 'message' => [
                     'id' => $message->id,
                     'body' => $message->body,
+                    'preview_text' => $message->preview_text,
                     'sender_id' => $message->sender_id,
                     'sender_name' => $message->sender?->name,
                     'sender_chat_role_label' => app_chat_role_label($message->sender),
@@ -143,6 +160,7 @@ class CompanyChatController extends Controller
                     'created_at_label' => $message->created_at?->translatedFormat('H:i'),
                     'show_time' => true,
                     'read_at' => $message->read_at?->toIso8601String(),
+                    'attachments' => $this->formatAttachmentsForPayload($message),
                 ],
                 'conversation_id' => $conversation->id,
                 'last_message_at' => $conversation->last_message_at?->toIso8601String(),
@@ -169,30 +187,38 @@ class CompanyChatController extends Controller
             ->with('sender')
             ->orderBy('created_at')
             ->get()
-            ->values()
-            ->map(function (CompanyChatMessage $message, int $index) use ($authUser, $conversation): array {
-                $nextMessage = $conversation->messages->get($index + 1);
-                $currentLabel = $message->created_at?->translatedFormat('H:i');
-                $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+            ->values();
 
-                return [
-                    'id' => $message->id,
-                    'body' => $message->body,
-                    'sender_id' => $message->sender_id,
-                    'sender_name' => $message->sender?->name,
-                    'sender_chat_role_label' => app_chat_role_label($message->sender),
-                    'is_mine' => $message->sender_id === $authUser->id,
-                    'created_at' => $message->created_at?->toIso8601String(),
-                    'created_at_label' => $currentLabel,
-                    'show_time' => $nextLabel !== $currentLabel,
-                    'read_at' => $message->read_at?->toIso8601String(),
-                ];
-            });
+        $messagesPayload = $messages->map(function (CompanyChatMessage $message, int $index) use ($authUser, $messages): array {
+            $nextMessage = $messages->get($index + 1);
+            $currentLabel = $message->created_at?->translatedFormat('H:i');
+            $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+
+            return [
+                'id' => $message->id,
+                'body' => $message->body,
+                'preview_text' => $message->preview_text,
+                'sender_id' => $message->sender_id,
+                'sender_name' => $message->sender?->name,
+                'sender_chat_role_label' => app_chat_role_label($message->sender),
+                'is_mine' => $message->sender_id === $authUser->id,
+                'created_at' => $message->created_at?->toIso8601String(),
+                'created_at_label' => $currentLabel,
+                'show_time' => $nextLabel !== $currentLabel,
+                'read_at' => $message->read_at?->toIso8601String(),
+                'attachments' => $this->formatAttachmentsForPayload($message),
+            ];
+        });
+
+        $partner = $conversation->otherParticipant($authUser);
 
         return response()->json([
             'conversation_id' => $conversation->id,
+            'partner_name' => $partner?->name,
+            'partner_avatar_url' => $partner?->avatar_url,
+            'partner_chat_role_label' => app_chat_role_label($partner),
             'last_message_at' => $conversation->last_message_at?->toIso8601String(),
-            'messages' => $messages,
+            'messages' => $messagesPayload,
         ]);
     }
 
@@ -260,5 +286,83 @@ class CompanyChatController extends Controller
             ->where('type', CompanyChatMessageNotification::class)
             ->where('data->conversation_id', $conversation->id)
             ->update(['read_at' => now()]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function storeAttachments(Request $request): array
+    {
+        if (! $request->hasFile('attachments')) {
+            return [];
+        }
+
+        $directory = storage_path('app/public/chat/attachments');
+        File::ensureDirectoryExists($directory);
+
+        $storedAttachments = [];
+
+        foreach ((array) $request->file('attachments') as $file) {
+            if (! $file) {
+                continue;
+            }
+
+            $originalName = $file->getClientOriginalName();
+            $size = (int) $file->getSize();
+            $mimeType = (string) ($file->getMimeType() ?: $file->getClientMimeType() ?: 'application/octet-stream');
+            $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
+            $filename = Str::uuid()->toString() . '.' . $extension;
+            $file->move($directory, $filename);
+            $path = 'chat/attachments/' . $filename;
+
+            $storedAttachments[] = [
+                'path' => $path,
+                'original_name' => $originalName,
+                'mime_type' => $mimeType,
+                'size' => $size,
+                'is_image' => str_starts_with($mimeType, 'image/'),
+                'url' => Storage::disk('public')->url($path),
+            ];
+        }
+
+        return $storedAttachments;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatAttachmentsForPayload(CompanyChatMessage $message): array
+    {
+        return collect($message->attachments ?? [])
+            ->map(function (array $attachment): array {
+                $path = (string) ($attachment['path'] ?? '');
+                $mimeType = (string) ($attachment['mime_type'] ?? 'application/octet-stream');
+                $originalName = (string) ($attachment['original_name'] ?? '');
+
+                return [
+                    'path' => $path,
+                    'original_name' => $originalName !== '' ? $originalName : (basename($path) !== '' ? basename($path) : 'archivo'),
+                    'mime_type' => $mimeType,
+                    'size' => (int) ($attachment['size'] ?? 0),
+                    'size_label' => $this->formatBytes((int) ($attachment['size'] ?? 0)),
+                    'is_image' => (bool) ($attachment['is_image'] ?? str_starts_with($mimeType, 'image/')),
+                    'url' => (string) ($attachment['url'] ?? Storage::disk('public')->url($path)),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1024 * 1024) {
+            return number_format($bytes / (1024 * 1024), 1, ',', '.') . ' MB';
+        }
+
+        if ($bytes >= 1024) {
+            return number_format($bytes / 1024, 1, ',', '.') . ' KB';
+        }
+
+        return $bytes . ' B';
     }
 }

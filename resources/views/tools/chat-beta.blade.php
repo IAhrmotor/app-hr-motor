@@ -7,8 +7,8 @@
         $selectedConversationMessages = $selectedConversation?->messages ?? collect();
     @endphp
 
-    <section class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100" data-chat-summary-url="{{ route('chat.beta.summary') }}" data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}">
-        <aside class="flex h-full w-[21rem] min-w-[21rem] max-w-[21rem] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)]">
+    <section class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100" data-chat-root data-chat-summary-url="{{ route('chat.beta.summary') }}" data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}">
+        <aside class="flex h-full w-[21rem] min-w-[21rem] max-w-[21rem] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)]" data-chat-sidebar>
             <div class="flex min-h-[4.75rem] items-center border-b border-slate-200 px-4 py-2">
                 <div class="flex w-full items-center gap-2">
                     <button type="button"
@@ -44,6 +44,7 @@
                         <div class="space-y-2">
                             @forelse ($people as $person)
                                 <a href="{{ route('chat.beta', ['recipient' => $person->id]) }}"
+                                    data-chat-recipient-link
                                     class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-brand-primary/20 hover:shadow-sm">
                                     <img src="{{ $person->avatar_url }}" alt="Avatar de {{ $person->name }}" class="h-10 w-10 rounded-2xl object-cover">
                                     <div class="min-w-0 flex-1">
@@ -74,6 +75,7 @@
                                 $isSelected = $selectedConversation?->id === $conversation->id;
                             @endphp
                             <a href="{{ route('chat.beta', ['conversation' => $conversation->id]) }}"
+                                data-chat-conversation-link
                                 data-chat-conversation-id="{{ $conversation->id }}"
                                 class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition {{ $isSelected ? 'bg-brand-primary/10' : 'hover:bg-slate-50' }}">
                                 <div class="relative shrink-0">
@@ -101,7 +103,7 @@
 
                                         @if ($conversation->last_message_at)
                                             <span class="shrink-0 text-[11px] text-slate-400" data-chat-last-message-at>
-                                                {{ $conversation->last_message_at->translatedFormat('d/m') }}
+                                                {{ $conversation->last_message_at->translatedFormat('d/m H:i') }}
                                             </span>
                                         @else
                                             <span class="shrink-0 text-[11px] text-slate-400" data-chat-last-message-at></span>
@@ -125,7 +127,7 @@
             @if ($selectedConversation && $selectedParticipant)
                 <header class="flex min-h-[4.75rem] items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-2">
                     <div class="flex min-w-0 items-center gap-3">
-                        <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover">
+                        <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover" data-chat-partner-avatar>
                         <div class="min-w-0">
                             <h1 class="truncate text-base font-semibold text-brand-secondary">{{ $selectedParticipant->name }}</h1>
                             <p class="truncate text-xs text-slate-500">{{ $selectedParticipant->chat_role_label }} · {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}</p>
@@ -137,6 +139,8 @@
                 <div
                     class="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6"
                     data-chat-messages-wrapper
+                    data-chat-messages-url-template="{{ route('chat.beta.messages.index', ['conversation' => '__CONVERSATION_ID__']) }}"
+                    data-chat-store-url-template="{{ route('chat.beta.messages.store', ['conversation' => '__CONVERSATION_ID__']) }}"
                     data-poll-url="{{ route('chat.beta.messages.index', $selectedConversation) }}"
                     data-conversation-id="{{ $selectedConversation->id }}"
                 >
@@ -149,11 +153,49 @@
                                     $currentTimeLabel = $message->created_at->translatedFormat('H:i');
                                     $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
                                     $showTime = $loop->last || $nextTimeLabel !== $currentTimeLabel;
+                                    $messageAttachments = collect($message->attachments ?? []);
                                 @endphp
                                 <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $loop->first ? 'mt-0' : ($showTime ? 'mt-3' : 'mt-0.5') }}" data-message-id="{{ $message->id }}">
                                     <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
                                         <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm {{ $isMine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary' }}">
-                                            <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                            @if (filled($message->body))
+                                                <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                            @endif
+
+                                            @if ($messageAttachments->isNotEmpty())
+                                                <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
+                                                    @foreach ($messageAttachments as $attachment)
+                                                        @php
+                                                            $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
+                                                            $attachmentUrl = $attachment['url'] ?? '';
+                                                            $attachmentName = $attachment['original_name'] ?? 'archivo';
+                                                            $attachmentSize = $attachment['size_label'] ?? '';
+                                                        @endphp
+
+                                                        @if ($isImageAttachment)
+                                                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-[1rem] border border-black/5 bg-white/50">
+                                                                <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover">
+                                                            </a>
+                                                        @else
+                                                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                                                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
+                                                                    </svg>
+                                                                </span>
+                                                                <span class="min-w-0 flex-1">
+                                                                    <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
+                                                                    @if ($attachmentSize !== '')
+                                                                        <span class="block text-xs text-slate-500">{{ $attachmentSize }}</span>
+                                                                    @endif
+                                                                </span>
+                                                            </a>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            @endif
+
                                             @if ($isMine)
                                                 <span class="absolute bottom-1.5 right-2 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -186,15 +228,32 @@
                     <form
                         method="POST"
                         action="{{ route('chat.beta.messages.store', $selectedConversation) }}"
-                        class="mx-auto max-w-5xl"
+                        class="relative mx-auto max-w-5xl"
                         data-chat-form
                     >
                         @csrf
                         <input type="hidden" name="conversation_id" value="{{ $selectedConversation->id }}">
+                        <input type="file" name="attachments[]" multiple class="hidden" data-chat-attachments-input accept="image/*,.svg,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar">
+
+                        <div class="absolute bottom-full right-16 mb-3 hidden w-72 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-xl" data-chat-emoji-picker>
+                            <div class="grid grid-cols-8 gap-1">
+                                @foreach (['😀','😄','😁','😉','😍','🥰','😎','🤩','🙂','🙌','👍','👏','🔥','✨','❤️','💡','📎','📷','🧠','🎯','🚀','💬','😅','🙏'] as $emoji)
+                                    <button type="button"
+                                        class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-lg transition hover:bg-slate-100"
+                                        data-chat-emoji-option
+                                        data-emoji="{{ $emoji }}"
+                                        aria-label="Insertar {{ $emoji }}">
+                                        {{ $emoji }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
                         <div class="flex items-end gap-3 rounded-[1.75rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
                             <button type="button"
                                 class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
-                                aria-label="Adjuntar archivo">
+                                aria-label="Adjuntar archivo"
+                                data-chat-attachments-button>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.5 12.5 21a6.364 6.364 0 1 1-9-9L12 3.5a4.243 4.243 0 1 1 6 6L8.5 19a2.121 2.121 0 1 1-3-3L14 7.5" />
                                 </svg>
@@ -208,11 +267,26 @@
                                 data-chat-input
                             >{{ old('body') }}</textarea>
 
+                            <button type="button"
+                                class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
+                                aria-label="Emoticonos"
+                                data-chat-emoji-button>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 10h.01M15 10h.01" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 15c.8 1 1.8 1.5 3 1.5S14.2 16 15 15" />
+                                </svg>
+                            </button>
+
                             <button type="submit"
                                 class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-90">
                                 Enviar
                             </button>
                         </div>
+
+                        <div class="mt-2 hidden px-1 text-xs text-slate-500" data-chat-attachments-preview></div>
+                        <div class="mt-2 hidden px-1" data-chat-attachments-chips></div>
+                        <p class="mt-2 hidden px-1 text-sm font-medium text-red-600" data-chat-error></p>
 
                         @error('body')
                             <p class="mt-2 px-1 text-sm text-red-600">{{ $message }}</p>
@@ -236,17 +310,31 @@
     @if ($selectedConversation && $selectedParticipant)
         <script>
             document.addEventListener('DOMContentLoaded', () => {
+                const root = document.querySelector('[data-chat-root]');
+                const sidebar = document.querySelector('[data-chat-sidebar]');
                 const wrapper = document.querySelector('[data-chat-messages-wrapper]');
                 const messagesContainer = document.querySelector('[data-chat-messages]');
                 const form = document.querySelector('[data-chat-form]');
                 const input = document.querySelector('[data-chat-input]');
-                const pollUrl = wrapper?.dataset.pollUrl;
+                const attachmentsInput = document.querySelector('[data-chat-attachments-input]');
+                const attachmentsButton = document.querySelector('[data-chat-attachments-button]');
+                const attachmentsPreview = document.querySelector('[data-chat-attachments-preview]');
+                const attachmentsChips = document.querySelector('[data-chat-attachments-chips]');
+                const chatError = document.querySelector('[data-chat-error]');
+                const emojiButton = document.querySelector('[data-chat-emoji-button]');
+                const emojiPicker = document.querySelector('[data-chat-emoji-picker]');
+                let pollUrl = wrapper?.dataset.pollUrl;
                 const summaryRoot = document.querySelector('[data-chat-summary-url]');
                 const sidebarList = document.querySelector('[data-chat-conversations-list]');
                 const sidebarUnreadTotal = document.querySelector('[data-chat-unread-total]');
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
+                const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
+                const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
+                const headerName = document.querySelector('[data-chat-partner-name]');
+                const headerRole = document.querySelector('[data-chat-partner-role]');
+                const headerAvatar = document.querySelector('[data-chat-partner-avatar]');
 
-                if (!wrapper || !messagesContainer || !form || !input || !pollUrl) {
+                if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker) {
                     return;
                 }
 
@@ -255,6 +343,7 @@
                 let pollingLocked = false;
                 let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
+                const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
 
                 const escapeHtml = (value) => {
                     const span = document.createElement('span');
@@ -264,6 +353,56 @@
 
                 const autoScroll = () => {
                     wrapper.scrollTop = wrapper.scrollHeight;
+                };
+
+                const clearChatError = () => {
+                    chatError.textContent = '';
+                    chatError.classList.add('hidden');
+                };
+
+                const setChatError = (message) => {
+                    if (!message) {
+                        clearChatError();
+                        return;
+                    }
+
+                    chatError.textContent = message;
+                    chatError.classList.remove('hidden');
+                };
+
+                const getAttachmentExtension = (fileName) => {
+                    const parts = String(fileName || '').toLowerCase().split('.');
+                    return parts.length > 1 ? parts.pop() : '';
+                };
+
+                const buildConversationMessagesUrl = (conversationId) => messagesUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(conversationId));
+
+                const buildConversationStoreUrl = (conversationId) => storeUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(conversationId));
+
+                const setSelectedConversation = (conversationId) => {
+                    sidebarSelectedConversationId = Number(conversationId);
+                    wrapper.dataset.conversationId = String(conversationId);
+                    pollUrl = buildConversationMessagesUrl(conversationId);
+                    wrapper.dataset.pollUrl = pollUrl;
+                    form.action = buildConversationStoreUrl(conversationId);
+                    form.querySelector('input[name="conversation_id"]').value = String(conversationId);
+                };
+
+                const updateHeader = (payload) => {
+                    if (payload?.partner_name && headerName) {
+                        headerName.textContent = payload.partner_name;
+                    }
+
+                    if (payload?.partner_chat_role_label && headerRole) {
+                        const dealership = headerRole.textContent?.split('·')?.[1]?.trim();
+                        headerRole.textContent = dealership
+                            ? `${payload.partner_chat_role_label} · ${dealership}`
+                            : payload.partner_chat_role_label;
+                    }
+
+                    if (payload?.partner_avatar_url && headerAvatar) {
+                        headerAvatar.src = payload.partner_avatar_url;
+                    }
                 };
 
                 const updatePreviousTimeVisibility = (message) => {
@@ -290,17 +429,51 @@
                 const renderMessage = (message, compactTop = false) => {
                     const mine = Boolean(message.is_mine);
                     const readClass = message.read_at ? 'text-sky-500' : 'text-slate-400';
-                    const doubleCheckSvg = `
+                const doubleCheckSvg = `
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
                             <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                             <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
                         </svg>`;
 
+                const renderAttachment = (attachment) => {
+                    const url = escapeHtml(attachment?.url || '');
+                    const name = escapeHtml(attachment?.original_name || 'archivo');
+                    const sizeLabel = attachment?.size_label ? `<span class="block text-xs text-slate-500">${escapeHtml(attachment.size_label)}</span>` : '';
+
+                    if (attachment?.is_image) {
+                        return `
+                            <a href="${url}" target="_blank" rel="noopener" class="block overflow-hidden rounded-[1rem] border border-black/5 bg-white/50">
+                                <img src="${url}" alt="${name}" class="max-h-72 w-full object-cover">
+                            </a>
+                        `;
+                    }
+
                     return `
+                        <a href="${url}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
+                                </svg>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block truncate text-sm font-semibold text-brand-secondary">${name}</span>
+                                ${sizeLabel}
+                            </span>
+                        </a>
+                    `;
+                };
+
+                return `
                         <div class="flex ${mine ? 'justify-end' : 'justify-start'} ${compactTop ? 'mt-0.5' : 'mt-3'}" data-message-id="${message.id}">
                             <div class="flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}">
                                 <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm ${mine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
-                                    <p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(message.body)}</p>
+                                    ${message.body ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(message.body)}</p>` : ''}
+                                    ${(Array.isArray(message.attachments) && message.attachments.length > 0) ? `
+                                        <div class="${message.body ? 'mt-2' : ''} space-y-2">
+                                            ${message.attachments.map((attachment) => renderAttachment(attachment)).join('')}
+                                        </div>
+                                    ` : ''}
                                     ${mine ? `<span class="absolute bottom-1.5 right-2 inline-flex items-center ${readClass}" data-message-checks>${doubleCheckSvg}</span>` : ''}
                                 </div>
                                 <div class="${message.show_time === false ? 'mt-0.5' : 'mt-1'} flex items-center gap-1 text-[11px] ${mine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
@@ -309,6 +482,40 @@
                             </div>
                         </div>
                     `;
+                };
+
+                const setAttachmentsFiles = (files) => {
+                    const dataTransfer = new DataTransfer();
+
+                    files.forEach((file) => dataTransfer.items.add(file));
+                    attachmentsInput.files = dataTransfer.files;
+                    renderAttachmentsPreview();
+                };
+
+                const filterUnsupportedAttachments = () => {
+                    const files = Array.from(attachmentsInput.files || []);
+                    const validFiles = [];
+                    const invalidFiles = [];
+
+                    files.forEach((file) => {
+                        const extension = getAttachmentExtension(file.name);
+
+                        if (allowedAttachmentExtensions.includes(extension)) {
+                            validFiles.push(file);
+                            return;
+                        }
+
+                        invalidFiles.push(file.name);
+                    });
+
+                    if (invalidFiles.length > 0) {
+                        const allowedList = allowedAttachmentExtensions.map((extension) => `.${extension}`).join(', ');
+                        setChatError(`El archivo ${invalidFiles.length === 1 ? invalidFiles[0] : invalidFiles.join(', ')} no se puede enviar. Formatos permitidos: ${allowedList}.`);
+                    } else {
+                        clearChatError();
+                    }
+
+                    setAttachmentsFiles(validFiles);
                 };
 
                 const renderConversation = (conversation) => {
@@ -323,6 +530,7 @@
 
                     return `
                         <a href="{{ route('chat.beta') }}?conversation=${encodeURIComponent(conversation.id)}"
+                            data-chat-conversation-link
                             data-chat-conversation-id="${conversation.id}"
                             class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition ${itemClass}">
                             <div class="relative shrink-0">
@@ -344,6 +552,65 @@
                             </div>
                         </a>
                     `;
+                };
+
+                const loadConversation = async (conversationId, { pushState = true } = {}) => {
+                    if (!conversationId) {
+                        return;
+                    }
+
+                    const url = buildConversationMessagesUrl(conversationId);
+
+                    try {
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const payload = await response.json();
+                        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+                        const activeConversationId = Number(payload.conversation_id || conversationId);
+
+                        setSelectedConversation(activeConversationId);
+                        updateHeader(payload);
+                        renderMessages(messages);
+                        refreshSidebar();
+
+                        if (pushState) {
+                            const nextUrl = new URL(window.location.href);
+                            nextUrl.searchParams.set('conversation', String(activeConversationId));
+                            nextUrl.searchParams.delete('recipient');
+                            window.history.pushState({ conversationId: activeConversationId }, '', nextUrl.toString());
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                };
+
+                const openConversationFromLink = async (url) => {
+                    try {
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                            },
+                        });
+
+                        const finalUrl = new URL(response.url);
+                        const conversationId = finalUrl.searchParams.get('conversation');
+
+                        if (conversationId) {
+                            await loadConversation(conversationId);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
                 };
 
                 const refreshSidebar = async () => {
@@ -407,6 +674,74 @@
                     autoScroll();
                 };
 
+                const renderAttachmentsPreview = () => {
+                    const files = Array.from(attachmentsInput.files || []);
+
+                    if (files.length === 0) {
+                        attachmentsPreview.classList.add('hidden');
+                        attachmentsPreview.textContent = '';
+                        attachmentsChips.classList.add('hidden');
+                        attachmentsChips.innerHTML = '';
+                        return;
+                    }
+
+                    attachmentsPreview.textContent = files.length === 1
+                        ? '1 archivo adjunto'
+                        : `${files.length} archivos adjuntos`;
+                    attachmentsPreview.classList.remove('hidden');
+
+                    attachmentsChips.innerHTML = files.map((file, index) => `
+                        <span class="mb-2 mr-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm">
+                            <span class="max-w-[14rem] truncate">${escapeHtml(file.name)}</span>
+                            <button type="button"
+                                class="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
+                                data-chat-remove-attachment
+                                data-attachment-index="${index}"
+                                aria-label="Quitar adjunto ${escapeHtml(file.name)}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </span>
+                    `).join('');
+                    attachmentsChips.classList.remove('hidden');
+                };
+
+                const showServerValidationError = async (response) => {
+                    const contentType = response.headers.get('content-type') || '';
+
+                    if (!contentType.includes('application/json')) {
+                        setChatError('No se pudo enviar el mensaje.');
+                        return;
+                    }
+
+                    const payload = await response.json().catch(() => null);
+                    const messages = payload?.errors ? Object.values(payload.errors).flat().filter(Boolean) : [];
+
+                    if (messages.length > 0) {
+                        setChatError(messages[0]);
+                        return;
+                    }
+
+                    setChatError(payload?.message || 'No se pudo enviar el mensaje.');
+                };
+
+                const insertTextAtCursor = (textToInsert) => {
+                    const start = input.selectionStart ?? input.value.length;
+                    const end = input.selectionEnd ?? input.value.length;
+                    const value = input.value;
+
+                    input.value = `${value.slice(0, start)}${textToInsert}${value.slice(end)}`;
+                    const nextPosition = start + textToInsert.length;
+                    input.focus();
+                    input.setSelectionRange(nextPosition, nextPosition);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+
+                const toggleEmojiPicker = () => {
+                    emojiPicker.classList.toggle('hidden');
+                };
+
                 const syncMessages = async () => {
                     if (pollingLocked) {
                         return;
@@ -459,10 +794,12 @@
 
                 form.addEventListener('submit', async (event) => {
                     event.preventDefault();
+                    clearChatError();
 
                     const body = input.value.trimEnd();
+                    const hasAttachments = Array.from(attachmentsInput.files || []).length > 0;
 
-                    if (body.trim() === '' || isSubmitting) {
+                    if ((body.trim() === '' && !hasAttachments) || isSubmitting) {
                         return;
                     }
 
@@ -483,7 +820,8 @@
                         });
 
                         if (!response.ok) {
-                            throw new Error('No se pudo enviar el mensaje.');
+                            await showServerValidationError(response);
+                            return;
                         }
 
                         const payload = await response.json();
@@ -506,8 +844,14 @@
 
                         input.value = '';
                         input.style.height = 'auto';
+                        attachmentsInput.value = '';
+                        renderAttachmentsPreview();
+                        emojiPicker.classList.add('hidden');
                     } catch (error) {
                         console.error(error);
+                        if (!chatError.textContent) {
+                            setChatError('No se pudo enviar el mensaje.');
+                        }
                     } finally {
                         isSubmitting = false;
                         pollingLocked = false;
@@ -528,7 +872,84 @@
                     input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
                 });
 
+                attachmentsButton.addEventListener('click', () => {
+                    emojiPicker.classList.add('hidden');
+                    attachmentsInput.click();
+                });
+
+                attachmentsInput.addEventListener('change', renderAttachmentsPreview);
+                attachmentsInput.addEventListener('change', filterUnsupportedAttachments);
+
+                emojiButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    toggleEmojiPicker();
+                });
+
+                emojiPicker.addEventListener('click', (event) => {
+                    const emojiOption = event.target.closest('[data-chat-emoji-option]');
+
+                    if (!emojiOption) {
+                        return;
+                    }
+
+                    insertTextAtCursor(emojiOption.dataset.emoji || '🙂');
+                });
+
+                attachmentsChips.addEventListener('click', (event) => {
+                    const removeButton = event.target.closest('[data-chat-remove-attachment]');
+
+                    if (!removeButton) {
+                        return;
+                    }
+
+                    const index = Number(removeButton.dataset.attachmentIndex);
+                    const files = Array.from(attachmentsInput.files || []);
+
+                    if (!Number.isInteger(index) || index < 0 || index >= files.length) {
+                        return;
+                    }
+
+                    files.splice(index, 1);
+                    setAttachmentsFiles(files);
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (emojiPicker.classList.contains('hidden')) {
+                        return;
+                    }
+
+                    if (emojiPicker.contains(event.target) || emojiButton.contains(event.target)) {
+                        return;
+                    }
+
+                    emojiPicker.classList.add('hidden');
+                });
+
+                root.addEventListener('click', async (event) => {
+                    const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link]');
+
+                    if (!link) {
+                        return;
+                    }
+
+                    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    await openConversationFromLink(link.href);
+                });
+
+                window.addEventListener('popstate', () => {
+                    const conversationId = new URL(window.location.href).searchParams.get('conversation');
+
+                    if (conversationId) {
+                        void loadConversation(conversationId, { pushState: false });
+                    }
+                });
+
                 autoScroll();
+                renderAttachmentsPreview();
                 setInterval(syncMessages, 3000);
                 setInterval(refreshSidebar, 5000);
                 refreshSidebar();
