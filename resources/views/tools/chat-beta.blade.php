@@ -136,11 +136,21 @@
             @if ($selectedConversation && $selectedParticipant)
                 <header class="flex min-h-[4.75rem] items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-2">
                     <div class="flex min-w-0 items-center gap-3">
-                        <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover" data-chat-partner-avatar>
-                        <div class="min-w-0">
+                        <button
+                            type="button"
+                            @click.stop="openImage({ src: @js($selectedParticipant->avatar_url), alt: @js('Avatar de '.$selectedParticipant->name), title: @js($selectedParticipant->name) })"
+                            class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            aria-label="Ampliar imagen de {{ $selectedParticipant->name }}"
+                        >
+                            <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" data-chat-partner-avatar>
+                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                Ver
+                            </span>
+                        </button>
+                        <a href="{{ route('users.show', $selectedParticipant) }}" class="min-w-0 transition hover:opacity-90" aria-label="Ver perfil de {{ $selectedParticipant->name }}">
                             <h1 class="truncate text-base font-semibold text-brand-secondary">{{ $selectedParticipant->name }}</h1>
                             <p class="truncate text-xs text-slate-500">{{ $selectedParticipant->chat_role_label }} · {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}</p>
-                        </div>
+                        </a>
                     </div>
 
                 </header>
@@ -439,6 +449,7 @@
                 const csrfToken = form.querySelector('input[name="_token"]')?.value ?? '';
                 let isSubmitting = false;
                 let pollingLocked = false;
+                let attachmentSnapshot = [];
                 let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
@@ -472,6 +483,13 @@
                     const parts = String(fileName || '').toLowerCase().split('.');
                     return parts.length > 1 ? parts.pop() : '';
                 };
+
+                const getAttachmentKey = (file) => [
+                    file?.name || '',
+                    file?.size || 0,
+                    file?.type || '',
+                    file?.lastModified || 0,
+                ].join('|');
 
                 const buildConversationMessagesUrl = (conversationId) => messagesUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(conversationId));
 
@@ -988,12 +1006,31 @@
                 });
 
                 attachmentsButton.addEventListener('click', () => {
+                    attachmentSnapshot = Array.from(attachmentsInput.files || []);
                     emojiPicker.classList.add('hidden');
                     attachmentsInput.click();
                 });
 
-                attachmentsInput.addEventListener('change', renderAttachmentsPreview);
-                attachmentsInput.addEventListener('change', filterUnsupportedAttachments);
+                attachmentsInput.addEventListener('change', () => {
+                    const incomingFiles = Array.from(attachmentsInput.files || []);
+                    const mergedFiles = [...attachmentSnapshot, ...incomingFiles];
+                    const dedupedFiles = [];
+                    const seenFiles = new Set();
+
+                    mergedFiles.forEach((file) => {
+                        const fileKey = getAttachmentKey(file);
+
+                        if (seenFiles.has(fileKey)) {
+                            return;
+                        }
+
+                        seenFiles.add(fileKey);
+                        dedupedFiles.push(file);
+                    });
+
+                    setAttachmentsFiles(dedupedFiles);
+                    filterUnsupportedAttachments();
+                });
 
                 emojiButton.addEventListener('click', (event) => {
                     event.stopPropagation();
