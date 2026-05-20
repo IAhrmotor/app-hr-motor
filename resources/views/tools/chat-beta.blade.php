@@ -9,8 +9,8 @@
 
     <section class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100" data-chat-summary-url="{{ route('chat.beta.summary') }}" data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}">
         <aside class="flex h-full w-[21rem] min-w-[21rem] max-w-[21rem] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)]">
-            <div class="border-b border-slate-200 px-4 py-3">
-                <div class="flex items-center gap-2">
+            <div class="flex min-h-[4.75rem] items-center border-b border-slate-200 px-4 py-2">
+                <div class="flex w-full items-center gap-2">
                     <button type="button"
                         class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-brand-primary/20 hover:text-brand-primary"
                         aria-label="Nuevo chat">
@@ -61,12 +61,13 @@
                 @endif
 
                 <div class="px-4 py-3">
-                    <div class="mb-2 flex items-center justify-between">
+                    <div class="flex items-center justify-between">
                         <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Recientes</p>
                         <span class="text-xs text-slate-400" data-chat-unread-total>{{ $conversations->sum('unread_messages_count') }}</span>
                     </div>
+                </div>
 
-                    <div class="space-y-1.5" data-chat-conversations-list>
+                <div class="divide-y divide-slate-100 border-y border-slate-100" data-chat-conversations-list>
                         @forelse ($conversations as $conversation)
                             @php
                                 $partner = $conversation->otherParticipant($authUser);
@@ -74,7 +75,7 @@
                             @endphp
                             <a href="{{ route('chat.beta', ['conversation' => $conversation->id]) }}"
                                 data-chat-conversation-id="{{ $conversation->id }}"
-                                class="group flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 transition {{ $isSelected ? 'bg-brand-primary/10 ring-1 ring-brand-primary/15' : 'hover:bg-slate-50' }}">
+                                class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition {{ $isSelected ? 'bg-brand-primary/10' : 'hover:bg-slate-50' }}">
                                 <div class="relative shrink-0">
                                     <img src="{{ $partner?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png') }}"
                                         alt="Avatar de {{ $partner?->name ?? 'Usuario' }}"
@@ -109,21 +110,20 @@
                                 </div>
                             </a>
                         @empty
-                            <div class="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
+                            <div class="px-4 py-8 text-center">
                                 <p class="text-sm font-semibold text-brand-secondary">Sin conversaciones aún</p>
                                 <p class="mt-1 text-sm leading-6 text-slate-500">
                                     Busca a un compañero y abre el primer chat.
                                 </p>
                             </div>
                         @endforelse
-                    </div>
                 </div>
             </div>
         </aside>
 
         <section class="flex min-w-0 flex-1 flex-col bg-slate-100">
             @if ($selectedConversation && $selectedParticipant)
-                <header class="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-3">
+                <header class="flex min-h-[4.75rem] items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-2">
                     <div class="flex min-w-0 items-center gap-3">
                         <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover">
                         <div class="min-w-0">
@@ -154,8 +154,11 @@
                                         <div class="mt-1 flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
                                             <span>{{ $message->created_at->translatedFormat('H:i') }}</span>
                                             @if ($isMine)
-                                                <span class="inline-flex items-center gap-0.5 {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
-                                                    <span>✓</span><span>✓</span>
+                                                <span class="inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                                                        <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                                                        <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                                    </svg>
                                                 </span>
                                             @endif
                                         </div>
@@ -262,6 +265,11 @@
                 const renderMessage = (message) => {
                     const mine = Boolean(message.is_mine);
                     const readClass = message.read_at ? 'text-sky-500' : 'text-slate-400';
+                    const doubleCheckSvg = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                            <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                            <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                        </svg>`;
 
                     return `
                         <div class="flex ${mine ? 'justify-end' : 'justify-start'}" data-message-id="${message.id}">
@@ -271,7 +279,7 @@
                                 </div>
                                 <div class="mt-1 flex items-center gap-1 text-[11px] ${mine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
                                     <span>${escapeHtml(message.created_at_label ?? '')}</span>
-                                    ${mine ? `<span class="inline-flex items-center gap-0.5 ${readClass}" data-message-checks><span>✓</span><span>✓</span></span>` : ''}
+                                    ${mine ? `<span class="inline-flex items-center ${readClass}" data-message-checks>${doubleCheckSvg}</span>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -281,7 +289,7 @@
                 const renderConversation = (conversation) => {
                     const isSelected = Number(conversation.id) === Number(sidebarSelectedConversationId);
                     const itemClass = isSelected
-                        ? 'bg-brand-primary/10 ring-1 ring-brand-primary/15'
+                        ? 'bg-brand-primary/10'
                         : 'hover:bg-slate-50';
                     const unreadBadge = Number(conversation.unread_messages_count || 0);
                     const unreadHtml = unreadBadge > 0
@@ -291,7 +299,7 @@
                     return `
                         <a href="{{ route('chat.beta') }}?conversation=${encodeURIComponent(conversation.id)}"
                             data-chat-conversation-id="${conversation.id}"
-                            class="group flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 transition ${itemClass}">
+                            class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition ${itemClass}">
                             <div class="relative shrink-0">
                                 <img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}"
                                     alt="Avatar de ${escapeHtml(conversation.partner_name || 'Usuario')}"
