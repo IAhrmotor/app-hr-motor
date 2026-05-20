@@ -16,6 +16,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ForumThreadController;
 use App\Http\Controllers\ForumTagController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CompanyChatController;
 use App\Http\Controllers\FeedbackReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
@@ -64,13 +65,10 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('tools.web');
 
-    Route::get('/chat-beta', function () {
-        abort_unless(app_can_access_chat_beta(), 403);
-
-        return view('tools.chat-beta', [
-            'chatBetaUrl' => 'https://hrmotor-connect.onrender.com/',
-        ]);
-    })->name('chat.beta');
+    Route::get('/chat', [CompanyChatController::class, 'index'])->name('chat.beta');
+    Route::post('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'storeMessage'])
+        ->whereNumber('conversation')
+        ->name('chat.beta.messages.store');
 
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');

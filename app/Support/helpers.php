@@ -148,9 +148,7 @@ if (! function_exists('app_can_access_chat_beta')) {
             return false;
         }
 
-        return app_user_has_any_role($user, [
-            User::ROLE_INFORMATION_TECHNOLOGY,
-        ]);
+        return (bool) $user->is_active;
     }
 }
 
