@@ -141,6 +141,7 @@ class CompanyChatController extends Controller
                     'is_mine' => true,
                     'created_at' => $message->created_at?->toIso8601String(),
                     'created_at_label' => $message->created_at?->translatedFormat('H:i'),
+                    'show_time' => true,
                     'read_at' => $message->read_at?->toIso8601String(),
                 ],
                 'conversation_id' => $conversation->id,
@@ -168,17 +169,25 @@ class CompanyChatController extends Controller
             ->with('sender')
             ->orderBy('created_at')
             ->get()
-            ->map(fn (CompanyChatMessage $message): array => [
-                'id' => $message->id,
-                'body' => $message->body,
-                'sender_id' => $message->sender_id,
-                'sender_name' => $message->sender?->name,
-                'sender_chat_role_label' => app_chat_role_label($message->sender),
-                'is_mine' => $message->sender_id === $authUser->id,
-                'created_at' => $message->created_at?->toIso8601String(),
-                'created_at_label' => $message->created_at?->translatedFormat('H:i'),
-                'read_at' => $message->read_at?->toIso8601String(),
-            ]);
+            ->values()
+            ->map(function (CompanyChatMessage $message, int $index) use ($authUser, $conversation): array {
+                $nextMessage = $conversation->messages->get($index + 1);
+                $currentLabel = $message->created_at?->translatedFormat('H:i');
+                $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+
+                return [
+                    'id' => $message->id,
+                    'body' => $message->body,
+                    'sender_id' => $message->sender_id,
+                    'sender_name' => $message->sender?->name,
+                    'sender_chat_role_label' => app_chat_role_label($message->sender),
+                    'is_mine' => $message->sender_id === $authUser->id,
+                    'created_at' => $message->created_at?->toIso8601String(),
+                    'created_at_label' => $currentLabel,
+                    'show_time' => $nextLabel !== $currentLabel,
+                    'read_at' => $message->read_at?->toIso8601String(),
+                ];
+            });
 
         return response()->json([
             'conversation_id' => $conversation->id,

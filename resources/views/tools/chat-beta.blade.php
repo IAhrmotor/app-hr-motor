@@ -141,26 +141,30 @@
                     data-conversation-id="{{ $selectedConversation->id }}"
                 >
                     <div class="mx-auto flex min-h-full max-w-5xl flex-col justify-end">
-                        <div class="space-y-3" data-chat-messages>
+                        <div class="space-y-0" data-chat-messages>
                             @forelse ($selectedConversationMessages as $message)
                                 @php
                                     $isMine = $message->sender_id === $authUser->id;
+                                    $nextMessage = $selectedConversationMessages->get($loop->index + 1);
+                                    $currentTimeLabel = $message->created_at->translatedFormat('H:i');
+                                    $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+                                    $showTime = $loop->last || $nextTimeLabel !== $currentTimeLabel;
                                 @endphp
-                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }}" data-message-id="{{ $message->id }}">
+                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $loop->first ? 'mt-0' : ($showTime ? 'mt-3' : 'mt-0.5') }}" data-message-id="{{ $message->id }}">
                                     <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
-                                        <div class="rounded-[1.1rem] px-3 py-2 shadow-sm {{ $isMine ? 'bg-[#d9fdd3] text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary' }}">
+                                        <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm {{ $isMine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary' }}">
                                             <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
-                                        </div>
-                                        <div class="mt-1 flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
-                                            <span>{{ $message->created_at->translatedFormat('H:i') }}</span>
                                             @if ($isMine)
-                                                <span class="inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                                                <span class="absolute bottom-1.5 right-2 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
                                                         <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                                                         <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
                                                     </svg>
                                                 </span>
                                             @endif
+                                        </div>
+                                        <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
+                                            <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -262,7 +266,28 @@
                     wrapper.scrollTop = wrapper.scrollHeight;
                 };
 
-                const renderMessage = (message) => {
+                const updatePreviousTimeVisibility = (message) => {
+                    const currentTime = message?.created_at_label;
+                    if (!currentTime) {
+                        return;
+                    }
+
+                    const currentNode = messagesContainer.querySelector(`[data-message-id="${message.id}"]`);
+                    const previousNode = currentNode?.previousElementSibling;
+                    const previousTimeNode = previousNode?.querySelector('[data-message-time]');
+
+                    if (!previousTimeNode) {
+                        return;
+                    }
+
+                    const previousTime = previousTimeNode.textContent?.trim();
+
+                    if (previousTime === currentTime) {
+                        previousTimeNode.classList.add('hidden');
+                    }
+                };
+
+                const renderMessage = (message, compactTop = false) => {
                     const mine = Boolean(message.is_mine);
                     const readClass = message.read_at ? 'text-sky-500' : 'text-slate-400';
                     const doubleCheckSvg = `
@@ -272,14 +297,14 @@
                         </svg>`;
 
                     return `
-                        <div class="flex ${mine ? 'justify-end' : 'justify-start'}" data-message-id="${message.id}">
+                        <div class="flex ${mine ? 'justify-end' : 'justify-start'} ${compactTop ? 'mt-0.5' : 'mt-3'}" data-message-id="${message.id}">
                             <div class="flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}">
-                                <div class="rounded-[1.1rem] px-3 py-2 shadow-sm ${mine ? 'bg-[#d9fdd3] text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
+                                <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm ${mine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
                                     <p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(message.body)}</p>
+                                    ${mine ? `<span class="absolute bottom-1.5 right-2 inline-flex items-center ${readClass}" data-message-checks>${doubleCheckSvg}</span>` : ''}
                                 </div>
-                                <div class="mt-1 flex items-center gap-1 text-[11px] ${mine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
-                                    <span>${escapeHtml(message.created_at_label ?? '')}</span>
-                                    ${mine ? `<span class="inline-flex items-center ${readClass}" data-message-checks>${doubleCheckSvg}</span>` : ''}
+                                <div class="${message.show_time === false ? 'mt-0.5' : 'mt-1'} flex items-center gap-1 text-[11px] ${mine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
+                                    <span data-message-time${message.show_time === false ? ' class="hidden"' : ''}>${escapeHtml(message.created_at_label ?? '')}</span>
                                 </div>
                             </div>
                         </div>
@@ -373,7 +398,11 @@
                         return;
                     }
 
-                    messagesContainer.innerHTML = messages.map(renderMessage).join('');
+                    messagesContainer.innerHTML = messages.map((message, index) => {
+                        const previousMessage = messages[index - 1];
+                        const compactTop = Boolean(previousMessage) && previousMessage.created_at_label === message.created_at_label;
+                        return renderMessage(message, compactTop);
+                    }).join('');
                     latestMessageId = Math.max(...messages.map((message) => Number(message.id) || 0));
                     autoScroll();
                 };
@@ -465,7 +494,11 @@
                             if (currentHtml.includes('Chat listo para empezar')) {
                                 messagesContainer.innerHTML = '';
                             }
-                            messagesContainer.insertAdjacentHTML('beforeend', renderMessage(message));
+                            const previousNode = messagesContainer.lastElementChild;
+                            const previousTime = previousNode?.querySelector('[data-message-time]')?.textContent?.trim();
+                            const compactTop = previousTime === (message.created_at_label ?? '');
+                            messagesContainer.insertAdjacentHTML('beforeend', renderMessage(message, compactTop));
+                            updatePreviousTimeVisibility(message);
                             latestMessageId = Number(message.id) || latestMessageId;
                             autoScroll();
                             refreshSidebar();

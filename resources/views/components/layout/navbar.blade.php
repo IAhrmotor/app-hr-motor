@@ -240,13 +240,13 @@
 
                         @if ($forumUnreadNotificationCount > 0)
                             <span
-                                class="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-center text-[11px] font-semibold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
+                                class="absolute -right-1 -top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-center text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
                                 data-notification-badge>
                                 {{ $forumUnreadNotificationCount > 9 ? '+9' : $forumUnreadNotificationCount }}
                             </span>
                         @else
                             <span
-                                class="absolute -right-0.5 -top-0.5 hidden h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-center text-[11px] font-semibold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
+                                class="absolute -right-1 -top-1 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-center text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
                                 data-notification-badge></span>
                         @endif
                     </button>
