@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompanyChatConversation;
+use App\Models\CompanyChatMessage;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -98,7 +100,7 @@ class CompanyChatController extends Controller
         ]);
     }
 
-    public function storeMessage(Request $request, CompanyChatConversation $conversation): RedirectResponse
+    public function storeMessage(Request $request, CompanyChatConversation $conversation): JsonResponse|RedirectResponse
     {
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
@@ -107,7 +109,7 @@ class CompanyChatController extends Controller
             'body' => ['required', 'string', 'min:1', 'max:4000'],
         ]);
 
-        DB::transaction(function () use ($conversation, $request, $validated): void {
+        $message = DB::transaction(function () use ($conversation, $request, $validated): CompanyChatMessage {
             $message = $conversation->messages()->create([
                 'sender_id' => $request->user()->id,
                 'body' => $validated['body'],
@@ -118,10 +120,101 @@ class CompanyChatController extends Controller
                 'last_message_at' => $message->created_at ?? now(),
                 'last_message_excerpt' => str($message->body)->squish()->limit(120)->toString(),
             ])->save();
+
+            return $message->load('sender');
         });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => [
+                    'id' => $message->id,
+                    'body' => $message->body,
+                    'sender_id' => $message->sender_id,
+                    'sender_name' => $message->sender?->name,
+                    'sender_role_label' => app_chat_role_label($message->sender),
+                    'is_mine' => true,
+                    'created_at' => $message->created_at?->toIso8601String(),
+                    'created_at_label' => $message->created_at?->translatedFormat('H:i'),
+                    'read_at' => $message->read_at?->toIso8601String(),
+                ],
+                'conversation_id' => $conversation->id,
+                'last_message_at' => $conversation->last_message_at?->toIso8601String(),
+                'last_message_excerpt' => $conversation->last_message_excerpt,
+            ]);
+        }
 
         return redirect()->route('chat.beta', [
             'conversation' => $conversation->id,
+        ]);
+    }
+
+    public function messages(Request $request, CompanyChatConversation $conversation): JsonResponse
+    {
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+        abort_unless($conversation->involves($request->user()), 403);
+
+        $authUser = $request->user();
+
+        $this->markConversationAsRead($conversation, $authUser);
+
+        $messages = $conversation->messages()
+            ->with('sender')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (CompanyChatMessage $message): array => [
+                'id' => $message->id,
+                'body' => $message->body,
+                'sender_id' => $message->sender_id,
+                'sender_name' => $message->sender?->name,
+                'sender_role_label' => app_chat_role_label($message->sender),
+                'is_mine' => $message->sender_id === $authUser->id,
+                'created_at' => $message->created_at?->toIso8601String(),
+                'created_at_label' => $message->created_at?->translatedFormat('H:i'),
+                'read_at' => $message->read_at?->toIso8601String(),
+            ]);
+
+        return response()->json([
+            'conversation_id' => $conversation->id,
+            'last_message_at' => $conversation->last_message_at?->toIso8601String(),
+            'messages' => $messages,
+        ]);
+    }
+
+    public function summary(Request $request): JsonResponse
+    {
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+
+        $authUser = $request->user();
+
+        $conversations = CompanyChatConversation::query()
+            ->forUser($authUser)
+            ->with(['userOne', 'userTwo'])
+            ->withCount([
+                'messages as unread_messages_count' => function ($query) use ($authUser): void {
+                    $query->whereNull('read_at')
+                        ->where('sender_id', '!=', $authUser->id);
+                },
+            ])
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(static function (CompanyChatConversation $conversation) use ($authUser): array {
+                $partner = $conversation->otherParticipant($authUser);
+
+                return [
+                    'id' => $conversation->id,
+                    'partner_name' => $partner?->name,
+                    'partner_avatar_url' => $partner?->avatar_url,
+                    'partner_role_label' => app_chat_role_label($partner),
+                    'last_message_excerpt' => $conversation->last_message_excerpt,
+                    'last_message_at_label' => $conversation->last_message_at?->translatedFormat('d/m H:i'),
+                    'unread_messages_count' => (int) ($conversation->unread_messages_count ?? 0),
+                ];
+            });
+
+        return response()->json([
+            'unread_messages_total' => $conversations->sum('unread_messages_count'),
+            'conversations' => $conversations,
         ]);
     }
 

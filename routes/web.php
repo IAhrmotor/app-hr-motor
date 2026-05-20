@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/foro/{thread}/respuestas', [ForumThreadController::class, 'reply'])->whereNumber('thread')->name('forum.reply');
     Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->whereNumber('thread')->name('forum.status.update');
     Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->whereNumber('thread')->name('forum.destroy');
+    Route::get('/notificaciones/resumen', [NotificationController::class, 'summary'])->name('notifications.summary');
     Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
     Route::get('/agenda/usuarios/{user}', [UserController::class, 'show'])->name('agenda.users.show');
@@ -69,6 +70,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'storeMessage'])
         ->whereNumber('conversation')
         ->name('chat.beta.messages.store');
+    Route::get('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'messages'])
+        ->whereNumber('conversation')
+        ->name('chat.beta.messages.index');
+    Route::get('/chat/resumen', [CompanyChatController::class, 'summary'])->name('chat.beta.summary');
 
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
