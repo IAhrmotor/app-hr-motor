@@ -98,10 +98,35 @@ class CompanyChatController extends Controller
             ->limit(12)
             ->get();
 
+        $teamUsers = User::query()
+            ->where('is_active', true)
+            ->whereKeyNot($authUser->id)
+            ->orderBy('name')
+            ->get()
+            ->groupBy(fn (User $user): string => $user->chat_role_label)
+            ->sortKeys()
+            ->map(function ($users, string $roleLabel): array {
+                return [
+                    'role_label' => $roleLabel,
+                    'users' => $users->map(function (User $user): array {
+                        return [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'avatar_url' => $user->avatar_url,
+                            'chat_role_label' => $user->chat_role_label,
+                            'resolved_dealership_name' => $user->resolved_dealership_name,
+                        ];
+                    })->values()->all(),
+                ];
+            })
+            ->values()
+            ->all();
+
         return view('tools.chat-beta', [
             'conversations' => $conversations,
             'selectedConversation' => $selectedConversation,
             'people' => $people,
+            'teamUsers' => $teamUsers,
             'search' => $search,
         ]);
     }

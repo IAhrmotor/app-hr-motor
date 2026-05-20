@@ -43,6 +43,24 @@
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto">
+                <div class="border-b border-slate-200 px-4 py-3">
+                    <div class="grid grid-cols-3 rounded-2xl bg-slate-100 p-1 text-xs font-semibold">
+                        <button type="button" data-chat-sidebar-tab="chats" aria-pressed="true"
+                            class="inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-primary px-3 py-2 text-white shadow-sm transition hover:bg-brand-primary/95">
+                            Chats
+                        </button>
+                        <button type="button" data-chat-sidebar-tab="team" aria-pressed="false"
+                            class="inline-flex cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition hover:bg-slate-100">
+                            Equipo
+                        </button>
+                        <button type="button" data-chat-sidebar-tab="groups" aria-pressed="false"
+                            class="inline-flex cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition hover:bg-slate-100">
+                            Grupos
+                        </button>
+                    </div>
+                </div>
+
+                <div data-chat-sidebar-panel="chats">
                 @if ($search !== '')
                     <div class="border-b border-slate-200 px-4 py-3">
                         <div class="mb-2 flex items-center justify-between">
@@ -128,6 +146,47 @@
                                 </p>
                             </div>
                         @endforelse
+                </div>
+                </div>
+
+                <div class="hidden" data-chat-sidebar-panel="team">
+                    <div class="divide-y divide-slate-100 border-y border-slate-100">
+                        @forelse ($teamUsers as $group)
+                            <details class="group" data-chat-team-accordion>
+                                <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-3 transition hover:bg-slate-50">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $group['role_label'] }}</p>
+                                        <p class="text-xs text-slate-400">{{ count($group['users']) }} persona{{ count($group['users']) === 1 ? '' : 's' }}</p>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                                    </svg>
+                                </summary>
+
+                                <div class="border-t border-slate-100">
+                                    @foreach ($group['users'] as $teamUser)
+                                        <a href="{{ route('chat.beta', ['recipient' => $teamUser['id']]) }}" class="flex cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-slate-50">
+                                            <img src="{{ $teamUser['avatar_url'] }}" alt="Avatar de {{ $teamUser['name'] }}" class="h-10 w-10 rounded-2xl object-cover">
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-semibold text-brand-secondary">{{ $teamUser['name'] }}</p>
+                                                <p class="truncate text-xs text-slate-500">{{ $teamUser['chat_role_label'] }}{{ $teamUser['resolved_dealership_name'] ? ' · ' . $teamUser['resolved_dealership_name'] : '' }}</p>
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @empty
+                            <div class="px-4 py-8 text-center text-sm text-slate-500">
+                                No hay usuarios activos para mostrar.
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="hidden" data-chat-sidebar-panel="groups">
+                    <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
+                        Próximamente.
+                    </div>
                 </div>
             </div>
         </aside>
@@ -441,6 +500,8 @@
                 const headerName = document.querySelector('[data-chat-partner-name]');
                 const headerRole = document.querySelector('[data-chat-partner-role]');
                 const headerAvatar = document.querySelector('[data-chat-partner-avatar]');
+                const sidebarTabButtons = Array.from(document.querySelectorAll('[data-chat-sidebar-tab]'));
+                const sidebarPanels = Array.from(document.querySelectorAll('[data-chat-sidebar-panel]'));
 
                 if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker) {
                     return;
@@ -450,6 +511,7 @@
                 let isSubmitting = false;
                 let pollingLocked = false;
                 let attachmentSnapshot = [];
+                let sidebarTab = 'chats';
                 let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
@@ -467,6 +529,25 @@
                 const clearChatError = () => {
                     chatError.textContent = '';
                     chatError.classList.add('hidden');
+                };
+
+                const setSidebarTab = (tab) => {
+                    sidebarTab = tab;
+
+                    sidebarTabButtons.forEach((button) => {
+                        const isActive = button.dataset.chatSidebarTab === tab;
+                        button.classList.toggle('bg-brand-primary', isActive);
+                        button.classList.toggle('text-white', isActive);
+                        button.classList.toggle('shadow-sm', isActive);
+                        button.classList.toggle('text-slate-500', !isActive);
+                        button.classList.toggle('hover:bg-slate-100', !isActive);
+                        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    });
+
+                    sidebarPanels.forEach((panel) => {
+                        const isActive = panel.dataset.chatSidebarPanel === tab;
+                        panel.classList.toggle('hidden', !isActive);
+                    });
                 };
 
                 const setChatError = (message) => {
@@ -1076,6 +1157,14 @@
 
                     emojiPicker.classList.add('hidden');
                 });
+
+                sidebarTabButtons.forEach((button) => {
+                    button.addEventListener('click', () => {
+                        setSidebarTab(button.dataset.chatSidebarTab || 'chats');
+                    });
+                });
+
+                setSidebarTab('chats');
 
                 root.addEventListener('click', async (event) => {
                     const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link]');
