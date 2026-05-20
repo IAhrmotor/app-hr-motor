@@ -30,7 +30,7 @@ class CompanyChatMessageNotification extends Notification
             'type' => 'chat.message.received',
             'priority' => false,
             'title' => 'Nuevo mensaje de ' . $this->sender->name,
-            'description' => str($this->message->body)->squish()->limit(140)->toString(),
+            'description' => $this->message->preview_text,
             'link_url' => route('chat.beta', ['conversation' => $this->conversation->id]),
             'link_label' => 'Abrir chat',
             'actor_name' => $this->sender->name,

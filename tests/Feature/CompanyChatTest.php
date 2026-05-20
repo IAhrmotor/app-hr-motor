@@ -7,7 +7,9 @@ use App\Models\CompanyChatMessage;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class CompanyChatTest extends TestCase
@@ -19,6 +21,17 @@ class CompanyChatTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+    }
+
+    protected function tearDown(): void
+    {
+        $attachmentsDirectory = storage_path('app/public/chat/attachments');
+
+        if (File::exists($attachmentsDirectory)) {
+            File::deleteDirectory($attachmentsDirectory);
+        }
+
+        parent::tearDown();
     }
 
     public function test_authenticated_user_can_open_the_chat_and_start_a_conversation_with_any_active_member(): void
@@ -88,6 +101,47 @@ class CompanyChatTest extends TestCase
         ]);
     }
 
+    public function test_user_can_send_chat_messages_with_attachments_and_without_text(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Marta Test',
+        ]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $response = $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => '',
+                'attachments' => [
+                    UploadedFile::fake()->image('captura-chat.png', 1200, 900),
+                ],
+            ]);
+
+        $message = CompanyChatMessage::query()->latest('id')->first();
+
+        $response
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $this->assertNotNull($message);
+        $this->assertSame('', $message->body);
+        $this->assertNotEmpty($message->attachments);
+        $this->assertSame('Archivo adjunto: captura-chat.png', $conversation->fresh()->last_message_excerpt);
+        $this->assertSame(1, count($message->attachments));
+        $this->assertFileExists(storage_path('app/public/' . $message->attachments[0]['path']));
+
+        $responseJson = $this->actingAs($recipient)->getJson(route('chat.beta.messages.index', $conversation));
+
+        $responseJson
+            ->assertOk()
+            ->assertJsonPath('messages.0.preview_text', 'Archivo adjunto: captura-chat.png')
+            ->assertJsonPath('messages.0.attachments.0.original_name', 'captura-chat.png')
+            ->assertJsonPath('messages.0.attachments.0.is_image', true);
+    }
+
     public function test_chat_messages_endpoint_returns_json_and_marks_incoming_messages_as_read(): void
     {
         $sender = User::factory()->create([
@@ -112,6 +166,7 @@ class CompanyChatTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertJsonPath('partner_name', $sender->name)
             ->assertJsonPath('messages.0.body', 'Mensaje de prueba')
             ->assertJsonPath('messages.0.sender_chat_role_label', 'Informática');
 
