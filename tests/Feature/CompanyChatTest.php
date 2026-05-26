@@ -208,6 +208,29 @@ class CompanyChatTest extends TestCase
         $this->assertSame(1, $recipient->unreadNotifications()->count());
     }
 
+    public function test_chat_live_search_returns_json_results_without_loading_the_full_chat_view(): void
+    {
+        $authUser = User::factory()->create();
+        $matchedUser = User::factory()->create([
+            'name' => 'Marta Búsqueda',
+        ]);
+        User::factory()->create([
+            'name' => 'No debería salir',
+        ]);
+
+        $response = $this->actingAs($authUser)->getJson(route('chat.beta', [
+            'search' => 'Marta',
+            'ajax' => 1,
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertJsonStructure(['html']);
+
+        $this->assertStringContainsString($matchedUser->name, $response->json('html'));
+        $this->assertStringNotContainsString('No debería salir', $response->json('html'));
+    }
+
     public function test_chat_notifications_are_grouped_in_the_notifications_summary_and_marked_read_together(): void
     {
         $sender = User::factory()->create([

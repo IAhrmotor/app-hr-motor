@@ -18,12 +18,35 @@ use Illuminate\View\View;
 
 class CompanyChatController extends Controller
 {
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request): View|RedirectResponse|JsonResponse
     {
         abort_unless(app_can_access_chat_beta($request->user()), 403);
 
         $authUser = $request->user();
         $search = trim((string) $request->query('search'));
+
+        if ($request->boolean('ajax')) {
+            $people = User::query()
+                ->where('is_active', true)
+                ->whereKeyNot($authUser->id)
+                ->when($search !== '', function ($query) use ($search): void {
+                    $query->where(function ($subquery) use ($search): void {
+                        $subquery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('dealership', 'like', "%{$search}%");
+                    });
+                })
+                ->orderBy('name')
+                ->limit(12)
+                ->get();
+
+            return response()->json([
+                'html' => view('tools.chat-beta.partials.search-results', [
+                    'people' => $people,
+                    'search' => $search,
+                ])->render(),
+            ]);
+        }
 
         if ($request->filled('recipient')) {
             $recipient = User::query()
@@ -97,15 +120,6 @@ class CompanyChatController extends Controller
             ->orderBy('name')
             ->limit(12)
             ->get();
-
-        if ($request->boolean('ajax')) {
-            return response()->json([
-                'html' => view('tools.chat-beta.partials.search-results', [
-                    'people' => $people,
-                    'search' => $search,
-                ])->render(),
-            ]);
-        }
 
         $teamUsers = User::query()
             ->where('is_active', true)
