@@ -37,6 +37,7 @@
                         </span>
                         <input type="text" name="search" value="{{ $search }}"
                             placeholder="Buscar..."
+                            data-chat-search-input
                             class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-brand-primary/10">
                     </form>
                 </div>
@@ -61,41 +62,18 @@
                 </div>
 
                 <div data-chat-sidebar-panel="chats">
-                @if ($search !== '')
-                    <div class="border-b border-slate-200 px-4 py-3">
-                        <div class="mb-2 flex items-center justify-between">
-                            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Resultados</p>
-                            <a href="{{ route('chat.beta') }}" class="cursor-pointer text-xs font-semibold text-brand-primary hover:underline">Limpiar</a>
-                        </div>
+                    <div data-chat-search-results>
+                        @include('tools.chat-beta.partials.search-results', ['people' => $people, 'search' => $search])
+                    </div>
 
-                        <div class="space-y-2">
-                            @forelse ($people as $person)
-                                <a href="{{ route('chat.beta', ['recipient' => $person->id]) }}"
-                                    data-chat-recipient-link
-                                    class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-brand-primary/20 hover:shadow-sm">
-                                    <img src="{{ $person->avatar_url }}" alt="Avatar de {{ $person->name }}" class="h-10 w-10 rounded-2xl object-cover">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $person->name }}</p>
-                                        <p class="truncate text-xs text-slate-500">{{ $person->chat_role_label }}</p>
-                                    </div>
-                                </a>
-                            @empty
-                                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-                                    Sin resultados.
-                                </div>
-                            @endforelse
+                    <div class="px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Recientes</p>
+                            <span class="text-xs text-slate-400" data-chat-unread-total>{{ $conversations->sum('unread_messages_count') }}</span>
                         </div>
                     </div>
-                @endif
 
-                <div class="px-4 py-3">
-                    <div class="flex items-center justify-between">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Recientes</p>
-                        <span class="text-xs text-slate-400" data-chat-unread-total>{{ $conversations->sum('unread_messages_count') }}</span>
-                    </div>
-                </div>
-
-                <div class="divide-y divide-slate-100 border-y border-slate-100" data-chat-conversations-list>
+                    <div class="divide-y divide-slate-100 border-y border-slate-100" data-chat-conversations-list>
                         @forelse ($conversations as $conversation)
                             @php
                                 $partner = $conversation->otherParticipant($authUser);
@@ -146,7 +124,7 @@
                                 </p>
                             </div>
                         @endforelse
-                </div>
+                    </div>
                 </div>
 
                 <div class="hidden" data-chat-sidebar-panel="team">
@@ -490,6 +468,8 @@
                 const chatError = document.querySelector('[data-chat-error]');
                 const emojiButton = document.querySelector('[data-chat-emoji-button]');
                 const emojiPicker = document.querySelector('[data-chat-emoji-picker]');
+                const searchInput = document.querySelector('[data-chat-search-input]');
+                const searchResults = document.querySelector('[data-chat-search-results]');
                 let pollUrl = wrapper?.dataset.pollUrl;
                 const summaryRoot = document.querySelector('[data-chat-summary-url]');
                 const sidebarList = document.querySelector('[data-chat-conversations-list]');
@@ -503,7 +483,7 @@
                 const sidebarTabButtons = Array.from(document.querySelectorAll('[data-chat-sidebar-tab]'));
                 const sidebarPanels = Array.from(document.querySelectorAll('[data-chat-sidebar-panel]'));
 
-                if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker) {
+                if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker || !searchInput || !searchResults) {
                     return;
                 }
 
@@ -512,6 +492,8 @@
                 let pollingLocked = false;
                 let attachmentSnapshot = [];
                 let sidebarTab = 'chats';
+                let searchAbortController = null;
+                let searchDebounce = null;
                 let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
@@ -548,6 +530,56 @@
                         const isActive = panel.dataset.chatSidebarPanel === tab;
                         panel.classList.toggle('hidden', !isActive);
                     });
+                };
+
+                const renderSearchResults = (html) => {
+                    searchResults.innerHTML = html;
+                };
+
+                const performLiveSearch = async (term) => {
+                    if (searchAbortController) {
+                        searchAbortController.abort();
+                    }
+
+                    const searchTerm = term.trim();
+
+                    if (searchTerm === '') {
+                        renderSearchResults('');
+                        return;
+                    }
+
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('search', searchTerm);
+                    url.searchParams.set('ajax', '1');
+
+                    const controller = new AbortController();
+                    searchAbortController = controller;
+
+                    try {
+                        const response = await fetch(url.toString(), {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                            },
+                            signal: controller.signal,
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const payload = await response.json();
+
+                        if (searchAbortController !== controller) {
+                            return;
+                        }
+
+                        renderSearchResults(payload.html || '');
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            console.error(error);
+                        }
+                    }
                 };
 
                 const setChatError = (message) => {
@@ -1165,6 +1197,13 @@
                 });
 
                 setSidebarTab('chats');
+
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(searchDebounce);
+                    searchDebounce = setTimeout(() => {
+                        void performLiveSearch(searchInput.value);
+                    }, 250);
+                });
 
                 root.addEventListener('click', async (event) => {
                     const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link]');

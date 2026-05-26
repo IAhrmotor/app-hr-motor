@@ -98,6 +98,15 @@ class CompanyChatController extends Controller
             ->limit(12)
             ->get();
 
+        if ($request->boolean('ajax')) {
+            return response()->json([
+                'html' => view('tools.chat-beta.partials.search-results', [
+                    'people' => $people,
+                    'search' => $search,
+                ])->render(),
+            ]);
+        }
+
         $teamUsers = User::query()
             ->where('is_active', true)
             ->whereKeyNot($authUser->id)
