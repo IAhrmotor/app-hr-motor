@@ -233,9 +233,25 @@ class User extends Authenticatable
         return $this->hasMany(ForumReply::class);
     }
 
+    public function chatFavoriteContacts(): HasMany
+    {
+        return $this->hasMany(CompanyChatFavoriteContact::class, 'user_id');
+    }
+
     public function getResolvedDealershipNameAttribute(): ?string
     {
         return $this->assignedDealership?->name ?: $this->dealership;
+    }
+
+    public function isFavoriteChatContact(?self $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->chatFavoriteContacts()
+            ->where('favorite_user_id', $user->id)
+            ->exists();
     }
 
     public function isCommercialLike(): bool

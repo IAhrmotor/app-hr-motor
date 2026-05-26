@@ -74,6 +74,9 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('conversation')
         ->name('chat.beta.messages.index');
     Route::get('/chat/resumen', [CompanyChatController::class, 'summary'])->name('chat.beta.summary');
+    Route::post('/chat/favoritos/{user}', [CompanyChatController::class, 'toggleFavorite'])
+        ->whereNumber('user')
+        ->name('chat.beta.favorites.toggle');
 
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
