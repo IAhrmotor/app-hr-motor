@@ -5,6 +5,8 @@
         $authUser = auth()->user();
         $selectedParticipant = $selectedConversation?->otherParticipant($authUser);
         $selectedConversationMessages = $selectedConversation?->messages ?? collect();
+        $favoriteUserIds = $favoriteUserIds ?? [];
+        $selectedParticipantIsFavorite = $selectedParticipant?->id ? in_array($selectedParticipant->id, $favoriteUserIds, true) : false;
     @endphp
 
     <section
@@ -12,6 +14,7 @@
         x-effect="document.body.classList.toggle('overflow-hidden', isImageOpen)"
         @keydown.escape.window="closeImage()"
         @keydown.window="handleKeydown($event)"
+        @open-image.window="openImage($event.detail)"
         class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100"
         data-chat-root
         data-chat-summary-url="{{ route('chat.beta.summary') }}"
@@ -20,11 +23,11 @@
         <aside class="flex h-full w-[21rem] min-w-[21rem] max-w-[21rem] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)]" data-chat-sidebar>
             <div class="flex min-h-[4.75rem] items-center border-b border-slate-200 px-4 py-2">
                 <div class="flex w-full items-center gap-2">
-                    <button type="button"
-                        class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-brand-primary/20 hover:text-brand-primary"
-                        aria-label="Nuevo chat">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                        <button type="button" data-chat-sidebar-tab="favorites" aria-pressed="false"
+                            class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-2xl border border-transparent text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary"
+                            aria-label="Abrir favoritos">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M11.245 4.174C11.4765 3.50808 11.5922 3.17513 11.7634 3.08285C11.9115 3.00298 12.0898 3.00298 12.238 3.08285C12.4091 3.17513 12.5248 3.50808 12.7563 4.174L14.2866 8.57639C14.3525 8.76592 14.3854 8.86068 14.4448 8.93125C14.4972 8.99359 14.5641 9.04218 14.6396 9.07278C14.725 9.10743 14.8253 9.10947 15.0259 9.11356L19.6857 9.20852C20.3906 9.22288 20.743 9.23007 20.8837 9.36432C21.0054 9.48051 21.0605 9.65014 21.0303 9.81569C20.9955 10.007 20.7146 10.2199 20.1528 10.6459L16.4387 13.4616C16.2788 13.5829 16.1989 13.6435 16.1501 13.7217C16.107 13.7909 16.0815 13.8695 16.0757 13.9507C16.0692 14.0427 16.0982 14.1387 16.1563 14.3308L17.506 18.7919C17.7101 19.4667 17.8122 19.8041 17.728 19.9793C17.6551 20.131 17.5108 20.2358 17.344 20.2583C17.1513 20.2842 16.862 20.0829 16.2833 19.6802L12.4576 17.0181C12.2929 16.9035 12.2106 16.8462 12.1211 16.8239C12.042 16.8043 11.9593 16.8043 11.8803 16.8239C11.7908 16.8462 11.7084 16.9035 11.5437 17.0181L7.71805 19.6802C7.13937 20.0829 6.85003 20.2842 6.65733 20.2583C6.49056 20.2358 6.34626 20.131 6.27337 19.9793C6.18915 19.8041 6.29123 19.4667 6.49538 18.7919L7.84503 14.3308C7.90313 14.1387 7.93218 14.0427 7.92564 13.9507C7.91986 13.8695 7.89432 13.7909 7.85123 13.7217C7.80246 13.6435 7.72251 13.5829 7.56262 13.4616L3.84858 10.6459C3.28678 10.2199 3.00588 10.007 2.97101 9.81569C2.94082 9.65014 2.99594 9.48051 3.11767 9.36432C3.25831 9.23007 3.61074 9.22289 4.31559 9.20852L8.9754 9.11356C9.176 9.10947 9.27631 9.10743 9.36177 9.07278C9.43726 9.04218 9.50414 8.99359 9.55657 8.93125C9.61593 8.86068 9.64887 8.76592 9.71475 8.57639L11.245 4.174Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
 
@@ -58,6 +61,41 @@
                             class="inline-flex cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition hover:bg-slate-100">
                             Grupos
                         </button>
+                    </div>
+                </div>
+
+                <div class="hidden" data-chat-sidebar-panel="favorites">
+                    <div data-chat-favorites-list>
+                        @if (! empty($favoriteContacts))
+                            <div class="divide-y divide-slate-100 border-y border-slate-100">
+                                @foreach ($favoriteContacts as $favoriteContact)
+                                    <a href="{{ route('chat.beta', ['recipient' => $favoriteContact['id']]) }}"
+                                        data-chat-recipient-link
+                                        class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-slate-50">
+                                        <div class="shrink-0">
+                                            <img src="{{ $favoriteContact['avatar_url'] }}"
+                                                alt="Avatar de {{ $favoriteContact['name'] }}"
+                                                class="h-11 w-11 rounded-2xl object-cover">
+                                        </div>
+
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-start justify-between gap-2">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm font-semibold text-amber-600">
+                                                        {{ $favoriteContact['name'] }}
+                                                    </p>
+                                                    <p class="truncate text-xs text-slate-500">{{ $favoriteContact['chat_role_label'] }}{{ $favoriteContact['resolved_dealership_name'] ? ' · ' . $favoriteContact['resolved_dealership_name'] : '' }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
+                                Marca contactos como favoritos para verlos aquí.
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -99,7 +137,7 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="min-w-0">
-                                            <p class="truncate text-sm font-semibold text-brand-secondary" data-chat-partner-name>{{ $partner?->name ?? 'Conversación' }}</p>
+                                            <p class="truncate text-sm font-semibold {{ in_array($partner?->id, $favoriteUserIds, true) ? 'text-amber-600' : 'text-brand-secondary' }}" data-chat-partner-name>{{ $partner?->name ?? 'Conversación' }}</p>
                                             <p class="truncate text-xs text-slate-500" data-chat-partner-role>{{ $partner?->chat_role_label ?? '' }}</p>
                                             <p class="truncate text-xs text-slate-500" data-chat-last-message>
                                                 {{ $conversation->last_message_excerpt ?: 'Empieza la conversación' }}
@@ -146,7 +184,7 @@
                                         <a href="{{ route('chat.beta', ['recipient' => $teamUser['id']]) }}" class="flex cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-slate-50">
                                             <img src="{{ $teamUser['avatar_url'] }}" alt="Avatar de {{ $teamUser['name'] }}" class="h-10 w-10 rounded-2xl object-cover">
                                             <div class="min-w-0 flex-1">
-                                                <p class="truncate text-sm font-semibold text-brand-secondary">{{ $teamUser['name'] }}</p>
+                                                <p class="truncate text-sm font-semibold {{ in_array($teamUser['id'], $favoriteUserIds, true) ? 'text-amber-600' : 'text-brand-secondary' }}">{{ $teamUser['name'] }}</p>
                                                 <p class="truncate text-xs text-slate-500">{{ $teamUser['chat_role_label'] }}{{ $teamUser['resolved_dealership_name'] ? ' · ' . $teamUser['resolved_dealership_name'] : '' }}</p>
                                             </div>
                                         </a>
@@ -179,15 +217,56 @@
                             class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                             aria-label="Ampliar imagen de {{ $selectedParticipant->name }}"
                         >
-                            <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" data-chat-partner-avatar>
+                            <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" data-chat-header-avatar>
                             <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
                                 Ver
                             </span>
                         </button>
                         <a href="{{ route('users.show', $selectedParticipant) }}" class="min-w-0 transition hover:opacity-90" aria-label="Ver perfil de {{ $selectedParticipant->name }}">
-                            <h1 class="truncate text-base font-semibold text-brand-secondary">{{ $selectedParticipant->name }}</h1>
-                            <p class="truncate text-xs text-slate-500">{{ $selectedParticipant->chat_role_label }} · {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}</p>
+                            <span class="flex min-w-0 items-center gap-2">
+                                <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-header-name>{{ $selectedParticipant->name }}</h1>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-amber-500 {{ $selectedParticipantIsFavorite ? '' : 'hidden' }}" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-chat-favorite-star>
+                                    <path d="M11.245 4.174C11.4765 3.50808 11.5922 3.17513 11.7634 3.08285C11.9115 3.00298 12.0898 3.00298 12.238 3.08285C12.4091 3.17513 12.5248 3.50808 12.7563 4.174L14.2866 8.57639C14.3525 8.76592 14.3854 8.86068 14.4448 8.93125C14.4972 8.99359 14.5641 9.04218 14.6396 9.07278C14.725 9.10743 14.8253 9.10947 15.0259 9.11356L19.6857 9.20852C20.3906 9.22288 20.743 9.23007 20.8837 9.36432C21.0054 9.48051 21.0605 9.65014 21.0303 9.81569C20.9955 10.007 20.7146 10.2199 20.1528 10.6459L16.4387 13.4616C16.2788 13.5829 16.1989 13.6435 16.1501 13.7217C16.107 13.7909 16.0815 13.8695 16.0757 13.9507C16.0692 14.0427 16.0982 14.1387 16.1563 14.3308L17.506 18.7919C17.7101 19.4667 17.8122 19.8041 17.728 19.9793C17.6551 20.131 17.5108 20.2358 17.344 20.2583C17.1513 20.2842 16.862 20.0829 16.2833 19.6802L12.4576 17.0181C12.2929 16.9035 12.2106 16.8462 12.1211 16.8239C12.042 16.8043 11.9593 16.8043 11.8803 16.8239C11.7908 16.8462 11.7084 16.9035 11.5437 17.0181L7.71805 19.6802C7.13937 20.0829 6.85003 20.2842 6.65733 20.2583C6.49056 20.2358 6.34626 20.131 6.27337 19.9793C6.18915 19.8041 6.29123 19.4667 6.49538 18.7919L7.84503 14.3308C7.90313 14.1387 7.93218 14.0427 7.92564 13.9507C7.91986 13.8695 7.89432 13.7909 7.85123 13.7217C7.80246 13.6435 7.72251 13.5829 7.56262 13.4616L3.84858 10.6459C3.28678 10.2199 3.00588 10.007 2.97101 9.81569C2.94082 9.65014 2.99594 9.48051 3.11767 9.36432C3.25831 9.23007 3.61074 9.22289 4.31559 9.20852L8.9754 9.11356C9.176 9.10947 9.27631 9.10743 9.36177 9.07278C9.43726 9.04218 9.50414 8.99359 9.55657 8.93125C9.61593 8.86068 9.64887 8.76592 9.71475 8.57639L11.245 4.174Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </span>
+                            <p class="truncate text-xs text-slate-500" data-chat-header-role>{{ $selectedParticipant->chat_role_label }} · {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}</p>
                         </a>
+                    </div>
+
+                    <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                        <button
+                            type="button"
+                            data-chat-contact-menu-button
+                            @click="open = !open"
+                            class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-2xl text-slate-500 transition hover:bg-slate-50 hover:text-brand-secondary"
+                            aria-label="Acciones del contacto"
+                            :aria-expanded="open.toString()"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <circle cx="5" cy="12" r="1.8" />
+                                <circle cx="12" cy="12" r="1.8" />
+                                <circle cx="19" cy="12" r="1.8" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-1"
+                            class="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
+                            <form method="POST" action="{{ route('chat.beta.favorites.toggle', $selectedParticipant) }}" data-chat-favorite-toggle-form data-chat-favorite-toggle-url-template="{{ route('chat.beta.favorites.toggle', ['user' => '__USER_ID__']) }}">
+                                @csrf
+                                <button type="submit"
+                                    class="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left text-sm font-medium text-brand-secondary transition hover:bg-brand-secondary/5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                        <path d="M11.245 4.174C11.4765 3.50808 11.5922 3.17513 11.7634 3.08285C11.9115 3.00298 12.0898 3.00298 12.238 3.08285C12.4091 3.17513 12.5248 3.50808 12.7563 4.174L14.2866 8.57639C14.3525 8.76592 14.3854 8.86068 14.4448 8.93125C14.4972 8.99359 14.5641 9.04218 14.6396 9.07278C14.725 9.10743 14.8253 9.10947 15.0259 9.11356L19.6857 9.20852C20.3906 9.22288 20.743 9.23007 20.8837 9.36432C21.0054 9.48051 21.0605 9.65014 21.0303 9.81569C20.9955 10.007 20.7146 10.2199 20.1528 10.6459L16.4387 13.4616C16.2788 13.5829 16.1989 13.6435 16.1501 13.7217C16.107 13.7909 16.0815 13.8695 16.0757 13.9507C16.0692 14.0427 16.0982 14.1387 16.1563 14.3308L17.506 18.7919C17.7101 19.4667 17.8122 19.8041 17.728 19.9793C17.6551 20.131 17.5108 20.2358 17.344 20.2583C17.1513 20.2842 16.862 20.0829 16.2833 19.6802L12.4576 17.0181C12.2929 16.9035 12.2106 16.8462 12.1211 16.8239C12.042 16.8043 11.9593 16.8043 11.8803 16.8239C11.7908 16.8462 11.7084 16.9035 11.5437 17.0181L7.71805 19.6802C7.13937 20.0829 6.85003 20.2842 6.65733 20.2583C6.49056 20.2358 6.34626 20.131 6.27337 19.9793C6.18915 19.8041 6.29123 19.4667 6.49538 18.7919L7.84503 14.3308C7.90313 14.1387 7.93218 14.0427 7.92564 13.9507C7.91986 13.8695 7.89432 13.7909 7.85123 13.7217C7.80246 13.6435 7.72251 13.5829 7.56262 13.4616L3.84858 10.6459C3.28678 10.2199 3.00588 10.007 2.97101 9.81569C2.94082 9.65014 2.99594 9.48051 3.11767 9.36432C3.25831 9.23007 3.61074 9.22289 4.31559 9.20852L8.9754 9.11356C9.176 9.10947 9.27631 9.10743 9.36177 9.07278C9.43726 9.04218 9.50414 8.99359 9.55657 8.93125C9.61593 8.86068 9.64887 8.76592 9.71475 8.57639L11.245 4.174Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    <span data-chat-favorite-toggle-label>{{ $selectedParticipantIsFavorite ? 'Quitar de favoritos' : 'Marcar como favorito' }}</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                 </header>
@@ -304,7 +383,7 @@
 
                         <div class="absolute bottom-full right-16 mb-3 hidden w-72 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-xl" data-chat-emoji-picker>
                             <div class="grid grid-cols-8 gap-1">
-                                @foreach (['😀','😄','😁','😉','😍','🥰','😎','🤩','🙂','🙌','👍','👏','🔥','✨','❤️','💡','📎','📷','🧠','🎯','🚀','💬','😅','🙏'] as $emoji)
+                                @foreach (['😀','😁','😂','😃','😍','🥰','😎','🤩','💩','🙌','👍','👏','🔥','✨','❤️','💡','🎯','🚀','💬','🤠','🙏','😆','🥳','🤯'] as $emoji)
                                     <button type="button"
                                         class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-lg transition hover:bg-slate-100"
                                         data-chat-emoji-option
@@ -473,13 +552,18 @@
                 let pollUrl = wrapper?.dataset.pollUrl;
                 const summaryRoot = document.querySelector('[data-chat-summary-url]');
                 const sidebarList = document.querySelector('[data-chat-conversations-list]');
+                const sidebarFavoritesList = document.querySelector('[data-chat-favorites-list]');
                 const sidebarUnreadTotal = document.querySelector('[data-chat-unread-total]');
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
                 const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
                 const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
-                const headerName = document.querySelector('[data-chat-partner-name]');
-                const headerRole = document.querySelector('[data-chat-partner-role]');
-                const headerAvatar = document.querySelector('[data-chat-partner-avatar]');
+                const headerName = document.querySelector('[data-chat-header-name]');
+                const headerRole = document.querySelector('[data-chat-header-role]');
+                const headerAvatar = document.querySelector('[data-chat-header-avatar]');
+                const headerFavoriteStar = document.querySelector('[data-chat-favorite-star]');
+                const headerFavoriteToggleLabel = document.querySelector('[data-chat-favorite-toggle-label]');
+                const headerFavoriteToggleForm = document.querySelector('[data-chat-favorite-toggle-form]');
+                const headerFavoriteMenuButton = document.querySelector('[data-chat-contact-menu-button]');
                 const sidebarTabButtons = Array.from(document.querySelectorAll('[data-chat-sidebar-tab]'));
                 const sidebarPanels = Array.from(document.querySelectorAll('[data-chat-sidebar-panel]'));
 
@@ -496,6 +580,7 @@
                 let searchDebounce = null;
                 let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
+                const favoriteUserIds = new Set(@js($favoriteUserIds ?? []));
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
 
                 const escapeHtml = (value) => {
@@ -513,174 +598,40 @@
                     chatError.classList.add('hidden');
                 };
 
-                const setSidebarTab = (tab) => {
-                    sidebarTab = tab;
+                const buildConversationMessagesUrl = (conversationId) => {
+                    if (!messagesUrlTemplate) {
+                        return '';
+                    }
 
-                    sidebarTabButtons.forEach((button) => {
-                        const isActive = button.dataset.chatSidebarTab === tab;
-                        button.classList.toggle('bg-brand-primary', isActive);
-                        button.classList.toggle('text-white', isActive);
-                        button.classList.toggle('shadow-sm', isActive);
-                        button.classList.toggle('text-slate-500', !isActive);
-                        button.classList.toggle('hover:bg-slate-100', !isActive);
-                        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-                    });
-
-                    sidebarPanels.forEach((panel) => {
-                        const isActive = panel.dataset.chatSidebarPanel === tab;
-                        panel.classList.toggle('hidden', !isActive);
-                    });
+                    return messagesUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(String(conversationId)));
                 };
 
-                const renderSearchResults = (html) => {
-                    searchResults.innerHTML = html;
+                const buildConversationStoreUrl = (conversationId) => {
+                    if (!storeUrlTemplate) {
+                        return '';
+                    }
+
+                    return storeUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(String(conversationId)));
                 };
 
-                const performLiveSearch = async (term) => {
-                    if (searchAbortController) {
-                        searchAbortController.abort();
-                    }
+                const renderAttachmentMarkup = (attachment) => {
+                    const url = attachment.url ?? '';
+                    const name = attachment.original_name ?? 'archivo';
+                    const sizeLabel = attachment.size_label ?? '';
+                    const isImageAttachment = Boolean(attachment.is_image ?? false);
 
-                    const searchTerm = term.trim();
-
-                    if (searchTerm === '') {
-                        renderSearchResults('');
-                        return;
-                    }
-
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('search', searchTerm);
-                    url.searchParams.set('ajax', '1');
-
-                    const controller = new AbortController();
-                    searchAbortController = controller;
-
-                    try {
-                        const response = await fetch(url.toString(), {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                Accept: 'application/json',
-                            },
-                            signal: controller.signal,
-                        });
-
-                        if (!response.ok) {
-                            return;
-                        }
-
-                        const payload = await response.json();
-
-                        if (searchAbortController !== controller) {
-                            return;
-                        }
-
-                        renderSearchResults(payload.html || '');
-                    } catch (error) {
-                        if (error.name !== 'AbortError') {
-                            console.error(error);
-                        }
-                    }
-                };
-
-                const setChatError = (message) => {
-                    if (!message) {
-                        clearChatError();
-                        return;
-                    }
-
-                    chatError.textContent = message;
-                    chatError.classList.remove('hidden');
-                };
-
-                const getAttachmentExtension = (fileName) => {
-                    const parts = String(fileName || '').toLowerCase().split('.');
-                    return parts.length > 1 ? parts.pop() : '';
-                };
-
-                const getAttachmentKey = (file) => [
-                    file?.name || '',
-                    file?.size || 0,
-                    file?.type || '',
-                    file?.lastModified || 0,
-                ].join('|');
-
-                const buildConversationMessagesUrl = (conversationId) => messagesUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(conversationId));
-
-                const buildConversationStoreUrl = (conversationId) => storeUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(conversationId));
-
-                const setSelectedConversation = (conversationId) => {
-                    sidebarSelectedConversationId = Number(conversationId);
-                    wrapper.dataset.conversationId = String(conversationId);
-                    pollUrl = buildConversationMessagesUrl(conversationId);
-                    wrapper.dataset.pollUrl = pollUrl;
-                    form.action = buildConversationStoreUrl(conversationId);
-                    form.querySelector('input[name="conversation_id"]').value = String(conversationId);
-                };
-
-                const updateHeader = (payload) => {
-                    if (payload?.partner_name && headerName) {
-                        headerName.textContent = payload.partner_name;
-                    }
-
-                    if (payload?.partner_chat_role_label && headerRole) {
-                        const dealership = headerRole.textContent?.split('·')?.[1]?.trim();
-                        headerRole.textContent = dealership
-                            ? `${payload.partner_chat_role_label} · ${dealership}`
-                            : payload.partner_chat_role_label;
-                    }
-
-                    if (payload?.partner_avatar_url && headerAvatar) {
-                        headerAvatar.src = payload.partner_avatar_url;
-                    }
-                };
-
-                const updatePreviousTimeVisibility = (message) => {
-                    const currentTime = message?.created_at_label;
-                    if (!currentTime) {
-                        return;
-                    }
-
-                    const currentNode = messagesContainer.querySelector(`[data-message-id="${message.id}"]`);
-                    const previousNode = currentNode?.previousElementSibling;
-                    const previousTimeNode = previousNode?.querySelector('[data-message-time]');
-
-                    if (!previousTimeNode) {
-                        return;
-                    }
-
-                    const previousTime = previousTimeNode.textContent?.trim();
-
-                    if (previousTime === currentTime) {
-                        previousTimeNode.classList.add('hidden');
-                    }
-                };
-
-                const renderMessage = (message, compactTop = false) => {
-                    const mine = Boolean(message.is_mine);
-                    const readClass = message.read_at ? 'text-sky-500' : 'text-slate-400';
-                const doubleCheckSvg = `
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                            <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                            <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
-                        </svg>`;
-
-                const renderAttachment = (attachment) => {
-                    const url = escapeHtml(attachment?.url || '');
-                    const name = escapeHtml(attachment?.original_name || 'archivo');
-                    const sizeLabel = attachment?.size_label ? `<span class="block text-xs text-slate-500">${escapeHtml(attachment.size_label)}</span>` : '';
-
-                    if (attachment?.is_image) {
+                    if (isImageAttachment) {
                         return `
                             <button
                                 type="button"
-                                data-chat-image-src="${url}"
-                                data-chat-image-alt="${name}"
-                                data-chat-image-title="${name}"
-                                @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
+                                data-chat-image-src="${escapeHtml(url)}"
+                                data-chat-image-alt="${escapeHtml(name)}"
+                                data-chat-image-title="${escapeHtml(name)}"
+                                onclick="window.dispatchEvent(new CustomEvent('open-image', { detail: { src: this.dataset.chatImageSrc, alt: this.dataset.chatImageAlt, title: this.dataset.chatImageTitle } }))"
                                 class="group relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                                aria-label="Ver ${name}"
+                                aria-label="Ver ${escapeHtml(name)}"
                             >
-                                <img src="${url}" alt="${name}" class="max-h-72 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
+                                <img src="${escapeHtml(url)}" alt="${escapeHtml(name)}" class="max-h-72 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
                                 <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/30 group-hover:opacity-100">
                                     Ver
                                 </span>
@@ -689,7 +640,7 @@
                     }
 
                     return `
-                        <a href="${url}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                        <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
                             <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
@@ -697,73 +648,70 @@
                                 </svg>
                             </span>
                             <span class="min-w-0 flex-1">
-                                <span class="block truncate text-sm font-semibold text-brand-secondary">${name}</span>
-                                ${sizeLabel}
+                                <span class="block truncate text-sm font-semibold text-brand-secondary">${escapeHtml(name)}</span>
+                                ${sizeLabel !== '' ? `<span class="block text-xs text-slate-500">${escapeHtml(sizeLabel)}</span>` : ''}
                             </span>
                         </a>
                     `;
                 };
 
-                return `
-                        <div class="flex ${mine ? 'justify-end' : 'justify-start'} ${compactTop ? 'mt-0.5' : 'mt-3'}" data-message-id="${message.id}">
-                            <div class="flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}">
-                                <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm ${mine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
-                                    ${message.body ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(message.body)}</p>` : ''}
-                                    ${(Array.isArray(message.attachments) && message.attachments.length > 0) ? `
-                                        <div class="${message.body ? 'mt-2' : ''} space-y-2">
-                                            ${message.attachments.map((attachment) => renderAttachment(attachment)).join('')}
-                                        </div>
-                                    ` : ''}
-                                    ${mine ? `<span class="absolute bottom-1.5 right-2 inline-flex items-center ${readClass}" data-message-checks>${doubleCheckSvg}</span>` : ''}
+                const renderMessage = (message, index, messages) => {
+                    const isMine = Boolean(message.is_mine);
+                    const nextMessage = messages[index + 1];
+                    const currentTimeLabel = message.created_at_label || '';
+                    const nextTimeLabel = nextMessage?.created_at_label || '';
+                    const showTime = Boolean(message.show_time ?? (index === messages.length - 1 || nextTimeLabel !== currentTimeLabel));
+                    const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
+                    const body = message.body || '';
+                    const attachmentsHtml = messageAttachments.map((attachment) => renderAttachmentMarkup(attachment)).join('');
+
+                    return `
+                        <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${index === 0 ? 'mt-0' : (showTime ? 'mt-3' : 'mt-0.5')}" data-message-id="${message.id}">
+                            <div class="flex max-w-[78%] flex-col ${isMine ? 'items-end' : 'items-start'}">
+                                <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm ${isMine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
+                                    ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(body)}</p>` : ''}
+                                    ${attachmentsHtml !== '' ? `<div class="${body !== '' ? 'mt-2' : ''} space-y-2">${attachmentsHtml}</div>` : ''}
+                                    ${isMine ? `<span class="absolute bottom-1.5 right-2 inline-flex items-center ${message.read_at ? 'text-sky-500' : 'text-slate-400'}" data-message-checks>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                            <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                                            <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                        </svg>
+                                    </span>` : ''}
                                 </div>
-                                <div class="${message.show_time === false ? 'mt-0.5' : 'mt-1'} flex items-center gap-1 text-[11px] ${mine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
-                                    <span data-message-time${message.show_time === false ? ' class="hidden"' : ''}>${escapeHtml(message.created_at_label ?? '')}</span>
+                                <div class="${showTime ? 'mt-1' : 'mt-0.5'} flex items-center gap-1 text-[11px] ${isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
+                                    <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                 </div>
                             </div>
                         </div>
                     `;
                 };
 
-                const setAttachmentsFiles = (files) => {
-                    const dataTransfer = new DataTransfer();
+                const renderMessages = (messages) => {
+                    const safeMessages = Array.isArray(messages) ? messages : [];
 
-                    files.forEach((file) => dataTransfer.items.add(file));
-                    attachmentsInput.files = dataTransfer.files;
-                    renderAttachmentsPreview();
-                };
-
-                const filterUnsupportedAttachments = () => {
-                    const files = Array.from(attachmentsInput.files || []);
-                    const validFiles = [];
-                    const invalidFiles = [];
-
-                    files.forEach((file) => {
-                        const extension = getAttachmentExtension(file.name);
-
-                        if (allowedAttachmentExtensions.includes(extension)) {
-                            validFiles.push(file);
-                            return;
-                        }
-
-                        invalidFiles.push(file.name);
-                    });
-
-                    if (invalidFiles.length > 0) {
-                        const allowedList = allowedAttachmentExtensions.map((extension) => `.${extension}`).join(', ');
-                        setChatError(`El archivo ${invalidFiles.length === 1 ? invalidFiles[0] : invalidFiles.join(', ')} no se puede enviar. Formatos permitidos: ${allowedList}.`);
-                    } else {
-                        clearChatError();
+                    if (safeMessages.length === 0) {
+                        messagesContainer.innerHTML = `
+                            <div class="flex min-h-full items-center justify-center">
+                                <div class="max-w-md rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
+                                    <p class="text-lg font-bold text-brand-secondary">Chat listo para empezar</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-500">Aquí verás la conversación cuando elijas un compañero.</p>
+                                </div>
+                            </div>
+                        `;
+                        latestMessageId = 0;
+                        return;
                     }
 
-                    setAttachmentsFiles(validFiles);
+                    messagesContainer.innerHTML = safeMessages.map((message, index) => renderMessage(message, index, safeMessages)).join('');
+                    latestMessageId = Number(safeMessages[safeMessages.length - 1]?.id ?? 0);
+                    autoScroll();
                 };
 
                 const renderConversation = (conversation) => {
                     const isSelected = Number(conversation.id) === Number(sidebarSelectedConversationId);
-                    const itemClass = isSelected
-                        ? 'bg-brand-primary/10'
-                        : 'hover:bg-slate-50';
+                    const itemClass = isSelected ? 'bg-brand-primary/10' : 'hover:bg-slate-50';
                     const unreadBadge = Number(conversation.unread_messages_count || 0);
+                    const nameClass = conversation.partner_is_favorite ? 'text-amber-600' : 'text-brand-secondary';
                     const unreadHtml = unreadBadge > 0
                         ? `<span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge>${unreadBadge}</span>`
                         : `<span class="absolute -right-1 -top-1 hidden h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge></span>`;
@@ -783,7 +731,7 @@
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-brand-secondary" data-chat-partner-name>${escapeHtml(conversation.partner_name || 'Conversación')}</p>
+                                        <p class="truncate text-sm font-semibold ${nameClass}" data-chat-partner-name>${escapeHtml(conversation.partner_name || 'Conversación')}</p>
                                         <p class="truncate text-xs text-slate-500" data-chat-partner-role>${escapeHtml(conversation.partner_chat_role_label || '')}</p>
                                         <p class="truncate text-xs text-slate-500" data-chat-last-message>${escapeHtml(conversation.last_message_excerpt || 'Empieza la conversación')}</p>
                                     </div>
@@ -792,6 +740,62 @@
                             </div>
                         </a>
                     `;
+                };
+
+                const renderFavoriteContact = (contact) => {
+                    return `
+                        <a href="{{ route('chat.beta') }}?recipient=${encodeURIComponent(contact.id)}"
+                            data-chat-recipient-link
+                            class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-slate-50">
+                            <div class="relative shrink-0">
+                                <img src="${escapeHtml(contact.avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}"
+                                    alt="Avatar de ${escapeHtml(contact.name || 'Usuario')}"
+                                    class="h-11 w-11 rounded-2xl object-cover">
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-amber-600">${escapeHtml(contact.name || 'Usuario')}</p>
+                                        <p class="truncate text-xs text-slate-500">${escapeHtml(contact.chat_role_label || '')}${contact.resolved_dealership_name ? ' · ' + escapeHtml(contact.resolved_dealership_name) : ''}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                };
+
+                const setHeaderFavoriteState = (isFavorite) => {
+                    if (headerFavoriteStar) {
+                        headerFavoriteStar.classList.toggle('hidden', !isFavorite);
+                    }
+
+                    if (headerFavoriteToggleLabel) {
+                        headerFavoriteToggleLabel.textContent = isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito';
+                    }
+                };
+
+                const updateHeader = (payload) => {
+                    if (headerName && payload.partner_name) {
+                        headerName.textContent = payload.partner_name;
+                    }
+
+                    if (headerRole) {
+                        const partnerRoleLabel = payload.partner_chat_role_label || '';
+                        const partnerDealershipName = payload.partner_dealership_name || 'Sin delegación';
+                        headerRole.textContent = `${partnerRoleLabel}${partnerRoleLabel ? ' · ' : ''}${partnerDealershipName}`;
+                    }
+
+                    if (headerAvatar && payload.partner_avatar_url) {
+                        headerAvatar.src = payload.partner_avatar_url;
+                        headerAvatar.alt = `Avatar de ${payload.partner_name || 'Usuario'}`;
+                    }
+
+                    if (headerFavoriteToggleForm && payload.partner_id) {
+                        headerFavoriteToggleForm.action = (headerFavoriteToggleForm.dataset.chatFavoriteToggleUrlTemplate || '').replace('__USER_ID__', String(payload.partner_id));
+                    }
+
+                    setHeaderFavoriteState(Boolean(payload.partner_is_favorite));
                 };
 
                 const loadConversation = async (conversationId, { pushState = true } = {}) => {
@@ -817,10 +821,13 @@
                         const messages = Array.isArray(payload.messages) ? payload.messages : [];
                         const activeConversationId = Number(payload.conversation_id || conversationId);
 
-                        setSelectedConversation(activeConversationId);
+                        sidebarSelectedConversationId = activeConversationId;
+                        pollUrl = buildConversationMessagesUrl(activeConversationId);
+                        wrapper.dataset.pollUrl = pollUrl;
+                        wrapper.dataset.conversationId = String(activeConversationId);
+
                         updateHeader(payload);
                         renderMessages(messages);
-                        autoScroll();
                         refreshSidebar();
 
                         if (pushState) {
@@ -836,27 +843,60 @@
 
                 const openConversationFromLink = async (url) => {
                     try {
-                        const response = await fetch(url, {
+                        const nextUrl = new URL(url, window.location.href);
+
+                        if (nextUrl.searchParams.has('conversation')) {
+                            await loadConversation(nextUrl.searchParams.get('conversation'), { pushState: true });
+                            return;
+                        }
+
+                        const response = await fetch(nextUrl.toString(), {
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
                                 Accept: 'application/json',
                             },
                         });
 
-                        const finalUrl = new URL(response.url);
-                        const conversationId = finalUrl.searchParams.get('conversation');
+                        const redirectedUrl = new URL(response.url, window.location.href);
+                        const conversationId = redirectedUrl.searchParams.get('conversation');
 
                         if (conversationId) {
-                            await loadConversation(conversationId);
-                            autoScroll();
+                            await loadConversation(conversationId, { pushState: true });
                         }
                     } catch (error) {
                         console.error(error);
                     }
                 };
 
+                window.loadConversation = loadConversation;
+                window.openConversationFromLink = openConversationFromLink;
+
+                const renderAttachmentsPreview = () => {
+                    if (!attachmentSnapshot.length) {
+                        attachmentsPreview.classList.add('hidden');
+                        attachmentsPreview.innerHTML = '';
+                        attachmentsChips.classList.add('hidden');
+                        attachmentsChips.innerHTML = '';
+                        return;
+                    }
+
+                    const previewText = attachmentSnapshot.map((file) => `${file.name} (${Math.ceil(file.size / 1024)} KB)`).join(' · ');
+                    attachmentsPreview.textContent = `${attachmentSnapshot.length} archivo${attachmentSnapshot.length === 1 ? '' : 's'} seleccionado${attachmentSnapshot.length === 1 ? '' : 's'}: ${previewText}`;
+                    attachmentsPreview.classList.remove('hidden');
+
+                    attachmentsChips.innerHTML = attachmentSnapshot.map((file, index) => `
+                        <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-brand-secondary">
+                            <span class="truncate max-w-[9rem]">${escapeHtml(file.name)}</span>
+                            <button type="button" class="cursor-pointer text-slate-400 transition hover:text-rose-500" data-chat-remove-attachment-index="${index}" aria-label="Quitar ${escapeHtml(file.name)}">
+                                ×
+                            </button>
+                        </span>
+                    `).join('');
+                    attachmentsChips.classList.remove('hidden');
+                };
+
                 const refreshSidebar = async () => {
-                    if (!summaryUrl || !sidebarList) {
+                    if (!summaryUrl || (!sidebarList && !sidebarFavoritesList)) {
                         return;
                     }
 
@@ -874,119 +914,43 @@
 
                         const payload = await response.json();
                         const conversations = Array.isArray(payload.conversations) ? payload.conversations : [];
+                        const favoriteContacts = Array.isArray(payload.favorite_contacts) ? payload.favorite_contacts : [];
+                        const unreadTotal = Number(payload.unread_messages_total || 0);
 
                         if (sidebarUnreadTotal) {
-                            const unreadTotal = Number(payload.unread_messages_total || 0);
                             sidebarUnreadTotal.textContent = String(unreadTotal);
                         }
 
-                        sidebarList.innerHTML = conversations.length === 0
-                            ? `
-                                <div class="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
-                                    <p class="text-sm font-semibold text-brand-secondary">Sin conversaciones aún</p>
-                                    <p class="mt-1 text-sm leading-6 text-slate-500">Busca a un compañero y abre el primer chat.</p>
-                                </div>
-                            `
-                            : conversations.map(renderConversation).join('');
+                        if (sidebarList) {
+                            sidebarList.innerHTML = conversations.length === 0
+                                ? `
+                                    <div class="px-4 py-8 text-center text-sm text-slate-500">
+                                        Sin conversaciones aún
+                                    </div>
+                                `
+                                : conversations.map(renderConversation).join('');
+                        }
+
+                        if (sidebarFavoritesList) {
+                            sidebarFavoritesList.innerHTML = favoriteContacts.length === 0
+                                ? `
+                                    <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
+                                        Marca contactos como favoritos para verlos aquí.
+                                    </div>
+                                `
+                                : `
+                                    <div class="divide-y divide-slate-100 border-y border-slate-100">
+                                        ${favoriteContacts.map(renderFavoriteContact).join('')}
+                                    </div>
+                                `;
+                        }
                     } catch (error) {
                         console.error(error);
                     }
                 };
 
-                const renderMessages = (messages) => {
-                    if (!Array.isArray(messages) || messages.length === 0) {
-                        messagesContainer.innerHTML = `
-                            <div class="flex min-h-full items-center justify-center">
-                                <div class="max-w-md rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
-                                    <p class="text-lg font-bold text-brand-secondary">Chat listo para empezar</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-500">Aquí verás la conversación cuando elijas un compañero.</p>
-                                </div>
-                            </div>
-                        `;
-                        latestMessageId = 0;
-                        return;
-                    }
-
-                    messagesContainer.innerHTML = messages.map((message, index) => {
-                        const previousMessage = messages[index - 1];
-                        const compactTop = Boolean(previousMessage) && previousMessage.created_at_label === message.created_at_label;
-                        return renderMessage(message, compactTop);
-                    }).join('');
-                    window.Alpine?.initTree(messagesContainer);
-                    latestMessageId = Math.max(...messages.map((message) => Number(message.id) || 0));
-                    autoScroll();
-                };
-
-                const renderAttachmentsPreview = () => {
-                    const files = Array.from(attachmentsInput.files || []);
-
-                    if (files.length === 0) {
-                        attachmentsPreview.classList.add('hidden');
-                        attachmentsPreview.textContent = '';
-                        attachmentsChips.classList.add('hidden');
-                        attachmentsChips.innerHTML = '';
-                        return;
-                    }
-
-                    attachmentsPreview.textContent = files.length === 1
-                        ? '1 archivo adjunto'
-                        : `${files.length} archivos adjuntos`;
-                    attachmentsPreview.classList.remove('hidden');
-
-                    attachmentsChips.innerHTML = files.map((file, index) => `
-                        <span class="mb-2 mr-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm">
-                            <span class="max-w-[14rem] truncate">${escapeHtml(file.name)}</span>
-                            <button type="button"
-                                class="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
-                                data-chat-remove-attachment
-                                data-attachment-index="${index}"
-                                aria-label="Quitar adjunto ${escapeHtml(file.name)}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </span>
-                    `).join('');
-                    attachmentsChips.classList.remove('hidden');
-                };
-
-                const showServerValidationError = async (response) => {
-                    const contentType = response.headers.get('content-type') || '';
-
-                    if (!contentType.includes('application/json')) {
-                        setChatError('No se pudo enviar el mensaje.');
-                        return;
-                    }
-
-                    const payload = await response.json().catch(() => null);
-                    const messages = payload?.errors ? Object.values(payload.errors).flat().filter(Boolean) : [];
-
-                    if (messages.length > 0) {
-                        setChatError(messages[0]);
-                        return;
-                    }
-
-                    setChatError(payload?.message || 'No se pudo enviar el mensaje.');
-                };
-
-                const insertTextAtCursor = (textToInsert) => {
-                    const start = input.selectionStart ?? input.value.length;
-                    const end = input.selectionEnd ?? input.value.length;
-                    const value = input.value;
-
-                    input.value = `${value.slice(0, start)}${textToInsert}${value.slice(end)}`;
-                    const nextPosition = start + textToInsert.length;
-                    input.focus();
-                    input.setSelectionRange(nextPosition, nextPosition);
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                };
-
-                const toggleEmojiPicker = () => {
-                    emojiPicker.classList.toggle('hidden');
-                };
-
                 const syncMessages = async () => {
-                    if (pollingLocked) {
+                    if (!pollUrl || pollingLocked) {
                         return;
                     }
 
@@ -1004,199 +968,54 @@
 
                         const payload = await response.json();
                         const messages = Array.isArray(payload.messages) ? payload.messages : [];
-                        const newLatestId = Math.max(0, ...messages.map((message) => Number(message.id) || 0));
+                        const nextLatest = Number(messages[messages.length - 1]?.id ?? 0);
 
-                        if (newLatestId !== latestMessageId) {
+                        if (nextLatest !== latestMessageId) {
                             renderMessages(messages);
-                            autoScroll();
-                            refreshSidebar();
-                            return;
                         }
-
-                        const currentMineMessages = messages.filter((message) => message.is_mine);
-                        const currentDomMessages = Array.from(messagesContainer.querySelectorAll('[data-message-id]'));
-
-                        if (currentDomMessages.length !== messages.length) {
-                            renderMessages(messages);
-                            autoScroll();
-                            return;
-                        }
-
-                        currentMineMessages.forEach((message) => {
-                            const node = messagesContainer.querySelector(`[data-message-id="${message.id}"] [data-message-checks]`);
-
-                            if (node) {
-                                node.classList.toggle('text-sky-500', Boolean(message.read_at));
-                                node.classList.toggle('text-slate-400', !message.read_at);
-                            }
-                        });
-
-                        refreshSidebar();
                     } catch (error) {
                         console.error(error);
                     }
                 };
 
-                form.addEventListener('submit', async (event) => {
-                    event.preventDefault();
-                    clearChatError();
+                window.renderAttachmentsPreview = renderAttachmentsPreview;
+                window.refreshSidebar = refreshSidebar;
+                window.syncMessages = syncMessages;
 
-                    const body = input.value.trimEnd();
-                    const hasAttachments = Array.from(attachmentsInput.files || []).length > 0;
+                const setSidebarTab = (tab) => {
+                    sidebarTab = tab;
 
-                    if ((body.trim() === '' && !hasAttachments) || isSubmitting) {
-                        return;
-                    }
+                    sidebarTabButtons.forEach((button) => {
+                        const isActive = button.dataset.chatSidebarTab === tab;
+                        const isFavoriteButton = button.dataset.chatSidebarTab === 'favorites';
 
-                    isSubmitting = true;
-                    pollingLocked = true;
-
-                    try {
-                        const formData = new FormData(form);
-
-                        const response = await fetch(form.action, {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                Accept: 'application/json',
-                                'X-CSRF-TOKEN': csrfToken,
-                            },
-                            body: formData,
-                        });
-
-                        if (!response.ok) {
-                            await showServerValidationError(response);
-                            return;
-                        }
-
-                        const payload = await response.json();
-                        const message = payload.message;
-
-                        if (message) {
-                            const currentHtml = messagesContainer.innerHTML;
-                            if (currentHtml.includes('Chat listo para empezar')) {
-                                messagesContainer.innerHTML = '';
-                            }
-                            const previousNode = messagesContainer.lastElementChild;
-                            const previousTime = previousNode?.querySelector('[data-message-time]')?.textContent?.trim();
-                            const compactTop = previousTime === (message.created_at_label ?? '');
-                            messagesContainer.insertAdjacentHTML('beforeend', renderMessage(message, compactTop));
-                            window.Alpine?.initTree(messagesContainer.lastElementChild);
-                            updatePreviousTimeVisibility(message);
-                            latestMessageId = Number(message.id) || latestMessageId;
-                            autoScroll();
-                            refreshSidebar();
-                        }
-
-                        input.value = '';
-                        input.style.height = 'auto';
-                        attachmentsInput.value = '';
-                        renderAttachmentsPreview();
-                        emojiPicker.classList.add('hidden');
-                    } catch (error) {
-                        console.error(error);
-                        if (!chatError.textContent) {
-                            setChatError('No se pudo enviar el mensaje.');
-                        }
-                    } finally {
-                        isSubmitting = false;
-                        pollingLocked = false;
-                    }
-                });
-
-                input.addEventListener('keydown', (event) => {
-                    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                    form.requestSubmit();
-                });
-
-                input.addEventListener('input', () => {
-                    input.style.height = 'auto';
-                    input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
-                });
-
-                attachmentsButton.addEventListener('click', () => {
-                    attachmentSnapshot = Array.from(attachmentsInput.files || []);
-                    emojiPicker.classList.add('hidden');
-                    attachmentsInput.click();
-                });
-
-                attachmentsInput.addEventListener('change', () => {
-                    const incomingFiles = Array.from(attachmentsInput.files || []);
-                    const mergedFiles = [...attachmentSnapshot, ...incomingFiles];
-                    const dedupedFiles = [];
-                    const seenFiles = new Set();
-
-                    mergedFiles.forEach((file) => {
-                        const fileKey = getAttachmentKey(file);
-
-                        if (seenFiles.has(fileKey)) {
-                            return;
-                        }
-
-                        seenFiles.add(fileKey);
-                        dedupedFiles.push(file);
+                        button.classList.toggle('bg-brand-primary', isActive && !isFavoriteButton);
+                        button.classList.toggle('text-white', isActive && !isFavoriteButton);
+                        button.classList.toggle('shadow-sm', isActive && !isFavoriteButton);
+                        button.classList.toggle('bg-brand-primary/10', isActive && isFavoriteButton);
+                        button.classList.toggle('text-brand-primary', isActive && isFavoriteButton);
+                        button.classList.toggle('shadow-sm', isActive && isFavoriteButton);
+                        button.classList.toggle('text-slate-500', !isActive);
+                        button.classList.toggle('hover:bg-slate-100', !isActive && !isFavoriteButton);
+                        button.classList.toggle('hover:bg-brand-primary/10', isFavoriteButton && !isActive);
+                        button.classList.toggle('hover:text-brand-primary', !isFavoriteButton && !isActive);
+                        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
                     });
 
-                    setAttachmentsFiles(dedupedFiles);
-                    filterUnsupportedAttachments();
-                });
+                    sidebarPanels.forEach((panel) => {
+                        const isActive = panel.dataset.chatSidebarPanel === tab;
+                        panel.classList.toggle('hidden', !isActive);
+                    });
+                };
 
-                emojiButton.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    toggleEmojiPicker();
-                });
-
-                emojiPicker.addEventListener('click', (event) => {
-                    const emojiOption = event.target.closest('[data-chat-emoji-option]');
-
-                    if (!emojiOption) {
-                        return;
-                    }
-
-                    insertTextAtCursor(emojiOption.dataset.emoji || '🙂');
-                });
-
-                attachmentsChips.addEventListener('click', (event) => {
-                    const removeButton = event.target.closest('[data-chat-remove-attachment]');
-
-                    if (!removeButton) {
-                        return;
-                    }
-
-                    const index = Number(removeButton.dataset.attachmentIndex);
-                    const files = Array.from(attachmentsInput.files || []);
-
-                    if (!Number.isInteger(index) || index < 0 || index >= files.length) {
-                        return;
-                    }
-
-                    files.splice(index, 1);
-                    setAttachmentsFiles(files);
-                });
-
-                document.addEventListener('click', (event) => {
-                    if (emojiPicker.classList.contains('hidden')) {
-                        return;
-                    }
-
-                    if (emojiPicker.contains(event.target) || emojiButton.contains(event.target)) {
-                        return;
-                    }
-
-                    emojiPicker.classList.add('hidden');
-                });
+                setSidebarTab('chats');
 
                 sidebarTabButtons.forEach((button) => {
                     button.addEventListener('click', () => {
-                        setSidebarTab(button.dataset.chatSidebarTab || 'chats');
+                        const nextTab = button.dataset.chatSidebarTab === 'favorites' && sidebarTab === 'favorites' ? 'chats' : (button.dataset.chatSidebarTab || 'chats');
+                        setSidebarTab(nextTab);
                     });
                 });
-
-                setSidebarTab('chats');
 
                 searchInput.addEventListener('input', () => {
                     clearTimeout(searchDebounce);
@@ -1227,19 +1046,19 @@
                     }
 
                     event.preventDefault();
-                    await openConversationFromLink(link.href);
+                    await window.openConversationFromLink?.(link.href);
                 });
 
                 window.addEventListener('popstate', () => {
                     const conversationId = new URL(window.location.href).searchParams.get('conversation');
 
                     if (conversationId) {
-                        void loadConversation(conversationId, { pushState: false });
+                        void window.loadConversation?.(conversationId, { pushState: false });
                     }
                 });
 
                 autoScroll();
-                renderAttachmentsPreview();
+                window.renderAttachmentsPreview?.();
                 setInterval(syncMessages, 3000);
                 setInterval(refreshSidebar, 5000);
                 refreshSidebar();
@@ -1248,3 +1067,4 @@
         </script>
     @endif
 @endsection
+

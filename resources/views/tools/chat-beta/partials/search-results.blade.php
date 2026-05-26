@@ -12,7 +12,7 @@
                     class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-brand-primary/20 hover:shadow-sm">
                     <img src="{{ $person->avatar_url }}" alt="Avatar de {{ $person->name }}" class="h-10 w-10 rounded-2xl object-cover">
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $person->name }}</p>
+                        <p class="truncate text-sm font-semibold {{ in_array($person->id, $favoriteUserIds ?? [], true) ? 'text-amber-600' : 'text-brand-secondary' }}">{{ $person->name }}</p>
                         <p class="truncate text-xs text-slate-500">{{ $person->chat_role_label }}</p>
                     </div>
                 </a>

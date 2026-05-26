@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompanyChatConversation;
+use App\Models\CompanyChatFavoriteContact;
 use App\Models\CompanyChatMessage;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
@@ -24,6 +25,7 @@ class CompanyChatController extends Controller
 
         $authUser = $request->user();
         $search = trim((string) $request->query('search'));
+        $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
         if ($request->boolean('ajax')) {
             $people = User::query()
@@ -44,6 +46,7 @@ class CompanyChatController extends Controller
                 'html' => view('tools.chat-beta.partials.search-results', [
                     'people' => $people,
                     'search' => $search,
+                    'favoriteUserIds' => $favoriteUserIds,
                 ])->render(),
             ]);
         }
@@ -121,6 +124,8 @@ class CompanyChatController extends Controller
             ->limit(12)
             ->get();
 
+        $favoriteContacts = $this->favoriteContactsPayload($authUser);
+
         $teamUsers = User::query()
             ->where('is_active', true)
             ->whereKeyNot($authUser->id)
@@ -149,8 +154,10 @@ class CompanyChatController extends Controller
             'conversations' => $conversations,
             'selectedConversation' => $selectedConversation,
             'people' => $people,
+            'favoriteContacts' => $favoriteContacts,
             'teamUsers' => $teamUsers,
             'search' => $search,
+            'favoriteUserIds' => $favoriteUserIds,
         ]);
     }
 
@@ -227,6 +234,7 @@ class CompanyChatController extends Controller
         abort_unless($conversation->involves($request->user()), 403);
 
         $authUser = $request->user();
+        $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
         $this->markConversationAsRead($conversation, $authUser);
         $this->markConversationNotificationsAsRead($conversation, $authUser);
@@ -262,9 +270,12 @@ class CompanyChatController extends Controller
 
         return response()->json([
             'conversation_id' => $conversation->id,
+            'partner_id' => $partner?->id,
             'partner_name' => $partner?->name,
             'partner_avatar_url' => $partner?->avatar_url,
             'partner_chat_role_label' => app_chat_role_label($partner),
+            'partner_dealership_name' => $partner?->resolved_dealership_name ?? 'Sin delegación',
+            'partner_is_favorite' => $partner?->id ? in_array($partner->id, $favoriteUserIds, true) : false,
             'last_message_at' => $conversation->last_message_at?->toIso8601String(),
             'messages' => $messagesPayload,
         ]);
@@ -275,6 +286,8 @@ class CompanyChatController extends Controller
         abort_unless(app_can_access_chat_beta($request->user()), 403);
 
         $authUser = $request->user();
+        $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
+        $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
         $conversations = CompanyChatConversation::query()
             ->forUser($authUser)
@@ -288,7 +301,7 @@ class CompanyChatController extends Controller
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
             ->get()
-            ->map(static function (CompanyChatConversation $conversation) use ($authUser): array {
+            ->map(static function (CompanyChatConversation $conversation) use ($authUser, $favoriteUserIds): array {
                 $partner = $conversation->otherParticipant($authUser);
 
                 return [
@@ -296,16 +309,56 @@ class CompanyChatController extends Controller
                     'partner_name' => $partner?->name,
                     'partner_avatar_url' => $partner?->avatar_url,
                     'partner_chat_role_label' => app_chat_role_label($partner),
+                    'partner_is_favorite' => $partner?->id ? in_array($partner->id, $favoriteUserIds, true) : false,
                     'last_message_excerpt' => $conversation->last_message_excerpt,
                     'last_message_at_label' => $conversation->last_message_at?->translatedFormat('d/m H:i'),
                     'unread_messages_count' => (int) ($conversation->unread_messages_count ?? 0),
                 ];
             });
 
+        $favoriteContacts = $this->favoriteContactsPayload($authUser);
+
         return response()->json([
             'unread_messages_total' => $conversations->sum('unread_messages_count'),
             'conversations' => $conversations,
+            'favorite_contacts' => $favoriteContacts,
         ]);
+    }
+
+    public function toggleFavorite(Request $request, User $user): JsonResponse|RedirectResponse
+    {
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+
+        $authUser = $request->user();
+        abort_unless($user->is_active, 404);
+        abort_unless($user->id !== $authUser->id, 403);
+
+        $favorite = CompanyChatFavoriteContact::query()
+            ->where('user_id', $authUser->id)
+            ->where('favorite_user_id', $user->id)
+            ->first();
+
+        if ($favorite) {
+            $favorite->delete();
+            $isFavorite = false;
+        } else {
+            CompanyChatFavoriteContact::query()->create([
+                'user_id' => $authUser->id,
+                'favorite_user_id' => $user->id,
+            ]);
+
+            $isFavorite = true;
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'favorite_user_id' => $user->id,
+                'is_favorite' => $isFavorite,
+                'favorite_contacts' => $this->favoriteContactsPayload($authUser),
+            ]);
+        }
+
+        return back();
     }
 
     private function findOrCreateConversation(User $firstUser, User $secondUser): CompanyChatConversation
@@ -334,6 +387,41 @@ class CompanyChatController extends Controller
             ->where('type', CompanyChatMessageNotification::class)
             ->where('data->conversation_id', $conversation->id)
             ->update(['read_at' => now()]);
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function favoriteUserIdsFor(User $user): array
+    {
+        return $user->chatFavoriteContacts()
+            ->pluck('favorite_user_id')
+            ->map(static fn ($value): int => (int) $value)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function favoriteContactsPayload(User $user): array
+    {
+        $favoriteUsers = User::query()
+            ->where('is_active', true)
+            ->whereIn('id', $this->favoriteUserIdsFor($user))
+            ->orderBy('name')
+            ->get();
+
+        return $favoriteUsers->map(function (User $favoriteUser) use ($user): array {
+            return [
+                'id' => $favoriteUser->id,
+                'name' => $favoriteUser->name,
+                'avatar_url' => $favoriteUser->avatar_url,
+                'chat_role_label' => $favoriteUser->chat_role_label,
+                'resolved_dealership_name' => $favoriteUser->resolved_dealership_name,
+                'is_favorite' => true,
+            ];
+        })->values()->all();
     }
 
     /**

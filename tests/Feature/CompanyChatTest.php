@@ -208,6 +208,37 @@ class CompanyChatTest extends TestCase
         $this->assertSame(1, $recipient->unreadNotifications()->count());
     }
 
+    public function test_chat_contact_can_be_marked_as_favorite_and_appears_in_the_summary(): void
+    {
+        $authUser = User::factory()->create();
+        $favoriteContact = User::factory()->create([
+            'name' => 'Marta Favorita',
+        ]);
+
+        CompanyChatConversation::query()->create([
+            'user_one_id' => min($authUser->id, $favoriteContact->id),
+            'user_two_id' => max($authUser->id, $favoriteContact->id),
+        ]);
+
+        $this->actingAs($authUser)
+            ->postJson(route('chat.beta.favorites.toggle', $favoriteContact))
+            ->assertOk()
+            ->assertJsonPath('is_favorite', true);
+
+        $this->assertDatabaseHas('company_chat_favorite_contacts', [
+            'user_id' => $authUser->id,
+            'favorite_user_id' => $favoriteContact->id,
+        ]);
+
+        $summaryResponse = $this->actingAs($authUser)->getJson(route('chat.beta.summary'));
+
+        $summaryResponse
+            ->assertOk()
+            ->assertJsonPath('favorite_contacts.0.name', $favoriteContact->name)
+            ->assertJsonPath('conversations.0.partner_name', $favoriteContact->name)
+            ->assertJsonPath('conversations.0.partner_is_favorite', true);
+    }
+
     public function test_chat_live_search_returns_json_results_without_loading_the_full_chat_view(): void
     {
         $authUser = User::factory()->create();
