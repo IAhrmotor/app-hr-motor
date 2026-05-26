@@ -978,6 +978,216 @@
                     }
                 };
 
+                const syncAttachmentInputFiles = () => {
+                    const dataTransfer = new DataTransfer();
+
+                    attachmentSnapshot.forEach((file) => {
+                        dataTransfer.items.add(file);
+                    });
+
+                    attachmentsInput.files = dataTransfer.files;
+                };
+
+                const isAllowedAttachment = (file) => {
+                    const extension = (file?.name?.split('.').pop() || '').toLowerCase();
+                    return allowedAttachmentExtensions.includes(extension);
+                };
+
+                const showChatError = (message) => {
+                    if (!message) {
+                        clearChatError();
+                        return;
+                    }
+
+                    chatError.textContent = message;
+                    chatError.classList.remove('hidden');
+                };
+
+                const appendAttachments = (files) => {
+                    const incomingFiles = Array.from(files || []);
+
+                    if (!incomingFiles.length) {
+                        return;
+                    }
+
+                    const currentKeys = new Set(attachmentSnapshot.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+                    const accepted = [];
+                    const rejected = [];
+
+                    incomingFiles.forEach((file) => {
+                        if (!isAllowedAttachment(file)) {
+                            rejected.push(file);
+                            return;
+                        }
+
+                        const key = `${file.name}:${file.size}:${file.lastModified}`;
+
+                        if (currentKeys.has(key) || (attachmentSnapshot.length + accepted.length) >= 4) {
+                            return;
+                        }
+
+                        currentKeys.add(key);
+                        accepted.push(file);
+                    });
+
+                    if (accepted.length > 0) {
+                        attachmentSnapshot = [...attachmentSnapshot, ...accepted];
+                        syncAttachmentInputFiles();
+                        renderAttachmentsPreview();
+                        clearChatError();
+                    }
+
+                    if (rejected.length > 0) {
+                        showChatError(`No se puede adjuntar ${rejected[0].name}. Tipo de archivo no permitido.`);
+                    }
+                };
+
+                const removeAttachmentAtIndex = (index) => {
+                    attachmentSnapshot = attachmentSnapshot.filter((_, currentIndex) => currentIndex !== index);
+                    syncAttachmentInputFiles();
+                    renderAttachmentsPreview();
+                };
+
+                const closeEmojiPicker = () => {
+                    emojiPicker.classList.add('hidden');
+                };
+
+                const toggleEmojiPicker = () => {
+                    emojiPicker.classList.toggle('hidden');
+                };
+
+                const insertEmoji = (emoji) => {
+                    if (!emoji) {
+                        return;
+                    }
+
+                    const start = input.selectionStart ?? input.value.length;
+                    const end = input.selectionEnd ?? input.value.length;
+                    const value = input.value;
+                    const nextValue = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
+
+                    input.value = nextValue;
+                    const nextCursor = start + emoji.length;
+                    input.setSelectionRange(nextCursor, nextCursor);
+                    input.focus();
+                };
+
+                const performLiveSearch = async (searchValue) => {
+                    const search = String(searchValue ?? '').trim();
+
+                    if (search === '') {
+                        searchResults.innerHTML = '';
+                        return;
+                    }
+
+                    if (searchAbortController) {
+                        searchAbortController.abort();
+                    }
+
+                    searchAbortController = new AbortController();
+
+                    try {
+                        const nextUrl = new URL(window.location.href);
+                        nextUrl.searchParams.set('search', search);
+                        nextUrl.searchParams.set('ajax', '1');
+
+                        const response = await fetch(nextUrl.toString(), {
+                            signal: searchAbortController.signal,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const payload = await response.json();
+                        searchResults.innerHTML = payload.html || '';
+                    } catch (error) {
+                        if (error?.name !== 'AbortError') {
+                            console.error(error);
+                        }
+                    }
+                };
+
+                const sendMessage = async () => {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    clearChatError();
+
+                    const body = input.value.trim();
+                    const conversationId = Number(wrapper.dataset.conversationId || sidebarSelectedConversationId || 0);
+
+                    if (!conversationId) {
+                        showChatError('No hay ninguna conversación activa.');
+                        return;
+                    }
+
+                    if (body === '' && attachmentSnapshot.length === 0) {
+                        showChatError('Escribe un mensaje o adjunta un archivo.');
+                        return;
+                    }
+
+                    const url = buildConversationStoreUrl(conversationId);
+                    const formData = new FormData();
+                    formData.append('_token', csrfToken);
+                    formData.append('conversation_id', String(conversationId));
+                    formData.append('body', input.value);
+
+                    attachmentSnapshot.forEach((file) => {
+                        formData.append('attachments[]', file, file.name);
+                    });
+
+                    isSubmitting = true;
+
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                            },
+                            body: formData,
+                        });
+
+                        const payload = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            if (response.status === 422 && payload?.errors) {
+                                const firstError = Object.values(payload.errors).flat()[0];
+                                showChatError(firstError || 'No se pudo enviar el mensaje.');
+                            } else {
+                                showChatError(payload?.message || 'No se pudo enviar el mensaje.');
+                            }
+                            return;
+                        }
+
+                        input.value = '';
+                        attachmentSnapshot = [];
+                        syncAttachmentInputFiles();
+                        renderAttachmentsPreview();
+                        closeEmojiPicker();
+
+                        if (payload.conversation_id) {
+                            await loadConversation(payload.conversation_id, { pushState: false });
+                        } else {
+                            await loadConversation(conversationId, { pushState: false });
+                        }
+
+                        await refreshSidebar();
+                    } catch (error) {
+                        console.error(error);
+                        showChatError('No se pudo enviar el mensaje.');
+                    } finally {
+                        isSubmitting = false;
+                        input.focus();
+                    }
+                };
+
                 window.renderAttachmentsPreview = renderAttachmentsPreview;
                 window.refreshSidebar = refreshSidebar;
                 window.syncMessages = syncMessages;
@@ -1017,6 +1227,57 @@
                     });
                 });
 
+                attachmentsButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    attachmentsInput.value = '';
+                    attachmentsInput.click();
+                });
+
+                attachmentsInput.addEventListener('change', (event) => {
+                    appendAttachments(event.target.files);
+                    event.target.value = '';
+                });
+
+                attachmentsChips.addEventListener('click', (event) => {
+                    const removeButton = event.target.closest('[data-chat-remove-attachment-index]');
+
+                    if (!removeButton) {
+                        return;
+                    }
+
+                    const index = Number(removeButton.dataset.chatRemoveAttachmentIndex);
+
+                    if (Number.isNaN(index)) {
+                        return;
+                    }
+
+                    removeAttachmentAtIndex(index);
+                });
+
+                emojiButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleEmojiPicker();
+                });
+
+                emojiPicker.addEventListener('click', (event) => {
+                    const emojiButton = event.target.closest('[data-chat-emoji-option]');
+
+                    if (!emojiButton) {
+                        return;
+                    }
+
+                    insertEmoji(emojiButton.dataset.emoji || emojiButton.textContent || '');
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (emojiPicker.contains(event.target) || emojiButton.contains(event.target)) {
+                        return;
+                    }
+
+                    closeEmojiPicker();
+                });
+
                 searchInput.addEventListener('input', () => {
                     clearTimeout(searchDebounce);
                     searchDebounce = setTimeout(() => {
@@ -1032,6 +1293,14 @@
 
                 form.addEventListener('submit', (event) => {
                     event.preventDefault();
+                    void sendMessage();
+                });
+
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        void sendMessage();
+                    }
                 });
 
                 root.addEventListener('click', async (event) => {
