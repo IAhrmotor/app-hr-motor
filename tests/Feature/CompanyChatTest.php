@@ -239,6 +239,8 @@ class CompanyChatTest extends TestCase
         $summaryResponse
             ->assertOk()
             ->assertJsonPath('count', 1)
+            ->assertJsonPath('notifications.0.type', 'chat.message.received')
+            ->assertJsonPath('notifications.0.actor_name', $sender->name)
             ->assertJsonPath('notifications.0.message_count', 2);
 
         $notification = $recipient->unreadNotifications()->latest()->first();

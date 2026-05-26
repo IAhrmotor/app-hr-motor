@@ -102,6 +102,7 @@ class NotificationController extends Controller
 
                 return [
                     'id' => $notification->id,
+                    'type' => data_get($notification->data, 'type', $notification->type),
                     'title' => data_get($notification->data, 'title', data_get($notification->data, 'message', 'Notificación')),
                     'description' => $description,
                     'link_url' => data_get($notification->data, 'link_url', data_get($notification->data, 'thread_url')),
@@ -110,6 +111,9 @@ class NotificationController extends Controller
                     'created_at_label' => $notification->created_at?->diffForHumans(),
                     'message_count' => $messageCount,
                     'sort_timestamp' => $sortTimestamp,
+                    'actor_name' => data_get($notification->data, 'actor_name'),
+                    'actor_avatar_url' => data_get($notification->data, 'actor_avatar_url'),
+                    'chat_group_key' => data_get($notification->data, 'chat_group_key'),
                 ];
             })
             ->sortByDesc(fn (array $notification): int => (int) ($notification['sort_timestamp'] ?? 0))

@@ -275,6 +275,8 @@
                                     $notificationLinkUrl = data_get($notification->data, 'link_url', data_get($notification->data, 'thread_url'));
                                 @endphp
                                 <a href="{{ route('notifications.show', $notification->id) }}"
+                                    data-notification-id="{{ $notification->id }}"
+                                    data-notification-type="{{ data_get($notification->data, 'type', $notification->type) }}"
                                     class="block rounded-2xl px-3 py-3 transition {{ $isPriorityNotification ? 'mb-3 border border-amber-200 bg-amber-50/80 hover:bg-amber-100/80' : 'mb-1 hover:bg-brand-secondary/5' }} last:mb-0">
                                     <div class="flex items-start gap-3">
                                         <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full {{ $isPriorityNotification ? 'bg-amber-500 text-white shadow-sm' : 'bg-brand-primary/10 text-brand-primary' }}">
@@ -346,12 +348,59 @@
                         const summaryUrl = root.dataset.notificationSummaryUrl;
                         const badge = root.querySelector('[data-notification-badge]');
                         const list = root.querySelector('[data-notification-list]');
+                        const knownNotificationIds = new Set(Array.from(list?.querySelectorAll('[data-notification-id]') ?? []).map((element) => String(element.dataset.notificationId || '')));
                         const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
+                        const defaultNotificationIconUrl = @js(asset('images/users/hrmotor-default-user-avatar.png'));
 
                         const escapeHtml = (value) => {
                             const span = document.createElement('span');
                             span.textContent = value ?? '';
                             return span.innerHTML;
+                        };
+
+                        const isChatBrowserNotificationSupported = () => {
+                            return 'Notification' in window && window.isSecureContext;
+                        };
+
+                        const requestBrowserNotificationPermission = async () => {
+                            if (!isChatBrowserNotificationSupported() || Notification.permission !== 'default') {
+                                return;
+                            }
+
+                            try {
+                                await Notification.requestPermission();
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        };
+
+                        const showBrowserNotification = (notification) => {
+                            if (!isChatBrowserNotificationSupported() || Notification.permission !== 'granted') {
+                                return;
+                            }
+
+                            if ((notification.type || '') !== 'chat.message.received') {
+                                return;
+                            }
+
+                            if (document.visibilityState === 'visible') {
+                                return;
+                            }
+
+                            const browserNotification = new Notification(notification.title ?? 'Nuevo mensaje', {
+                                body: notification.description ?? '',
+                                icon: notification.actor_avatar_url || defaultNotificationIconUrl,
+                                tag: notification.chat_group_key || `chat-${notification.id}`,
+                            });
+
+                            browserNotification.onclick = (event) => {
+                                event.preventDefault();
+
+                                const targetUrl = notification.link_url || '/notificaciones/' + notification.id;
+
+                                window.focus();
+                                window.location.href = targetUrl;
+                            };
                         };
 
                         const renderNotification = (notification) => {
@@ -371,6 +420,8 @@
 
                             return `
                                 <a href="/notificaciones/${notification.id}"
+                                    data-notification-id="${escapeHtml(notification.id)}"
+                                    data-notification-type="${escapeHtml(notification.type ?? '')}"
                                     class="block rounded-2xl px-3 py-3 transition ${priorityClass}">
                                     <div class="flex items-start gap-3">
                                         <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconClass}">
@@ -412,6 +463,18 @@
 
                                 const payload = await response.json();
                                 const count = Number(payload.count || 0);
+                                const nextNotifications = Array.isArray(payload.notifications) ? payload.notifications : [];
+                                const nextNotificationIds = new Set(nextNotifications.map((notification) => String(notification.id || '')));
+
+                                nextNotifications.forEach((notification) => {
+                                    const notificationId = String(notification.id || '');
+
+                                    if (!notificationId || knownNotificationIds.has(notificationId)) {
+                                        return;
+                                    }
+
+                                    showBrowserNotification(notification);
+                                });
 
                                 if (badge) {
                                     if (count > 0) {
@@ -423,18 +486,22 @@
                                     }
                                 }
 
-                                if (list && Array.isArray(payload.notifications)) {
-                                    if (payload.notifications.length === 0) {
+                                if (list) {
+                                    if (nextNotifications.length === 0) {
                                         list.innerHTML = `<div class="${emptyStateClass}"><p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p></div>`;
                                     } else {
-                                        list.innerHTML = payload.notifications.map(renderNotification).join('');
+                                        list.innerHTML = nextNotifications.map(renderNotification).join('');
                                     }
                                 }
+
+                                nextNotificationIds.forEach((notificationId) => knownNotificationIds.add(notificationId));
                             } catch (error) {
                                 console.error(error);
                             }
                         };
 
+                        void requestBrowserNotificationPermission();
+                        window.addEventListener('pointerdown', requestBrowserNotificationPermission, { once: true });
                         refreshNotifications();
                         setInterval(refreshNotifications, 15000);
                     });
