@@ -340,6 +340,10 @@
                 <script>
                     document.addEventListener('DOMContentLoaded', () => {
                         const root = document.querySelector('[data-notification-summary-url]');
+                        const originalTitle = document.title;
+                        const originalTitleBase = originalTitle.replace(/^\(\+?\d+\)\s*/u, '');
+                        const faviconLink = document.querySelector('link[rel="icon"]');
+                        const originalFaviconHref = faviconLink?.getAttribute('href') || @js(asset('favicon.ico'));
 
                         if (!root) {
                             return;
@@ -358,6 +362,65 @@
                             const span = document.createElement('span');
                             span.textContent = value ?? '';
                             return span.innerHTML;
+                        };
+
+                        const setPageTitleWithUnreadCount = (count) => {
+                            if (!count || count <= 0) {
+                                document.title = originalTitle;
+                                return;
+                            }
+
+                            const label = count > 9 ? '+9' : String(count);
+                            document.title = `(${label}) ${originalTitleBase}`;
+                        };
+
+                        const renderFaviconWithBadge = async (count) => {
+                            if (!faviconLink) {
+                                return;
+                            }
+
+                            if (!count || count <= 0) {
+                                faviconLink.setAttribute('href', originalFaviconHref);
+                                return;
+                            }
+
+                            try {
+                                const size = 64;
+                                const canvas = document.createElement('canvas');
+                                const context = canvas.getContext('2d');
+
+                                if (!context) {
+                                    return;
+                                }
+
+                                canvas.width = size;
+                                canvas.height = size;
+
+                                const icon = new Image();
+                                icon.crossOrigin = 'anonymous';
+
+                                await new Promise((resolve, reject) => {
+                                    icon.onload = resolve;
+                                    icon.onerror = reject;
+                                    icon.src = originalFaviconHref;
+                                });
+
+                                context.clearRect(0, 0, size, size);
+                                context.drawImage(icon, 0, 0, size, size);
+
+                                const badgeSize = 14;
+                                const badgeX = 3;
+                                const badgeY = 16;
+
+                                context.fillStyle = '#1F2944';
+                                context.beginPath();
+                                context.arc(badgeX + badgeSize / 2, badgeY + badgeSize / 2, badgeSize / 2, 0, Math.PI * 2);
+                                context.fill();
+
+                                faviconLink.setAttribute('href', canvas.toDataURL('image/png'));
+                            } catch (error) {
+                                console.error(error);
+                            }
                         };
 
                         const isChatBrowserNotificationSupported = () => {
@@ -508,6 +571,9 @@
                                         badge.classList.add('hidden');
                                     }
                                 }
+
+                                setPageTitleWithUnreadCount(count);
+                                void renderFaviconWithBadge(count);
 
                                 if (list) {
                                     if (nextNotifications.length === 0) {
