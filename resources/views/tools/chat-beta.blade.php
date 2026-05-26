@@ -1205,6 +1205,16 @@
                     }, 250);
                 });
 
+                searchInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                    }
+                });
+
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                });
+
                 root.addEventListener('click', async (event) => {
                     const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link]');
 
