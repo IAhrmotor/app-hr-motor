@@ -60,10 +60,12 @@ class NotificationController extends Controller
     {
         $authUser = $request->user();
         $notifications = $authUser ? $this->groupUnreadNotifications($authUser) : collect();
+        $rawChatNotifications = $authUser ? $this->rawUnreadChatNotifications($authUser) : collect();
 
         return response()->json([
             'count' => $notifications->count(),
             'notifications' => $notifications,
+            'raw_notifications' => $rawChatNotifications,
         ]);
     }
 
@@ -117,6 +119,30 @@ class NotificationController extends Controller
                 ];
             })
             ->sortByDesc(fn (array $notification): int => (int) ($notification['sort_timestamp'] ?? 0))
+            ->values();
+    }
+
+    private function rawUnreadChatNotifications($authUser)
+    {
+        return $authUser
+            ->unreadNotifications()
+            ->where('type', CompanyChatMessageNotification::class)
+            ->latest()
+            ->limit(25)
+            ->get()
+            ->map(function ($notification): array {
+                return [
+                    'id' => $notification->id,
+                    'type' => data_get($notification->data, 'type', $notification->type),
+                    'title' => data_get($notification->data, 'title', 'Nuevo mensaje'),
+                    'description' => data_get($notification->data, 'description', ''),
+                    'link_url' => data_get($notification->data, 'link_url'),
+                    'actor_name' => data_get($notification->data, 'actor_name'),
+                    'actor_avatar_url' => data_get($notification->data, 'actor_avatar_url'),
+                    'chat_group_key' => data_get($notification->data, 'chat_group_key'),
+                    'created_at_label' => $notification->created_at?->diffForHumans(),
+                ];
+            })
             ->values();
     }
 }

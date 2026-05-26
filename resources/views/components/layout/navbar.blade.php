@@ -240,13 +240,13 @@
 
                         @if ($forumUnreadNotificationCount > 0)
                             <span
-                                class="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 p-0 text-[10px] font-bold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
+                                class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow-sm ring-2 ring-white"
                                 data-notification-badge>
                                 {{ $forumUnreadNotificationCount > 9 ? '+9' : $forumUnreadNotificationCount }}
                             </span>
                         @else
                             <span
-                                class="absolute -right-1 -top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 p-0 text-[10px] font-bold leading-none tabular-nums text-white shadow-sm ring-2 ring-white"
+                                class="absolute -right-1 -top-1 hidden h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow-sm ring-2 ring-white"
                                 data-notification-badge></span>
                         @endif
                     </button>
@@ -349,6 +349,8 @@
                         const badge = root.querySelector('[data-notification-badge]');
                         const list = root.querySelector('[data-notification-list]');
                         const knownNotificationIds = new Set(Array.from(list?.querySelectorAll('[data-notification-id]') ?? []).map((element) => String(element.dataset.notificationId || '')));
+                        const knownBrowserNotificationIds = new Set();
+                        let browserNotificationsSeeded = false;
                         const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
                         const defaultNotificationIconUrl = @js(asset('images/users/hrmotor-default-user-avatar.png'));
 
@@ -386,7 +388,8 @@
                             const browserNotification = new Notification(notification.title ?? 'Nuevo mensaje', {
                                 body: notification.description ?? '',
                                 icon: notification.actor_avatar_url || defaultNotificationIconUrl,
-                                tag: notification.chat_group_key || `chat-${notification.id}`,
+                                tag: `chat-${notification.id}`,
+                                renotify: true,
                             });
 
                             browserNotification.onclick = (event) => {
@@ -460,7 +463,31 @@
                                 const payload = await response.json();
                                 const count = Number(payload.count || 0);
                                 const nextNotifications = Array.isArray(payload.notifications) ? payload.notifications : [];
+                                const rawNotifications = Array.isArray(payload.raw_notifications) ? payload.raw_notifications : [];
                                 const nextNotificationIds = new Set(nextNotifications.map((notification) => String(notification.id || '')));
+
+                                if (!browserNotificationsSeeded) {
+                                    rawNotifications.forEach((notification) => {
+                                        const notificationId = String(notification.id || '');
+
+                                        if (notificationId) {
+                                            knownBrowserNotificationIds.add(notificationId);
+                                        }
+                                    });
+
+                                    browserNotificationsSeeded = true;
+                                } else {
+                                    rawNotifications.forEach((notification) => {
+                                        const notificationId = String(notification.id || '');
+
+                                        if (!notificationId || knownBrowserNotificationIds.has(notificationId)) {
+                                            return;
+                                        }
+
+                                        showBrowserNotification(notification);
+                                        knownBrowserNotificationIds.add(notificationId);
+                                    });
+                                }
 
                                 nextNotifications.forEach((notification) => {
                                     const notificationId = String(notification.id || '');
