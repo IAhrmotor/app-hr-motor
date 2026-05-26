@@ -284,13 +284,16 @@
                             @forelse ($selectedConversationMessages as $message)
                                 @php
                                     $isMine = $message->sender_id === $authUser->id;
+                                    $previousMessage = $selectedConversationMessages->get($loop->index - 1);
                                     $nextMessage = $selectedConversationMessages->get($loop->index + 1);
                                     $currentTimeLabel = $message->created_at->translatedFormat('H:i');
+                                    $previousTimeLabel = $previousMessage?->created_at?->translatedFormat('H:i');
                                     $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
                                     $showTime = $loop->last || $nextTimeLabel !== $currentTimeLabel;
+                                    $topMarginClass = $loop->first ? 'mt-0' : ($previousTimeLabel === $currentTimeLabel ? 'mt-0.5' : 'mt-3');
                                     $messageAttachments = collect($message->attachments ?? []);
                                 @endphp
-                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $loop->first ? 'mt-0' : ($showTime ? 'mt-3' : 'mt-0.5') }}" data-message-id="{{ $message->id }}">
+                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}">
                                     <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
                                         <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm {{ $isMine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary' }}">
                                             @if (filled($message->body))
@@ -657,16 +660,19 @@
 
                 const renderMessage = (message, index, messages) => {
                     const isMine = Boolean(message.is_mine);
+                    const previousMessage = messages[index - 1];
                     const nextMessage = messages[index + 1];
                     const currentTimeLabel = message.created_at_label || '';
+                    const previousTimeLabel = previousMessage?.created_at_label || '';
                     const nextTimeLabel = nextMessage?.created_at_label || '';
                     const showTime = Boolean(message.show_time ?? (index === messages.length - 1 || nextTimeLabel !== currentTimeLabel));
+                    const topMarginClass = index === 0 ? 'mt-0' : (previousTimeLabel === currentTimeLabel ? 'mt-0.5' : 'mt-3');
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
                     const body = message.body || '';
                     const attachmentsHtml = messageAttachments.map((attachment) => renderAttachmentMarkup(attachment)).join('');
 
                     return `
-                        <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${index === 0 ? 'mt-0' : (showTime ? 'mt-3' : 'mt-0.5')}" data-message-id="${message.id}">
+                        <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${topMarginClass}" data-message-id="${message.id}">
                             <div class="flex max-w-[78%] flex-col ${isMine ? 'items-end' : 'items-start'}">
                                 <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm ${isMine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
                                     ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(body)}</p>` : ''}
