@@ -70,6 +70,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'storeMessage'])
         ->whereNumber('conversation')
         ->name('chat.beta.messages.store');
+    Route::patch('/chat/conversations/{conversation}/mensajes/{message}', [CompanyChatController::class, 'updateMessage'])
+        ->whereNumber('conversation')
+        ->whereNumber('message')
+        ->name('chat.beta.messages.update');
+    Route::delete('/chat/conversations/{conversation}/mensajes/{message}', [CompanyChatController::class, 'destroyMessage'])
+        ->whereNumber('conversation')
+        ->whereNumber('message')
+        ->name('chat.beta.messages.destroy');
     Route::get('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'messages'])
         ->whereNumber('conversation')
         ->name('chat.beta.messages.index');

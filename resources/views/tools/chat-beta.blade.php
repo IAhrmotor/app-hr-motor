@@ -276,6 +276,8 @@
                     data-chat-messages-wrapper
                     data-chat-messages-url-template="{{ route('chat.beta.messages.index', ['conversation' => '__CONVERSATION_ID__']) }}"
                     data-chat-store-url-template="{{ route('chat.beta.messages.store', ['conversation' => '__CONVERSATION_ID__']) }}"
+                    data-chat-message-update-url-template="{{ route('chat.beta.messages.update', ['conversation' => '__CONVERSATION_ID__', 'message' => '__MESSAGE_ID__']) }}"
+                    data-chat-message-destroy-url-template="{{ route('chat.beta.messages.destroy', ['conversation' => '__CONVERSATION_ID__', 'message' => '__MESSAGE_ID__']) }}"
                     data-poll-url="{{ route('chat.beta.messages.index', $selectedConversation) }}"
                     data-conversation-id="{{ $selectedConversation->id }}"
                 >
@@ -293,67 +295,94 @@
                                     $topMarginClass = $loop->first ? 'mt-0' : ($previousTimeLabel === $currentTimeLabel ? 'mt-0.5' : 'mt-3');
                                     $messageAttachments = collect($message->attachments ?? []);
                                 @endphp
-                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}">
+                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
                                     <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
-                                        <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm {{ $isMine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary' }}">
-                                            @if (filled($message->body))
-                                                <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary' }}">
+                                            @if ($isMine)
+                                                <button type="button"
+                                                    class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100"
+                                                    aria-label="Abrir opciones del mensaje"
+                                                    data-chat-message-trigger>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                        <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
+                                                    </svg>
+                                                </button>
                                             @endif
 
-                                            @if ($messageAttachments->isNotEmpty())
-                                                <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
-                                                    @foreach ($messageAttachments as $attachment)
-                                                        @php
-                                                            $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
-                                                            $attachmentUrl = $attachment['url'] ?? '';
-                                                            $attachmentName = $attachment['original_name'] ?? 'archivo';
-                                                            $attachmentSize = $attachment['size_label'] ?? '';
-                                                        @endphp
+                                            <div data-chat-message-content>
+                                                @if (filled($message->body))
+                                                    <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                                @endif
 
-                                                        @if ($isImageAttachment)
-                                                            <button
-                                                                type="button"
-                                                                data-chat-image-src="{{ $attachmentUrl }}"
-                                                                data-chat-image-alt="{{ $attachmentName }}"
-                                                                data-chat-image-title="{{ $attachmentName }}"
-                                                                @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
-                                                                class="group relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                                                                aria-label="Ver {{ $attachmentName }}"
-                                                            >
-                                                                <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
-                                                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/30 group-hover:opacity-100">
-                                                                    Ver
-                                                                </span>
-                                                            </button>
-                                                        @else
-                                                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
-                                                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
-                                                                    </svg>
-                                                                </span>
-                                                                <span class="min-w-0 flex-1">
-                                                                    <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
-                                                                    @if ($attachmentSize !== '')
-                                                                        <span class="block text-xs text-slate-500">{{ $attachmentSize }}</span>
-                                                                    @endif
-                                                                </span>
-                                                            </a>
-                                                        @endif
-                                                    @endforeach
-                                                </div>
-                                            @endif
+                                                @if ($messageAttachments->isNotEmpty())
+                                                    <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
+                                                        @foreach ($messageAttachments as $attachment)
+                                                            @php
+                                                                $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
+                                                                $attachmentUrl = $attachment['url'] ?? '';
+                                                                $attachmentName = $attachment['original_name'] ?? 'archivo';
+                                                                $attachmentSize = $attachment['size_label'] ?? '';
+                                                            @endphp
+
+                                                            @if ($isImageAttachment)
+                                                                <button
+                                                                    type="button"
+                                                                    data-chat-image-src="{{ $attachmentUrl }}"
+                                                                    data-chat-image-alt="{{ $attachmentName }}"
+                                                                    data-chat-image-title="{{ $attachmentName }}"
+                                                                    @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
+                                                                    class="group relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                                                    aria-label="Ver {{ $attachmentName }}"
+                                                                >
+                                                                    <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
+                                                                    <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/30 group-hover:opacity-100">
+                                                                        Ver
+                                                                    </span>
+                                                                </button>
+                                                            @else
+                                                                <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                                                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
+                                                                        </svg>
+                                                                    </span>
+                                                                    <span class="min-w-0 flex-1">
+                                                                        <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
+                                                                        @if ($attachmentSize !== '')
+                                                                            <span class="block text-xs text-slate-500">{{ $attachmentSize }}</span>
+                                                                        @endif
+                                                                    </span>
+                                                                </a>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+
+                                                @if ($isMine)
+                                                    <span class="absolute bottom-1.5 right-3 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                            <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                                                            <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                                        </svg>
+                                                    </span>
+                                                @endif
+                                            </div>
 
                                             @if ($isMine)
-                                                <span class="absolute bottom-1.5 right-2 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                        <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                                                        <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
-                                                    </svg>
-                                                </span>
+                                                <div class="hidden" data-chat-message-inline-editor>
+                                                    <textarea
+                                                        rows="1"
+                                                        class="mt-1 min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                                        data-chat-edit-input>{{ $message->body }}</textarea>
+                                                    <div class="mt-3 flex items-center justify-end gap-2">
+                                                        <button type="button" class="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100" data-chat-edit-cancel>Cancelar</button>
+                                                        <button type="button" class="cursor-pointer rounded-full bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90" data-chat-edit-save>Guardar</button>
+                                                    </div>
+                                                </div>
                                             @endif
                                         </div>
+                                        <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
                                         <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
                                             <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
                                         </div>
@@ -569,7 +598,6 @@
                 const headerFavoriteMenuButton = document.querySelector('[data-chat-contact-menu-button]');
                 const sidebarTabButtons = Array.from(document.querySelectorAll('[data-chat-sidebar-tab]'));
                 const sidebarPanels = Array.from(document.querySelectorAll('[data-chat-sidebar-panel]'));
-
                 if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker || !searchInput || !searchResults) {
                     return;
                 }
@@ -583,6 +611,25 @@
                 let searchDebounce = null;
                 let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
+                let currentMessages = [];
+                let activeMessageMenuId = null;
+                let editingMessageId = null;
+                let editingMessageDraft = '';
+                currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
+                    $nextMessage = $selectedConversationMessages->get($index + 1);
+                    $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
+                    $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+
+                    return [
+                        'id' => $message->id,
+                        'body' => $message->body,
+                        'attachments' => $message->attachments ?? [],
+                        'is_mine' => $message->sender_id === $authUser->id,
+                        'read_at' => $message->read_at?->toIso8601String(),
+                        'created_at_label' => $currentTimeLabel,
+                        'show_time' => $nextTimeLabel !== $currentTimeLabel,
+                    ];
+                })->values());
                 const favoriteUserIds = new Set(@js($favoriteUserIds ?? []));
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
 
@@ -615,6 +662,22 @@
                     }
 
                     return storeUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(String(conversationId)));
+                };
+
+                const buildConversationMessageUpdateUrl = (conversationId, messageId) => {
+                    const template = wrapper?.dataset.chatMessageUpdateUrlTemplate || '';
+
+                    return template
+                        .replace('__CONVERSATION_ID__', encodeURIComponent(String(conversationId)))
+                        .replace('__MESSAGE_ID__', encodeURIComponent(String(messageId)));
+                };
+
+                const buildConversationMessageDestroyUrl = (conversationId, messageId) => {
+                    const template = wrapper?.dataset.chatMessageDestroyUrlTemplate || '';
+
+                    return template
+                        .replace('__CONVERSATION_ID__', encodeURIComponent(String(conversationId)))
+                        .replace('__MESSAGE_ID__', encodeURIComponent(String(messageId)));
                 };
 
                 const renderAttachmentMarkup = (attachment) => {
@@ -654,8 +717,76 @@
                                 <span class="block truncate text-sm font-semibold text-brand-secondary">${escapeHtml(name)}</span>
                                 ${sizeLabel !== '' ? `<span class="block text-xs text-slate-500">${escapeHtml(sizeLabel)}</span>` : ''}
                             </span>
-                        </a>
-                    `;
+                    </a>
+                `;
+                };
+
+                const renderMessageMenuMarkup = () => `
+                    <div class="mt-0.5 grid gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                        <button type="button" class="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-brand-secondary transition hover:bg-slate-50" data-chat-message-edit>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.5 2.5 0 0 1 3.536 3.536L7.5 19.92 3 21l1.08-4.5L16.862 3.487Z" />
+                            </svg>
+                            <span>Editar mensaje</span>
+                        </button>
+                        <button type="button" class="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50" data-chat-message-delete>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6m-8 0v13A2 2 0 0 0 10 21h4a2 2 0 0 0 2-2V6m-8 0h8" />
+                            </svg>
+                            <span>Eliminar mensaje</span>
+                        </button>
+                    </div>
+                `;
+
+                const findMessageMenuSlot = (messageId) => messagesContainer.querySelector(`[data-message-id="${CSS.escape(String(messageId))}"] [data-chat-message-menu-slot]`);
+
+                const setMessageMenuState = (messageId, open) => {
+                    const slot = findMessageMenuSlot(messageId);
+
+                    if (!slot) {
+                        return;
+                    }
+
+                    if (open) {
+                        slot.classList.remove('hidden');
+                        slot.innerHTML = renderMessageMenuMarkup();
+                        return;
+                    }
+
+                    slot.innerHTML = '';
+                    slot.classList.add('hidden');
+                };
+
+                const resizeChatEditInput = (textarea) => {
+                    if (!textarea) {
+                        return;
+                    }
+
+                    const computedStyle = window.getComputedStyle(textarea);
+                    const canvas = resizeChatEditInput._canvas || (resizeChatEditInput._canvas = document.createElement('canvas'));
+                    const context = canvas.getContext('2d');
+
+                    if (!context) {
+                        return;
+                    }
+
+                    context.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+                    const lines = String(textarea.value || '').split('\n');
+                    const contentWidth = Math.max(
+                        ...lines.map((line) => context.measureText(line || ' ').width),
+                        0,
+                    );
+                    const paddingX = (parseFloat(computedStyle.paddingLeft || '0') || 0) + (parseFloat(computedStyle.paddingRight || '0') || 0);
+                    const borderX = (parseFloat(computedStyle.borderLeftWidth || '0') || 0) + (parseFloat(computedStyle.borderRightWidth || '0') || 0);
+                    const minWidth = 128;
+                    const maxWidth = 640;
+                    const nextWidth = Math.min(Math.max(Math.ceil(contentWidth + paddingX + borderX), minWidth), maxWidth);
+
+                    textarea.style.width = `${nextWidth}px`;
+                    textarea.style.maxWidth = `${maxWidth}px`;
+                    textarea.style.height = 'auto';
+                    textarea.style.height = `${textarea.scrollHeight}px`;
                 };
 
                 const renderMessage = (message, index, messages) => {
@@ -670,20 +801,36 @@
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
                     const body = message.body || '';
                     const attachmentsHtml = messageAttachments.map((attachment) => renderAttachmentMarkup(attachment)).join('');
+                    const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
+                    const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
 
                     return `
-                        <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${topMarginClass}" data-message-id="${message.id}">
+                        <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
                             <div class="flex max-w-[78%] flex-col ${isMine ? 'items-end' : 'items-start'}">
-                                <div class="relative rounded-[1.1rem] px-3 py-2 shadow-sm ${isMine ? 'bg-[#d9fdd3] pb-5 text-slate-800' : 'border border-slate-200 bg-white text-brand-secondary'}">
-                                    ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(body)}</p>` : ''}
-                                    ${attachmentsHtml !== '' ? `<div class="${body !== '' ? 'mt-2' : ''} space-y-2">${attachmentsHtml}</div>` : ''}
-                                    ${isMine ? `<span class="absolute bottom-1.5 right-2 inline-flex items-center ${message.read_at ? 'text-sky-500' : 'text-slate-400'}" data-message-checks>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                            <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                                            <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
-                                        </svg>
-                                    </span>` : ''}
+                                <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary'}">
+                                    ${isEditing ? `
+                                        <textarea rows="1" class="min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10" data-chat-edit-input>${escapeHtml(editableBody)}</textarea>
+                                        <div class="mt-3 flex items-center justify-end gap-2">
+                                            <button type="button" class="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100" data-chat-edit-cancel>Cancelar</button>
+                                            <button type="button" class="cursor-pointer rounded-full bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90" data-chat-edit-save>Guardar</button>
+                                        </div>
+                                    ` : `
+                                        ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(body)}</p>` : ''}
+                                        ${attachmentsHtml !== '' ? `<div class="${body !== '' ? 'mt-2' : ''} space-y-2">${attachmentsHtml}</div>` : ''}
+                                        ${isMine ? `<button type="button" class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100" aria-label="Abrir opciones del mensaje" data-chat-message-trigger>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
+                                            </svg>
+                                        </button>` : ''}
+                                        ${isMine ? `<span class="absolute bottom-1.5 right-3 inline-flex items-center ${message.read_at ? 'text-sky-500' : 'text-slate-400'}" data-message-checks>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                                                <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                            </svg>
+                                        </span>` : ''}
+                                    `}
                                 </div>
+                                <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
                                 <div class="${showTime ? 'mt-1' : 'mt-0.5'} flex items-center gap-1 text-[11px] ${isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
                                     <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                 </div>
@@ -692,10 +839,16 @@
                     `;
                 };
 
-                const renderMessages = (messages) => {
+                const renderMessages = (messages, { preserveScroll = 'none' } = {}) => {
                     const safeMessages = Array.isArray(messages) ? messages : [];
+                    const previousScrollTop = wrapper.scrollTop;
+                    const previousScrollHeight = wrapper.scrollHeight;
+                    currentMessages = safeMessages;
 
                     if (safeMessages.length === 0) {
+                        activeMessageMenuId = null;
+                        editingMessageId = null;
+                        editingMessageDraft = '';
                         messagesContainer.innerHTML = `
                             <div class="flex min-h-full items-center justify-center">
                                 <div class="max-w-md rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
@@ -710,7 +863,179 @@
 
                     messagesContainer.innerHTML = safeMessages.map((message, index) => renderMessage(message, index, safeMessages)).join('');
                     latestMessageId = Number(safeMessages[safeMessages.length - 1]?.id ?? 0);
+
+                    if (preserveScroll === 'exact') {
+                        wrapper.scrollTop = previousScrollTop;
+                        return;
+                    }
+
+                    if (preserveScroll === 'delta') {
+                        const nextScrollHeight = wrapper.scrollHeight;
+                        wrapper.scrollTop = previousScrollTop + (nextScrollHeight - previousScrollHeight);
+                        return;
+                    }
+
                     autoScroll();
+                };
+
+                const cancelInlineEdit = () => {
+                    editingMessageId = null;
+                    editingMessageDraft = '';
+                };
+
+                const beginInlineEdit = (message) => {
+                    if (!message || !Boolean(message.is_mine)) {
+                        return;
+                    }
+
+                    editingMessageId = Number(message.id);
+                    editingMessageDraft = String(message.body || '');
+                    closeMessageMenu();
+                    renderMessages(currentMessages);
+
+                    requestAnimationFrame(() => {
+                        const editInput = messagesContainer.querySelector('[data-chat-edit-input]');
+                        if (!editInput) {
+                            return;
+                        }
+
+                        resizeChatEditInput(editInput);
+                        editInput.focus();
+                        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+                    });
+                };
+
+                const saveInlineEdit = async () => {
+                    const conversationId = Number(wrapper.dataset.conversationId || sidebarSelectedConversationId || 0);
+                    const message = currentMessages.find((item) => Number(item.id) === Number(editingMessageId));
+
+                    if (!conversationId || !message) {
+                        cancelInlineEdit();
+                        renderMessages(currentMessages);
+                        return;
+                    }
+
+                    const editInput = messagesContainer.querySelector('[data-chat-edit-input]');
+                    const body = editInput ? editInput.value : editingMessageDraft;
+
+                    if (body.trim() === '' && (!Array.isArray(message.attachments) || message.attachments.length === 0)) {
+                        showChatError('Escribe un mensaje o conserva un adjunto.');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('_token', csrfToken);
+                    formData.append('_method', 'PATCH');
+                    formData.append('body', body);
+
+                    try {
+                        const response = await fetch(buildConversationMessageUpdateUrl(conversationId, message.id), {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                            },
+                            body: formData,
+                        });
+
+                        const payload = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            showChatError(payload?.message || 'No se pudo editar el mensaje.');
+                            return;
+                        }
+
+                        cancelInlineEdit();
+                        await loadConversation(conversationId, { pushState: false });
+                        await refreshSidebar();
+                    } catch (error) {
+                        console.error(error);
+                        showChatError('No se pudo editar el mensaje.');
+                    }
+                };
+
+                const closeMessageMenu = () => {
+                    if (activeMessageMenuId) {
+                        setMessageMenuState(activeMessageMenuId, false);
+                    }
+
+                    activeMessageMenuId = null;
+                };
+
+                const openMessageMenu = (messageElement) => {
+                    const messageId = Number(messageElement?.dataset.messageId ?? 0);
+                    const isMine = messageElement?.dataset.chatMessageOwner === '1';
+
+                    if (!messageId || !isMine) {
+                        return;
+                    }
+
+                    if (Number(activeMessageMenuId || 0) === messageId) {
+                        closeMessageMenu();
+                        return;
+                    }
+
+                    if (activeMessageMenuId) {
+                        setMessageMenuState(activeMessageMenuId, false);
+                    }
+
+                    activeMessageMenuId = messageId;
+                    editingMessageId = null;
+                    editingMessageDraft = '';
+                    setMessageMenuState(messageId, true);
+
+                };
+
+                const getActiveMessage = () => currentMessages.find((message) => Number(message.id) === Number(activeMessageMenuId));
+
+                const applyMessageAction = async (action) => {
+                    const conversationId = Number(wrapper.dataset.conversationId || sidebarSelectedConversationId || 0);
+                    const message = getActiveMessage();
+
+                    if (!conversationId || !message) {
+                        closeMessageMenu();
+                        return;
+                    }
+
+                    closeMessageMenu();
+
+                    if (action === 'edit') {
+                        beginInlineEdit(message);
+                        return;
+                    }
+
+                    if (action === 'delete') {
+                        const confirmed = window.confirm('¿Eliminar este mensaje?');
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(buildConversationMessageDestroyUrl(conversationId, message.id), {
+                                method: 'POST',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    Accept: 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: new URLSearchParams({ _method: 'DELETE' }),
+                            });
+
+                            const payload = await response.json().catch(() => ({}));
+
+                            if (!response.ok) {
+                                showChatError(payload?.message || 'No se pudo eliminar el mensaje.');
+                                return;
+                            }
+
+                            await loadConversation(conversationId, { pushState: false });
+                            await refreshSidebar();
+                        } catch (error) {
+                            console.error(error);
+                            showChatError('No se pudo eliminar el mensaje.');
+                        }
+                    }
                 };
 
                 const renderConversation = (conversation) => {
@@ -831,6 +1156,9 @@
                         pollUrl = buildConversationMessagesUrl(activeConversationId);
                         wrapper.dataset.pollUrl = pollUrl;
                         wrapper.dataset.conversationId = String(activeConversationId);
+                        activeMessageMenuId = null;
+                        editingMessageId = null;
+                        editingMessageDraft = '';
 
                         updateHeader(payload);
                         renderMessages(messages);
@@ -1233,6 +1561,61 @@
                     });
                 });
 
+                messagesContainer.addEventListener('click', (event) => {
+                    const trigger = event.target.closest('[data-chat-message-trigger]');
+                    if (trigger) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const messageElement = trigger.closest('[data-message-id]');
+                        if (messageElement) {
+                            openMessageMenu(messageElement);
+                        }
+                        return;
+                    }
+
+                    const editButton = event.target.closest('[data-chat-message-edit]');
+                    if (editButton) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void applyMessageAction('edit');
+                        return;
+                    }
+
+                    const deleteButton = event.target.closest('[data-chat-message-delete]');
+                    if (deleteButton) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void applyMessageAction('delete');
+                        return;
+                    }
+
+                    const saveButton = event.target.closest('[data-chat-edit-save]');
+                    if (saveButton) {
+                        event.preventDefault();
+                        void saveInlineEdit();
+                        return;
+                    }
+
+                    const cancelButton = event.target.closest('[data-chat-edit-cancel]');
+                    if (cancelButton) {
+                        event.preventDefault();
+                        cancelInlineEdit();
+                        renderMessages(currentMessages);
+                        return;
+                    }
+                });
+
+                messagesContainer.addEventListener('input', (event) => {
+                    const editInput = event.target.closest('[data-chat-edit-input]');
+
+                    if (!editInput) {
+                        return;
+                    }
+
+                    editingMessageDraft = editInput.value;
+                    resizeChatEditInput(editInput);
+                });
+
                 attachmentsButton.addEventListener('click', (event) => {
                     event.preventDefault();
                     attachmentsInput.value = '';
@@ -1313,6 +1696,7 @@
                     const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link]');
 
                     if (!link) {
+                        closeMessageMenu();
                         return;
                     }
 
@@ -1321,7 +1705,16 @@
                     }
 
                     event.preventDefault();
+                    closeMessageMenu();
                     await window.openConversationFromLink?.(link.href);
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (event.target.closest('[data-message-id]')) {
+                        return;
+                    }
+
+                    closeMessageMenu();
                 });
 
                 window.addEventListener('popstate', () => {
