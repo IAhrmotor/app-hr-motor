@@ -142,6 +142,49 @@ class CompanyChatTest extends TestCase
             ->assertJsonPath('messages.0.attachments.0.is_image', true);
     }
 
+    public function test_user_can_edit_and_delete_own_chat_messages(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Laura Test',
+        ]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $message = CompanyChatMessage::query()->create([
+            'company_chat_conversation_id' => $conversation->id,
+            'sender_id' => $sender->id,
+            'body' => 'Mensaje original',
+        ]);
+
+        $recipient->notify(new CompanyChatMessageNotification($conversation, $message, $sender));
+
+        $this->actingAs($sender)
+            ->patchJson(route('chat.beta.messages.update', [$conversation, $message]), [
+                'body' => 'Mensaje editado',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message.body', 'Mensaje editado')
+            ->assertJsonPath('last_message_excerpt', 'Mensaje editado');
+
+        $this->assertSame('Mensaje editado', $message->fresh()->body);
+        $this->assertSame('Mensaje editado', $conversation->fresh()->last_message_excerpt);
+
+        $this->actingAs($sender)
+            ->deleteJson(route('chat.beta.messages.destroy', [$conversation, $message]))
+            ->assertOk()
+            ->assertJsonPath('conversation_id', $conversation->id);
+
+        $this->assertDatabaseMissing('company_chat_messages', [
+            'id' => $message->id,
+        ]);
+        $this->assertSame(0, $recipient->unreadNotifications()->count());
+        $this->assertNull($conversation->fresh()->last_message_excerpt);
+    }
+
     public function test_chat_messages_endpoint_returns_json_and_marks_incoming_messages_as_read(): void
     {
         $sender = User::factory()->create([

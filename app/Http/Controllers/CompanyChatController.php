@@ -228,6 +228,98 @@ class CompanyChatController extends Controller
         ]);
     }
 
+    public function updateMessage(Request $request, CompanyChatConversation $conversation, CompanyChatMessage $message): JsonResponse|RedirectResponse
+    {
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+        abort_unless($conversation->involves($request->user()), 403);
+        abort_unless($message->company_chat_conversation_id === $conversation->id, 404);
+        abort_unless($message->sender_id === $request->user()->id, 403);
+
+        $validated = $request->validate([
+            'body' => ['nullable', 'string', 'max:4000'],
+        ]);
+
+        $body = trim((string) ($validated['body'] ?? ''));
+        $hasAttachments = filled($message->attachments);
+
+        if ($body === '' && ! $hasAttachments) {
+            throw ValidationException::withMessages([
+                'body' => 'Escribe un mensaje o conserva un adjunto.',
+            ]);
+        }
+
+        $message->forceFill([
+            'body' => $body,
+        ])->save();
+
+        $this->refreshConversationSummary($conversation);
+
+        if ($request->expectsJson()) {
+            $message = $message->load('sender');
+
+            return response()->json([
+                'message' => [
+                    'id' => $message->id,
+                    'body' => $message->body,
+                    'preview_text' => $message->preview_text,
+                    'sender_id' => $message->sender_id,
+                    'sender_name' => $message->sender?->name,
+                    'sender_chat_role_label' => app_chat_role_label($message->sender),
+                    'is_mine' => true,
+                    'created_at' => $message->created_at?->toIso8601String(),
+                    'created_at_label' => $message->created_at?->translatedFormat('H:i'),
+                    'show_time' => true,
+                    'read_at' => $message->read_at?->toIso8601String(),
+                    'attachments' => $this->formatAttachmentsForPayload($message),
+                ],
+                'conversation_id' => $conversation->id,
+                'last_message_at' => $conversation->fresh()->last_message_at?->toIso8601String(),
+                'last_message_excerpt' => $conversation->fresh()->last_message_excerpt,
+            ]);
+        }
+
+        return redirect()->route('chat.beta', [
+            'conversation' => $conversation->id,
+        ]);
+    }
+
+    public function destroyMessage(Request $request, CompanyChatConversation $conversation, CompanyChatMessage $message): JsonResponse|RedirectResponse
+    {
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+        abort_unless($conversation->involves($request->user()), 403);
+        abort_unless($message->company_chat_conversation_id === $conversation->id, 404);
+        abort_unless($message->sender_id === $request->user()->id, 403);
+
+        $attachmentPaths = collect($message->attachments ?? [])
+            ->pluck('path')
+            ->filter()
+            ->map(static fn ($path): string => (string) $path)
+            ->values()
+            ->all();
+
+        if ($attachmentPaths !== []) {
+            Storage::disk('public')->delete($attachmentPaths);
+        }
+
+        $messageId = $message->id;
+        $message->delete();
+
+        $this->removeChatNotificationsForMessage($conversation, $request->user(), $messageId);
+        $this->refreshConversationSummary($conversation);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'conversation_id' => $conversation->id,
+                'last_message_at' => $conversation->fresh()->last_message_at?->toIso8601String(),
+                'last_message_excerpt' => $conversation->fresh()->last_message_excerpt,
+            ]);
+        }
+
+        return redirect()->route('chat.beta', [
+            'conversation' => $conversation->id,
+        ]);
+    }
+
     public function messages(Request $request, CompanyChatConversation $conversation): JsonResponse
     {
         abort_unless(app_can_access_chat_beta($request->user()), 403);
@@ -387,6 +479,34 @@ class CompanyChatController extends Controller
             ->where('type', CompanyChatMessageNotification::class)
             ->where('data->conversation_id', $conversation->id)
             ->update(['read_at' => now()]);
+    }
+
+    private function removeChatNotificationsForMessage(CompanyChatConversation $conversation, User $user, int $messageId): void
+    {
+        $recipient = $conversation->otherParticipant($user);
+
+        if (! $recipient) {
+            return;
+        }
+
+        $recipient->notifications()
+            ->where('type', CompanyChatMessageNotification::class)
+            ->where('data->conversation_id', $conversation->id)
+            ->where('data->message_id', $messageId)
+            ->delete();
+    }
+
+    private function refreshConversationSummary(CompanyChatConversation $conversation): void
+    {
+        $latestMessage = $conversation->messages()
+            ->with('sender')
+            ->orderByDesc('created_at')
+            ->first();
+
+        $conversation->forceFill([
+            'last_message_at' => $latestMessage?->created_at,
+            'last_message_excerpt' => $latestMessage?->preview_text,
+        ])->save();
     }
 
     /**
