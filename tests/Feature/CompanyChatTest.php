@@ -171,18 +171,20 @@ class CompanyChatTest extends TestCase
             ->assertJsonPath('last_message_excerpt', 'Mensaje editado');
 
         $this->assertSame('Mensaje editado', $message->fresh()->body);
+        $this->assertNotNull($message->fresh()->edited_at);
         $this->assertSame('Mensaje editado', $conversation->fresh()->last_message_excerpt);
 
         $this->actingAs($sender)
             ->deleteJson(route('chat.beta.messages.destroy', [$conversation, $message]))
             ->assertOk()
-            ->assertJsonPath('conversation_id', $conversation->id);
+            ->assertJsonPath('conversation_id', $conversation->id)
+            ->assertJsonPath('last_message_excerpt', 'Mensaje eliminado');
 
-        $this->assertDatabaseMissing('company_chat_messages', [
+        $this->assertSoftDeleted('company_chat_messages', [
             'id' => $message->id,
         ]);
         $this->assertSame(0, $recipient->unreadNotifications()->count());
-        $this->assertNull($conversation->fresh()->last_message_excerpt);
+        $this->assertSame('Mensaje eliminado', $conversation->fresh()->last_message_excerpt);
     }
 
     public function test_chat_messages_endpoint_returns_json_and_marks_incoming_messages_as_read(): void

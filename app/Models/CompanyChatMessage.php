@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CompanyChatMessage extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'company_chat_conversation_id',
@@ -16,6 +18,7 @@ class CompanyChatMessage extends Model
         'body',
         'attachments',
         'read_at',
+        'edited_at',
     ];
 
     protected function casts(): array
@@ -23,6 +26,8 @@ class CompanyChatMessage extends Model
         return [
             'attachments' => 'array',
             'read_at' => 'datetime',
+            'edited_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -43,6 +48,10 @@ class CompanyChatMessage extends Model
 
     public function getPreviewTextAttribute(): string
     {
+        if ($this->trashed()) {
+            return 'Mensaje eliminado';
+        }
+
         $body = trim((string) $this->body);
 
         if ($body !== '') {
