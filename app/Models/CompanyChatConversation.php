@@ -17,12 +17,20 @@ class CompanyChatConversation extends Model
         'user_two_id',
         'last_message_at',
         'last_message_excerpt',
+        'retention_hold',
+        'retention_hold_reason',
+        'retention_hold_created_at',
+        'retention_hold_created_by',
+        'retention_hold_expires_at',
     ];
 
     protected function casts(): array
     {
         return [
             'last_message_at' => 'datetime',
+            'retention_hold' => 'boolean',
+            'retention_hold_created_at' => 'datetime',
+            'retention_hold_expires_at' => 'datetime',
         ];
     }
 
@@ -36,9 +44,85 @@ class CompanyChatConversation extends Model
         return $this->belongsTo(User::class, 'user_two_id');
     }
 
+    public function retentionHoldCreatedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'retention_hold_created_by');
+    }
+
     public function messages(): HasMany
     {
         return $this->hasMany(CompanyChatMessage::class, 'company_chat_conversation_id');
+    }
+
+    public function scopeWithActiveRetentionHold(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query->where('retention_hold', true)
+            ->where(function (Builder $subquery) use ($now): void {
+                $subquery->whereNull('retention_hold_expires_at')
+                    ->orWhere('retention_hold_expires_at', '>', $now);
+            });
+    }
+
+    public function scopeAvailableForRetentionHold(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query->where(function (Builder $subquery) use ($now): void {
+            $subquery->where('retention_hold', false)
+                ->orWhere(function (Builder $holdQuery) use ($now): void {
+                    $holdQuery->where('retention_hold', true)
+                        ->whereNotNull('retention_hold_expires_at')
+                        ->where('retention_hold_expires_at', '<=', $now);
+                });
+        });
+    }
+
+    public function hasActiveRetentionHold(?\Illuminate\Support\Carbon $at = null): bool
+    {
+        $at ??= now();
+
+        if (! $this->retention_hold) {
+            return false;
+        }
+
+        if ($this->retention_hold_expires_at === null) {
+            return true;
+        }
+
+        return $this->retention_hold_expires_at->greaterThan($at);
+    }
+
+    public function getRetentionHoldStatusLabelAttribute(): string
+    {
+        if (! $this->retention_hold) {
+            return 'Sin bloqueo';
+        }
+
+        if ($this->retention_hold_expires_at !== null && $this->retention_hold_expires_at->isPast()) {
+            return 'Caducado';
+        }
+
+        return 'Activo';
+    }
+
+    public function getRetentionHoldTargetLabelAttribute(): string
+    {
+        $participants = collect([
+            $this->userOne?->name,
+            $this->userTwo?->name,
+        ])->filter()->values();
+
+        if ($participants->count() === 0) {
+            return '';
+        }
+
+        if ($participants->count() === 1) {
+            return (string) $participants->first();
+        }
+
+        return $participants->join(' con ');
     }
 
     public function scopeForUser(Builder $query, User $user): Builder
