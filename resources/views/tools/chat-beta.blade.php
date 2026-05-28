@@ -283,20 +283,58 @@
                 >
                     <div class="mx-auto flex min-h-full max-w-5xl flex-col justify-end">
                         <div class="space-y-0" data-chat-messages>
+                            @php
+                                $chatDateToday = now()->startOfDay();
+                                $chatDateYesterday = $chatDateToday->copy()->subDay();
+                                $chatDateWeekStart = $chatDateToday->copy()->startOfWeek();
+
+                                $chatDateLabel = static function ($date) use ($chatDateToday, $chatDateYesterday, $chatDateWeekStart) {
+                                    if (! $date) {
+                                        return '';
+                                    }
+
+                                    $date = $date->copy()->startOfDay();
+
+                                    if ($date->equalTo($chatDateToday)) {
+                                        return 'Hoy';
+                                    }
+
+                                    if ($date->equalTo($chatDateYesterday)) {
+                                        return 'Ayer';
+                                    }
+
+                                    if ($date->greaterThanOrEqualTo($chatDateWeekStart)) {
+                                        return mb_strtolower($date->translatedFormat('l'));
+                                    }
+
+                                    return $date->translatedFormat('d/m/Y');
+                                };
+                            @endphp
                             @forelse ($selectedConversationMessages as $message)
                                 @php
                                     $isMine = $message->sender_id === $authUser->id;
                                     $previousMessage = $selectedConversationMessages->get($loop->index - 1);
                                     $nextMessage = $selectedConversationMessages->get($loop->index + 1);
+                                    $currentDateKey = $message->created_at?->format('Y-m-d');
+                                    $previousDateKey = $previousMessage?->created_at?->format('Y-m-d');
+                                    $nextDateKey = $nextMessage?->created_at?->format('Y-m-d');
                                     $currentTimeLabel = $message->created_at->translatedFormat('H:i');
                                     $previousTimeLabel = $previousMessage?->created_at?->translatedFormat('H:i');
                                     $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
-                                    $showTime = $loop->last || $nextTimeLabel !== $currentTimeLabel;
-                                    $topMarginClass = $loop->first ? 'mt-0' : ($previousTimeLabel === $currentTimeLabel ? 'mt-0.5' : 'mt-3');
+                                    $showDateSeparator = $loop->first || $previousDateKey !== $currentDateKey;
+                                    $showTime = $loop->last || $nextDateKey !== $currentDateKey || $nextTimeLabel !== $currentTimeLabel;
+                                    $topMarginClass = $loop->first ? 'mt-0' : (($previousDateKey === $currentDateKey && $previousTimeLabel === $currentTimeLabel) ? 'mt-0.5' : 'mt-3');
                                     $messageAttachments = collect($message->attachments ?? []);
                                     $isDeleted = $message->deleted_at !== null;
                                     $isEdited = $message->edited_at !== null && ! $isDeleted;
                                 @endphp
+                                @if ($showDateSeparator)
+                                    <div class="my-5 flex justify-center" data-chat-date-separator>
+                                        <span class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold text-sky-700 shadow-sm ring-1 ring-sky-200">
+                                            {{ $chatDateLabel($message->created_at) }}
+                                        </span>
+                                    </div>
+                                @endif
                                 <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
                                     <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
                                         <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
@@ -633,6 +671,8 @@
                     $nextMessage = $selectedConversationMessages->get($index + 1);
                     $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
                     $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+                    $currentDateKey = $message->created_at?->format('Y-m-d');
+                    $nextDateKey = $nextMessage?->created_at?->format('Y-m-d');
 
                     return [
                         'id' => $message->id,
@@ -640,11 +680,12 @@
                         'attachments' => $message->attachments ?? [],
                         'is_mine' => $message->sender_id === $authUser->id,
                         'read_at' => $message->read_at?->toIso8601String(),
+                        'created_at' => $message->created_at?->toIso8601String(),
                         'updated_at' => $message->updated_at?->toIso8601String(),
                         'edited_at' => $message->edited_at?->toIso8601String(),
                         'deleted_at' => $message->deleted_at?->toIso8601String(),
                         'created_at_label' => $currentTimeLabel,
-                        'show_time' => $nextTimeLabel !== $currentTimeLabel,
+                        'show_time' => $nextDateKey !== $currentDateKey || $nextTimeLabel !== $currentTimeLabel,
                     ];
                 })->values());
                 const buildMessagesFingerprint = (messages) => {
@@ -668,6 +709,73 @@
                     const span = document.createElement('span');
                     span.textContent = value ?? '';
                     return span.innerHTML;
+                };
+
+                const getLocalDateKey = (value) => {
+                    if (!value) {
+                        return '';
+                    }
+
+                    const date = new Date(value);
+
+                    if (Number.isNaN(date.getTime())) {
+                        return '';
+                    }
+
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+
+                    return `${year}-${month}-${day}`;
+                };
+
+                const formatChatDateLabel = (value) => {
+                    if (!value) {
+                        return '';
+                    }
+
+                    const date = new Date(value);
+
+                    if (Number.isNaN(date.getTime())) {
+                        return '';
+                    }
+
+                    const today = new Date();
+                    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    const startOfMessage = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                    const diffDays = Math.round((startOfToday.getTime() - startOfMessage.getTime()) / 86400000);
+
+                    if (diffDays === 0) {
+                        return 'Hoy';
+                    }
+
+                    if (diffDays === 1) {
+                        return 'Ayer';
+                    }
+
+                    const startOfWeek = new Date(startOfToday);
+                    const mondayOffset = (startOfWeek.getDay() + 6) % 7;
+                    startOfWeek.setDate(startOfWeek.getDate() - mondayOffset);
+
+                    if (startOfMessage >= startOfWeek) {
+                        return date.toLocaleDateString('es-ES', { weekday: 'long' });
+                    }
+
+                    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                };
+
+                const renderDateSeparatorMarkup = (label) => {
+                    if (!label) {
+                        return '';
+                    }
+
+                    return `
+                        <div class="my-5 flex justify-center" data-chat-date-separator>
+                            <span class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold text-sky-700 shadow-sm ring-1 ring-sky-200">
+                                ${escapeHtml(label)}
+                            </span>
+                        </div>
+                    `;
                 };
 
                 const autoScroll = () => {
@@ -862,11 +970,14 @@
                     const isMine = Boolean(message.is_mine);
                     const previousMessage = messages[index - 1];
                     const nextMessage = messages[index + 1];
+                    const currentDateKey = getLocalDateKey(message.created_at);
+                    const previousDateKey = getLocalDateKey(previousMessage?.created_at);
+                    const nextDateKey = getLocalDateKey(nextMessage?.created_at);
                     const currentTimeLabel = message.created_at_label || '';
                     const previousTimeLabel = previousMessage?.created_at_label || '';
                     const nextTimeLabel = nextMessage?.created_at_label || '';
-                    const showTime = Boolean(message.show_time ?? (index === messages.length - 1 || nextTimeLabel !== currentTimeLabel));
-                    const topMarginClass = index === 0 ? 'mt-0' : (previousTimeLabel === currentTimeLabel ? 'mt-0.5' : 'mt-3');
+                    const showTime = Boolean(index === messages.length - 1 || nextDateKey !== currentDateKey || nextTimeLabel !== currentTimeLabel);
+                    const topMarginClass = index === 0 ? 'mt-0' : ((previousDateKey === currentDateKey && previousTimeLabel === currentTimeLabel) ? 'mt-0.5' : 'mt-3');
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
                     const body = message.body || '';
                     const attachmentsHtml = messageAttachments.map((attachment) => renderAttachmentMarkup(attachment)).join('');
@@ -942,7 +1053,21 @@
                         return;
                     }
 
-                    messagesContainer.innerHTML = safeMessages.map((message, index) => renderMessage(message, index, safeMessages)).join('');
+                    const renderedMessages = [];
+
+                    safeMessages.forEach((message, index) => {
+                        const previousMessage = safeMessages[index - 1];
+                        const currentDateKey = getLocalDateKey(message.created_at);
+                        const previousDateKey = getLocalDateKey(previousMessage?.created_at);
+
+                        if (index === 0 || previousDateKey !== currentDateKey) {
+                            renderedMessages.push(renderDateSeparatorMarkup(formatChatDateLabel(message.created_at)));
+                        }
+
+                        renderedMessages.push(renderMessage(message, index, safeMessages));
+                    });
+
+                    messagesContainer.innerHTML = renderedMessages.join('');
                     latestMessageId = Number(safeMessages[safeMessages.length - 1]?.id ?? 0);
 
                     if (preserveScroll === 'exact') {
