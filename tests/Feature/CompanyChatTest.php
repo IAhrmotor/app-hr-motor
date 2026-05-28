@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatMessage;
+use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
+use App\Support\ChatPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -34,12 +36,21 @@ class CompanyChatTest extends TestCase
         parent::tearDown();
     }
 
+    private function acceptChatPolicy(User $user, array $params = []): void
+    {
+        $this->actingAs($user)
+            ->post(route('chat.beta.policy.accept', $params))
+            ->assertRedirect(route('chat.beta'));
+    }
+
     public function test_authenticated_user_can_open_the_chat_and_start_a_conversation_with_any_active_member(): void
     {
         $sender = User::factory()->create();
         $recipient = User::factory()->create([
             'name' => 'Marta Test',
         ]);
+
+        $this->acceptChatPolicy($sender);
 
         $response = $this->actingAs($sender)->get(route('chat.beta', ['recipient' => $recipient->id]));
 
@@ -59,6 +70,8 @@ class CompanyChatTest extends TestCase
         $recipient = User::factory()->create([
             'name' => 'Lucia Test',
         ]);
+
+        $this->acceptChatPolicy($recipient);
 
         $conversation = CompanyChatConversation::query()->create([
             'user_one_id' => min($sender->id, $recipient->id),
@@ -108,6 +121,9 @@ class CompanyChatTest extends TestCase
             'name' => 'Marta Test',
         ]);
 
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
         $conversation = CompanyChatConversation::query()->create([
             'user_one_id' => min($sender->id, $recipient->id),
             'user_two_id' => max($sender->id, $recipient->id),
@@ -148,6 +164,8 @@ class CompanyChatTest extends TestCase
         $recipient = User::factory()->create([
             'name' => 'Laura Test',
         ]);
+
+        $this->acceptChatPolicy($sender);
 
         $conversation = CompanyChatConversation::query()->create([
             'user_one_id' => min($sender->id, $recipient->id),
@@ -196,6 +214,8 @@ class CompanyChatTest extends TestCase
             'extra_role' => User::ROLE_HUMAN_RESOURCES,
         ]);
 
+        $this->acceptChatPolicy($recipient);
+
         $conversation = CompanyChatConversation::query()->create([
             'user_one_id' => min($sender->id, $recipient->id),
             'user_two_id' => max($sender->id, $recipient->id),
@@ -230,6 +250,9 @@ class CompanyChatTest extends TestCase
             'extra_role' => User::ROLE_HUMAN_RESOURCES,
         ]);
 
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
         $conversation = CompanyChatConversation::query()->create([
             'user_one_id' => min($sender->id, $recipient->id),
             'user_two_id' => max($sender->id, $recipient->id),
@@ -259,6 +282,8 @@ class CompanyChatTest extends TestCase
         $favoriteContact = User::factory()->create([
             'name' => 'Marta Favorita',
         ]);
+
+        $this->acceptChatPolicy($authUser);
 
         CompanyChatConversation::query()->create([
             'user_one_id' => min($authUser->id, $favoriteContact->id),
@@ -294,6 +319,8 @@ class CompanyChatTest extends TestCase
             'name' => 'No debería salir',
         ]);
 
+        $this->acceptChatPolicy($authUser);
+
         $response = $this->actingAs($authUser)->getJson(route('chat.beta', [
             'search' => 'Marta',
             'ajax' => 1,
@@ -315,6 +342,9 @@ class CompanyChatTest extends TestCase
         $recipient = User::factory()->create([
             'extra_role' => User::ROLE_HUMAN_RESOURCES,
         ]);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
 
         $conversation = CompanyChatConversation::query()->create([
             'user_one_id' => min($sender->id, $recipient->id),
@@ -365,6 +395,9 @@ class CompanyChatTest extends TestCase
                 'extra_role' => User::ROLE_HUMAN_RESOURCES,
             ]);
 
+            $this->acceptChatPolicy($sender);
+            $this->acceptChatPolicy($recipient);
+
             $conversation = CompanyChatConversation::query()->create([
                 'user_one_id' => min($sender->id, $recipient->id),
                 'user_two_id' => max($sender->id, $recipient->id),
@@ -391,5 +424,85 @@ class CompanyChatTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_chat_page_shows_policy_modal_until_the_user_accepts_the_current_version(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('chat.beta'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Política de uso del chat corporativo')
+            ->assertSee('Aceptar y continuar');
+    }
+
+    public function test_chat_policy_acceptance_is_persisted_and_unlocks_the_chat(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('chat.beta.policy.accept'), [
+                'source' => 'ignored',
+            ])
+            ->assertRedirect(route('chat.beta'));
+
+        $this->assertDatabaseHas('policy_acceptances', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'policy_version' => ChatPolicy::POLICY_VERSION,
+            'source' => ChatPolicy::SOURCE_WEB_CHAT,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('chat.beta'))
+            ->assertOk()
+            ->assertDontSee('Política de uso del chat corporativo');
+    }
+
+    public function test_chat_is_blocked_until_the_user_accepts_the_current_policy_version(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Mensaje bloqueado',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($recipient)
+            ->getJson(route('chat.beta.messages.index', $conversation))
+            ->assertForbidden();
+
+        $this->actingAs($recipient)
+            ->getJson(route('chat.beta.summary'))
+            ->assertForbidden();
+    }
+
+    public function test_chat_requires_acceptance_again_when_the_policy_version_changes(): void
+    {
+        $user = User::factory()->create();
+
+        PolicyAcceptance::query()->create([
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'policy_version' => '2026-01-01-v1',
+            'accepted_at' => now()->subDay(),
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+            'source' => ChatPolicy::SOURCE_WEB_CHAT,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('chat.beta'))
+            ->assertOk()
+            ->assertSee('Política de uso del chat corporativo');
     }
 }

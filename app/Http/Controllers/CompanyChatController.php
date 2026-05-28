@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatFavoriteContact;
 use App\Models\CompanyChatMessage;
+use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
+use App\Support\ChatPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,9 +27,13 @@ class CompanyChatController extends Controller
 
         $authUser = $request->user();
         $search = trim((string) $request->query('search'));
+        $policyVersion = ChatPolicy::version();
+        $policyAccepted = $this->hasAcceptedChatPolicy($authUser);
         $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
         if ($request->boolean('ajax')) {
+            abort_unless($policyAccepted, 403);
+
             $people = User::query()
                 ->where('is_active', true)
                 ->whereKeyNot($authUser->id)
@@ -51,7 +57,7 @@ class CompanyChatController extends Controller
             ]);
         }
 
-        if ($request->filled('recipient')) {
+        if ($policyAccepted && $request->filled('recipient')) {
             $recipient = User::query()
                 ->whereKey($request->integer('recipient'))
                 ->whereKeyNot($authUser->id)
@@ -62,6 +68,24 @@ class CompanyChatController extends Controller
 
             return redirect()->route('chat.beta', [
                 'conversation' => $conversation->id,
+            ]);
+        }
+
+        if (! $policyAccepted) {
+            return view('tools.chat-beta', [
+                'conversations' => collect(),
+                'selectedConversation' => null,
+                'people' => collect(),
+                'favoriteContacts' => [],
+                'teamUsers' => [],
+                'search' => $search,
+                'favoriteUserIds' => [],
+                'policyAccepted' => false,
+                'policyVersion' => $policyVersion,
+                'policyStatusUrl' => route('chat.beta.policy.status'),
+                'policyAcceptUrl' => route('chat.beta.policy.accept'),
+                'policyReturnRecipient' => $request->filled('recipient') ? $request->integer('recipient') : null,
+                'policyReturnConversation' => $request->filled('conversation') ? $request->integer('conversation') : null,
             ]);
         }
 
@@ -158,11 +182,69 @@ class CompanyChatController extends Controller
             'teamUsers' => $teamUsers,
             'search' => $search,
             'favoriteUserIds' => $favoriteUserIds,
+            'policyAccepted' => true,
+            'policyVersion' => $policyVersion,
+            'policyStatusUrl' => route('chat.beta.policy.status'),
+            'policyAcceptUrl' => route('chat.beta.policy.accept'),
+            'policyReturnRecipient' => null,
+            'policyReturnConversation' => null,
         ]);
+    }
+
+    public function policyStatus(Request $request): JsonResponse
+    {
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+
+        $authUser = $request->user();
+
+        return response()->json([
+            'policy_version' => ChatPolicy::version(),
+            'accepted' => $this->hasAcceptedChatPolicy($authUser),
+        ]);
+    }
+
+    public function acceptPolicy(Request $request): JsonResponse|RedirectResponse
+    {
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+
+        $authUser = $request->user();
+        $policyVersion = ChatPolicy::version();
+
+        PolicyAcceptance::query()->updateOrCreate(
+            [
+                'user_id' => $authUser->id,
+                'policy_version' => $policyVersion,
+            ],
+            [
+                'user_email' => $authUser->email,
+                'accepted_at' => now(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'source' => ChatPolicy::SOURCE_WEB_CHAT,
+            ],
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'accepted' => true,
+                'policy_version' => $policyVersion,
+            ]);
+        }
+
+        $redirectParams = [];
+
+        if ($request->filled('recipient')) {
+            $redirectParams['recipient'] = $request->integer('recipient');
+        } elseif ($request->filled('conversation')) {
+            $redirectParams['conversation'] = $request->integer('conversation');
+        }
+
+        return redirect()->route('chat.beta', $redirectParams);
     }
 
     public function storeMessage(Request $request, CompanyChatConversation $conversation): JsonResponse|RedirectResponse
     {
+        $this->ensureChatPolicyAccepted($request);
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
 
@@ -231,6 +313,7 @@ class CompanyChatController extends Controller
 
     public function updateMessage(Request $request, CompanyChatConversation $conversation, CompanyChatMessage $message): JsonResponse|RedirectResponse
     {
+        $this->ensureChatPolicyAccepted($request);
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
         abort_unless($message->company_chat_conversation_id === $conversation->id, 404);
@@ -291,6 +374,7 @@ class CompanyChatController extends Controller
 
     public function destroyMessage(Request $request, CompanyChatConversation $conversation, CompanyChatMessage $message): JsonResponse|RedirectResponse
     {
+        $this->ensureChatPolicyAccepted($request);
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
         abort_unless($message->company_chat_conversation_id === $conversation->id, 404);
@@ -328,6 +412,7 @@ class CompanyChatController extends Controller
 
     public function messages(Request $request, CompanyChatConversation $conversation): JsonResponse
     {
+        $this->ensureChatPolicyAccepted($request);
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
 
@@ -387,10 +472,10 @@ class CompanyChatController extends Controller
 
     public function summary(Request $request): JsonResponse
     {
+        $this->ensureChatPolicyAccepted($request);
         abort_unless(app_can_access_chat_beta($request->user()), 403);
 
         $authUser = $request->user();
-        $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
         $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
         $conversations = CompanyChatConversation::query()
@@ -431,6 +516,7 @@ class CompanyChatController extends Controller
 
     public function toggleFavorite(Request $request, User $user): JsonResponse|RedirectResponse
     {
+        $this->ensureChatPolicyAccepted($request);
         abort_unless(app_can_access_chat_beta($request->user()), 403);
 
         $authUser = $request->user();
@@ -475,6 +561,16 @@ class CompanyChatController extends Controller
                 'user_two_id' => $userTwoId,
             ]);
         });
+    }
+
+    private function hasAcceptedChatPolicy(?User $user): bool
+    {
+        return (bool) $user && $user->hasAcceptedPolicyVersion(ChatPolicy::version());
+    }
+
+    private function ensureChatPolicyAccepted(Request $request): void
+    {
+        abort_unless($this->hasAcceptedChatPolicy($request->user()), 403);
     }
 
     private function markConversationAsRead(CompanyChatConversation $conversation, User $user): void
