@@ -612,6 +612,7 @@
                 let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
                 let currentMessages = [];
+                let currentMessagesFingerprint = '';
                 let activeMessageMenuId = null;
                 let editingMessageId = null;
                 let editingMessageDraft = '';
@@ -626,10 +627,23 @@
                         'attachments' => $message->attachments ?? [],
                         'is_mine' => $message->sender_id === $authUser->id,
                         'read_at' => $message->read_at?->toIso8601String(),
+                        'updated_at' => $message->updated_at?->toIso8601String(),
                         'created_at_label' => $currentTimeLabel,
                         'show_time' => $nextTimeLabel !== $currentTimeLabel,
                     ];
                 })->values());
+                const buildMessagesFingerprint = (messages) => {
+                    return JSON.stringify(
+                        (Array.isArray(messages) ? messages : []).map((message) => ({
+                            id: Number(message.id ?? 0),
+                            body: String(message.body ?? ''),
+                            read_at: String(message.read_at ?? ''),
+                            updated_at: String(message.updated_at ?? ''),
+                            attachments_count: Array.isArray(message.attachments) ? message.attachments.length : 0,
+                        })),
+                    );
+                };
+                currentMessagesFingerprint = buildMessagesFingerprint(currentMessages);
                 const favoriteUserIds = new Set(@js($favoriteUserIds ?? []));
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
 
@@ -844,6 +858,7 @@
                     const previousScrollTop = wrapper.scrollTop;
                     const previousScrollHeight = wrapper.scrollHeight;
                     currentMessages = safeMessages;
+                    currentMessagesFingerprint = buildMessagesFingerprint(safeMessages);
 
                     if (safeMessages.length === 0) {
                         activeMessageMenuId = null;
@@ -1303,9 +1318,14 @@
                         const payload = await response.json();
                         const messages = Array.isArray(payload.messages) ? payload.messages : [];
                         const nextLatest = Number(messages[messages.length - 1]?.id ?? 0);
+                        const nextFingerprint = buildMessagesFingerprint(messages);
 
-                        if (nextLatest !== latestMessageId) {
-                            renderMessages(messages);
+                        if (nextFingerprint !== currentMessagesFingerprint) {
+                            const isNewTailMessage = nextLatest > latestMessageId;
+                            const isNearBottom = (wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight) < 120;
+                            renderMessages(messages, {
+                                preserveScroll: isNewTailMessage && isNearBottom ? 'none' : 'exact',
+                            });
                         }
                     } catch (error) {
                         console.error(error);
