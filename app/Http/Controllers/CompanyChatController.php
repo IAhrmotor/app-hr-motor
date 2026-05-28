@@ -94,7 +94,7 @@ class CompanyChatController extends Controller
                 'userOne',
                 'userTwo',
                 'messages' => function ($query) {
-                    $query->with('sender')->orderBy('created_at');
+                    $query->withTrashed()->with('sender')->orderBy('created_at');
                 },
             ]);
 
@@ -105,7 +105,7 @@ class CompanyChatController extends Controller
                 'userOne',
                 'userTwo',
                 'messages' => function ($query) {
-                    $query->with('sender')->orderBy('created_at');
+                    $query->withTrashed()->with('sender')->orderBy('created_at');
                 },
             ]);
         }
@@ -240,6 +240,7 @@ class CompanyChatController extends Controller
             'body' => ['nullable', 'string', 'max:4000'],
         ]);
 
+        $originalBody = trim((string) $message->body);
         $body = trim((string) ($validated['body'] ?? ''));
         $hasAttachments = filled($message->attachments);
 
@@ -251,6 +252,7 @@ class CompanyChatController extends Controller
 
         $message->forceFill([
             'body' => $body,
+            'edited_at' => $body !== $originalBody ? now() : $message->edited_at,
         ])->save();
 
         $this->refreshConversationSummary($conversation);
@@ -269,6 +271,8 @@ class CompanyChatController extends Controller
                     'is_mine' => true,
                     'created_at' => $message->created_at?->toIso8601String(),
                     'updated_at' => $message->updated_at?->toIso8601String(),
+                    'edited_at' => $message->edited_at?->toIso8601String(),
+                    'deleted_at' => $message->deleted_at?->toIso8601String(),
                     'created_at_label' => $message->created_at?->translatedFormat('H:i'),
                     'show_time' => true,
                     'read_at' => $message->read_at?->toIso8601String(),
@@ -334,6 +338,7 @@ class CompanyChatController extends Controller
         $this->markConversationNotificationsAsRead($conversation, $authUser);
 
         $messages = $conversation->messages()
+            ->withTrashed()
             ->with('sender')
             ->orderBy('created_at')
             ->get()
@@ -354,6 +359,8 @@ class CompanyChatController extends Controller
                 'is_mine' => $message->sender_id === $authUser->id,
                 'created_at' => $message->created_at?->toIso8601String(),
                 'updated_at' => $message->updated_at?->toIso8601String(),
+                'edited_at' => $message->edited_at?->toIso8601String(),
+                'deleted_at' => $message->deleted_at?->toIso8601String(),
                 'created_at_label' => $currentLabel,
                 'show_time' => $nextLabel !== $currentLabel,
                 'read_at' => $message->read_at?->toIso8601String(),
@@ -502,6 +509,7 @@ class CompanyChatController extends Controller
     private function refreshConversationSummary(CompanyChatConversation $conversation): void
     {
         $latestMessage = $conversation->messages()
+            ->withTrashed()
             ->with('sender')
             ->orderByDesc('created_at')
             ->first();

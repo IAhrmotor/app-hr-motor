@@ -294,11 +294,13 @@
                                     $showTime = $loop->last || $nextTimeLabel !== $currentTimeLabel;
                                     $topMarginClass = $loop->first ? 'mt-0' : ($previousTimeLabel === $currentTimeLabel ? 'mt-0.5' : 'mt-3');
                                     $messageAttachments = collect($message->attachments ?? []);
+                                    $isDeleted = $message->deleted_at !== null;
+                                    $isEdited = $message->edited_at !== null && ! $isDeleted;
                                 @endphp
                                 <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
                                     <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
-                                <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary' }}">
-                                            @if ($isMine)
+                                        <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
+                                            @if ($isMine && ! $isDeleted)
                                                 <button type="button"
                                                     class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100"
                                                     aria-label="Abrir opciones del mensaje"
@@ -310,11 +312,18 @@
                                             @endif
 
                                             <div data-chat-message-content>
-                                                @if (filled($message->body))
+                                                @if ($isDeleted)
+                                                    <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                                        </svg>
+                                                        <span>Este mensaje ha sido eliminado.</span>
+                                                    </div>
+                                                @elseif (filled($message->body))
                                                     <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
                                                 @endif
 
-                                                @if ($messageAttachments->isNotEmpty())
+                                                @if (! $isDeleted && $messageAttachments->isNotEmpty())
                                                     <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
                                                         @foreach ($messageAttachments as $attachment)
                                                             @php
@@ -359,7 +368,7 @@
                                                     </div>
                                                 @endif
 
-                                                @if ($isMine)
+                                                @if ($isMine && ! $isDeleted)
                                                     <span class="absolute bottom-1.5 right-3 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
                                                             <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
@@ -384,6 +393,9 @@
                                         </div>
                                         <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
                                         <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
+                                            @if ($isEdited)
+                                                <span class="text-[10px] italic text-slate-400">Editado</span>
+                                            @endif
                                             <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
                                         </div>
                                     </div>
@@ -616,6 +628,7 @@
                 let activeMessageMenuId = null;
                 let editingMessageId = null;
                 let editingMessageDraft = '';
+                let pendingDeleteMessageId = null;
                 currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
                     $nextMessage = $selectedConversationMessages->get($index + 1);
                     $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
@@ -628,6 +641,8 @@
                         'is_mine' => $message->sender_id === $authUser->id,
                         'read_at' => $message->read_at?->toIso8601String(),
                         'updated_at' => $message->updated_at?->toIso8601String(),
+                        'edited_at' => $message->edited_at?->toIso8601String(),
+                        'deleted_at' => $message->deleted_at?->toIso8601String(),
                         'created_at_label' => $currentTimeLabel,
                         'show_time' => $nextTimeLabel !== $currentTimeLabel,
                     ];
@@ -639,6 +654,8 @@
                             body: String(message.body ?? ''),
                             read_at: String(message.read_at ?? ''),
                             updated_at: String(message.updated_at ?? ''),
+                            edited_at: String(message.edited_at ?? ''),
+                            deleted_at: String(message.deleted_at ?? ''),
                             attachments_count: Array.isArray(message.attachments) ? message.attachments.length : 0,
                         })),
                     );
@@ -753,6 +770,28 @@
                     </div>
                 `;
 
+                const renderDeleteConfirmMarkup = (messageId) => `
+                    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4" data-chat-delete-modal-overlay>
+                        <div class="w-full max-w-sm rounded-[1.6rem] bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="chat-delete-title">
+                            <div class="flex items-start gap-3">
+                                <div class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                    </svg>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <h3 id="chat-delete-title" class="text-base font-semibold text-brand-secondary">Eliminar mensaje</h3>
+                                    <p class="mt-1 text-sm leading-6 text-slate-500">Esta acción eliminará el mensaje para todos los participantes.</p>
+                                </div>
+                            </div>
+                            <div class="mt-5 flex items-center justify-end gap-2">
+                                <button type="button" class="cursor-pointer rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100" data-chat-delete-cancel>Cancelar</button>
+                                <button type="button" class="cursor-pointer rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500" data-chat-delete-confirm data-message-id="${escapeHtml(String(messageId ?? ''))}">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
                 const findMessageMenuSlot = (messageId) => messagesContainer.querySelector(`[data-message-id="${CSS.escape(String(messageId))}"] [data-chat-message-menu-slot]`);
 
                 const setMessageMenuState = (messageId, open) => {
@@ -770,6 +809,22 @@
 
                     slot.innerHTML = '';
                     slot.classList.add('hidden');
+                };
+
+                const closeDeleteConfirmModal = () => {
+                    const existingOverlay = document.querySelector('[data-chat-delete-modal-overlay]');
+
+                    if (existingOverlay) {
+                        existingOverlay.remove();
+                    }
+
+                    pendingDeleteMessageId = null;
+                };
+
+                const openDeleteConfirmModal = (messageId) => {
+                    closeDeleteConfirmModal();
+                    pendingDeleteMessageId = Number(messageId);
+                    document.body.insertAdjacentHTML('beforeend', renderDeleteConfirmMarkup(messageId));
                 };
 
                 const resizeChatEditInput = (textarea) => {
@@ -815,28 +870,37 @@
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
                     const body = message.body || '';
                     const attachmentsHtml = messageAttachments.map((attachment) => renderAttachmentMarkup(attachment)).join('');
+                    const isDeleted = Boolean(message.deleted_at);
+                    const isEdited = Boolean(message.edited_at && !isDeleted);
                     const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
                     const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
 
                     return `
                         <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
                             <div class="flex max-w-[78%] flex-col ${isMine ? 'items-end' : 'items-start'}">
-                                <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary'}">
+                                <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}">
                                     ${isEditing ? `
                                         <textarea rows="1" class="min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10" data-chat-edit-input>${escapeHtml(editableBody)}</textarea>
                                         <div class="mt-3 flex items-center justify-end gap-2">
                                             <button type="button" class="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100" data-chat-edit-cancel>Cancelar</button>
                                             <button type="button" class="cursor-pointer rounded-full bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90" data-chat-edit-save>Guardar</button>
                                         </div>
+                                    ` : isDeleted ? `
+                                        <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                            </svg>
+                                            <span>Este mensaje ha sido eliminado.</span>
+                                        </div>
                                     ` : `
                                         ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(body)}</p>` : ''}
                                         ${attachmentsHtml !== '' ? `<div class="${body !== '' ? 'mt-2' : ''} space-y-2">${attachmentsHtml}</div>` : ''}
-                                        ${isMine ? `<button type="button" class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100" aria-label="Abrir opciones del mensaje" data-chat-message-trigger>
+                                        ${isMine && !isDeleted ? `<button type="button" class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100" aria-label="Abrir opciones del mensaje" data-chat-message-trigger>
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                                 <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
                                             </svg>
                                         </button>` : ''}
-                                        ${isMine ? `<span class="absolute bottom-1.5 right-3 inline-flex items-center ${message.read_at ? 'text-sky-500' : 'text-slate-400'}" data-message-checks>
+                                        ${isMine && !isDeleted ? `<span class="absolute bottom-1.5 right-3 inline-flex items-center ${message.read_at ? 'text-sky-500' : 'text-slate-400'}" data-message-checks>
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
                                                 <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                                                 <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
@@ -846,6 +910,7 @@
                                 </div>
                                 <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
                                 <div class="${showTime ? 'mt-1' : 'mt-0.5'} flex items-center gap-1 text-[11px] ${isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400'}">
+                                    ${isEdited ? '<span class="text-[10px] italic text-slate-400">Editado</span>' : ''}
                                     <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                 </div>
                             </div>
@@ -864,6 +929,7 @@
                         activeMessageMenuId = null;
                         editingMessageId = null;
                         editingMessageDraft = '';
+                        currentMessagesFingerprint = buildMessagesFingerprint(safeMessages);
                         messagesContainer.innerHTML = `
                             <div class="flex min-h-full items-center justify-center">
                                 <div class="max-w-md rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
@@ -1020,14 +1086,24 @@
                     }
 
                     if (action === 'delete') {
-                        const confirmed = window.confirm('¿Eliminar este mensaje?');
+                        openDeleteConfirmModal(message.id);
+                        return;
+                    }
+                };
 
-                        if (!confirmed) {
-                            return;
-                        }
+                const deleteActiveMessage = async () => {
+                    const conversationId = Number(wrapper.dataset.conversationId || sidebarSelectedConversationId || 0);
+                    const message = currentMessages.find((item) => Number(item.id) === Number(pendingDeleteMessageId));
 
-                        try {
-                            const response = await fetch(buildConversationMessageDestroyUrl(conversationId, message.id), {
+                    if (!conversationId || !message) {
+                        closeDeleteConfirmModal();
+                        return;
+                    }
+
+                    closeDeleteConfirmModal();
+
+                    try {
+                        const response = await fetch(buildConversationMessageDestroyUrl(conversationId, message.id), {
                                 method: 'POST',
                                 headers: {
                                     'X-Requested-With': 'XMLHttpRequest',
@@ -1037,19 +1113,18 @@
                                 body: new URLSearchParams({ _method: 'DELETE' }),
                             });
 
-                            const payload = await response.json().catch(() => ({}));
+                        const payload = await response.json().catch(() => ({}));
 
-                            if (!response.ok) {
-                                showChatError(payload?.message || 'No se pudo eliminar el mensaje.');
-                                return;
-                            }
-
-                            await loadConversation(conversationId, { pushState: false });
-                            await refreshSidebar();
-                        } catch (error) {
-                            console.error(error);
-                            showChatError('No se pudo eliminar el mensaje.');
+                        if (!response.ok) {
+                            showChatError(payload?.message || 'No se pudo eliminar el mensaje.');
+                            return;
                         }
+
+                        await loadConversation(conversationId, { pushState: false });
+                        await refreshSidebar();
+                    } catch (error) {
+                        console.error(error);
+                        showChatError('No se pudo eliminar el mensaje.');
                     }
                 };
 
@@ -1625,6 +1700,39 @@
                     }
                 });
 
+                document.addEventListener('click', (event) => {
+                    const overlay = event.target.closest('[data-chat-delete-modal-overlay]');
+
+                    if (!overlay) {
+                        return;
+                    }
+
+                    const cancelButton = event.target.closest('[data-chat-delete-cancel]');
+                    const confirmButton = event.target.closest('[data-chat-delete-confirm]');
+
+                    if (cancelButton) {
+                        event.preventDefault();
+                        closeDeleteConfirmModal();
+                        return;
+                    }
+
+                    if (confirmButton) {
+                        event.preventDefault();
+                        void deleteActiveMessage();
+                        return;
+                    }
+
+                    if (event.target === overlay) {
+                        closeDeleteConfirmModal();
+                    }
+                });
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        closeDeleteConfirmModal();
+                    }
+                });
+
                 messagesContainer.addEventListener('input', (event) => {
                     const editInput = event.target.closest('[data-chat-edit-input]');
 
@@ -1634,6 +1742,19 @@
 
                     editingMessageDraft = editInput.value;
                     resizeChatEditInput(editInput);
+                });
+
+                messagesContainer.addEventListener('keydown', (event) => {
+                    const editInput = event.target.closest('[data-chat-edit-input]');
+
+                    if (!editInput) {
+                        return;
+                    }
+
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        void saveInlineEdit();
+                    }
                 });
 
                 attachmentsButton.addEventListener('click', (event) => {
