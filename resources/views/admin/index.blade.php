@@ -274,7 +274,7 @@
                         </span>
                     </div>
 
-                    <div class="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                    <div class="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6">
                         @foreach ($logs as $section)
                             <div class="flex flex-col items-center rounded-[1.5rem] px-4 py-5 text-center">
                                 <a
