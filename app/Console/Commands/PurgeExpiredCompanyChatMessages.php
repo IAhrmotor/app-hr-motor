@@ -6,6 +6,7 @@ use App\Mail\ChatRetentionCleanupFailedMail;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatMessage;
 use App\Models\CompanyChatRetentionLog;
+use App\Models\CompanyChatRetentionUserHold;
 use App\Notifications\CompanyChatMessageNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -27,14 +28,30 @@ class PurgeExpiredCompanyChatMessages extends Command
         $affectedUsers = [];
         $affectedConversations = [];
         $errors = [];
+        $protectedUserIds = CompanyChatRetentionUserHold::query()
+            ->active()
+            ->pluck('user_id')
+            ->all();
 
         CompanyChatMessage::query()
-            ->with('sender:id,name,email')
+            ->with([
+                'sender:id,name,email',
+                'conversation:id,user_one_id,user_two_id,retention_hold,retention_hold_expires_at',
+            ])
             ->where('created_at', '<', $cutoff)
             ->orderBy('id')
-            ->chunkById(100, function ($messages) use (&$deletedCount, &$affectedUsers, &$affectedConversations, &$errors): void {
+            ->chunkById(100, function ($messages) use (&$deletedCount, &$affectedUsers, &$affectedConversations, &$errors, $protectedUserIds): void {
                 foreach ($messages as $message) {
                     try {
+                        if (
+                            $message->conversation?->hasActiveRetentionHold()
+                            || in_array((int) $message->sender_id, $protectedUserIds, true)
+                            || in_array((int) ($message->conversation?->user_one_id ?? 0), $protectedUserIds, true)
+                            || in_array((int) ($message->conversation?->user_two_id ?? 0), $protectedUserIds, true)
+                        ) {
+                            continue;
+                        }
+
                         $attachmentPaths = collect($message->attachments ?? [])
                             ->pluck('path')
                             ->filter()

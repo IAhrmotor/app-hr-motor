@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminDealershipLogController;
 use App\Http\Controllers\AdminContentLogController;
 use App\Http\Controllers\AdminChatRetentionLogController;
+use App\Http\Controllers\AdminChatRetentionHoldController;
 use App\Http\Controllers\AdminPolicyAcceptanceLogController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\ContactController;
@@ -1398,6 +1399,8 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin,gestor')->group(function () {
         Route::get('/admin', function () {
+            $authUser = auth()->user();
+
             $adminSections = [
                 [
                     'label' => 'Gestión de usuarios',
@@ -1485,6 +1488,16 @@ Route::middleware('auth')->group(function () {
                 ],
             ];
 
+            if (app_real_role($authUser) === User::ROLE_ADMIN) {
+                $adminSections[] = [
+                    'label' => 'Conservación excepcional',
+                    'description' => 'Bloquea conversaciones concretas o usuarios completos para que no entren en la purga automática.',
+                    'route' => 'admin.chat-retention-holds.index',
+                    'kind' => 'management',
+                    'icon' => 'chat-retention-hold',
+                ];
+            }
+
             return view('admin.index', compact('adminSections'));
         })->name('admin.index');
 
@@ -1526,6 +1539,25 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/logs/politica-aceptacion/descargar', [AdminPolicyAcceptanceLogController::class, 'export'])->name('admin.policy-acceptance-logs.export');
         Route::get('/admin/logs/borrado-chats', [AdminChatRetentionLogController::class, 'index'])->name('admin.chat-retention-logs.index');
         Route::get('/admin/logs/borrado-chats/descargar', [AdminChatRetentionLogController::class, 'export'])->name('admin.chat-retention-logs.export');
+
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/admin/conservacion-excepcional', [AdminChatRetentionHoldController::class, 'index'])->name('admin.chat-retention-holds.index');
+            Route::post('/admin/conservacion-excepcional', [AdminChatRetentionHoldController::class, 'store'])->name('admin.chat-retention-holds.store');
+            Route::patch('/admin/conservacion-excepcional/{conversation}', [AdminChatRetentionHoldController::class, 'update'])
+                ->whereNumber('conversation')
+                ->name('admin.chat-retention-holds.update');
+            Route::delete('/admin/conservacion-excepcional/{conversation}/desactivar', [AdminChatRetentionHoldController::class, 'destroy'])
+                ->whereNumber('conversation')
+                ->name('admin.chat-retention-holds.destroy');
+            Route::post('/admin/conservacion-excepcional/usuarios', [AdminChatRetentionHoldController::class, 'storeUser'])
+                ->name('admin.chat-retention-holds.users.store');
+            Route::patch('/admin/conservacion-excepcional/usuarios/{userHold}', [AdminChatRetentionHoldController::class, 'updateUser'])
+                ->whereNumber('userHold')
+                ->name('admin.chat-retention-holds.users.update');
+            Route::delete('/admin/conservacion-excepcional/usuarios/{userHold}/desactivar', [AdminChatRetentionHoldController::class, 'destroyUser'])
+                ->whereNumber('userHold')
+                ->name('admin.chat-retention-holds.users.destroy');
+        });
         Route::get('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'edit'])->name('admin.magazine.edit');
         Route::put('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'update'])->name('admin.magazine.update');
         Route::get('/admin/notificaciones', [AdminNotificationController::class, 'create'])->name('admin.notifications.create');

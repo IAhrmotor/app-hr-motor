@@ -103,6 +103,14 @@
                     <path d="M8 12H8.009M11.991 12H12M15.991 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             SVG,
+            'chat-retention-hold' => <<<'SVG'
+                <svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M16 24H8c-2.2 0-4-1.8-4-4v-7c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v7c0 2.2-1.8 4-4 4Zm-8-13c-1.1 0-2 .9-2 2v7c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2v-7c0-1.1-.9-2-2-2H8Z" fill="currentColor"/>
+                    <path d="M17 11H7c-.6 0-1-.4-1-1V6c0-3.3 2.7-6 6-6 3.4 0 6 2.7 6 6v4c0 .6-.4 1-1 1Zm-9-2h8V6c0-2.2-1.8-4-4-4-2.2 0-4 1.8-4 4v3Z" fill="currentColor"/>
+                    <circle cx="12" cy="15" r="2" fill="currentColor"/>
+                    <path d="M12 20c-.6 0-1-.4-1-1v-3c0-.6.4-1 1-1s1 .4 1 1v3c0 .6-.4 1-1 1Z" fill="currentColor"/>
+                </svg>
+            SVG,
             'default' => <<<'SVG'
                 <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M13.5 4.5 20.25 12 13.5 19.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -123,6 +131,7 @@
                 'content-log' => 'Contenidos',
                 'policy-acceptance-log' => 'Política',
                 'chat-retention-log' => 'Borrado chats',
+                'chat-retention-hold' => 'Conservación excepcional',
                 default => $section['label'] ?? '',
             };
         };
