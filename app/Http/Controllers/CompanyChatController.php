@@ -348,6 +348,8 @@ class CompanyChatController extends Controller
             $nextMessage = $messages->get($index + 1);
             $currentLabel = $message->created_at?->translatedFormat('H:i');
             $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+            $currentDateKey = $message->created_at?->format('Y-m-d');
+            $nextDateKey = $nextMessage?->created_at?->format('Y-m-d');
 
             return [
                 'id' => $message->id,
@@ -362,7 +364,7 @@ class CompanyChatController extends Controller
                 'edited_at' => $message->edited_at?->toIso8601String(),
                 'deleted_at' => $message->deleted_at?->toIso8601String(),
                 'created_at_label' => $currentLabel,
-                'show_time' => $nextLabel !== $currentLabel,
+                'show_time' => $nextDateKey !== $currentDateKey || $nextLabel !== $currentLabel,
                 'read_at' => $message->read_at?->toIso8601String(),
                 'attachments' => $this->formatAttachmentsForPayload($message),
             ];
