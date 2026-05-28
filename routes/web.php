@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminDealershipLogController;
 use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AdminChatRetentionLogController;
 use App\Http\Controllers\AdminPolicyAcceptanceLogController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\ContactController;
@@ -1475,6 +1476,13 @@ Route::middleware('auth')->group(function () {
                     'kind' => 'logs',
                     'icon' => 'policy-acceptance-log',
                 ],
+                [
+                    'label' => 'Borrado chats',
+                    'description' => 'Consulta las ejecuciones diarias de la purga automática de mensajes de chat.',
+                    'route' => 'admin.chat-retention-logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'chat-retention-log',
+                ],
             ];
 
             return view('admin.index', compact('adminSections'));
@@ -1516,6 +1524,8 @@ Route::middleware('auth')->group(function () {
         Route::redirect('/admin/logs/tags/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
         Route::get('/admin/logs/politica-aceptacion', [AdminPolicyAcceptanceLogController::class, 'index'])->name('admin.policy-acceptance-logs.index');
         Route::get('/admin/logs/politica-aceptacion/descargar', [AdminPolicyAcceptanceLogController::class, 'export'])->name('admin.policy-acceptance-logs.export');
+        Route::get('/admin/logs/borrado-chats', [AdminChatRetentionLogController::class, 'index'])->name('admin.chat-retention-logs.index');
+        Route::get('/admin/logs/borrado-chats/descargar', [AdminChatRetentionLogController::class, 'export'])->name('admin.chat-retention-logs.export');
         Route::get('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'edit'])->name('admin.magazine.edit');
         Route::put('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'update'])->name('admin.magazine.update');
         Route::get('/admin/notificaciones', [AdminNotificationController::class, 'create'])->name('admin.notifications.create');

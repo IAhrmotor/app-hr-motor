@@ -34,3 +34,7 @@ Artisan::command('google-business-profile:cleanup-duplicate-reviews', function (
 
 Schedule::command('salesforce:sync-leaderboard')->everyTenMinutes();
 Schedule::command('google-business-profile:sync-reviews')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('chat:purge-expired-messages')
+    ->dailyAt('05:30')
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();
