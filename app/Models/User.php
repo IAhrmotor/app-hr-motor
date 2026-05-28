@@ -238,6 +238,18 @@ class User extends Authenticatable
         return $this->hasMany(CompanyChatFavoriteContact::class, 'user_id');
     }
 
+    public function policyAcceptances(): HasMany
+    {
+        return $this->hasMany(PolicyAcceptance::class);
+    }
+
+    public function hasAcceptedPolicyVersion(string $policyVersion): bool
+    {
+        return $this->policyAcceptances()
+            ->where('policy_version', $policyVersion)
+            ->exists();
+    }
+
     public function getResolvedDealershipNameAttribute(): ?string
     {
         return $this->assignedDealership?->name ?: $this->dealership;

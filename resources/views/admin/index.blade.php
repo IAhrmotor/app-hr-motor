@@ -91,6 +91,12 @@
                 </defs>
                 </svg>
             SVG,
+            'policy-acceptance-log' => <<<'SVG'
+                <svg width="800px" height="800px" viewBox="0 0 1024 1024" class="h-11 w-11" version="1.1" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M146.3 73.06v877.71h512l219.43-239.38V73.06H146.3z m512.01 769.46V694.77h135.44L658.31 842.52z m146.27-220.89H585.16v256H219.44V146.2h585.14v475.43z" fill="currentColor" />
+                    <path d="M292.59 219.34h438.86v73.14H292.59zM292.59 365.63H658.3v73.14H292.59zM292.59 511.91h219.43v73.14H292.59z" fill="currentColor" />
+                </svg>
+            SVG,
             'default' => <<<'SVG'
                 <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M13.5 4.5 20.25 12 13.5 19.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -109,6 +115,7 @@
                 'magazine' => 'Revista',
                 'notifications', 'notification-log' => 'Notificaciones',
                 'content-log' => 'Contenidos',
+                'policy-acceptance-log' => 'Política',
                 default => $section['label'] ?? '',
             };
         };
