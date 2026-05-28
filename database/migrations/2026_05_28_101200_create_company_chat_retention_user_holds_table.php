@@ -14,10 +14,18 @@ return new class extends Migration
             $table->boolean('retention_hold')->default(true)->index();
             $table->text('retention_hold_reason');
             $table->timestamp('retention_hold_created_at')->nullable();
-            $table->foreignId('retention_hold_created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('retention_hold_created_by')->nullable();
+            $table->foreign('retention_hold_created_by', 'uch_created_by_fk')
+                ->references('id')
+                ->on('users')
+                ->nullOnDelete();
             $table->timestamp('retention_hold_expires_at')->nullable()->index();
             $table->timestamp('retention_hold_deactivated_at')->nullable();
-            $table->foreignId('retention_hold_deactivated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('retention_hold_deactivated_by')->nullable();
+            $table->foreign('retention_hold_deactivated_by', 'uch_deactivated_by_fk')
+                ->references('id')
+                ->on('users')
+                ->nullOnDelete();
             $table->text('retention_hold_deactivation_reason')->nullable();
             $table->timestamps();
 

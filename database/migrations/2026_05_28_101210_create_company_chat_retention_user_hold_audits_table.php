@@ -11,7 +11,11 @@ return new class extends Migration
         Schema::create('company_chat_retention_user_hold_audits', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('admin_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('admin_user_id')->nullable();
+            $table->foreign('admin_user_id', 'uch_audits_admin_fk')
+                ->references('id')
+                ->on('users')
+                ->nullOnDelete();
             $table->string('action', 40)->index();
             $table->text('reason')->nullable();
             $table->text('previous_reason')->nullable();
