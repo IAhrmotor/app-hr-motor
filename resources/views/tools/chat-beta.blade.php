@@ -10,18 +10,21 @@
         $policyAccepted = $policyAccepted ?? true;
     @endphp
 
-    <section
-        x-data="imageLightbox()"
-        x-effect="document.body.classList.toggle('overflow-hidden', isImageOpen)"
-        @keydown.escape.window="closeImage()"
-        @keydown.window="handleKeydown($event)"
-        @open-image.window="openImage($event.detail)"
-        class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100"
-        data-chat-root
-        data-chat-summary-url="{{ route('chat.beta.summary') }}"
-        data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}"
-    >
-        <aside class="flex h-full w-[21rem] min-w-[21rem] max-w-[21rem] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)]" data-chat-sidebar>
+        <section
+            x-data="imageLightbox()"
+            x-effect="document.body.classList.toggle('overflow-hidden', isImageOpen)"
+            @keydown.escape.window="closeImage()"
+            @keydown.window="handleKeydown($event)"
+            @open-image.window="openImage($event.detail)"
+            class="flex min-h-0 flex-1 w-full overflow-hidden bg-slate-100"
+            data-chat-root
+            data-chat-summary-url="{{ route('chat.beta.summary') }}"
+            data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}"
+        >
+        <div class="fixed inset-0 top-[4.75rem] z-40 hidden bg-slate-950/20 md:hidden" data-chat-mobile-sidebar-backdrop onclick="window.chatToggleMobileSidebar?.(false)"></div>
+        <aside class="fixed inset-y-[4.75rem] left-0 z-50 flex h-[calc(100dvh-4.75rem)] w-[21rem] max-w-[85vw] -translate-x-full overflow-hidden border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)] will-change-transform transform-gpu transition-[width,min-width,max-width,transform] duration-300 ease-in-out md:static md:z-auto md:h-full md:max-w-[21rem] md:translate-x-0" data-chat-sidebar>
+            <div class="relative h-full w-full">
+            <div data-chat-sidebar-expanded-shell class="absolute inset-0 flex h-full flex-col opacity-100 translate-x-0 pointer-events-auto transition-all duration-300 ease-in-out">
             <div class="flex min-h-[4.75rem] items-center border-b border-slate-200 px-4 py-2">
                 <div class="flex w-full items-center gap-2">
                         <button type="button" data-chat-sidebar-tab="favorites" aria-pressed="false"
@@ -33,16 +36,33 @@
                     </button>
 
                     <form method="GET" action="{{ route('chat.beta') }}" class="relative flex-1">
-                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="11" cy="11" r="7"></circle>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5"></path>
-                            </svg>
-                        </span>
-                        <input type="text" name="search" value="{{ $search }}"
-                            placeholder="Buscar..."
-                            data-chat-search-input
-                            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-brand-primary/10">
+                        <div class="relative flex items-center gap-2">
+                            <div class="relative min-w-0 flex-1">
+                                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="7"></circle>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5"></path>
+                                    </svg>
+                                </span>
+                                <input type="text" name="search" value="{{ $search }}"
+                                    placeholder="Buscar..."
+                                    data-chat-search-input
+                                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-brand-primary/10">
+                            </div>
+
+                            <button
+                                type="button"
+                                class="hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary md:inline-flex"
+                                aria-label="Contraer panel lateral"
+                                aria-expanded="true"
+                                data-chat-sidebar-collapse-button
+                                onclick="window.chatSetSidebarCollapsed?.(true)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -206,12 +226,39 @@
                     </div>
                 </div>
             </div>
+            </div>
+
+            <div class="absolute inset-0 flex h-full w-[4.75rem] flex-col items-center justify-center border-r border-slate-200 bg-white px-2 py-4 shadow-[12px_0_40px_rgba(15,23,42,0.04)] opacity-0 pointer-events-none translate-x-2 scale-95 transition-all duration-300 ease-in-out" data-chat-sidebar-collapsed-shell>
+                <button
+                    type="button"
+                    data-chat-sidebar-expand-button
+                    class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary"
+                    aria-label="Expandir panel lateral"
+                    aria-expanded="false"
+                    onclick="window.chatSetSidebarCollapsed?.(false)"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
         </aside>
 
         <section class="flex min-w-0 flex-1 flex-col bg-slate-100">
             @if ($selectedConversation && $selectedParticipant)
                 <header class="flex min-h-[4.75rem] items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-2">
                     <div class="flex min-w-0 items-center gap-3">
+                        <button
+                            type="button"
+                            class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary md:hidden"
+                            aria-label="Abrir panel lateral"
+                            aria-expanded="false"
+                            data-chat-mobile-sidebar-toggle
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="block h-4 w-4 shrink-0 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-chat-mobile-sidebar-icon>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"></path>
+                            </svg>
+                        </button>
                         <button
                             type="button"
                             @click.stop="openImage({ src: @js($selectedParticipant->avatar_url), alt: @js('Avatar de '.$selectedParticipant->name), title: @js($selectedParticipant->name) })"
@@ -508,8 +555,11 @@
                             </button>
 
                             <button type="submit"
-                                class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-90">
-                                Enviar
+                                class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-90 md:px-5 md:text-sm">
+                                <span class="hidden md:inline">Enviar</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M10.3009 13.6949L20.102 3.89742M10.5795 14.1355L12.8019 18.5804C13.339 19.6545 13.6075 20.1916 13.9458 20.3356C14.2394 20.4606 14.575 20.4379 14.8492 20.2747C15.1651 20.0866 15.3591 19.5183 15.7472 18.3818L19.9463 6.08434C20.2845 5.09409 20.4535 4.59896 20.3378 4.27142C20.2371 3.98648 20.013 3.76234 19.7281 3.66167C19.4005 3.54595 18.9054 3.71502 17.9151 4.05315L5.61763 8.2523C4.48114 8.64037 3.91289 8.83441 3.72478 9.15032C3.56153 9.42447 3.53891 9.76007 3.66389 10.0536C3.80791 10.3919 4.34498 10.6605 5.41912 11.1975L9.86397 13.42C10.041 13.5085 10.1295 13.5527 10.2061 13.6118C10.2742 13.6643 10.3352 13.7253 10.3876 13.7933C10.4468 13.87 10.491 13.9585 10.5795 14.1355Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
                             </button>
                         </div>
 
@@ -646,9 +696,16 @@
                 const headerFavoriteToggleLabel = document.querySelector('[data-chat-favorite-toggle-label]');
                 const headerFavoriteToggleForm = document.querySelector('[data-chat-favorite-toggle-form]');
                 const headerFavoriteMenuButton = document.querySelector('[data-chat-contact-menu-button]');
+                const mobileSidebarBackdrop = document.querySelector('[data-chat-mobile-sidebar-backdrop]');
+                const mobileSidebarToggleButton = document.querySelector('[data-chat-mobile-sidebar-toggle]');
+                const mobileSidebarIcon = document.querySelector('[data-chat-mobile-sidebar-icon]');
+                const sidebarExpandedShell = document.querySelector('[data-chat-sidebar-expanded-shell]');
+                const sidebarCollapsedShell = document.querySelector('[data-chat-sidebar-collapsed-shell]');
+                const sidebarCollapseButton = document.querySelector('[data-chat-sidebar-collapse-button]');
+                const sidebarExpandButton = document.querySelector('[data-chat-sidebar-expand-button]');
                 const sidebarTabButtons = Array.from(document.querySelectorAll('[data-chat-sidebar-tab]'));
                 const sidebarPanels = Array.from(document.querySelectorAll('[data-chat-sidebar-panel]'));
-                if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker || !searchInput || !searchResults) {
+                if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker || !searchInput || !searchResults || !sidebarExpandedShell || !sidebarCollapsedShell || !sidebarCollapseButton || !sidebarExpandButton) {
                     return;
                 }
 
@@ -667,6 +724,8 @@
                 let editingMessageId = null;
                 let editingMessageDraft = '';
                 let pendingDeleteMessageId = null;
+                let sidebarCollapsed = false;
+                let mobileSidebarOpen = false;
                 currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
                     $nextMessage = $selectedConversationMessages->get($index + 1);
                     $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
@@ -704,6 +763,73 @@
                 currentMessagesFingerprint = buildMessagesFingerprint(currentMessages);
                 const favoriteUserIds = new Set(@js($favoriteUserIds ?? []));
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
+
+                const setSidebarCollapsed = (collapsed) => {
+                    sidebarCollapsed = Boolean(collapsed);
+
+                    if (sidebarCollapsed) {
+                        sidebar.style.width = '4.75rem';
+                        sidebar.style.minWidth = '4.75rem';
+                        sidebar.style.maxWidth = '4.75rem';
+                    } else {
+                        sidebar.style.removeProperty('width');
+                        sidebar.style.removeProperty('min-width');
+                        sidebar.style.removeProperty('max-width');
+                    }
+
+                    sidebarExpandedShell.classList.toggle('opacity-0', sidebarCollapsed);
+                    sidebarExpandedShell.classList.toggle('translate-x-[-8px]', sidebarCollapsed);
+                    sidebarExpandedShell.classList.toggle('pointer-events-none', sidebarCollapsed);
+                    sidebarExpandedShell.classList.toggle('opacity-100', !sidebarCollapsed);
+                    sidebarExpandedShell.classList.toggle('translate-x-0', !sidebarCollapsed);
+                    sidebarExpandedShell.classList.toggle('pointer-events-auto', !sidebarCollapsed);
+
+                    sidebarCollapsedShell.classList.toggle('opacity-100', sidebarCollapsed);
+                    sidebarCollapsedShell.classList.toggle('translate-x-0', sidebarCollapsed);
+                    sidebarCollapsedShell.classList.toggle('scale-100', sidebarCollapsed);
+                    sidebarCollapsedShell.classList.toggle('pointer-events-auto', sidebarCollapsed);
+                    sidebarCollapsedShell.classList.toggle('opacity-0', !sidebarCollapsed);
+                    sidebarCollapsedShell.classList.toggle('translate-x-2', !sidebarCollapsed);
+                    sidebarCollapsedShell.classList.toggle('scale-95', !sidebarCollapsed);
+                    sidebarCollapsedShell.classList.toggle('pointer-events-none', !sidebarCollapsed);
+                    sidebarCollapseButton.classList.toggle('hidden', sidebarCollapsed);
+                    sidebarExpandButton.classList.toggle('hidden', !sidebarCollapsed);
+                    sidebarCollapseButton.setAttribute('aria-expanded', sidebarCollapsed ? 'false' : 'true');
+                    sidebarExpandButton.setAttribute('aria-expanded', sidebarCollapsed ? 'true' : 'false');
+                };
+                window.chatSetSidebarCollapsed = setSidebarCollapsed;
+
+                const setMobileSidebarOpen = (open) => {
+                    if (!mobileSidebarBackdrop || !mobileSidebarToggleButton || !mobileSidebarIcon) {
+                        return;
+                    }
+
+                    mobileSidebarOpen = Boolean(open);
+
+                    if (window.matchMedia('(max-width: 767px)').matches) {
+                        sidebarCollapsed = false;
+                        sidebar.style.removeProperty('width');
+                        sidebar.style.removeProperty('min-width');
+                        sidebar.style.removeProperty('max-width');
+                        sidebarExpandedShell.classList.add('opacity-100', 'translate-x-0', 'pointer-events-auto');
+                        sidebarExpandedShell.classList.remove('opacity-0', 'translate-x-[-8px]', 'pointer-events-none');
+                        sidebarCollapsedShell.classList.add('opacity-0', 'translate-x-2', 'scale-95', 'pointer-events-none');
+                        sidebarCollapsedShell.classList.remove('opacity-100', 'translate-x-0', 'scale-100', 'pointer-events-auto');
+                        sidebarCollapseButton.classList.add('hidden');
+                        sidebarExpandButton.classList.add('hidden');
+                        sidebar.classList.toggle('-translate-x-full', !mobileSidebarOpen);
+                        sidebar.classList.toggle('translate-x-0', mobileSidebarOpen);
+                        sidebar.classList.toggle('pointer-events-none', !mobileSidebarOpen);
+                        sidebar.classList.toggle('pointer-events-auto', mobileSidebarOpen);
+                    }
+
+                    mobileSidebarBackdrop.classList.toggle('hidden', !mobileSidebarOpen);
+                    mobileSidebarToggleButton.setAttribute('aria-expanded', mobileSidebarOpen ? 'true' : 'false');
+                    mobileSidebarIcon.classList.toggle('rotate-180', mobileSidebarOpen);
+                };
+                window.chatToggleMobileSidebar = (nextState = null) => {
+                    setMobileSidebarOpen(nextState === null ? !mobileSidebarOpen : Boolean(nextState));
+                };
 
                 const escapeHtml = (value) => {
                     const span = document.createElement('span');
@@ -1773,12 +1899,34 @@
                 };
 
                 setSidebarTab('chats');
+                setSidebarCollapsed(false);
+                setMobileSidebarOpen(false);
 
                 sidebarTabButtons.forEach((button) => {
                     button.addEventListener('click', () => {
                         const nextTab = button.dataset.chatSidebarTab === 'favorites' && sidebarTab === 'favorites' ? 'chats' : (button.dataset.chatSidebarTab || 'chats');
                         setSidebarTab(nextTab);
                     });
+                });
+
+                if (mobileSidebarToggleButton) {
+                    mobileSidebarToggleButton.addEventListener('click', () => {
+                        setMobileSidebarOpen(!mobileSidebarOpen);
+                    });
+                }
+
+                sidebarCollapseButton.addEventListener('click', () => {
+                    setSidebarCollapsed(true);
+                });
+
+                sidebarExpandButton.addEventListener('click', () => {
+                    setSidebarCollapsed(false);
+                });
+
+                window.addEventListener('resize', () => {
+                    if (window.matchMedia('(min-width: 768px)').matches) {
+                        setMobileSidebarOpen(false);
+                    }
                 });
 
                 messagesContainer.addEventListener('click', (event) => {
@@ -2093,4 +2241,3 @@
         </div>
     @endif
 @endsection
-
