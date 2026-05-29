@@ -505,4 +505,26 @@ class CompanyChatTest extends TestCase
             ->assertOk()
             ->assertSee('Política de uso del chat corporativo');
     }
+    public function test_chat_view_keeps_the_desktop_sidebar_controls_and_mobile_toggle_markup(): void
+    {
+        $user = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        $this->acceptChatPolicy($user);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($user->id, $recipient->id),
+            'user_two_id' => max($user->id, $recipient->id),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $response
+            ->assertOk()
+            ->assertSee('data-chat-sidebar-collapse-button', false)
+            ->assertSee('data-chat-sidebar-collapsed-shell', false)
+            ->assertSee('data-chat-mobile-sidebar-toggle', false)
+            ->assertSee('data-chat-mobile-sidebar-backdrop', false);
+    }
 }
