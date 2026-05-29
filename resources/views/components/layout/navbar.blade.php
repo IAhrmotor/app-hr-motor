@@ -712,7 +712,8 @@
     <div x-show="open" x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 -translate-y-1" x-cloak class="border-t border-gray-200 bg-white xl:hidden">
+        x-transition:leave-end="opacity-0 -translate-y-1" x-cloak
+        class="fixed inset-x-0 top-[5rem] z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-gray-200 bg-white shadow-lg xl:hidden">
         <div class="mx-auto max-w-7xl px-6 py-4 lg:px-8">
             @auth
                 <a href="{{ route('profile.show') }}" @click="open = false"
