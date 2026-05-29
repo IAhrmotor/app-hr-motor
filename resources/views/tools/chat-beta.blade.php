@@ -21,8 +21,8 @@
             data-chat-summary-url="{{ route('chat.beta.summary') }}"
             data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}"
         >
-        <div class="fixed inset-0 top-[4.75rem] z-40 hidden bg-slate-950/20 md:hidden" data-chat-mobile-sidebar-backdrop onclick="window.chatToggleMobileSidebar?.(false)"></div>
-        <aside class="fixed inset-y-[4.75rem] left-0 z-50 flex h-[calc(100dvh-4.75rem)] w-[21rem] max-w-[85vw] -translate-x-full overflow-hidden border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)] will-change-transform transform-gpu transition-[width,min-width,max-width,transform] duration-300 ease-in-out md:static md:z-auto md:h-full md:max-w-[21rem] md:translate-x-0" data-chat-sidebar>
+        <div class="fixed inset-0 top-[calc(5rem+1px)] z-40 hidden bg-slate-950/20 md:hidden" data-chat-mobile-sidebar-backdrop onclick="window.chatToggleMobileSidebar?.(false)"></div>
+        <aside class="fixed left-0 top-[calc(5rem+1px)] z-50 flex h-[calc(100dvh-5rem-1px)] w-[21rem] max-w-[85vw] -translate-x-full overflow-hidden border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)] will-change-transform transform-gpu transition-[width,min-width,max-width,transform] duration-300 ease-in-out md:static md:z-auto md:h-full md:max-w-[21rem] md:translate-x-0" data-chat-sidebar>
             <div class="relative h-full w-full">
             <div data-chat-sidebar-expanded-shell class="absolute inset-0 flex h-full flex-col opacity-100 translate-x-0 pointer-events-auto transition-all duration-300 ease-in-out">
             <div class="flex min-h-[4.75rem] items-center border-b border-slate-200 px-4 py-2">
@@ -539,12 +539,12 @@
                                 name="body"
                                 rows="1"
                                 placeholder="Escribir mensaje..."
-                                class="max-h-40 flex-1 resize-none border-0 bg-transparent px-0 py-2 text-[15px] text-brand-secondary outline-none placeholder:text-slate-400 focus:ring-0"
+                                class="max-h-40 flex-1 resize-none border-0 bg-transparent px-0 py-2 text-[16px] text-brand-secondary outline-none placeholder:text-slate-400 focus:ring-0 md:text-[15px]"
                                 data-chat-input
                             >{{ old('body') }}</textarea>
 
                             <button type="button"
-                                class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
+                                class="hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary md:inline-flex"
                                 aria-label="Emoticonos"
                                 data-chat-emoji-button>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
