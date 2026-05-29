@@ -26,8 +26,8 @@ return new class extends Migration
             $table->string('source', 60)->default('web-admin');
             $table->timestamps();
 
-            $table->index(['user_id', 'action']);
-            $table->index(['admin_user_id', 'created_at']);
+            $table->index(['user_id', 'action'], 'uch_audits_user_action_idx');
+            $table->index(['admin_user_id', 'created_at'], 'uch_audits_admin_created_idx');
         });
     }
 

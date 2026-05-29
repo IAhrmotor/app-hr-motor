@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('company_chat_retention_user_holds', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->boolean('retention_hold')->default(true)->index();
+            $table->boolean('retention_hold')->default(true);
             $table->text('retention_hold_reason');
             $table->timestamp('retention_hold_created_at')->nullable();
             $table->foreignId('retention_hold_created_by')->nullable();
@@ -19,7 +19,7 @@ return new class extends Migration
                 ->references('id')
                 ->on('users')
                 ->nullOnDelete();
-            $table->timestamp('retention_hold_expires_at')->nullable()->index();
+            $table->timestamp('retention_hold_expires_at')->nullable();
             $table->timestamp('retention_hold_deactivated_at')->nullable();
             $table->foreignId('retention_hold_deactivated_by')->nullable();
             $table->foreign('retention_hold_deactivated_by', 'uch_deactivated_by_fk')
@@ -29,8 +29,10 @@ return new class extends Migration
             $table->text('retention_hold_deactivation_reason')->nullable();
             $table->timestamps();
 
-            $table->index(['user_id', 'retention_hold']);
-            $table->index(['retention_hold_created_by', 'created_at']);
+            $table->index('retention_hold', 'uch_retention_idx');
+            $table->index('retention_hold_expires_at', 'uch_expires_at_idx');
+            $table->index(['user_id', 'retention_hold'], 'uch_user_retention_idx');
+            $table->index(['retention_hold_created_by', 'created_at'], 'uch_created_by_created_idx');
         });
     }
 
