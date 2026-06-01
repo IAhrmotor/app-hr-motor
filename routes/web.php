@@ -1490,7 +1490,7 @@ Route::middleware('auth')->group(function () {
                 ],
             ];
 
-            if (app_real_role($authUser) === User::ROLE_ADMIN) {
+            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
                 $adminSections[] = [
                     'label' => 'Conservación excepcional',
                     'description' => 'Bloquea conversaciones concretas o usuarios completos para que no entren en la purga automática.',
@@ -1500,7 +1500,7 @@ Route::middleware('auth')->group(function () {
                 ];
             }
 
-            if (app_real_role($authUser) === User::ROLE_ADMIN) {
+            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
                 $adminSections[] = [
                     'label' => 'Acceso justificado a conversaciones',
                     'description' => 'Solicita acceso temporal y auditado a conversaciones ajenas indicando un motivo justificado.',

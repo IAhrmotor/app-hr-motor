@@ -45,6 +45,24 @@ class AdminConversationAccessTest extends TestCase
             ->assertDontSee(route('admin.conversation-access.logs.index'), false);
     }
 
+    public function test_role_viewer_hides_conversation_access_sections_when_visible_role_is_gestor(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'name' => 'Admin Principal',
+            'email' => 'admin@example.com',
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession([
+                'role_viewer.active_role' => 'gestor',
+            ])
+            ->get(route('admin.index'))
+            ->assertOk()
+            ->assertDontSee(route('admin.conversation-access.index'), false)
+            ->assertDontSee(route('admin.conversation-access.logs.index'), false);
+    }
+
     public function test_only_admins_can_open_the_conversation_access_logs_page(): void
     {
         $admin = User::factory()->create([
