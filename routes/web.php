@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AdminDealershipLogController;
 use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AdminConversationAccessController;
+use App\Http\Controllers\AdminConversationAccessLogController;
 use App\Http\Controllers\AdminChatRetentionLogController;
 use App\Http\Controllers\AdminChatRetentionHoldController;
 use App\Http\Controllers\AdminPolicyAcceptanceLogController;
@@ -1488,13 +1490,31 @@ Route::middleware('auth')->group(function () {
                 ],
             ];
 
-            if (app_real_role($authUser) === User::ROLE_ADMIN) {
+            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
                 $adminSections[] = [
                     'label' => 'Conservación excepcional',
                     'description' => 'Bloquea conversaciones concretas o usuarios completos para que no entren en la purga automática.',
                     'route' => 'admin.chat-retention-holds.index',
                     'kind' => 'management',
                     'icon' => 'chat-retention-hold',
+                ];
+            }
+
+            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
+                $adminSections[] = [
+                    'label' => 'Acceso justificado a conversaciones',
+                    'description' => 'Solicita acceso temporal y auditado a conversaciones ajenas indicando un motivo justificado.',
+                    'route' => 'admin.conversation-access.index',
+                    'kind' => 'management',
+                    'icon' => 'conversation-access',
+                ];
+
+                $adminSections[] = [
+                    'label' => 'Accesos administrativos a conversaciones',
+                    'description' => 'Consulta el histórico de accesos administrativos justificados a conversaciones ajenas.',
+                    'route' => 'admin.conversation-access.logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'conversation-access-log',
                 ];
             }
 
@@ -1576,4 +1596,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/admin/contactos/{contact}', [ContactController::class, 'update'])->name('admin.contacts.update');
         Route::delete('/admin/contactos/{contact}', [ContactController::class, 'destroy'])->name('admin.contacts.destroy');
     });
+
+    Route::get('/admin/acceso-conversacion', [AdminConversationAccessController::class, 'index'])->name('admin.conversation-access.index');
+    Route::post('/admin/acceso-conversacion', [AdminConversationAccessController::class, 'store'])->name('admin.conversation-access.store');
+    Route::get('/admin/logs/acceso-conversacion', [AdminConversationAccessLogController::class, 'index'])->name('admin.conversation-access.logs.index');
+    Route::get('/admin/logs/acceso-conversacion/descargar', [AdminConversationAccessLogController::class, 'export'])->name('admin.conversation-access.logs.export');
 });
