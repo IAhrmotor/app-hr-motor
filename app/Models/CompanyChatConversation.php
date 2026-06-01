@@ -54,6 +54,11 @@ class CompanyChatConversation extends Model
         return $this->hasMany(CompanyChatMessage::class, 'company_chat_conversation_id');
     }
 
+    public function accessAudits(): HasMany
+    {
+        return $this->hasMany(CompanyChatConversationAccessAudit::class, 'company_chat_conversation_id');
+    }
+
     public function scopeWithActiveRetentionHold(Builder $query): Builder
     {
         $now = now();
@@ -123,6 +128,11 @@ class CompanyChatConversation extends Model
         }
 
         return $participants->join(' con ');
+    }
+
+    public function getConversationTypeLabelAttribute(): string
+    {
+        return 'Privada';
     }
 
     public function scopeForUser(Builder $query, User $user): Builder

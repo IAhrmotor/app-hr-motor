@@ -104,11 +104,21 @@
                 </svg>
             SVG,
             'chat-retention-hold' => <<<'SVG'
-                <svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <svg class="h-11 w-11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M16 24H8c-2.2 0-4-1.8-4-4v-7c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v7c0 2.2-1.8 4-4 4Zm-8-13c-1.1 0-2 .9-2 2v7c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2v-7c0-1.1-.9-2-2-2H8Z" fill="currentColor"/>
                     <path d="M17 11H7c-.6 0-1-.4-1-1V6c0-3.3 2.7-6 6-6 3.4 0 6 2.7 6 6v4c0 .6-.4 1-1 1Zm-9-2h8V6c0-2.2-1.8-4-4-4-2.2 0-4 1.8-4 4v3Z" fill="currentColor"/>
                     <circle cx="12" cy="15" r="2" fill="currentColor"/>
                     <path d="M12 20c-.6 0-1-.4-1-1v-3c0-.6.4-1 1-1s1 .4 1 1v3c0 .6-.4 1-1 1Z" fill="currentColor"/>
+                </svg>
+            SVG,
+            'conversation-access' => <<<'SVG'
+                <svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M4 21V19.5C4 16.4624 6.46243 14 9.5 14H14.5C17.5376 14 20 16.4624 20 19.5V21M8 21V18.5M16 21V18.3333M8.5 6.5C10.514 8.22631 13.486 8.22631 15.5 6.5M16 7V4.92755L17.4657 2.78205C17.6925 2.45018 17.4548 2 17.0529 2H6.94712C6.5452 2 6.30755 2.45018 6.53427 2.78205L8 4.92755V7M16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8V5.5H16V8Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4"/>
+                </svg>
+            SVG,
+            'conversation-access-log' => <<<'SVG'
+                <svg class="h-11 w-11" viewBox="-2 0 19 19" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M14.443 4.445a1.615 1.615 0 0 1-1.613 1.614h-.506v8.396a1.615 1.615 0 0 1-1.613 1.613H2.17a1.613 1.613 0 1 1 0-3.227h.505V4.445A1.615 1.615 0 0 1 4.289 2.83h8.54a1.615 1.615 0 0 1 1.614 1.614zM2.17 14.96h7.007a1.612 1.612 0 0 1 0-1.01H2.172a.505.505 0 0 0 0 1.01zm9.045-10.515a1.62 1.62 0 0 1 .08-.505H4.29a.5.5 0 0 0-.31.107l-.002.001a.5.5 0 0 0-.193.397v8.396h6.337a.61.61 0 0 1 .6.467.632.632 0 0 1-.251.702.505.505 0 1 0 .746.445zm-.86 1.438h-5.76V6.99h5.76zm0 2.26h-5.76V9.25h5.76zm0 2.26h-5.76v1.108h5.76zm2.979-5.958a.506.506 0 0 0-.505-.505.496.496 0 0 0-.31.107h-.002a.501.501 0 0 0-.194.398v.505h.506a.506.506 0 0 0 .505-.505z" fill="currentColor"/>
                 </svg>
             SVG,
             'default' => <<<'SVG'
