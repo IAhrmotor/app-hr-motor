@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('company_chat_retention_hold_audits', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('company_chat_conversation_id')->constrained('company_chat_conversations')->cascadeOnDelete();
-            $table->foreignId('admin_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('action', 40)->index();
+            $table->foreignId('company_chat_conversation_id')->constrained('company_chat_conversations', indexName: 'ccrha_conv_fk')->cascadeOnDelete();
+            $table->foreignId('admin_user_id')->nullable()->constrained('users', indexName: 'ccrha_admin_fk')->nullOnDelete();
+            $table->string('action', 40)->index('ccrha_action_idx');
             $table->text('reason')->nullable();
             $table->text('previous_reason')->nullable();
             $table->timestamp('expires_at')->nullable();
@@ -22,8 +22,8 @@ return new class extends Migration
             $table->string('source', 60)->default('web-admin');
             $table->timestamps();
 
-            $table->index(['company_chat_conversation_id', 'action']);
-            $table->index(['admin_user_id', 'created_at']);
+            $table->index(['company_chat_conversation_id', 'action'], 'ccrha_conv_action_idx');
+            $table->index(['admin_user_id', 'created_at'], 'ccrha_admin_created_idx');
         });
     }
 
