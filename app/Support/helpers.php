@@ -269,7 +269,14 @@ if (! function_exists('app_role_viewer_options')) {
             );
         }
 
-        if (in_array($user->role, [User::ROLE_MANAGER, User::ROLE_INFORMATION_TECHNOLOGY], true)) {
+        if ($user->role === User::ROLE_MANAGER) {
+            return array_merge(
+                [User::ROLE_MANAGER => User::roleLabels()[User::ROLE_MANAGER] ?? 'Gestor'],
+                User::extraRoleLabels()
+            );
+        }
+
+        if ($user->role === User::ROLE_INFORMATION_TECHNOLOGY) {
             return User::extraRoleLabels();
         }
 
