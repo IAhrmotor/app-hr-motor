@@ -16,8 +16,8 @@ return new class extends Migration
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
 
-            $table->index(['company_chat_conversation_id', 'created_at']);
-            $table->index(['sender_id', 'read_at']);
+            $table->index(['company_chat_conversation_id', 'created_at'], 'ccm_conversation_created_idx');
+            $table->index(['sender_id', 'read_at'], 'ccm_sender_read_idx');
         });
     }
 
