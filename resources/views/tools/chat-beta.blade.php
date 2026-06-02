@@ -2191,8 +2191,8 @@
                 </div>
             </aside>
 
-            <section class="flex min-w-0 flex-1 items-center justify-center overflow-y-auto bg-slate-100 px-4 py-4 sm:px-6 sm:py-6">
-                <div class="w-full max-w-3xl max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-[3rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <section class="flex min-w-0 flex-1 overflow-y-auto bg-slate-100 px-4 py-4 sm:px-6 sm:py-6">
+                <div class="mx-auto flex w-full max-w-3xl min-h-[calc(100dvh-8rem)] flex-col rounded-[3rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                     <div class="flex items-start gap-4">
                         <div class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
                             <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6">
@@ -2204,7 +2204,7 @@
                         </div>
                         <div class="min-w-0 flex-1">
                             <h1 class="text-2xl font-bold text-brand-secondary">Política de uso del chat corporativo</h1>
-                        <p class="mt-2 text-sm leading-6 text-slate-500">
+                            <p class="mt-2 text-sm leading-6 text-slate-500">
                                 Este chat es una herramienta interna de HRMOTOR destinada exclusivamente a comunicaciones profesionales entre usuarios autorizados.
                             </p>
                         </div>
