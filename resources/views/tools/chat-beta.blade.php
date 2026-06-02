@@ -2191,8 +2191,8 @@
                 </div>
             </aside>
 
-            <section class="flex min-w-0 flex-1 items-center justify-center bg-slate-100 px-6">
-                <div class="w-full max-w-3xl rounded-[3rem] border border-slate-200 bg-white p-8 shadow-sm">
+            <section class="flex min-w-0 flex-1 items-center justify-center overflow-y-auto bg-slate-100 px-4 py-4 sm:px-6 sm:py-6">
+                <div class="w-full max-w-3xl max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-[3rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                     <div class="flex items-start gap-4">
                         <div class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
                             <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6">
@@ -2219,7 +2219,7 @@
                         <p>Al pulsar “Aceptar y continuar”, el usuario confirma que ha leído y entendido esta política de uso.</p>
                     </div>
 
-                    <form method="POST" action="{{ $policyAcceptUrl }}" class="mt-8 flex flex-wrap items-center justify-between gap-3">
+                    <form method="POST" action="{{ $policyAcceptUrl }}" class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
                         @csrf
                         <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
                             <span>Versión: {{ $policyVersion }}</span>
