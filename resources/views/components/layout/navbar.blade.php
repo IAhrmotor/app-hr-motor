@@ -44,16 +44,28 @@
     $roleViewerOptions = app_role_viewer_options($authUser);
     $forumUnreadNotifications = $authUser
         ? $authUser->unreadNotifications()
+            ->latest()
             ->get()
-            ->sortByDesc(function ($notification) {
-                $priority = data_get($notification->data, 'priority', false) ? 1 : 0;
-                $createdAt = $notification->created_at?->timestamp ?? 0;
+            ->groupBy(function ($notification): string {
+                if ($notification->type === \App\Notifications\CompanyChatMessageNotification::class) {
+                    $groupKey = data_get($notification->data, 'chat_group_key');
+                    $conversationId = data_get($notification->data, 'conversation_id');
+                    $senderId = data_get($notification->data, 'sender_id');
 
-                return sprintf('%d-%010d', $priority, $createdAt);
+                    return 'chat:' . ($groupKey ?: ($conversationId . ':' . $senderId));
+                }
+
+                return 'notification:' . $notification->id;
             })
+            ->map(function ($group) {
+                $notification = $group->first();
+                $notification->message_count = $group->count();
+                return $notification;
+            })
+            ->sortByDesc(fn ($notification) => $notification->created_at?->timestamp ?? 0)
             ->take(8)
         : collect();
-    $forumUnreadNotificationCount = $authUser ? $authUser->unreadNotifications()->count() : 0;
+    $forumUnreadNotificationCount = $forumUnreadNotifications->count();
 @endphp
 @php
     $navItemClass = 'inline-flex h-10 items-center whitespace-nowrap px-2 text-sm font-medium leading-none transition';
@@ -216,7 +228,7 @@
                     </div>
                 @endif
 
-                <div class="relative" @click.outside="notificationsOpen = false">
+                <div class="relative" @click.outside="notificationsOpen = false" data-notification-summary-url="{{ route('notifications.summary') }}">
                     <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false"
                         class="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
                         aria-label="Ver notificaciones" :aria-expanded="notificationsOpen.toString()">
@@ -228,9 +240,14 @@
 
                         @if ($forumUnreadNotificationCount > 0)
                             <span
-                                class="absolute -right-0.5 -top-0.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-none text-white shadow-sm ring-2 ring-white">
+                                class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow-sm ring-2 ring-white"
+                                data-notification-badge>
                                 {{ $forumUnreadNotificationCount > 9 ? '+9' : $forumUnreadNotificationCount }}
                             </span>
+                        @else
+                            <span
+                                class="absolute -right-1 -top-1 hidden h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow-sm ring-2 ring-white"
+                                data-notification-badge></span>
                         @endif
                     </button>
 
@@ -247,7 +264,7 @@
                             </div>
                         </div>
 
-                        <div class="max-h-[28rem] overflow-y-auto p-2">
+                        <div class="max-h-[28rem] overflow-y-auto p-2" data-notification-list>
                             @forelse ($forumUnreadNotifications as $notification)
                                 @php
                                     $isPriorityNotification = (bool) data_get($notification->data, 'priority', false);
@@ -258,6 +275,8 @@
                                     $notificationLinkUrl = data_get($notification->data, 'link_url', data_get($notification->data, 'thread_url'));
                                 @endphp
                                 <a href="{{ route('notifications.show', $notification->id) }}"
+                                    data-notification-id="{{ $notification->id }}"
+                                    data-notification-type="{{ data_get($notification->data, 'type', $notification->type) }}"
                                     class="block rounded-2xl px-3 py-3 transition {{ $isPriorityNotification ? 'mb-3 border border-amber-200 bg-amber-50/80 hover:bg-amber-100/80' : 'mb-1 hover:bg-brand-secondary/5' }} last:mb-0">
                                     <div class="flex items-start gap-3">
                                         <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full {{ $isPriorityNotification ? 'bg-amber-500 text-white shadow-sm' : 'bg-brand-primary/10 text-brand-primary' }}">
@@ -273,9 +292,16 @@
 
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-start justify-between gap-3">
-                                                <p class="text-sm font-semibold {{ $isPriorityNotification ? 'text-amber-950' : 'text-brand-secondary' }}">
-                                                    {{ $notificationTitle }}
-                                                </p>
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-semibold {{ $isPriorityNotification ? 'text-amber-950' : 'text-brand-secondary' }}">
+                                                        {{ $notificationTitle }}
+                                                    </p>
+                                                    @if (($notification->message_count ?? 1) > 1)
+                                                        <span class="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none {{ $isPriorityNotification ? 'bg-amber-100 text-amber-700' : 'bg-brand-primary/10 text-brand-primary' }}">
+                                                            {{ $notification->message_count > 9 ? '+9' : $notification->message_count }} mensajes
+                                                        </span>
+                                                    @endif
+                                                </div>
 
                                                 @if ($isPriorityNotification)
                                                     <span class="inline-flex shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
@@ -303,13 +329,272 @@
                                     </div>
                                 </a>
                             @empty
-                                <div class="rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center">
+                                <div class="rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center" data-notification-empty>
                                     <p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p>
                                 </div>
                             @endforelse
                         </div>
                     </div>
                 </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const root = document.querySelector('[data-notification-summary-url]');
+                        const originalTitle = document.title;
+                        const originalTitleBase = originalTitle.replace(/^\(\+?\d+\)\s*/u, '');
+                        const faviconLink = document.querySelector('link[rel="icon"]');
+                        const originalFaviconHref = faviconLink?.getAttribute('href') || @js(asset('favicon.ico'));
+
+                        if (!root) {
+                            return;
+                        }
+
+                        const summaryUrl = root.dataset.notificationSummaryUrl;
+                        const badge = root.querySelector('[data-notification-badge]');
+                        const list = root.querySelector('[data-notification-list]');
+                        const knownNotificationIds = new Set(Array.from(list?.querySelectorAll('[data-notification-id]') ?? []).map((element) => String(element.dataset.notificationId || '')));
+                        const knownBrowserNotificationIds = new Set();
+                        let browserNotificationsSeeded = false;
+                        const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
+                        const defaultNotificationIconUrl = @js(asset('images/users/hrmotor-default-user-avatar.png'));
+
+                        const escapeHtml = (value) => {
+                            const span = document.createElement('span');
+                            span.textContent = value ?? '';
+                            return span.innerHTML;
+                        };
+
+                        const setPageTitleWithUnreadCount = (count) => {
+                            if (!count || count <= 0) {
+                                document.title = originalTitle;
+                                return;
+                            }
+
+                            const label = count > 9 ? '+9' : String(count);
+                            document.title = `(${label}) ${originalTitleBase}`;
+                        };
+
+                        const renderFaviconWithBadge = async (count) => {
+                            if (!faviconLink) {
+                                return;
+                            }
+
+                            if (!count || count <= 0) {
+                                faviconLink.setAttribute('href', originalFaviconHref);
+                                return;
+                            }
+
+                            try {
+                                const size = 64;
+                                const canvas = document.createElement('canvas');
+                                const context = canvas.getContext('2d');
+
+                                if (!context) {
+                                    return;
+                                }
+
+                                canvas.width = size;
+                                canvas.height = size;
+
+                                const icon = new Image();
+                                icon.crossOrigin = 'anonymous';
+
+                                await new Promise((resolve, reject) => {
+                                    icon.onload = resolve;
+                                    icon.onerror = reject;
+                                    icon.src = originalFaviconHref;
+                                });
+
+                                context.clearRect(0, 0, size, size);
+                                context.drawImage(icon, 0, 0, size, size);
+
+                                const badgeSize = 14;
+                                const badgeX = 3;
+                                const badgeY = 16;
+
+                                context.fillStyle = '#1F2944';
+                                context.beginPath();
+                                context.arc(badgeX + badgeSize / 2, badgeY + badgeSize / 2, badgeSize / 2, 0, Math.PI * 2);
+                                context.fill();
+
+                                faviconLink.setAttribute('href', canvas.toDataURL('image/png'));
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        };
+
+                        const isChatBrowserNotificationSupported = () => {
+                            return 'Notification' in window && window.isSecureContext;
+                        };
+
+                        const requestBrowserNotificationPermission = async () => {
+                            if (!isChatBrowserNotificationSupported() || Notification.permission !== 'default') {
+                                return;
+                            }
+
+                            try {
+                                await Notification.requestPermission();
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        };
+
+                        const showBrowserNotification = (notification) => {
+                            if (!isChatBrowserNotificationSupported() || Notification.permission !== 'granted') {
+                                return;
+                            }
+
+                            if ((notification.type || '') !== 'chat.message.received') {
+                                return;
+                            }
+
+                            const browserNotification = new Notification(notification.title ?? 'Nuevo mensaje', {
+                                body: notification.description ?? '',
+                                icon: notification.actor_avatar_url || defaultNotificationIconUrl,
+                                tag: `chat-${notification.id}`,
+                                renotify: true,
+                            });
+
+                            browserNotification.onclick = (event) => {
+                                event.preventDefault();
+
+                                const targetUrl = notification.link_url || '/notificaciones/' + notification.id;
+
+                                window.focus();
+                                window.location.href = targetUrl;
+                            };
+                        };
+
+                        const renderNotification = (notification) => {
+                            const priorityClass = notification.priority
+                                ? 'mb-3 border border-amber-200 bg-amber-50/80 hover:bg-amber-100/80'
+                                : 'mb-1 hover:bg-brand-secondary/5';
+                            const iconClass = notification.priority ? 'bg-amber-500 text-white shadow-sm' : 'bg-brand-primary/10 text-brand-primary';
+                            const titleClass = notification.priority ? 'text-amber-950' : 'text-brand-secondary';
+                            const descriptionClass = notification.priority ? 'text-amber-900/75' : 'text-brand-secondary/70';
+                            const timeClass = 'text-brand-secondary/40';
+                            const linkClass = notification.priority ? 'text-amber-700' : 'text-brand-primary';
+                            const linkLabel = escapeHtml(notification.link_label ?? 'Abrir');
+                            const groupedCount = Number(notification.message_count || 1);
+                            const groupedCountHtml = groupedCount > 1
+                                ? `<span class="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none ${notification.priority ? 'bg-amber-100 text-amber-700' : 'bg-brand-primary/10 text-brand-primary'}">${groupedCount > 9 ? '+9' : groupedCount} mensajes</span>`
+                                : '';
+
+                            return `
+                                <a href="/notificaciones/${notification.id}"
+                                    data-notification-id="${escapeHtml(notification.id)}"
+                                    data-notification-type="${escapeHtml(notification.type ?? '')}"
+                                    class="block rounded-2xl px-3 py-3 transition ${priorityClass}">
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconClass}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="block h-3.5 w-3.5 shrink-0"
+                                                viewBox="0 0 24 24" fill="none">
+                                                <path d="M9.15316 5.40838C10.4198 3.13613 11.0531 2 12 2C12.9469 2 13.5802 3.13612 14.8468 5.40837L15.1745 5.99623C15.5345 6.64193 15.7144 6.96479 15.9951 7.17781C16.2757 7.39083 16.6251 7.4699 17.3241 7.62805L17.9605 7.77203C20.4201 8.32856 21.65 8.60682 21.9426 9.54773C22.2352 10.4886 21.3968 11.4691 19.7199 13.4299L19.2861 13.9372C18.8096 14.4944 18.5713 14.773 18.4641 15.1177C18.357 15.4624 18.393 15.8341 18.465 16.5776L18.5306 17.2544C18.7841 19.8706 18.9109 21.1787 18.1449 21.7602C17.3788 22.3417 16.2273 21.8115 13.9243 20.7512L13.3285 20.4768C12.6741 20.1755 12.3469 20.0248 12 20.0248C11.6531 20.0248 11.3259 20.1755 10.6715 20.4768L10.0757 20.7512C7.77268 21.8115 6.62118 22.3417 5.85515 21.7602C5.08912 21.1787 5.21588 19.8706 5.4694 17.2544L5.53498 16.5776C5.60703 15.8341 5.64305 15.4624 5.53586 15.1177C5.42868 14.773 5.19043 14.4944 4.71392 13.9372L4.2801 13.4299C2.60325 11.4691 1.76482 10.4886 2.05742 9.54773C2.35002 8.60682 3.57986 8.32856 6.03954 7.77203L6.67589 7.62805C7.37485 7.4699 7.72433 7.39083 8.00494 7.17781C8.28555 6.96479 8.46553 6.64194 8.82547 5.99623L9.15316 5.40838Z" fill="currentColor"/>
+                                            </svg>
+                                        </div>
+
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <p class="text-sm font-semibold ${titleClass}">${escapeHtml(notification.title)}</p>
+                                                    ${groupedCountHtml}
+                                                </div>
+                                                ${notification.priority ? '<span class="inline-flex shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">Prioritaria</span>' : ''}
+                                            </div>
+                                            ${notification.description ? `<p class="mt-1 text-sm ${descriptionClass}">${escapeHtml(notification.description)}</p>` : ''}
+                                            <p class="mt-1 text-xs ${timeClass}">${escapeHtml(notification.created_at_label ?? '')}</p>
+                                            ${notification.link_url ? `<span class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold ${linkClass}">${linkLabel}<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>` : ''}
+                                        </div>
+                                    </div>
+                                </a>
+                            `;
+                        };
+
+                        const refreshNotifications = async () => {
+                            try {
+                                const response = await fetch(summaryUrl, {
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        Accept: 'application/json',
+                                    },
+                                });
+
+                                if (!response.ok) {
+                                    return;
+                                }
+
+                                const payload = await response.json();
+                                const count = Number(payload.count || 0);
+                                const nextNotifications = Array.isArray(payload.notifications) ? payload.notifications : [];
+                                const rawNotifications = Array.isArray(payload.raw_notifications) ? payload.raw_notifications : [];
+                                const nextNotificationIds = new Set(nextNotifications.map((notification) => String(notification.id || '')));
+
+                                if (!browserNotificationsSeeded) {
+                                    rawNotifications.forEach((notification) => {
+                                        const notificationId = String(notification.id || '');
+
+                                        if (notificationId) {
+                                            knownBrowserNotificationIds.add(notificationId);
+                                        }
+                                    });
+
+                                    browserNotificationsSeeded = true;
+                                } else {
+                                    rawNotifications.forEach((notification) => {
+                                        const notificationId = String(notification.id || '');
+
+                                        if (!notificationId || knownBrowserNotificationIds.has(notificationId)) {
+                                            return;
+                                        }
+
+                                        showBrowserNotification(notification);
+                                        knownBrowserNotificationIds.add(notificationId);
+                                    });
+                                }
+
+                                nextNotifications.forEach((notification) => {
+                                    const notificationId = String(notification.id || '');
+
+                                    if (!notificationId || knownNotificationIds.has(notificationId)) {
+                                        return;
+                                    }
+
+                                    showBrowserNotification(notification);
+                                });
+
+                                if (badge) {
+                                    if (count > 0) {
+                                        badge.textContent = count > 9 ? '+9' : String(count);
+                                        badge.classList.remove('hidden');
+                                    } else {
+                                        badge.textContent = '';
+                                        badge.classList.add('hidden');
+                                    }
+                                }
+
+                                setPageTitleWithUnreadCount(count);
+                                void renderFaviconWithBadge(count);
+
+                                if (list) {
+                                    if (nextNotifications.length === 0) {
+                                        list.innerHTML = `<div class="${emptyStateClass}"><p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p></div>`;
+                                    } else {
+                                        list.innerHTML = nextNotifications.map(renderNotification).join('');
+                                    }
+                                }
+
+                                nextNotificationIds.forEach((notificationId) => knownNotificationIds.add(notificationId));
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        };
+
+                        void requestBrowserNotificationPermission();
+                        window.addEventListener('pointerdown', requestBrowserNotificationPermission, { once: true });
+                        refreshNotifications();
+                        setInterval(refreshNotifications, 15000);
+                    });
+                </script>
 
                 <div class="relative hidden xl:block" @click.outside="profileOpen = false">
                     <button type="button" @click="profileOpen = !profileOpen"
@@ -427,7 +712,8 @@
     <div x-show="open" x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 -translate-y-1" x-cloak class="border-t border-gray-200 bg-white xl:hidden">
+        x-transition:leave-end="opacity-0 -translate-y-1" x-cloak
+        class="fixed inset-x-0 top-[5rem] z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto border-t border-gray-200 bg-white shadow-lg xl:hidden">
         <div class="mx-auto max-w-7xl px-6 py-4 lg:px-8">
             @auth
                 <a href="{{ route('profile.show') }}" @click="open = false"

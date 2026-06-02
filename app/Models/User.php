@@ -233,9 +233,37 @@ class User extends Authenticatable
         return $this->hasMany(ForumReply::class);
     }
 
+    public function chatFavoriteContacts(): HasMany
+    {
+        return $this->hasMany(CompanyChatFavoriteContact::class, 'user_id');
+    }
+
+    public function policyAcceptances(): HasMany
+    {
+        return $this->hasMany(PolicyAcceptance::class);
+    }
+
+    public function hasAcceptedPolicyVersion(string $policyVersion): bool
+    {
+        return $this->policyAcceptances()
+            ->where('policy_version', $policyVersion)
+            ->exists();
+    }
+
     public function getResolvedDealershipNameAttribute(): ?string
     {
         return $this->assignedDealership?->name ?: $this->dealership;
+    }
+
+    public function isFavoriteChatContact(?self $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->chatFavoriteContacts()
+            ->where('favorite_user_id', $user->id)
+            ->exists();
     }
 
     public function isCommercialLike(): bool
@@ -268,6 +296,15 @@ class User extends Authenticatable
         }
 
         return $baseLabel . ' · ' . $extraLabel;
+    }
+
+    public function getChatRoleLabelAttribute(): string
+    {
+        if (filled($this->extra_role)) {
+            return self::extraRoleLabels()[$this->extra_role] ?? ucfirst((string) $this->extra_role);
+        }
+
+        return self::baseRoleLabels()[$this->role] ?? 'Usuario';
     }
 
     public function getIsStoreManagerAttribute(): bool

@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\AdminDealershipLogController;
 use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AdminConversationAccessController;
+use App\Http\Controllers\AdminConversationAccessLogController;
+use App\Http\Controllers\AdminChatRetentionLogController;
+use App\Http\Controllers\AdminChatRetentionHoldController;
+use App\Http\Controllers\AdminPolicyAcceptanceLogController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\AdminNotificationController;
@@ -16,6 +21,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ForumThreadController;
 use App\Http\Controllers\ForumTagController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CompanyChatController;
 use App\Http\Controllers\FeedbackReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
@@ -44,6 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/foro/{thread}/respuestas', [ForumThreadController::class, 'reply'])->whereNumber('thread')->name('forum.reply');
     Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->whereNumber('thread')->name('forum.status.update');
     Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->whereNumber('thread')->name('forum.destroy');
+    Route::get('/notificaciones/resumen', [NotificationController::class, 'summary'])->name('notifications.summary');
     Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
     Route::get('/agenda/usuarios/{user}', [UserController::class, 'show'])->name('agenda.users.show');
@@ -64,13 +71,27 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('tools.web');
 
-    Route::get('/chat-beta', function () {
-        abort_unless(app_can_access_chat_beta(), 403);
-
-        return view('tools.chat-beta', [
-            'chatBetaUrl' => 'https://hrmotor-connect.onrender.com/',
-        ]);
-    })->name('chat.beta');
+    Route::get('/chat', [CompanyChatController::class, 'index'])->name('chat.beta');
+    Route::get('/chat/politica', [CompanyChatController::class, 'policyStatus'])->name('chat.beta.policy.status');
+    Route::post('/chat/politica/aceptar', [CompanyChatController::class, 'acceptPolicy'])->name('chat.beta.policy.accept');
+    Route::post('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'storeMessage'])
+        ->whereNumber('conversation')
+        ->name('chat.beta.messages.store');
+    Route::patch('/chat/conversations/{conversation}/mensajes/{message}', [CompanyChatController::class, 'updateMessage'])
+        ->whereNumber('conversation')
+        ->whereNumber('message')
+        ->name('chat.beta.messages.update');
+    Route::delete('/chat/conversations/{conversation}/mensajes/{message}', [CompanyChatController::class, 'destroyMessage'])
+        ->whereNumber('conversation')
+        ->whereNumber('message')
+        ->name('chat.beta.messages.destroy');
+    Route::get('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'messages'])
+        ->whereNumber('conversation')
+        ->name('chat.beta.messages.index');
+    Route::get('/chat/resumen', [CompanyChatController::class, 'summary'])->name('chat.beta.summary');
+    Route::post('/chat/favoritos/{user}', [CompanyChatController::class, 'toggleFavorite'])
+        ->whereNumber('user')
+        ->name('chat.beta.favorites.toggle');
 
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
@@ -1380,6 +1401,8 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin,gestor')->group(function () {
         Route::get('/admin', function () {
+            $authUser = auth()->user();
+
             $adminSections = [
                 [
                     'label' => 'Gestión de usuarios',
@@ -1451,7 +1474,49 @@ Route::middleware('auth')->group(function () {
                     'kind' => 'logs',
                     'icon' => 'content-log',
                 ],
+                [
+                    'label' => 'Política de aceptación',
+                    'description' => 'Revisa qué usuarios han aceptado la política vigente del chat corporativo y descarga el histórico.',
+                    'route' => 'admin.policy-acceptance-logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'policy-acceptance-log',
+                ],
+                [
+                    'label' => 'Borrado chats',
+                    'description' => 'Consulta las ejecuciones diarias de la purga automática de mensajes de chat.',
+                    'route' => 'admin.chat-retention-logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'chat-retention-log',
+                ],
             ];
+
+            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
+                $adminSections[] = [
+                    'label' => 'Conservación excepcional',
+                    'description' => 'Bloquea conversaciones concretas o usuarios completos para que no entren en la purga automática.',
+                    'route' => 'admin.chat-retention-holds.index',
+                    'kind' => 'management',
+                    'icon' => 'chat-retention-hold',
+                ];
+            }
+
+            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
+                $adminSections[] = [
+                    'label' => 'Acceso justificado a conversaciones',
+                    'description' => 'Solicita acceso temporal y auditado a conversaciones ajenas indicando un motivo justificado.',
+                    'route' => 'admin.conversation-access.index',
+                    'kind' => 'management',
+                    'icon' => 'conversation-access',
+                ];
+
+                $adminSections[] = [
+                    'label' => 'Accesos administrativos a conversaciones',
+                    'description' => 'Consulta el histórico de accesos administrativos justificados a conversaciones ajenas.',
+                    'route' => 'admin.conversation-access.logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'conversation-access-log',
+                ];
+            }
 
             return view('admin.index', compact('adminSections'));
         })->name('admin.index');
@@ -1490,6 +1555,29 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/logs/contenidos/descargar', [AdminContentLogController::class, 'export'])->name('admin.content-logs.export');
         Route::redirect('/admin/logs/tags', '/admin/logs/contenidos?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
         Route::redirect('/admin/logs/tags/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
+        Route::get('/admin/logs/politica-aceptacion', [AdminPolicyAcceptanceLogController::class, 'index'])->name('admin.policy-acceptance-logs.index');
+        Route::get('/admin/logs/politica-aceptacion/descargar', [AdminPolicyAcceptanceLogController::class, 'export'])->name('admin.policy-acceptance-logs.export');
+        Route::get('/admin/logs/borrado-chats', [AdminChatRetentionLogController::class, 'index'])->name('admin.chat-retention-logs.index');
+        Route::get('/admin/logs/borrado-chats/descargar', [AdminChatRetentionLogController::class, 'export'])->name('admin.chat-retention-logs.export');
+
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/admin/conservacion-excepcional', [AdminChatRetentionHoldController::class, 'index'])->name('admin.chat-retention-holds.index');
+            Route::post('/admin/conservacion-excepcional', [AdminChatRetentionHoldController::class, 'store'])->name('admin.chat-retention-holds.store');
+            Route::patch('/admin/conservacion-excepcional/{conversation}', [AdminChatRetentionHoldController::class, 'update'])
+                ->whereNumber('conversation')
+                ->name('admin.chat-retention-holds.update');
+            Route::delete('/admin/conservacion-excepcional/{conversation}/desactivar', [AdminChatRetentionHoldController::class, 'destroy'])
+                ->whereNumber('conversation')
+                ->name('admin.chat-retention-holds.destroy');
+            Route::post('/admin/conservacion-excepcional/usuarios', [AdminChatRetentionHoldController::class, 'storeUser'])
+                ->name('admin.chat-retention-holds.users.store');
+            Route::patch('/admin/conservacion-excepcional/usuarios/{userHold}', [AdminChatRetentionHoldController::class, 'updateUser'])
+                ->whereNumber('userHold')
+                ->name('admin.chat-retention-holds.users.update');
+            Route::delete('/admin/conservacion-excepcional/usuarios/{userHold}/desactivar', [AdminChatRetentionHoldController::class, 'destroyUser'])
+                ->whereNumber('userHold')
+                ->name('admin.chat-retention-holds.users.destroy');
+        });
         Route::get('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'edit'])->name('admin.magazine.edit');
         Route::put('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'update'])->name('admin.magazine.update');
         Route::get('/admin/notificaciones', [AdminNotificationController::class, 'create'])->name('admin.notifications.create');
@@ -1508,4 +1596,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/admin/contactos/{contact}', [ContactController::class, 'update'])->name('admin.contacts.update');
         Route::delete('/admin/contactos/{contact}', [ContactController::class, 'destroy'])->name('admin.contacts.destroy');
     });
+
+    Route::get('/admin/acceso-conversacion', [AdminConversationAccessController::class, 'index'])->name('admin.conversation-access.index');
+    Route::post('/admin/acceso-conversacion', [AdminConversationAccessController::class, 'store'])->name('admin.conversation-access.store');
+    Route::get('/admin/logs/acceso-conversacion', [AdminConversationAccessLogController::class, 'index'])->name('admin.conversation-access.logs.index');
+    Route::get('/admin/logs/acceso-conversacion/descargar', [AdminConversationAccessLogController::class, 'export'])->name('admin.conversation-access.logs.export');
 });

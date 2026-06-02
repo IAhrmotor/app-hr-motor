@@ -32,7 +32,7 @@ return [
             'route' => 'tools.web',
         ],
         [
-            'label' => 'Chat beta',
+            'label' => 'Chat',
             'route' => 'chat.beta',
         ],
         [

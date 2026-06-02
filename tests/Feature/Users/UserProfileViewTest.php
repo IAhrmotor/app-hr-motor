@@ -41,6 +41,8 @@ class UserProfileViewTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Perfil Comercial')
+            ->assertSee('aria-label="Chatear con Perfil Comercial"', false)
+            ->assertSee('href="' . route('chat.beta', ['recipient' => $user->id]) . '"', false)
             ->assertSee('aria-label="Ver LinkedIn"', false)
             ->assertSee('href="' . $user->linkedin_url . '"', false)
             ->assertDontSeeText($user->linkedin_url)

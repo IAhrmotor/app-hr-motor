@@ -91,6 +91,36 @@
                 </defs>
                 </svg>
             SVG,
+            'policy-acceptance-log' => <<<'SVG'
+                <svg width="800px" height="800px" viewBox="0 0 1024 1024" class="h-11 w-11" version="1.1" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M146.3 73.06v877.71h512l219.43-239.38V73.06H146.3z m512.01 769.46V694.77h135.44L658.31 842.52z m146.27-220.89H585.16v256H219.44V146.2h585.14v475.43z" fill="currentColor" />
+                    <path d="M292.59 219.34h438.86v73.14H292.59zM292.59 365.63H658.3v73.14H292.59zM292.59 511.91h219.43v73.14H292.59z" fill="currentColor" />
+                </svg>
+            SVG,
+            'chat-retention-log' => <<<'SVG'
+                <svg width="800px" height="800px" viewBox="0 0 24 24" class="h-10 w-10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M17 3.33782C15.5291 2.48697 13.8214 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22C17.5228 22 22 17.5228 22 12C22 10.1786 21.513 8.47087 20.6622 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M8 12H8.009M11.991 12H12M15.991 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            SVG,
+            'chat-retention-hold' => <<<'SVG'
+                <svg class="h-11 w-11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M16 24H8c-2.2 0-4-1.8-4-4v-7c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v7c0 2.2-1.8 4-4 4Zm-8-13c-1.1 0-2 .9-2 2v7c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2v-7c0-1.1-.9-2-2-2H8Z" fill="currentColor"/>
+                    <path d="M17 11H7c-.6 0-1-.4-1-1V6c0-3.3 2.7-6 6-6 3.4 0 6 2.7 6 6v4c0 .6-.4 1-1 1Zm-9-2h8V6c0-2.2-1.8-4-4-4-2.2 0-4 1.8-4 4v3Z" fill="currentColor"/>
+                    <circle cx="12" cy="15" r="2" fill="currentColor"/>
+                    <path d="M12 20c-.6 0-1-.4-1-1v-3c0-.6.4-1 1-1s1 .4 1 1v3c0 .6-.4 1-1 1Z" fill="currentColor"/>
+                </svg>
+            SVG,
+            'conversation-access' => <<<'SVG'
+                <svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M4 21V19.5C4 16.4624 6.46243 14 9.5 14H14.5C17.5376 14 20 16.4624 20 19.5V21M8 21V18.5M16 21V18.3333M8.5 6.5C10.514 8.22631 13.486 8.22631 15.5 6.5M16 7V4.92755L17.4657 2.78205C17.6925 2.45018 17.4548 2 17.0529 2H6.94712C6.5452 2 6.30755 2.45018 6.53427 2.78205L8 4.92755V7M16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8V5.5H16V8Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4"/>
+                </svg>
+            SVG,
+            'conversation-access-log' => <<<'SVG'
+                <svg class="h-11 w-11" viewBox="-2 0 19 19" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M14.443 4.445a1.615 1.615 0 0 1-1.613 1.614h-.506v8.396a1.615 1.615 0 0 1-1.613 1.613H2.17a1.613 1.613 0 1 1 0-3.227h.505V4.445A1.615 1.615 0 0 1 4.289 2.83h8.54a1.615 1.615 0 0 1 1.614 1.614zM2.17 14.96h7.007a1.612 1.612 0 0 1 0-1.01H2.172a.505.505 0 0 0 0 1.01zm9.045-10.515a1.62 1.62 0 0 1 .08-.505H4.29a.5.5 0 0 0-.31.107l-.002.001a.5.5 0 0 0-.193.397v8.396h6.337a.61.61 0 0 1 .6.467.632.632 0 0 1-.251.702.505.505 0 1 0 .746.445zm-.86 1.438h-5.76V6.99h5.76zm0 2.26h-5.76V9.25h5.76zm0 2.26h-5.76v1.108h5.76zm2.979-5.958a.506.506 0 0 0-.505-.505.496.496 0 0 0-.31.107h-.002a.501.501 0 0 0-.194.398v.505h.506a.506.506 0 0 0 .505-.505z" fill="currentColor"/>
+                </svg>
+            SVG,
             'default' => <<<'SVG'
                 <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M13.5 4.5 20.25 12 13.5 19.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -109,6 +139,9 @@
                 'magazine' => 'Revista',
                 'notifications', 'notification-log' => 'Notificaciones',
                 'content-log' => 'Contenidos',
+                'policy-acceptance-log' => 'Política',
+                'chat-retention-log' => 'Borrado chats',
+                'chat-retention-hold' => 'Conservación excepcional',
                 default => $section['label'] ?? '',
             };
         };
@@ -260,7 +293,7 @@
                         </span>
                     </div>
 
-                    <div class="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                    <div class="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6">
                         @foreach ($logs as $section)
                             <div class="flex flex-col items-center rounded-[1.5rem] px-4 py-5 text-center">
                                 <a

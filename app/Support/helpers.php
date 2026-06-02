@@ -148,9 +148,20 @@ if (! function_exists('app_can_access_chat_beta')) {
             return false;
         }
 
-        return app_user_has_any_role($user, [
-            User::ROLE_INFORMATION_TECHNOLOGY,
-        ]);
+        return (bool) $user->is_active;
+    }
+}
+
+if (! function_exists('app_chat_role_label')) {
+    function app_chat_role_label(?User $user = null): string
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return 'Usuario';
+        }
+
+        return $user->chat_role_label;
     }
 }
 
