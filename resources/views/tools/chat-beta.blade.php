@@ -705,18 +705,19 @@
                 const sidebarExpandButton = document.querySelector('[data-chat-sidebar-expand-button]');
                 const sidebarTabButtons = Array.from(document.querySelectorAll('[data-chat-sidebar-tab]'));
                 const sidebarPanels = Array.from(document.querySelectorAll('[data-chat-sidebar-panel]'));
-                if (!root || !sidebar || !wrapper || !messagesContainer || !form || !input || !pollUrl || !messagesUrlTemplate || !storeUrlTemplate || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips || !chatError || !emojiButton || !emojiPicker || !searchInput || !searchResults || !sidebarExpandedShell || !sidebarCollapsedShell || !sidebarCollapseButton || !sidebarExpandButton) {
+                if (!root || !sidebar || !sidebarExpandedShell || !sidebarCollapsedShell || !sidebarCollapseButton || !sidebarExpandButton) {
                     return;
                 }
 
-                const csrfToken = form.querySelector('input[name="_token"]')?.value ?? '';
+                const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && chatError && emojiButton && emojiPicker);
+                const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
                 let isSubmitting = false;
                 let pollingLocked = false;
                 let attachmentSnapshot = [];
                 let sidebarTab = 'chats';
                 let searchAbortController = null;
                 let searchDebounce = null;
-                let latestMessageId = Number(messagesContainer.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
+                let latestMessageId = Number(messagesContainer?.querySelector('[data-message-id]')?.dataset.messageId ?? 0);
                 let sidebarSelectedConversationId = Number(summaryRoot?.dataset.selectedConversationId ?? 0);
                 let currentMessages = [];
                 let currentMessagesFingerprint = '';
@@ -1929,6 +1930,7 @@
                     }
                 });
 
+                if (hasComposer) {
                 messagesContainer.addEventListener('click', (event) => {
                     const trigger = event.target.closest('[data-chat-message-trigger]');
                     if (trigger) {
@@ -2081,19 +2083,24 @@
                     closeEmojiPicker();
                 });
 
-                searchInput.addEventListener('input', () => {
-                    clearTimeout(searchDebounce);
-                    searchDebounce = setTimeout(() => {
-                        void performLiveSearch(searchInput.value);
-                    }, 250);
-                });
+                }
 
-                searchInput.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                    }
-                });
+                if (searchInput && searchResults) {
+                    searchInput.addEventListener('input', () => {
+                        clearTimeout(searchDebounce);
+                        searchDebounce = setTimeout(() => {
+                            void performLiveSearch(searchInput.value);
+                        }, 250);
+                    });
 
+                    searchInput.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                        }
+                    });
+                }
+
+                if (hasComposer) {
                 form.addEventListener('submit', (event) => {
                     event.preventDefault();
                     void sendMessage();
@@ -2106,6 +2113,11 @@
                     }
                 });
 
+                autoScroll();
+                window.renderAttachmentsPreview?.();
+                setInterval(syncMessages, 3000);
+                }
+
                 root.addEventListener('click', async (event) => {
                     const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link]');
 
@@ -2115,6 +2127,10 @@
                     }
 
                     if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                        return;
+                    }
+
+                    if (!hasComposer) {
                         return;
                     }
 
@@ -2139,12 +2155,11 @@
                     }
                 });
 
-                autoScroll();
-                window.renderAttachmentsPreview?.();
-                setInterval(syncMessages, 3000);
                 setInterval(refreshSidebar, 5000);
                 refreshSidebar();
-                syncMessages();
+                if (hasComposer) {
+                    syncMessages();
+                }
             });
         </script>
     @if (! $policyAccepted)
