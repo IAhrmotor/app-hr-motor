@@ -2192,7 +2192,7 @@
             </aside>
 
             <section class="flex min-w-0 flex-1 overflow-y-auto bg-slate-100 px-4 py-4 sm:px-6 sm:py-6">
-                <div class="mx-auto flex w-full max-w-3xl min-h-[calc(100dvh-8rem)] flex-col rounded-[3rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <div class="mx-auto w-full max-w-3xl min-h-[calc(100dvh-8rem)] px-2 pt-2 pb-20 sm:px-4 sm:pt-4 sm:pb-24">
                     <div class="flex items-start gap-4">
                         <div class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
                             <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6">
@@ -2219,23 +2219,26 @@
                         <p>Al pulsar “Aceptar y continuar”, el usuario confirma que ha leído y entendido esta política de uso.</p>
                     </div>
 
-                    <form method="POST" action="{{ $policyAcceptUrl }}" class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
-                        @csrf
-                        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                            <span>Versión: {{ $policyVersion }}</span>
+                    <div class="mt-10 border-t border-slate-200 pt-6 pb-6 sm:pb-8">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="text-xs text-slate-400">
+                                <span>Versión: {{ $policyVersion }}</span>
+                            </div>
+
+                            <form method="POST" action="{{ $policyAcceptUrl }}" class="sm:ml-auto">
+                                @csrf
+                                @if (filled($policyReturnRecipient))
+                                    <input type="hidden" name="recipient" value="{{ $policyReturnRecipient }}">
+                                @endif
+                                @if (filled($policyReturnConversation))
+                                    <input type="hidden" name="conversation" value="{{ $policyReturnConversation }}">
+                                @endif
+                                <button type="submit" class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90">
+                                    Aceptar y continuar
+                                </button>
+                            </form>
                         </div>
-                        <div class="flex items-center gap-2">
-                            @if (filled($policyReturnRecipient))
-                                <input type="hidden" name="recipient" value="{{ $policyReturnRecipient }}">
-                            @endif
-                            @if (filled($policyReturnConversation))
-                                <input type="hidden" name="conversation" value="{{ $policyReturnConversation }}">
-                            @endif
-                            <button type="submit" class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90">
-                                Aceptar y continuar
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </section>
         </div>
