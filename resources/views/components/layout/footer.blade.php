@@ -69,6 +69,11 @@
                                 Asistencia IT
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('legal') }}" class="transition hover:text-white">
+                                Legal
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
