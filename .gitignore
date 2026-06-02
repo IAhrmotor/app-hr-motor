@@ -19,6 +19,7 @@ Thumbs.db
 /.zed
 
 /auth.json
+/backup.env
 
 /node_modules
 /public/build
