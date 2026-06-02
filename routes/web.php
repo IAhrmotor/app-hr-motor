@@ -40,6 +40,8 @@ Route::get('/reset-password', function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::view('/legal', 'legal')->name('legal');
+
     Route::get('/mi-perfil', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
