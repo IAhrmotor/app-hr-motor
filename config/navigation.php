@@ -32,6 +32,10 @@ return [
             'route' => 'tools.web',
         ],
         [
+            'label' => 'Informes',
+            'route' => 'tools.informes',
+        ],
+        [
             'label' => 'Chat',
             'route' => 'chat.beta',
         ],
@@ -50,6 +54,10 @@ return [
             [
                 'label' => 'Inicio',
                 'route' => 'home',
+            ],
+            [
+                'label' => 'Informes',
+                'route' => 'tools.informes',
             ],
             [
                 'label' => 'Agenda',

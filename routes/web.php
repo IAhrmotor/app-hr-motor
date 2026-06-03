@@ -73,6 +73,15 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('tools.web');
 
+    Route::get('/informes', function () {
+        abort_unless(app_user_has_any_role(request()->user(), [User::ROLE_MANAGEMENT, User::ROLE_AREA_MANAGER]), 403);
+
+        return view('tools.embedded', [
+            'url' => 'https://informes.app.hrmotor.com/informes/',
+            'title' => 'Informes',
+        ]);
+    })->name('tools.informes');
+
     Route::get('/chat', [CompanyChatController::class, 'index'])->name('chat.beta');
     Route::get('/chat/politica', [CompanyChatController::class, 'policyStatus'])->name('chat.beta.policy.status');
     Route::post('/chat/politica/aceptar', [CompanyChatController::class, 'acceptPolicy'])->name('chat.beta.policy.accept');

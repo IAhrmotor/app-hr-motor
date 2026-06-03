@@ -1,6 +1,11 @@
 @php
+    $authUser = auth()->user();
     $footerPlatformItems = collect(config('navigation.footer.platform', []))
-        ->filter(function (array $item): bool {
+        ->filter(function (array $item) use ($authUser): bool {
+            if (($item['route'] ?? null) === 'tools.informes' && ! app_user_has_any_role($authUser, [\App\Models\User::ROLE_MANAGEMENT, \App\Models\User::ROLE_AREA_MANAGER])) {
+                return false;
+            }
+
             if (($item['route'] ?? null) === 'forum.index' && ! app_can_access_forum()) {
                 return false;
             }
