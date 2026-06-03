@@ -10,10 +10,15 @@
                 <a href="{{ route('chat.beta', ['recipient' => $person->id]) }}"
                     data-chat-recipient-link
                     class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-brand-primary/20 hover:shadow-sm">
-                    <img src="{{ $person->avatar_url }}" alt="Avatar de {{ $person->name }}" class="h-10 w-10 rounded-2xl object-cover">
+                    <img src="{{ $person->avatar_url }}" alt="Avatar de {{ $person->name }}" class="h-10 w-10 rounded-2xl object-cover {{ $person->isDisabled() ? 'grayscale opacity-75' : '' }}">
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-semibold {{ in_array($person->id, $favoriteUserIds ?? [], true) ? 'text-amber-600' : 'text-brand-secondary' }}">{{ $person->name }}</p>
-                        <p class="truncate text-xs text-slate-500">{{ $person->chat_role_label }}</p>
+                        <p class="truncate text-xs text-slate-500">
+                            {{ $person->chat_role_label }}
+                            @if ($person->isDisabled())
+                                <span class="ml-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>
+                            @endif
+                        </p>
                     </div>
                 </a>
             @empty

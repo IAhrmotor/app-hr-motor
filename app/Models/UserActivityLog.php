@@ -16,10 +16,15 @@ class UserActivityLog extends Model
 
     public const ACTION_DELETED = 'deleted';
 
+    public const ACTION_DISABLED = 'user_disabled';
+
+    public const ACTION_REACTIVATED = 'user_reactivated';
+
     public $timestamps = false;
 
     protected $fillable = [
         'action',
+        'result',
         'actor_user_id',
         'actor_name',
         'actor_email',
@@ -29,6 +34,9 @@ class UserActivityLog extends Model
         'target_role',
         'target_dealership',
         'changes',
+        'reason',
+        'ip_address',
+        'user_agent',
         'created_at',
     ];
 
@@ -56,6 +64,8 @@ class UserActivityLog extends Model
             self::ACTION_CREATED => 'Alta',
             self::ACTION_UPDATED => 'Edición',
             self::ACTION_DELETED => 'Eliminación',
+            self::ACTION_DISABLED => 'Desactivación',
+            self::ACTION_REACTIVATED => 'Reactivación',
             default => ucfirst((string) $this->action),
         };
     }

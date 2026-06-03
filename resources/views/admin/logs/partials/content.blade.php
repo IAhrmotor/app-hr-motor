@@ -21,7 +21,7 @@
                 </h1>
 
                 <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                    Aqui puedes revisar las altas, ediciones y eliminaciones de usuarios con su fecha, hora y la persona que realizo la gestion.
+                    Aqui puedes revisar las altas, ediciones, desactivaciones, reactivaciones y eliminaciones definitivas de usuarios con su fecha, hora y la persona que realizo la gestion.
                 </p>
             </div>
 
@@ -44,6 +44,8 @@
                                     {{ match ($action) {
                                         'created' => 'Altas',
                                         'updated' => 'Ediciones',
+                                        'user_disabled' => 'Desactivaciones',
+                                        'user_reactivated' => 'Reactivaciones',
                                         'deleted' => 'Eliminaciones',
                                         default => 'Todas las acciones',
                                     } }}
@@ -53,6 +55,8 @@
                                     <option value="">Todas las acciones</option>
                                     <option value="created" @selected($action === 'created')>Altas</option>
                                     <option value="updated" @selected($action === 'updated')>Ediciones</option>
+                                    <option value="{{ \App\Models\UserActivityLog::ACTION_DISABLED }}" @selected($action === \App\Models\UserActivityLog::ACTION_DISABLED)>Desactivaciones</option>
+                                    <option value="{{ \App\Models\UserActivityLog::ACTION_REACTIVATED }}" @selected($action === \App\Models\UserActivityLog::ACTION_REACTIVATED)>Reactivaciones</option>
                                     <option value="deleted" @selected($action === 'deleted')>Eliminaciones</option>
                                 </select>
 
@@ -138,6 +142,7 @@
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Fecha y hora</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Accion</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Resultado</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Gestionado por</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Usuario afectado</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Detalle</th>
@@ -155,6 +160,26 @@
                                 <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-brand-primary">
                                     {{ $log->action_label }}
                                 </span>
+                            </td>
+                            <td class="px-6 py-5 text-sm text-brand-secondary">
+                                <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+                                    {{ $log->result ?: 'success' }}
+                                </span>
+                                @if (filled($log->reason))
+                                    <p class="mt-2 text-xs leading-5 text-brand-secondary/60">
+                                        <span class="font-semibold text-brand-secondary">Motivo:</span> {{ $log->reason }}
+                                    </p>
+                                @endif
+                                @if (filled($log->ip_address) || filled($log->user_agent))
+                                    <div class="mt-2 space-y-1 text-xs leading-5 text-brand-secondary/60">
+                                        @if (filled($log->ip_address))
+                                            <p><span class="font-semibold text-brand-secondary">IP:</span> {{ $log->ip_address }}</p>
+                                        @endif
+                                        @if (filled($log->user_agent))
+                                            <p class="break-words"><span class="font-semibold text-brand-secondary">UA:</span> {{ $log->user_agent }}</p>
+                                        @endif
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-6 py-5 text-sm text-brand-secondary">
                                 <p class="font-semibold">{{ $log->actor_name }}</p>
@@ -187,7 +212,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-10 text-center text-sm text-brand-secondary/65">
+                            <td colspan="6" class="px-6 py-10 text-center text-sm text-brand-secondary/65">
                                 Todavia no hay logs de usuarios para los filtros seleccionados.
                             </td>
                         </tr>

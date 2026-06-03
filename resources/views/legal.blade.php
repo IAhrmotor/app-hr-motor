@@ -152,14 +152,21 @@
                             seguridad, errores, trazabilidad y auditoría. No incluyen el contenido íntegro de los mensajes.
                         </p>
                         <p>
-                            Las copias de seguridad pueden incluir información necesaria para la continuidad del
-                            servicio. Se generan y custodian de forma cifrada. En la operativa actual, los backups se
-                            conservan localmente y en el repositorio remoto durante un máximo de 30 días, tras lo cual se
-                            eliminan automáticamente, salvo necesidad legal o de seguridad que justifique su conservación.
+                            La aplicación se aloja en infraestructura controlada por la empresa o por proveedores
+                            tecnológicos autorizados. La base de datos y los ficheros persistentes se almacenan en
+                            entornos controlados con acceso restringido al personal autorizado de IT.
                         </p>
                         <p>
-                            Estas copias de seguridad no se almacenan en el repositorio de código ni se publican en
-                            ubicaciones accesibles para terceros no autorizados.
+                            Las copias de seguridad se realizan de forma periódica, se conservan durante un máximo de 30
+                            días, se almacenan cifradas y tienen acceso restringido al personal autorizado de IT.
+                        </p>
+                        <p>
+                            Los backups externos podrán almacenarse en una ubicación corporativa de Microsoft
+                            OneDrive/SharePoint controlada por IT.
+                        </p>
+                        <p>
+                            Los proveedores tecnológicos que puedan intervenir en el alojamiento, mantenimiento,
+                            seguridad o copias de seguridad deberán contar con las garantías contractuales exigibles.
                         </p>
                     </div>
                 </section>
