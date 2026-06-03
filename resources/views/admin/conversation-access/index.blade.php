@@ -199,14 +199,32 @@
 
                                             <div class="flex {{ $isFromUserOne ? 'justify-start' : 'justify-end' }} {{ $topMarginClass }}">
                                                 <div class="flex max-w-[78%] flex-col {{ $isFromUserOne ? 'items-start' : 'items-end' }}">
-                                                    <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isFromUserOne ? 'border border-slate-200 bg-white text-brand-secondary' : 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md') }}">
+                                                    <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-rose-200 bg-rose-50 text-rose-700' : ($isFromUserOne ? 'border border-slate-200 bg-white text-brand-secondary' : 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md') }}">
                                                         <div>
                                                             @if ($isDeleted)
-                                                                <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                <div class="mb-1.5 inline-flex items-center gap-1.5">
+                                                                    <span class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-700">
+                                                                        Eliminado
+                                                                    </span>
+                                                                </div>
+                                                                <div class="flex items-center gap-2 text-sm font-medium text-rose-700">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 self-center text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
                                                                     </svg>
-                                                                    <span>Este mensaje ha sido eliminado.</span>
+                                                                    <div class="min-w-0 leading-none">
+                                                                        @if (filled($message->body))
+                                                                            <p class="whitespace-pre-line py-0.5 text-[15px] leading-none line-through decoration-rose-400 decoration-2 decoration-from-font">
+                                                                                {{ $message->body }}
+                                                                            </p>
+                                                                        @else
+                                                                            <p>Mensaje eliminado sin texto.</p>
+                                                                        @endif
+                                                                        @if ($messageAttachments->isNotEmpty())
+                                                                            <p class="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-rose-500">
+                                                                                {{ $messageAttachments->count() }} adjunto{{ $messageAttachments->count() === 1 ? '' : 's' }} eliminado{{ $messageAttachments->count() === 1 ? '' : 's' }}
+                                                                            </p>
+                                                                        @endif
+                                                                    </div>
                                                                 </div>
                                                             @elseif (filled($message->body))
                                                                 <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>

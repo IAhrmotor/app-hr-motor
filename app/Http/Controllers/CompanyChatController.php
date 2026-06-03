@@ -333,7 +333,7 @@ class CompanyChatController extends Controller
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
         abort_unless($message->company_chat_conversation_id === $conversation->id, 404);
-        abort_unless($message->sender_id === $request->user()->id, 403);
+        abort_unless($message->canBeEditedOrDeletedBy($request->user()), 403);
 
         $validated = $request->validate([
             'body' => ['nullable', 'string', 'max:4000'],
@@ -396,7 +396,7 @@ class CompanyChatController extends Controller
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
         abort_unless($message->company_chat_conversation_id === $conversation->id, 404);
-        abort_unless($message->sender_id === $request->user()->id, 403);
+        abort_unless($message->canBeEditedOrDeletedBy($request->user()), 403);
 
         $attachmentPaths = collect($message->attachments ?? [])
             ->pluck('path')
