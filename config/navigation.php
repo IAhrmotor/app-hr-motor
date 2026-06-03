@@ -56,6 +56,10 @@ return [
                 'route' => 'agenda.index',
             ],
             [
+                'label' => 'Chat',
+                'route' => 'chat.beta',
+            ],
+            [
                 'label' => 'Vídeos',
                 'route' => 'videos',
             ],

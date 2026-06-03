@@ -64,12 +64,16 @@ class AdminLogController extends Controller
                 fputcsv($output, [
                     'fecha_hora',
                     'accion',
+                    'resultado',
                     'gestionado_por',
                     'email_gestor',
                     'usuario_afectado',
                     'email_usuario',
                     'rol_usuario',
                     'delegacion_usuario',
+                    'motivo',
+                    'ip',
+                    'user_agent',
                     'cambios',
                 ], ';');
 
@@ -94,12 +98,16 @@ class AdminLogController extends Controller
             fputcsv($output, [
                 'fecha_hora',
                 'accion',
+                'resultado',
                 'gestionado_por',
                 'email_gestor',
                 'usuario_afectado',
                 'email_usuario',
                 'rol_usuario',
                 'delegacion_usuario',
+                'motivo',
+                'ip',
+                'user_agent',
                 'cambios',
             ], ';');
 
@@ -107,12 +115,16 @@ class AdminLogController extends Controller
                 fputcsv($output, [
                     $log->created_at?->format('Y-m-d H:i:s'),
                     $log->action_label,
+                    $log->result,
                     $log->actor_name,
                     $log->actor_email,
                     $log->target_name,
                     $log->target_email,
                     $log->target_role,
                     $log->target_dealership,
+                    $log->reason,
+                    $log->ip_address,
+                    $log->user_agent,
                     $this->formatChanges($log->changes ?? []),
                 ], ';');
             }
@@ -129,6 +141,8 @@ class AdminLogController extends Controller
             UserActivityLog::ACTION_CREATED,
             UserActivityLog::ACTION_UPDATED,
             UserActivityLog::ACTION_DELETED,
+            UserActivityLog::ACTION_DISABLED,
+            UserActivityLog::ACTION_REACTIVATED,
         ];
 
         return in_array($action, $allowedActions, true) ? $action : null;

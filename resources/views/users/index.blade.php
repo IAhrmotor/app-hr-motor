@@ -33,6 +33,16 @@
                 <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
             @endif
 
+            @if ($errors->any())
+                <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
+                    <ul class="list-disc pl-5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <form method="GET" action="{{ route('users.index') }}" class="mb-6" data-users-search-form>
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div class="relative w-full md:max-w-md">
@@ -53,6 +63,7 @@
                             <option value="">Todos los estados</option>
                             <option value="active" @selected($status === 'active')>Activos</option>
                             <option value="pending" @selected($status === 'pending')>Pendientes</option>
+                            <option value="disabled" @selected($status === 'disabled')>Desactivados</option>
                         </select>
 
                         <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-brand-secondary/70">
@@ -124,12 +135,53 @@
         </section>
     </main>
 
+    <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/45 px-4 py-6" data-user-disable-modal aria-hidden="true">
+        <div class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <div class="flex items-start gap-4">
+                <div class="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 9v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M12 17h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                    <h2 class="text-lg font-semibold text-brand-secondary">Desactivar usuario</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                        Vas a desactivar este usuario. No podrá iniciar sesión ni acceder a la aplicación, pero se mantendrá su histórico, mensajes y auditorías.
+                    </p>
+
+                    <div class="mt-4">
+                        <label for="user-disable-reason-input" class="mb-2 block text-sm font-medium text-brand-secondary">Motivo opcional</label>
+                        <input id="user-disable-reason-input" type="text" placeholder="Por ejemplo: Baja de empleado"
+                            class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                            data-user-disable-reason-select>
+                    </div>
+
+                    <div class="mt-5 flex items-center justify-end gap-3">
+                        <button type="button" class="inline-flex items-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50" data-user-disable-modal-cancel>
+                            Cancelar
+                        </button>
+                        <button type="button" class="inline-flex items-center rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700" data-user-disable-modal-confirm>
+                            Desactivar usuario
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const root = document.querySelector('[data-users-root]');
             const form = document.querySelector('[data-users-search-form]');
             const results = document.querySelector('[data-users-results]');
             const loading = document.querySelector('[data-users-loading]');
+            const disableModal = document.querySelector('[data-user-disable-modal]');
+            const disableReasonSelect = document.querySelector('[data-user-disable-reason-select]');
+            const disableModalCancel = document.querySelector('[data-user-disable-modal-cancel]');
+            const disableModalConfirm = document.querySelector('[data-user-disable-modal-confirm]');
 
             if (!root || !form || !results || !loading) {
                 return;
@@ -141,10 +193,33 @@
             let timeout = null;
             let abortController = null;
             let lastRequestKey = '';
+            let pendingDisableForm = null;
 
             const setLoading = (isLoading) => {
                 loading.classList.toggle('hidden', !isLoading);
                 results.classList.toggle('hidden', isLoading);
+            };
+
+            const closeDisableModal = () => {
+                if (disableModal) {
+                    disableModal.classList.add('hidden');
+                    disableModal.setAttribute('aria-hidden', 'true');
+                }
+
+                pendingDisableForm = null;
+            };
+
+            const openDisableModal = (targetForm) => {
+                pendingDisableForm = targetForm;
+
+                if (disableReasonSelect) {
+                    disableReasonSelect.value = '';
+                }
+
+                if (disableModal) {
+                    disableModal.classList.remove('hidden');
+                    disableModal.setAttribute('aria-hidden', 'false');
+                }
             };
 
             const buildUrl = (page = 1) => {
@@ -270,6 +345,95 @@
 
                 event.preventDefault();
                 loadResults({ page: url.searchParams.get('page') || 1 });
+            });
+
+            document.addEventListener('submit', (event) => {
+                const form = event.target.closest('form');
+
+                if (!form) {
+                    return;
+                }
+
+                if (form.dataset.userActionConfirmed === '1') {
+                    delete form.dataset.userActionConfirmed;
+                    return;
+                }
+
+                const disableAction = form.dataset.userDisableForm === '1';
+                const reactivateAction = form.dataset.userReactivateForm === '1';
+                const deleteAction = form.dataset.userDeleteForm === '1';
+
+                if (!disableAction && !reactivateAction && !deleteAction) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (disableAction) {
+                    openDisableModal(form);
+                    return;
+                }
+
+                if (reactivateAction) {
+                    const confirmed = window.confirm('Vas a reactivar este usuario. Podra volver a acceder a la aplicacion segun sus permisos actuales. ¿Quieres continuar?');
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    form.dataset.userActionConfirmed = '1';
+                    form.submit();
+                    return;
+                }
+
+                if (deleteAction) {
+                    const confirmation = window.prompt('Escribe ELIMINAR para confirmar el borrado definitivo de este usuario. Esta accion puede romper el historico y las referencias asociadas.');
+
+                    if (confirmation !== 'ELIMINAR') {
+                        return;
+                    }
+
+                    form.dataset.userActionConfirmed = '1';
+                    form.submit();
+                }
+            });
+
+            disableModalCancel?.addEventListener('click', closeDisableModal);
+
+            disableModalConfirm?.addEventListener('click', () => {
+                if (!pendingDisableForm) {
+                    closeDisableModal();
+                    return;
+                }
+
+                const reasonValue = disableReasonSelect?.value?.trim() || '';
+
+                let reasonInput = pendingDisableForm.querySelector('[data-user-disable-reason-input]');
+
+                if (!reasonInput) {
+                    reasonInput = document.createElement('input');
+                    reasonInput.type = 'hidden';
+                    reasonInput.name = 'disabled_reason';
+                    reasonInput.setAttribute('data-user-disable-reason-input', '1');
+                    pendingDisableForm.appendChild(reasonInput);
+                }
+
+                reasonInput.value = reasonValue;
+                pendingDisableForm.dataset.userActionConfirmed = '1';
+                pendingDisableForm.submit();
+                closeDisableModal();
+            });
+
+            disableModal?.addEventListener('click', (event) => {
+                if (event.target === disableModal) {
+                    closeDisableModal();
+                }
+            });
+
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && pendingDisableForm) {
+                    closeDisableModal();
+                }
             });
         });
     </script>

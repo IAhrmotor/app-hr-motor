@@ -37,7 +37,7 @@ class UserController extends Controller
         $allowedSorts = ['name', 'email', 'role', 'dealership', 'is_active', 'salesforce_user_id'];
         $sort = in_array($sort, $allowedSorts) ? $sort : 'name';
         $direction = $direction === 'desc' ? 'desc' : 'asc';
-        $status = in_array($status, ['active', 'pending'], true) ? $status : null;
+        $status = in_array($status, ['active', 'pending', 'disabled'], true) ? $status : null;
 
         $users = User::query()
             ->when(($search && trim((string) $search) !== '') || $normalizedSearch, function ($query) use ($search, $normalizedSearch) {
@@ -58,10 +58,13 @@ class UserController extends Controller
                 });
             })
             ->when($status === 'active', function ($query) {
-                $query->where('is_active', true);
+                $query->where('is_active', true)->whereNull('disabled_at');
             })
             ->when($status === 'pending', function ($query) {
-                $query->where('is_active', false);
+                $query->where('is_active', false)->whereNull('disabled_at');
+            })
+            ->when($status === 'disabled', function ($query) {
+                $query->whereNotNull('disabled_at');
             })
             ->orderBy($sort, $direction)
             ->paginate(10)
@@ -198,6 +201,12 @@ class UserController extends Controller
     {
         $authUser = request()->user();
 
+        if (app_visible_role($authUser) !== User::ROLE_ADMIN) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'Solo un administrador puede eliminar definitivamente usuarios.');
+        }
+
         if ($response = $this->ensureCanManageListedUser($authUser, $user, 'eliminar', preventSelf: true)) {
             return $response;
         }
@@ -212,7 +221,108 @@ class UserController extends Controller
 
         return redirect()
             ->route('users.index')
-            ->with('success', 'Usuario eliminado correctamente.');
+            ->with('success', 'Usuario eliminado definitivamente correctamente.');
+    }
+
+    public function disable(Request $request, User $user)
+    {
+        $authUser = $request->user();
+
+        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'desactivar', preventSelf: true)) {
+            return $response;
+        }
+
+        if (! $user->is_active || $user->isDisabled()) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'Solo puedes desactivar usuarios activos.');
+        }
+
+        if ($user->role === User::ROLE_ADMIN) {
+            $otherActiveAdmins = User::query()
+                ->where('role', User::ROLE_ADMIN)
+                ->where('is_active', true)
+                ->whereNull('disabled_at')
+                ->whereKeyNot($user->id)
+                ->count();
+
+            if ($otherActiveAdmins === 0) {
+                return redirect()
+                    ->route('users.index')
+                    ->with('error', 'No puedes desactivar al ultimo administrador activo.');
+            }
+        }
+
+        $validated = $request->validate([
+            'disabled_reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $disabledReason = trim((string) ($validated['disabled_reason'] ?? ''));
+        if ($disabledReason === '') {
+            $disabledReason = 'Baja de empleado';
+        }
+
+        DB::transaction(function () use ($authUser, $user, $disabledReason): void {
+            $user->forceFill([
+                'is_active' => false,
+                'disabled_at' => now(),
+                'disabled_by' => $authUser->id,
+                'disabled_reason' => $disabledReason,
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            $this->invalidateUserSessions($user);
+
+            $this->storeActivityLog(
+                actor: $authUser,
+                targetUser: $user,
+                action: UserActivityLog::ACTION_DISABLED,
+                result: 'success',
+                reason: $disabledReason,
+            );
+        });
+
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'Usuario desactivado correctamente.');
+    }
+
+    public function reactivate(Request $request, User $user)
+    {
+        $authUser = $request->user();
+
+        if ($response = $this->ensureCanManageListedUser($authUser, $user, 'reactivar', preventSelf: false)) {
+            return $response;
+        }
+
+        if (! $user->isDisabled()) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'Solo puedes reactivar usuarios desactivados.');
+        }
+
+        DB::transaction(function () use ($authUser, $user): void {
+            $user->forceFill([
+                'is_active' => true,
+                'disabled_at' => null,
+                'disabled_by' => null,
+                'disabled_reason' => null,
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            $this->invalidateUserSessions($user);
+
+            $this->storeActivityLog(
+                actor: $authUser,
+                targetUser: $user,
+                action: UserActivityLog::ACTION_REACTIVATED,
+                result: 'success',
+            );
+        });
+
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'Usuario reactivado correctamente.');
     }
 
     public function edit(User $user)
@@ -327,6 +437,12 @@ class UserController extends Controller
             return $response;
         }
 
+        if ($user->isDisabled()) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'No puedes reenviar la invitacion a un usuario desactivado. Reactivalo primero.');
+        }
+
         if ($user->is_active && ! $user->must_change_password) {
             return redirect()
                 ->route('users.index')
@@ -406,10 +522,18 @@ class UserController extends Controller
         };
     }
 
-    protected function storeActivityLog(User $actor, User $targetUser, string $action, array $changes = []): void
+    protected function storeActivityLog(
+        User $actor,
+        User $targetUser,
+        string $action,
+        array $changes = [],
+        string $result = 'success',
+        ?string $reason = null,
+    ): void
     {
         UserActivityLog::query()->create([
             'action' => $action,
+            'result' => $result,
             'actor_user_id' => $actor->id,
             'actor_name' => $actor->name,
             'actor_email' => $actor->email,
@@ -419,6 +543,9 @@ class UserController extends Controller
             'target_role' => $targetUser->role,
             'target_dealership' => $targetUser->dealership,
             'changes' => $changes === [] ? null : $changes,
+            'reason' => $reason,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
             'created_at' => now(),
         ]);
     }
@@ -538,5 +665,12 @@ class UserController extends Controller
         }
 
         return filled($extraRole) ? $extraRole : null;
+    }
+
+    protected function invalidateUserSessions(User $user): void
+    {
+        DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->delete();
     }
 }
