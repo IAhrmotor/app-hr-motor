@@ -6,11 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class CompanyChatMessage extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
+    public const EDIT_AND_DELETE_WINDOW_MINUTES = 2;
 
     protected $fillable = [
         'company_chat_conversation_id',
@@ -44,6 +47,28 @@ class CompanyChatMessage extends Model
     public function isRead(): bool
     {
         return $this->read_at !== null;
+    }
+
+    public function canBeEditedOrDeletedBy(User $user, ?Carbon $at = null): bool
+    {
+        if ($this->sender_id !== $user->id || $this->created_at === null) {
+            return false;
+        }
+
+        $at ??= now();
+
+        return ! $at->greaterThan($this->created_at->copy()->addMinutes(self::EDIT_AND_DELETE_WINDOW_MINUTES));
+    }
+
+    public function isEditAndDeleteWindowExpired(?Carbon $at = null): bool
+    {
+        if ($this->created_at === null) {
+            return true;
+        }
+
+        $at ??= now();
+
+        return $at->greaterThan($this->created_at->copy()->addMinutes(self::EDIT_AND_DELETE_WINDOW_MINUTES));
     }
 
     public function getPreviewTextAttribute(): string
