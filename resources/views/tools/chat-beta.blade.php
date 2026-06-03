@@ -755,6 +755,9 @@
                 let pendingDeleteMessageId = null;
                 let sidebarCollapsed = false;
                 let mobileSidebarOpen = false;
+                const messageActionWindowMinutes = 2;
+                const messageActionWindowMs = messageActionWindowMinutes * 60 * 1000;
+                const messageActionWindowMessage = 'Solo puedes editar o eliminar un mensaje durante los 2 minutos posteriores a su envío.';
                 currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
                     $nextMessage = $selectedConversationMessages->get($index + 1);
                     $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
@@ -1025,23 +1028,49 @@
                 `;
                 };
 
-                const renderMessageMenuMarkup = () => `
+                const isMessageActionLocked = (message) => {
+                    if (!message?.created_at) {
+                        return false;
+                    }
+
+                    const createdAt = new Date(message.created_at);
+
+                    if (Number.isNaN(createdAt.getTime())) {
+                        return false;
+                    }
+
+                    return (Date.now() - createdAt.getTime()) > messageActionWindowMs;
+                };
+
+                const renderMessageMenuMarkup = (message) => {
+                    const isLocked = isMessageActionLocked(message);
+                    const editButtonClass = isLocked
+                        ? 'flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-300 transition'
+                        : 'flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-brand-secondary transition hover:bg-slate-50';
+                    const deleteButtonClass = isLocked
+                        ? 'flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-300 transition'
+                        : 'flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50';
+                    const editIconClass = isLocked ? 'h-4 w-4 shrink-0 text-slate-300' : 'h-4 w-4 shrink-0 text-slate-400';
+                    const deleteIconClass = isLocked ? 'h-4 w-4 shrink-0 text-slate-300' : 'h-4 w-4 shrink-0 text-rose-500';
+                    const disabledAttributes = isLocked ? ' disabled aria-disabled="true"' : '';
+
+                    return `
                     <div class="mt-0.5 grid gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                        <button type="button" class="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-brand-secondary transition hover:bg-slate-50" data-chat-message-edit>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <button type="button" class="${editButtonClass}" data-chat-message-edit${disabledAttributes}>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="${editIconClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.5 2.5 0 0 1 3.536 3.536L7.5 19.92 3 21l1.08-4.5L16.862 3.487Z" />
                             </svg>
                             <span>Editar mensaje</span>
                         </button>
-                        <button type="button" class="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50" data-chat-message-delete>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <button type="button" class="${deleteButtonClass}" data-chat-message-delete${disabledAttributes}>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="${deleteIconClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6m-8 0v13A2 2 0 0 0 10 21h4a2 2 0 0 0 2-2V6m-8 0h8" />
                             </svg>
                             <span>Eliminar mensaje</span>
                         </button>
                     </div>
-                `;
+                `;};
 
                 const renderDeleteConfirmMarkup = (messageId) => `
                     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4" data-chat-delete-modal-overlay>
@@ -1069,6 +1098,7 @@
 
                 const setMessageMenuState = (messageId, open) => {
                     const slot = findMessageMenuSlot(messageId);
+                    const message = currentMessages.find((item) => Number(item.id) === Number(messageId));
 
                     if (!slot) {
                         return;
@@ -1076,12 +1106,20 @@
 
                     if (open) {
                         slot.classList.remove('hidden');
-                        slot.innerHTML = renderMessageMenuMarkup();
+                        slot.innerHTML = renderMessageMenuMarkup(message);
                         return;
                     }
 
                     slot.innerHTML = '';
                     slot.classList.add('hidden');
+                };
+
+                const refreshActiveMessageMenu = () => {
+                    if (!activeMessageMenuId) {
+                        return;
+                    }
+
+                    setMessageMenuState(activeMessageMenuId, true);
                 };
 
                 const closeDeleteConfirmModal = () => {
@@ -1259,6 +1297,11 @@
                         return;
                     }
 
+                    if (isMessageActionLocked(message)) {
+                        showChatError(messageActionWindowMessage);
+                        return;
+                    }
+
                     editingMessageId = Number(message.id);
                     editingMessageDraft = String(message.body || '');
                     closeMessageMenu();
@@ -1283,6 +1326,13 @@
                     if (!conversationId || !message) {
                         cancelInlineEdit();
                         renderMessages(currentMessages);
+                        return;
+                    }
+
+                    if (isMessageActionLocked(message)) {
+                        cancelInlineEdit();
+                        renderMessages(currentMessages);
+                        showChatError(messageActionWindowMessage);
                         return;
                     }
 
@@ -1371,11 +1421,21 @@
                     closeMessageMenu();
 
                     if (action === 'edit') {
+                        if (isMessageActionLocked(message)) {
+                            showChatError(messageActionWindowMessage);
+                            return;
+                        }
+
                         beginInlineEdit(message);
                         return;
                     }
 
                     if (action === 'delete') {
+                        if (isMessageActionLocked(message)) {
+                            showChatError(messageActionWindowMessage);
+                            return;
+                        }
+
                         openDeleteConfirmModal(message.id);
                         return;
                     }
@@ -1386,6 +1446,12 @@
                     const message = currentMessages.find((item) => Number(item.id) === Number(pendingDeleteMessageId));
 
                     if (!conversationId || !message) {
+                        closeDeleteConfirmModal();
+                        return;
+                    }
+
+                    if (isMessageActionLocked(message)) {
+                        showChatError(messageActionWindowMessage);
                         closeDeleteConfirmModal();
                         return;
                     }
@@ -1704,6 +1770,8 @@
                             renderMessages(messages, {
                                 preserveScroll: isNewTailMessage && isNearBottom ? 'none' : 'exact',
                             });
+                        } else {
+                            refreshActiveMessageMenu();
                         }
                     } catch (error) {
                         console.error(error);

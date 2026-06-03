@@ -233,4 +233,51 @@ class AdminConversationAccessTest extends TestCase
             ->assertDontSee('Mensaje efímero de prueba')
             ->assertSee('Vas a acceder al contenido de una conversación en la que no participas.');
     }
+    public function test_admin_conversation_access_shows_deleted_messages_with_the_original_body_and_deleted_marker(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'name' => 'Admin Principal',
+            'email' => 'admin@example.com',
+        ]);
+        $sender = User::factory()->create([
+            'name' => 'Usuario Emisor',
+            'email' => 'emisor@example.com',
+        ]);
+        $recipient = User::factory()->create([
+            'name' => 'Usuario Receptor',
+            'email' => 'receptor@example.com',
+        ]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $message = CompanyChatMessage::query()->create([
+            'company_chat_conversation_id' => $conversation->id,
+            'sender_id' => $sender->id,
+            'body' => 'Mensaje eliminado para revisión',
+        ]);
+
+        $message->delete();
+
+        $this->actingAs($admin)
+            ->post(route('admin.conversation-access.store'), [
+                'conversation_id' => $conversation->id,
+                'reason' => 'Control interno justificado',
+            ])
+            ->assertRedirect(route('admin.conversation-access.index', [
+                'conversation' => $conversation->id,
+                'search' => '',
+            ]));
+
+        $this->actingAs($admin)
+            ->get(route('admin.conversation-access.index', [
+                'conversation' => $conversation->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Mensaje eliminado para revisión')
+            ->assertSee('Eliminado');
+    }
 }

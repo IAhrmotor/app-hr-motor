@@ -279,6 +279,51 @@ class CompanyChatTest extends TestCase
         $this->assertSame('Mensaje eliminado', $conversation->fresh()->last_message_excerpt);
     }
 
+    public function test_user_cannot_edit_or_delete_own_chat_messages_after_two_minutes(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Laura Test',
+        ]);
+
+        $this->acceptChatPolicy($sender);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        Carbon::setTestNow(now());
+
+        $message = CompanyChatMessage::query()->create([
+            'company_chat_conversation_id' => $conversation->id,
+            'sender_id' => $sender->id,
+            'body' => 'Mensaje original',
+        ]);
+
+        Carbon::setTestNow(now()->addMinutes(3));
+
+        try {
+            $this->actingAs($sender)
+                ->patchJson(route('chat.beta.messages.update', [$conversation, $message]), [
+                    'body' => 'Mensaje editado',
+                ])
+                ->assertForbidden();
+
+            $this->actingAs($sender)
+                ->deleteJson(route('chat.beta.messages.destroy', [$conversation, $message]))
+                ->assertForbidden();
+
+            $message->refresh();
+
+            $this->assertSame('Mensaje original', $message->body);
+            $this->assertNull($message->deleted_at);
+            $this->assertNull($message->edited_at);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_chat_messages_endpoint_returns_json_and_marks_incoming_messages_as_read(): void
     {
         $sender = User::factory()->create([
