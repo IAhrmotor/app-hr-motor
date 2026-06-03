@@ -155,7 +155,81 @@ class CompanyChatTest extends TestCase
             ->assertOk()
             ->assertJsonPath('messages.0.preview_text', 'Archivo adjunto: captura-chat.png')
             ->assertJsonPath('messages.0.attachments.0.original_name', 'captura-chat.png')
-            ->assertJsonPath('messages.0.attachments.0.is_image', true);
+            ->assertJsonPath('messages.0.attachments.0.is_image', true)
+            ->assertJsonPath('messages.0.attachments.0.url', route('chat.beta.attachments.show', [
+                'conversation' => $conversation->id,
+                'message' => $message->id,
+                'attachmentIndex' => 0,
+            ]));
+    }
+
+    public function test_chat_attachment_route_serves_files_for_conversation_participants(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Marta Test',
+        ]);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => '',
+                'attachments' => [
+                    UploadedFile::fake()->image('captura-chat.png', 1200, 900),
+                ],
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $message = CompanyChatMessage::query()->latest('id')->firstOrFail();
+
+        $this->actingAs($recipient)
+            ->get(route('chat.beta.attachments.show', [
+                'conversation' => $conversation->id,
+                'message' => $message->id,
+                'attachmentIndex' => 0,
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/png');
+    }
+
+    public function test_user_cannot_send_chat_messages_when_total_attachment_size_is_too_large(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Marta Test',
+        ]);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $response = $this->actingAs($sender)
+            ->postJson(route('chat.beta.messages.store', $conversation), [
+                'body' => '',
+                'attachments' => [
+                    UploadedFile::fake()->image('captura-1.png')->size(10240),
+                    UploadedFile::fake()->image('captura-2.png')->size(10240),
+                    UploadedFile::fake()->image('captura-3.png')->size(10240),
+                    UploadedFile::fake()->image('captura-4.png')->size(1024),
+                ],
+            ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['attachments']);
+
+        $this->assertDatabaseCount('company_chat_messages', 0);
     }
 
     public function test_user_can_edit_and_delete_own_chat_messages(): void

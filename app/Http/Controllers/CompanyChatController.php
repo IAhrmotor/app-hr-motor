@@ -12,15 +12,20 @@ use App\Support\ChatPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class CompanyChatController extends Controller
 {
+    private const MAX_ATTACHMENT_TOTAL_BYTES = 31457280;
+    private const MAX_ATTACHMENT_FILE_KILOBYTES = 30720;
+
     public function index(Request $request): View|RedirectResponse|JsonResponse
     {
         abort_unless(app_can_access_chat_beta($request->user()), 403);
@@ -249,11 +254,19 @@ class CompanyChatController extends Controller
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
 
+        $this->guardAgainstBrokenAttachmentUploads($request);
+
         $validated = $request->validate([
             'body' => ['nullable', 'string', 'max:4000'],
             'attachments' => ['nullable', 'array', 'max:4'],
-            'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,svg,pdf,txt,md,csv,doc,docx,xls,xlsx,ppt,pptx,zip,rar'],
+            'attachments.*' => ['file', 'max:' . self::MAX_ATTACHMENT_FILE_KILOBYTES, 'mimes:jpg,jpeg,png,webp,gif,svg,pdf,txt,md,csv,doc,docx,xls,xlsx,ppt,pptx,zip,rar'],
         ]);
+
+        if ($this->attachmentsTotalSize($request) > self::MAX_ATTACHMENT_TOTAL_BYTES) {
+            throw ValidationException::withMessages([
+                'attachments' => 'El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.',
+            ]);
+        }
 
         $body = trim((string) ($validated['body'] ?? ''));
         $attachments = $this->storeAttachments($request);
@@ -412,6 +425,30 @@ class CompanyChatController extends Controller
 
         return redirect()->route('chat.beta', [
             'conversation' => $conversation->id,
+        ]);
+    }
+
+    public function downloadAttachment(Request $request, CompanyChatConversation $conversation, CompanyChatMessage $message, int $attachmentIndex): Response
+    {
+        $this->ensureChatPolicyAccepted($request);
+        abort_unless(app_can_access_chat_beta($request->user()), 403);
+        abort_unless($conversation->involves($request->user()), 403);
+        abort_unless($message->company_chat_conversation_id === $conversation->id, 404);
+
+        $attachments = collect($message->attachments ?? [])->values();
+
+        abort_unless($attachmentIndex >= 0 && $attachmentIndex < $attachments->count(), 404);
+
+        $attachment = $attachments->get($attachmentIndex);
+        $path = (string) ($attachment['path'] ?? '');
+        $mimeType = (string) ($attachment['mime_type'] ?? 'application/octet-stream');
+        $downloadName = (string) ($attachment['original_name'] ?? '');
+        $downloadName = $downloadName !== '' ? $downloadName : ((basename($path) !== '') ? basename($path) : 'archivo');
+
+        abort_unless($path !== '' && Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path, $downloadName, [
+            'Content-Type' => $mimeType,
         ]);
     }
 
@@ -713,19 +750,24 @@ class CompanyChatController extends Controller
     private function formatAttachmentsForPayload(CompanyChatMessage $message): array
     {
         return collect($message->attachments ?? [])
-            ->map(function (array $attachment): array {
+            ->map(function (array $attachment, int $index) use ($message): array {
                 $path = (string) ($attachment['path'] ?? '');
                 $mimeType = (string) ($attachment['mime_type'] ?? 'application/octet-stream');
                 $originalName = (string) ($attachment['original_name'] ?? '');
+                $resolvedOriginalName = $originalName !== '' ? $originalName : (basename($path) !== '' ? basename($path) : 'archivo');
 
                 return [
                     'path' => $path,
-                    'original_name' => $originalName !== '' ? $originalName : (basename($path) !== '' ? basename($path) : 'archivo'),
+                    'original_name' => $resolvedOriginalName,
                     'mime_type' => $mimeType,
                     'size' => (int) ($attachment['size'] ?? 0),
                     'size_label' => $this->formatBytes((int) ($attachment['size'] ?? 0)),
                     'is_image' => (bool) ($attachment['is_image'] ?? str_starts_with($mimeType, 'image/')),
-                    'url' => (string) ($attachment['url'] ?? Storage::disk('public')->url($path)),
+                    'url' => route('chat.beta.attachments.show', [
+                        'conversation' => $message->company_chat_conversation_id,
+                        'message' => $message->id,
+                        'attachmentIndex' => $index,
+                    ]),
                 ];
             })
             ->values()
@@ -743,5 +785,41 @@ class CompanyChatController extends Controller
         }
 
         return $bytes . ' B';
+    }
+
+    private function attachmentsTotalSize(Request $request): int
+    {
+        return collect((array) $request->file('attachments'))
+            ->filter()
+            ->sum(static fn ($file): int => (int) ($file?->getSize() ?? 0));
+    }
+
+    private function guardAgainstBrokenAttachmentUploads(Request $request): void
+    {
+        collect((array) $request->file('attachments'))
+            ->filter()
+            ->each(function (mixed $file, int $index): void {
+                if (! $file instanceof UploadedFile) {
+                    return;
+                }
+
+                if ($file->isValid()) {
+                    return;
+                }
+
+                $message = match ($file->getError()) {
+                    UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'El archivo supera el tamaño permitido por el servidor. Prueba con una versión más pequeña o revisa la configuración de subida.',
+                    UPLOAD_ERR_PARTIAL => 'El archivo se ha subido solo parcialmente. Vuelve a intentarlo.',
+                    UPLOAD_ERR_NO_FILE => 'No se ha recibido ningún archivo adjunto.',
+                    UPLOAD_ERR_NO_TMP_DIR => 'El servidor no tiene directorio temporal disponible para subir archivos.',
+                    UPLOAD_ERR_CANT_WRITE => 'El servidor no ha podido escribir el archivo temporal.',
+                    UPLOAD_ERR_EXTENSION => 'Una extensión del servidor ha bloqueado la subida de este archivo.',
+                    default => 'No se pudo subir este archivo adjunto. Comprueba que no supera el tamaño permitido por el servidor e inténtalo de nuevo.',
+                };
+
+                throw ValidationException::withMessages([
+                    "attachments.$index" => $message,
+                ]);
+            });
     }
 }

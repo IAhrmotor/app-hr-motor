@@ -39,7 +39,6 @@ class HomeHumanResourcesToolsTest extends TestCase
             'Convenios Colectivos',
             'Sistema Delta',
             'Poder Judicial',
-            'Sede SEPE',
             'iLovePDF',
             'Sepe',
             'Sepe usuarios',
@@ -47,9 +46,23 @@ class HomeHumanResourcesToolsTest extends TestCase
             'Dehú',
             'Registro Electrónico',
             'Mi IP',
-            'Seguridad Social Portal',
         ] as $label) {
             $response->assertSee($label);
         }
+    }
+
+    public function test_it_role_sees_cms_motorflash_and_not_enreach_normal(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'email' => 'it@example.com',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('home'))
+            ->assertOk();
+
+        $response->assertSee('CMS Motorflash');
+        $response->assertDontSee('Enreach normal');
     }
 }
