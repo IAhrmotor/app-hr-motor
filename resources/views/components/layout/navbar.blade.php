@@ -10,6 +10,10 @@
                 return null;
             }
 
+            if (($item['route'] ?? null) === 'tools.informes' && ! app_user_has_any_role($authUser, [\App\Models\User::ROLE_MANAGEMENT, \App\Models\User::ROLE_AREA_MANAGER])) {
+                return null;
+            }
+
             if (($item['route'] ?? null) === 'chat.beta' && ! app_can_access_chat_beta($authUser)) {
                 return null;
             }
