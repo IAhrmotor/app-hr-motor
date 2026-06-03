@@ -99,6 +99,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'messages'])
         ->whereNumber('conversation')
         ->name('chat.beta.messages.index');
+    Route::get('/chat/conversations/{conversation}/mensajes/{message}/adjuntos/{attachmentIndex}', [CompanyChatController::class, 'downloadAttachment'])
+        ->whereNumber('conversation')
+        ->whereNumber('message')
+        ->whereNumber('attachmentIndex')
+        ->name('chat.beta.attachments.show');
     Route::get('/chat/resumen', [CompanyChatController::class, 'summary'])->name('chat.beta.summary');
     Route::post('/chat/favoritos/{user}', [CompanyChatController::class, 'toggleFavorite'])
         ->whereNumber('user')
@@ -1103,9 +1108,9 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/enreach-2.webp'),
                     ],
                     [
-                        'label' => 'Enreach normal',
-                        'url' => 'https://manager.masvoz.es/',
-                        'image' => asset('images/tools/enreach.webp'),
+                        'label' => 'CMS Motorflash',
+                        'url' => 'https://hrmotor.pruebasmf.com/mf-admin/dashboard',
+                        'image' => asset('images/tools/contact-center-motorflash.webp'),
                     ],
                     [
                         'label' => 'Grafana',
