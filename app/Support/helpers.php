@@ -148,7 +148,7 @@ if (! function_exists('app_can_access_chat_beta')) {
             return false;
         }
 
-        return (bool) $user->is_active;
+        return (bool) $user->is_active && ! $user->isDisabled();
     }
 }
 

@@ -57,6 +57,12 @@ class FortifyServiceProvider extends ServiceProvider
                 return null;
             }
 
+            if ($user->isDisabled()) {
+                throw ValidationException::withMessages([
+                    'email' => 'Tu usuario esta desactivado. Contacta con IT o con un administrador.',
+                ]);
+            }
+
             if (! $user->is_active || $user->must_change_password) {
                 throw ValidationException::withMessages([
                     'email' => 'Tu cuenta aún no está activada. Revisa el correo de bienvenida y cambia tu contraseña antes de acceder.',

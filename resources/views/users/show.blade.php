@@ -36,6 +36,30 @@
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Perfil de usuario</p>
                         <h1 class="mt-2 text-3xl font-bold tracking-tight text-brand-secondary">{{ $user->name }}</h1>
                         <p class="mt-2 text-sm text-brand-secondary/65">{{ $user->email }}</p>
+                        <div class="mt-3">
+                            @if ($user->isDisabled())
+                                <span class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Desactivado</span>
+                            @elseif ($user->is_active)
+                                <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-700">Activo</span>
+                            @else
+                                <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Pendiente</span>
+                            @endif
+                        </div>
+                        @if ($user->isDisabled())
+                            <div class="mt-4 inline-flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M12 9v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                        <path d="M12 17h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                                <div>
+                                    <p class="font-semibold text-slate-700">Cuenta desactivada</p>
+                                    <p class="mt-0.5 text-slate-500">Este usuario no puede iniciar sesión ni acceder a la aplicación hasta que se reactive.</p>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -112,6 +136,19 @@
                                     <span class="font-semibold text-brand-secondary">{{ $user->resolved_dealership_name }}</span>
                                 @endif
                             </dd>
+                        </div>
+                    @endif
+
+                    @if ($user->isDisabled())
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-3">
+                            <dt class="text-brand-secondary/60">Estado de la cuenta</dt>
+                            <dd class="mt-1 text-sm font-semibold uppercase tracking-wide text-slate-600">Cuenta desactivada</dd>
+                            <p class="mt-2 text-sm text-slate-600">
+                                Usuario desactivado desde {{ $user->disabled_at?->format('d/m/Y H:i') ?? 'fecha desconocida' }}.
+                            </p>
+                            @if ($user->disabled_reason)
+                                <p class="mt-2 text-sm text-slate-500"><span class="font-semibold text-slate-600">Motivo:</span> {{ $user->disabled_reason }}</p>
+                            @endif
                         </div>
                     @endif
                 </dl>

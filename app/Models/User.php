@@ -160,6 +160,9 @@ class User extends Authenticatable
         'is_active',
         'must_change_password',
         'activated_at',
+        'disabled_at',
+        'disabled_by',
+        'disabled_reason',
         'invitation_sent_at',
     ];
 
@@ -206,6 +209,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'activated_at' => 'datetime',
+            'disabled_at' => 'datetime',
             'invitation_sent_at' => 'datetime',
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
@@ -241,6 +245,21 @@ class User extends Authenticatable
     public function policyAcceptances(): HasMany
     {
         return $this->hasMany(PolicyAcceptance::class);
+    }
+
+    public function disabledByUser(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'disabled_by');
+    }
+
+    public function isDisabled(): bool
+    {
+        return $this->disabled_at !== null;
+    }
+
+    public function isPendingActivation(): bool
+    {
+        return ! $this->is_active && $this->disabled_at === null;
     }
 
     public function hasAcceptedPolicyVersion(string $policyVersion): bool
@@ -319,7 +338,7 @@ class User extends Authenticatable
 
     public function isInvitationExpired(): bool
     {
-        if ($this->is_active || ! $this->must_change_password) {
+        if ($this->is_active || ! $this->must_change_password || $this->isDisabled()) {
             return false;
         }
 
