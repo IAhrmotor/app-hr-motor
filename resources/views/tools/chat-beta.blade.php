@@ -165,9 +165,13 @@
                                         <div class="min-w-0">
                                             <p class="truncate text-sm font-semibold {{ in_array($partner?->id, $favoriteUserIds, true) ? 'text-amber-600' : 'text-brand-secondary' }}" data-chat-partner-name>{{ $partner?->name ?? 'Conversación' }}</p>
                                             <p class="truncate text-xs text-slate-500" data-chat-partner-role>
-                                                {{ $partner?->chat_role_label ?? '' }}
+                                                <span>{{ $partner?->chat_role_label ?? '' }}</span>
                                                 @if ($partner?->isDisabled())
-                                                    <span class="ml-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>
+                                                    <span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                            <path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                                        </svg>
+                                                    </span>
                                                 @endif
                                             </p>
                                             <p class="truncate text-xs text-slate-500" data-chat-last-message>
@@ -1425,8 +1429,10 @@
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold ${nameClass}" data-chat-partner-name>${escapeHtml(conversation.partner_name || 'Conversación')}</p>
-                                        <p class="truncate text-xs text-slate-500" data-chat-partner-role>${escapeHtml(conversation.partner_chat_role_label || '')}</p>
-                                        ${conversation.partner_is_disabled ? '<span class="mt-1 inline-flex rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>' : ''}
+                                        <p class="truncate text-xs text-slate-500" data-chat-partner-role>
+                                            <span>${escapeHtml(conversation.partner_chat_role_label || '')}</span>
+                                            ${conversation.partner_is_disabled ? '<span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
+                                        </p>
                                         <p class="truncate text-xs text-slate-500" data-chat-last-message>${escapeHtml(conversation.last_message_excerpt || 'Empieza la conversación')}</p>
                                     </div>
                                     <span class="shrink-0 text-[11px] text-slate-400" data-chat-last-message-at>${escapeHtml(conversation.last_message_at_label || '')}</span>
@@ -1477,7 +1483,7 @@
                     const partnerRoleLabel = escapeHtml(payload.partner_chat_role_label || '');
                     const partnerDealershipName = escapeHtml(payload.partner_dealership_name || 'Sin delegación');
                     const disabledBadge = payload.partner_is_disabled
-                        ? ' <span class="ml-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>'
+                        ? ' <span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
                         : '';
 
                     headerRole.innerHTML = `${partnerRoleLabel}${partnerRoleLabel ? ' &middot; ' : ''}${partnerDealershipName}${disabledBadge}`;
