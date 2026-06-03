@@ -438,9 +438,13 @@
                                                         @foreach ($messageAttachments as $attachment)
                                                             @php
                                                                 $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
-                                                                $attachmentUrl = $attachment['url'] ?? '';
                                                                 $attachmentName = $attachment['original_name'] ?? 'archivo';
                                                                 $attachmentSize = $attachment['size_label'] ?? '';
+                                                                $attachmentUrl = route('chat.beta.attachments.show', [
+                                                                    'conversation' => $message->company_chat_conversation_id,
+                                                                    'message' => $message->id,
+                                                                    'attachmentIndex' => $loop->index,
+                                                                ]);
                                                             @endphp
 
                                                             @if ($isImageAttachment)
@@ -788,6 +792,16 @@
                 currentMessagesFingerprint = buildMessagesFingerprint(currentMessages);
                 const favoriteUserIds = new Set(@js($favoriteUserIds ?? []));
                 const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
+                const maxAttachmentCount = 4;
+                const maxAttachmentTotalBytes = 30 * 1024 * 1024;
+                const pastedImageMimeToExtension = {
+                    'image/png': 'png',
+                    'image/jpeg': 'jpg',
+                    'image/jpg': 'jpg',
+                    'image/webp': 'webp',
+                    'image/gif': 'gif',
+                    'image/svg+xml': 'svg',
+                };
 
                 const setSidebarCollapsed = (collapsed) => {
                     sidebarCollapsed = Boolean(collapsed);
@@ -1711,6 +1725,44 @@
                     return allowedAttachmentExtensions.includes(extension);
                 };
 
+                const getAttachmentSnapshotTotalBytes = () => attachmentSnapshot.reduce((total, file) => total + Number(file?.size || 0), 0);
+
+                const buildPastedImageFile = (blob) => {
+                    if (!(blob instanceof Blob)) {
+                        return null;
+                    }
+
+                    const mimeType = String(blob.type || '').toLowerCase();
+                    const extension = pastedImageMimeToExtension[mimeType] || 'png';
+                    const safeTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+                    return new File([blob], `captura-portapapeles-${safeTimestamp}.${extension}`, {
+                        type: mimeType || 'image/png',
+                        lastModified: Date.now(),
+                    });
+                };
+
+                const handleComposerPaste = (event) => {
+                    const clipboardItems = Array.from(event.clipboardData?.items || []);
+                    const pastedFiles = clipboardItems
+                        .filter((item) => item.kind === 'file')
+                        .map((item) => item.getAsFile())
+                        .filter((file) => Boolean(file));
+
+                    if (!pastedFiles.length) {
+                        return;
+                    }
+
+                    const images = pastedFiles.filter((file) => String(file.type || '').startsWith('image/'));
+
+                    if (!images.length) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    appendAttachments(images.map((file) => buildPastedImageFile(file)).filter(Boolean));
+                };
+
                 const showChatError = (message) => {
                     if (!message) {
                         clearChatError();
@@ -1731,6 +1783,8 @@
                     const currentKeys = new Set(attachmentSnapshot.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
                     const accepted = [];
                     const rejected = [];
+                    let hitTotalLimit = false;
+                    let nextTotalBytes = getAttachmentSnapshotTotalBytes();
 
                     incomingFiles.forEach((file) => {
                         if (!isAllowedAttachment(file)) {
@@ -1740,12 +1794,21 @@
 
                         const key = `${file.name}:${file.size}:${file.lastModified}`;
 
-                        if (currentKeys.has(key) || (attachmentSnapshot.length + accepted.length) >= 4) {
+                        if (currentKeys.has(key) || (attachmentSnapshot.length + accepted.length) >= maxAttachmentCount) {
+                            return;
+                        }
+
+                        const nextFileSize = Number(file?.size || 0);
+
+                        if ((nextTotalBytes + nextFileSize) > maxAttachmentTotalBytes) {
+                            rejected.push(file);
+                            hitTotalLimit = true;
                             return;
                         }
 
                         currentKeys.add(key);
                         accepted.push(file);
+                        nextTotalBytes += nextFileSize;
                     });
 
                     if (accepted.length > 0) {
@@ -1756,7 +1819,15 @@
                     }
 
                     if (rejected.length > 0) {
-                        showChatError(`No se puede adjuntar ${rejected[0].name}. Tipo de archivo no permitido.`);
+                        const firstRejected = rejected[0];
+                        const firstRejectedName = firstRejected?.name || 'el archivo';
+
+                        if (hitTotalLimit) {
+                            showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
+                            return;
+                        }
+
+                        showChatError(`No se puede adjuntar ${firstRejectedName}. Tipo de archivo no permitido o demasiado pesado.`);
                     }
                 };
 
@@ -1850,6 +1921,11 @@
                         return;
                     }
 
+                    if (getAttachmentSnapshotTotalBytes() > maxAttachmentTotalBytes) {
+                        showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
+                        return;
+                    }
+
                     const url = buildConversationStoreUrl(conversationId);
                     const formData = new FormData();
                     formData.append('_token', csrfToken);
@@ -1875,6 +1951,11 @@
                         const payload = await response.json().catch(() => ({}));
 
                         if (!response.ok) {
+                            if (response.status === 413) {
+                                showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
+                                return;
+                            }
+
                             if (response.status === 422 && payload?.errors) {
                                 const firstError = Object.values(payload.errors).flat()[0];
                                 showChatError(firstError || 'No se pudo enviar el mensaje.');
@@ -2079,6 +2160,8 @@
                     appendAttachments(event.target.files);
                     event.target.value = '';
                 });
+
+                input.addEventListener('paste', handleComposerPaste);
 
                 attachmentsChips.addEventListener('click', (event) => {
                     const removeButton = event.target.closest('[data-chat-remove-attachment-index]');
