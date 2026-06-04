@@ -53,6 +53,28 @@ class UserProfileViewTest extends TestCase
             ->assertDontSee('ID Salesforce');
     }
 
+    public function test_any_registered_user_can_open_another_users_profile_view(): void
+    {
+        $commercial = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'name' => 'Comercial Acceso',
+        ]);
+
+        $profileUser = User::factory()->create([
+            'name' => 'Perfil Visible',
+            'dealership' => 'Madrid',
+        ]);
+
+        $response = $this->actingAs($commercial)->get(route('users.show', $profileUser));
+
+        $response
+            ->assertOk()
+            ->assertSee('Perfil Visible')
+            ->assertSee(route('chat.beta', ['recipient' => $profileUser->id]), false)
+            ->assertSee(route('users.show', $profileUser), false);
+    }
+
     public function test_commercial_profile_shows_sales_and_purchase_ranking_positions(): void
     {
         $admin = User::factory()->create([
@@ -64,7 +86,8 @@ class UserProfileViewTest extends TestCase
         ]);
 
         $commercial = User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'name' => 'Laura Comercial',
             'dealership' => 'Sevilla',
             'dealership_id' => $dealership->id,
@@ -93,7 +116,7 @@ class UserProfileViewTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSee('Posicion en rankings')
+            ->assertSee('Posición en rankings')
             ->assertSee('Top 3')
             ->assertSee('Top 2')
             ->assertSee('7 ventas este mes')
@@ -113,7 +136,8 @@ class UserProfileViewTest extends TestCase
         ]);
 
         $storeManager = User::factory()->create([
-            'role' => User::ROLE_STORE_MANAGER,
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_STORE_MANAGER,
             'name' => 'Marta Jefa',
             'dealership' => 'Sevilla',
             'dealership_id' => $dealership->id,

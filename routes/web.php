@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])
         ->whereNumber('dealership')
         ->name('dealerships.show');
+    Route::get('/usuarios/{user}', [UserController::class, 'show'])->name('users.show');
     Route::get('/web', function () {
         abort_unless(app_can_access_web(), 403);
 
@@ -1556,7 +1557,6 @@ Route::middleware('auth')->group(function () {
         Route::patch('/usuarios/{user}/reactivar', [UserController::class, 'reactivate'])
             ->whereNumber('user')
             ->name('users.reactivate');
-        Route::get('/usuarios/{user}', [UserController::class, 'show'])->name('users.show');
         Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
