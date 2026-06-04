@@ -127,7 +127,7 @@
                         $topEntryHref = null;
                         if ($aggregateByDealership && $entry->dealership_id) {
                             $topEntryHref = route('dealerships.show', $entry->dealership_id);
-                        } elseif ($entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true)) {
+                        } elseif ($entry->user && auth()->check()) {
                             $topEntryHref = route('users.show', $entry->user);
                         }
                         $medalStyles = match ($entry->ranking_position) {
@@ -249,7 +249,7 @@
                                         {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
                                     </p>
                                 </div>
-                            @elseif ($entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true))
+                            @elseif ($entry->user && auth()->check())
                                     <img src="{{ $entry->user->avatar_url }}"
                                         alt="Avatar de {{ $entry->user->name }}"
                                         class="h-16 w-16 rounded-2xl object-cover ring-2 {{ $medalStyles['ring'] }}">
@@ -400,7 +400,7 @@
                                         <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                             alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
                                             class="h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10">
-                                        @if ($entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true))
+                                        @if ($entry->user && auth()->check())
                                             <a href="{{ route('users.show', $entry->user) }}" class="transition hover:text-brand-primary">
                                                 <div class="flex flex-wrap items-center gap-2">
                                                     <span class="group relative inline-flex max-w-full">

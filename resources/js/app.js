@@ -123,6 +123,51 @@ window.imageLightbox = () => ({
         this.isImageOpen = false;
         this.resetTransform();
     },
+    async downloadImage() {
+        if (!this.imageUrl) {
+            return;
+        }
+
+        const safeName = String(this.imageTitle || this.imageAlt || 'imagen')
+            .trim()
+            .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '-')
+            .replace(/\s+/g, ' ')
+            .replace(/\.+$/g, '');
+
+        try {
+            const response = await fetch(this.imageUrl, {
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to download image');
+            }
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = objectUrl;
+            link.download = safeName || 'imagen';
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.setTimeout(() => {
+                URL.revokeObjectURL(objectUrl);
+            }, 1000);
+        } catch (error) {
+            const link = document.createElement('a');
+
+            link.href = this.imageUrl;
+            link.download = safeName || 'imagen';
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+    },
     zoomIn(clientX = null, clientY = null) {
         const rect = this.getViewportRect();
         const anchorX = clientX ?? (rect ? rect.left + rect.width / 2 : null);
