@@ -87,6 +87,7 @@ class CompanyChatTest extends TestCase
         $this->actingAs($recipient)
             ->get(route('chat.beta', ['conversation' => $conversation->id]))
             ->assertOk()
+            ->assertSee('data-chat-header-profile-link', false)
             ->assertSee('Hola, puedes revisar el expediente de hoy?');
 
         $message->refresh();
@@ -153,6 +154,7 @@ class CompanyChatTest extends TestCase
 
         $responseJson
             ->assertOk()
+            ->assertJsonPath('partner_profile_url', route('users.show', $sender))
             ->assertJsonPath('messages.0.preview_text', 'Archivo adjunto: captura-chat.png')
             ->assertJsonPath('messages.0.attachments.0.original_name', 'captura-chat.png')
             ->assertJsonPath('messages.0.attachments.0.is_image', true)
