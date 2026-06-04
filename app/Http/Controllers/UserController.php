@@ -8,6 +8,8 @@ use App\Models\PurchaseLeaderboardEntry;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\User;
 use App\Models\UserActivityLog;
+use App\Notifications\UserOnboardingNotification;
+use App\Notifications\UserWelcomeNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -185,6 +187,9 @@ class UserController extends Controller
             targetUser: $user,
             action: UserActivityLog::ACTION_CREATED,
         );
+
+        $user->notify(new UserWelcomeNotification());
+        $this->sendOnboardingNotificationsIfNeeded($user);
 
         if ($status !== Password::RESET_LINK_SENT) {
             return redirect()
@@ -672,5 +677,36 @@ class UserController extends Controller
         DB::table('sessions')
             ->where('user_id', $user->id)
             ->delete();
+    }
+
+    protected function sendOnboardingNotificationsIfNeeded(User $user): void
+    {
+        if (! app_user_has_any_role($user, [
+            User::ROLE_COMMERCIAL,
+            User::ROLE_STORE_MANAGER,
+            User::ROLE_AREA_MANAGER,
+        ])) {
+            return;
+        }
+
+        foreach ($this->onboardingNotifications() as $notification) {
+            $user->notify($notification);
+        }
+    }
+
+    /**
+     * @return array<int, UserOnboardingNotification>
+     */
+    protected function onboardingNotifications(): array
+    {
+        return [
+            UserOnboardingNotification::forum(),
+            UserOnboardingNotification::agenda(),
+            UserOnboardingNotification::salesRanking(),
+            UserOnboardingNotification::vehicleRanking(),
+            UserOnboardingNotification::web(),
+            UserOnboardingNotification::chat(),
+            UserOnboardingNotification::videos(),
+        ];
     }
 }

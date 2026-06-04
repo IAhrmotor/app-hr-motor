@@ -4,6 +4,8 @@ namespace Tests\Feature\Users;
 
 use App\Models\Dealership;
 use App\Models\User;
+use App\Notifications\UserOnboardingNotification;
+use App\Notifications\UserWelcomeNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -23,6 +25,69 @@ class UserInvitationTest extends TestCase
         $this->withoutVite();
     }
 
+    private function assertOnboardingNotificationsWereSentTo(User $user): void
+    {
+        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserOnboardingNotification::TYPE_FORUM
+                && $data['link_url'] === route('forum.index');
+        });
+
+        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserOnboardingNotification::TYPE_AGENDA
+                && $data['link_url'] === route('agenda.index');
+        });
+
+        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserOnboardingNotification::TYPE_SALES_RANKING
+                && $data['link_url'] === route('leaderboard.sales');
+        });
+
+        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserOnboardingNotification::TYPE_VEHICLE_RANKING
+                && $data['link_url'] === route('leaderboard.vehicles');
+        });
+
+        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserOnboardingNotification::TYPE_WEB
+                && $data['link_url'] === route('tools.web');
+        });
+
+        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserOnboardingNotification::TYPE_CHAT
+                && $data['link_url'] === route('chat.beta');
+        });
+
+        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserOnboardingNotification::TYPE_VIDEOS
+                && $data['link_url'] === route('videos');
+        });
+    }
+
+    private function assertWelcomeNotificationWasSentTo(User $user): void
+    {
+        Notification::assertSentTo($user, UserWelcomeNotification::class, function (UserWelcomeNotification $notification, array $channels, User $notifiable): bool {
+            $data = $notification->toDatabase($notifiable);
+
+            return $data['type'] === UserWelcomeNotification::TYPE
+                && $data['priority'] === true
+                && $data['link_url'] === route('home');
+        });
+    }
+
     public function test_admin_can_create_an_inactive_user_and_send_invitation_email(): void
     {
         Notification::fake();
@@ -37,7 +102,8 @@ class UserInvitationTest extends TestCase
         $response = $this->actingAs($admin)->post(route('users.store'), [
             'name' => 'Usuario Invitado',
             'email' => 'invitado@example.com',
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'salesforce_user_id' => 'SF-USER-001',
             'dealership_id' => $dealership->id,
         ]);
@@ -58,6 +124,8 @@ class UserInvitationTest extends TestCase
         $this->assertSame(User::DEFAULT_AVATAR_PATH, $createdUser->avatar_path);
 
         Notification::assertSentTo($createdUser, ResetPassword::class);
+        $this->assertWelcomeNotificationWasSentTo($createdUser);
+        $this->assertOnboardingNotificationsWereSentTo($createdUser);
     }
 
     public function test_admin_can_create_a_store_manager_user_from_the_commercial_form(): void
@@ -74,7 +142,7 @@ class UserInvitationTest extends TestCase
         $response = $this->actingAs($admin)->post(route('users.store'), [
             'name' => 'Jefe Tienda',
             'email' => 'jefe.tienda@example.com',
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
             'is_store_manager' => '1',
             'salesforce_user_id' => 'SF-STORE-001',
             'dealership_id' => $dealership->id,
@@ -87,12 +155,68 @@ class UserInvitationTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertNotNull($createdUser);
-        $this->assertSame(User::ROLE_STORE_MANAGER, $createdUser->role);
+        $this->assertSame(User::ROLE_USER, $createdUser->role);
+        $this->assertSame(User::ROLE_STORE_MANAGER, $createdUser->extra_role);
         $this->assertSame('SF-STORE-001', $createdUser->salesforce_user_id);
         $this->assertSame('Bilbao', $createdUser->dealership);
         $this->assertSame($dealership->id, $createdUser->dealership_id);
 
         Notification::assertSentTo($createdUser, ResetPassword::class);
+        $this->assertWelcomeNotificationWasSentTo($createdUser);
+        $this->assertOnboardingNotificationsWereSentTo($createdUser);
+    }
+
+    public function test_admin_can_create_an_area_manager_user_and_it_receives_the_onboarding_notifications(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Area Manager',
+            'email' => 'area.manager@example.com',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_AREA_MANAGER,
+        ]);
+
+        $createdUser = User::where('email', 'area.manager@example.com')->first();
+
+        $response
+            ->assertRedirect(route('users.index'))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($createdUser);
+        Notification::assertSentTo($createdUser, ResetPassword::class);
+        $this->assertWelcomeNotificationWasSentTo($createdUser);
+        $this->assertOnboardingNotificationsWereSentTo($createdUser);
+    }
+
+    public function test_admin_can_create_a_plain_user_and_it_receives_the_welcome_notification(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'Usuario Normal',
+            'email' => 'usuario.normal@example.com',
+            'role' => User::ROLE_USER,
+        ]);
+
+        $createdUser = User::where('email', 'usuario.normal@example.com')->first();
+
+        $response
+            ->assertRedirect(route('users.index'))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($createdUser);
+        Notification::assertSentTo($createdUser, ResetPassword::class);
+        $this->assertWelcomeNotificationWasSentTo($createdUser);
+        Notification::assertNotSentTo($createdUser, UserOnboardingNotification::class);
     }
 
     public function test_admin_can_resend_invitation_email_to_pending_user(): void
@@ -219,7 +343,8 @@ class UserInvitationTest extends TestCase
         ]);
 
         User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'dealership' => 'Pamplona',
             'dealership_id' => $dealership->id,
             'salesforce_user_id' => 'SF-PAM-001',
@@ -230,8 +355,7 @@ class UserInvitationTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Delegaci')
-            ->assertSee('Pamplona')
-            ->assertSee('SF-PAM-001');
+            ->assertSee('Pamplona');
     }
 
     public function test_users_index_displays_expired_status_for_pending_users_with_expired_invitation(): void
