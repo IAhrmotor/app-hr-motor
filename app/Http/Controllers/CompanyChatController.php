@@ -506,6 +506,7 @@ class CompanyChatController extends Controller
             'partner_id' => $partner?->id,
             'partner_name' => $partner?->name,
             'partner_avatar_url' => $partner?->avatar_url,
+            'partner_profile_url' => $partner ? route('users.show', $partner) : null,
             'partner_chat_role_label' => app_chat_role_label($partner),
             'partner_dealership_name' => $partner?->resolved_dealership_name ?? 'Sin delegación',
             'partner_is_active' => $partner?->is_active,

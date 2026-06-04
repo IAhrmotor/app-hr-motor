@@ -289,7 +289,12 @@
                                 Ver
                             </span>
                         </button>
-                        <a href="{{ route('users.show', $selectedParticipant) }}" class="min-w-0 transition hover:opacity-90" aria-label="Ver perfil de {{ $selectedParticipant->name }}">
+                        <a
+                            href="{{ route('users.show', $selectedParticipant) }}"
+                            class="min-w-0 transition hover:opacity-90"
+                            aria-label="Ver perfil de {{ $selectedParticipant->name }}"
+                            data-chat-header-profile-link
+                        >
                             <span class="flex min-w-0 items-center gap-2">
                                 <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-header-name>{{ $selectedParticipant->name }}</h1>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-amber-500 {{ $selectedParticipantIsFavorite ? '' : 'hidden' }}" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-chat-favorite-star>
@@ -720,6 +725,7 @@
                 const headerName = document.querySelector('[data-chat-header-name]');
                 const headerRole = document.querySelector('[data-chat-header-role]');
                 const headerAvatar = document.querySelector('[data-chat-header-avatar]');
+                const headerProfileLink = document.querySelector('[data-chat-header-profile-link]');
                 const headerFavoriteStar = document.querySelector('[data-chat-favorite-star]');
                 const headerFavoriteToggleLabel = document.querySelector('[data-chat-favorite-toggle-label]');
                 const headerFavoriteToggleForm = document.querySelector('[data-chat-favorite-toggle-form]');
@@ -1579,6 +1585,11 @@
                     if (headerAvatar && payload.partner_avatar_url) {
                         headerAvatar.src = payload.partner_avatar_url;
                         headerAvatar.alt = `Avatar de ${payload.partner_name || 'Usuario'}`;
+                    }
+
+                    if (headerProfileLink && payload.partner_profile_url) {
+                        headerProfileLink.href = payload.partner_profile_url;
+                        headerProfileLink.setAttribute('aria-label', `Ver perfil de ${payload.partner_name || 'Usuario'}`);
                     }
 
                     if (headerFavoriteToggleForm && payload.partner_id) {
