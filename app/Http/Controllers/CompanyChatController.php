@@ -6,6 +6,7 @@ use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatFavoriteContact;
 use App\Models\CompanyChatMessage;
+use App\Models\CompanyChatMessageRead;
 use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
@@ -678,10 +679,74 @@ class CompanyChatController extends Controller
 
     private function markConversationAsRead(CompanyChatConversation $conversation, User $user): void
     {
+        if ($conversation->isGroupConversation()) {
+            $this->markGroupConversationAsRead($conversation, $user);
+
+            return;
+        }
+
         $conversation->messages()
             ->where('sender_id', '!=', $user->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+    }
+
+    private function markGroupConversationAsRead(CompanyChatConversation $conversation, User $user): void
+    {
+        $messages = $conversation->messages()
+            ->with('sender')
+            ->where('sender_id', '!=', $user->id)
+            ->get();
+
+        if ($messages->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+
+        foreach ($messages as $message) {
+            CompanyChatMessageRead::query()->updateOrCreate(
+                [
+                    'company_chat_message_id' => $message->id,
+                    'user_id' => $user->id,
+                ],
+                [
+                    'read_at' => $now,
+                ],
+            );
+
+            $this->refreshGroupMessageReadState($conversation, $message);
+        }
+    }
+
+    private function refreshGroupMessageReadState(CompanyChatConversation $conversation, CompanyChatMessage $message): void
+    {
+        if (! $conversation->isGroupConversation() || ! $message->sender instanceof User) {
+            return;
+        }
+
+        $requiredReaderIds = $conversation->participantsFor($message->sender)
+            ->pluck('id')
+            ->reject(fn (int $userId): bool => $userId === $message->sender_id)
+            ->values();
+
+        if ($requiredReaderIds->isEmpty()) {
+            if ($message->read_at === null) {
+                $message->forceFill(['read_at' => now()])->save();
+            }
+
+            return;
+        }
+
+        $readCount = CompanyChatMessageRead::query()
+            ->where('company_chat_message_id', $message->id)
+            ->whereIn('user_id', $requiredReaderIds->all())
+            ->distinct()
+            ->count('user_id');
+
+        if ($readCount >= $requiredReaderIds->count() && $message->read_at === null) {
+            $message->forceFill(['read_at' => now()])->save();
+        }
     }
 
     private function markConversationNotificationsAsRead(CompanyChatConversation $conversation, User $user): void

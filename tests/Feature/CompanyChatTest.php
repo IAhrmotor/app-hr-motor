@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CompanyChatConversation;
+use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatMessage;
 use App\Models\PolicyAcceptance;
 use App\Models\User;
@@ -163,6 +164,96 @@ class CompanyChatTest extends TestCase
                 'message' => $message->id,
                 'attachmentIndex' => 0,
             ]));
+    }
+
+    public function test_group_messages_only_become_read_when_all_participants_have_opened_them(): void
+    {
+        $sender = User::factory()->create(['name' => 'Emisor']);
+        $firstReader = User::factory()->create(['name' => 'Lector Uno']);
+        $secondReader = User::factory()->create(['name' => 'Lector Dos']);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($firstReader);
+        $this->acceptChatPolicy($secondReader);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo de pruebas',
+        ]);
+
+        $group->participants()->sync([$sender->id, $firstReader->id, $secondReader->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        $message = CompanyChatMessage::query()->create([
+            'company_chat_conversation_id' => $conversation->id,
+            'sender_id' => $sender->id,
+            'body' => 'Mensaje de grupo',
+        ]);
+
+        $this->actingAs($firstReader)
+            ->get(route('chat.beta', ['group' => $group->id]))
+            ->assertOk();
+
+        $message->refresh();
+        $this->assertNull($message->read_at);
+
+        $this->actingAs($secondReader)
+            ->get(route('chat.beta', ['group' => $group->id]))
+            ->assertOk();
+
+        $message->refresh();
+        $this->assertNotNull($message->read_at);
+    }
+
+    public function test_group_messages_notify_all_members_except_the_sender_and_show_the_sender_name(): void
+    {
+        $sender = User::factory()->create(['name' => 'Emisor Grupo']);
+        $firstReader = User::factory()->create(['name' => 'Lector Uno']);
+        $secondReader = User::factory()->create(['name' => 'Lector Dos']);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($firstReader);
+        $this->acceptChatPolicy($secondReader);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo notificaciones',
+        ]);
+        $group->participants()->sync([$sender->id, $firstReader->id, $secondReader->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Mensaje para el grupo',
+            ])
+            ->assertRedirect(route('chat.beta', ['group' => $group->id]));
+
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_type' => User::class,
+            'notifiable_id' => $firstReader->id,
+            'type' => CompanyChatMessageNotification::class,
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_type' => User::class,
+            'notifiable_id' => $secondReader->id,
+            'type' => CompanyChatMessageNotification::class,
+        ]);
+
+        $this->assertDatabaseMissing('notifications', [
+            'notifiable_type' => User::class,
+            'notifiable_id' => $sender->id,
+            'type' => CompanyChatMessageNotification::class,
+        ]);
+
+        $this->actingAs($firstReader)
+            ->get(route('chat.beta', ['group' => $group->id]))
+            ->assertOk()
+            ->assertSee('Emisor Grupo', false);
     }
 
     public function test_chat_attachment_route_serves_files_for_conversation_participants(): void
