@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -46,8 +47,8 @@ class CompanyChatController extends Controller
                     $messageQuery->with('reads');
                 }]);
             }])
-            ->orderBy('name')
             ->get();
+        $chatGroups = $this->sortChatGroupsForSidebar($chatGroups);
 
         $conversations = CompanyChatConversation::query()
             ->forUser($authUser)
@@ -606,8 +607,8 @@ class CompanyChatController extends Controller
                     $messageQuery->with('reads');
                 }]);
             }])
-            ->orderBy('name')
             ->get();
+        $chatGroups = $this->sortChatGroupsForSidebar($chatGroups);
 
         $chatGroupsPayload = $chatGroups->map(function (CompanyChatGroup $chatGroup) use ($authUser): array {
             $conversation = $chatGroup->conversation;
@@ -701,6 +702,40 @@ class CompanyChatController extends Controller
                 'company_chat_group_id' => $group->id,
             ]);
         });
+    }
+
+    /**
+     * @param  Collection<int, CompanyChatGroup>  $chatGroups
+     * @return Collection<int, CompanyChatGroup>
+     */
+    private function sortChatGroupsForSidebar(Collection $chatGroups): Collection
+    {
+        return $chatGroups
+            ->sort(function (CompanyChatGroup $leftGroup, CompanyChatGroup $rightGroup): int {
+                $leftConversation = $leftGroup->conversation;
+                $rightConversation = $rightGroup->conversation;
+                $leftTimestamp = $leftConversation?->last_message_at?->timestamp;
+                $rightTimestamp = $rightConversation?->last_message_at?->timestamp;
+
+                if ($leftTimestamp === null && $rightTimestamp === null) {
+                    return strcasecmp($leftGroup->name, $rightGroup->name);
+                }
+
+                if ($leftTimestamp === null) {
+                    return 1;
+                }
+
+                if ($rightTimestamp === null) {
+                    return -1;
+                }
+
+                if ($leftTimestamp !== $rightTimestamp) {
+                    return $rightTimestamp <=> $leftTimestamp;
+                }
+
+                return strcasecmp($leftGroup->name, $rightGroup->name);
+            })
+            ->values();
     }
 
     private function hasAcceptedChatPolicy(?User $user): bool
