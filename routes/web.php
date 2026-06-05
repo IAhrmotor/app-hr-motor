@@ -6,6 +6,8 @@ use App\Http\Controllers\AdminConversationAccessController;
 use App\Http\Controllers\AdminConversationAccessLogController;
 use App\Http\Controllers\AdminChatRetentionLogController;
 use App\Http\Controllers\AdminChatRetentionHoldController;
+use App\Http\Controllers\AdminChatGroupController;
+use App\Http\Controllers\AdminChatGroupLogController;
 use App\Http\Controllers\AdminPolicyAcceptanceLogController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\ContactController;
@@ -1538,6 +1540,22 @@ Route::middleware('auth')->group(function () {
                     'kind' => 'logs',
                     'icon' => 'conversation-access-log',
                 ];
+
+                $adminSections[] = [
+                    'label' => 'Grupos del chat',
+                    'description' => 'Crea, edita y elimina los grupos internos disponibles para el chat.',
+                    'route' => 'admin.chat-groups.index',
+                    'kind' => 'management',
+                    'icon' => 'chat-groups',
+                ];
+
+                $adminSections[] = [
+                    'label' => 'Logs de grupos del chat',
+                    'description' => 'Consulta el histórico de altas, ediciones y eliminaciones de grupos del chat.',
+                    'route' => 'admin.chat-group-logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'chat-groups-log',
+                ];
             }
 
             return view('admin.index', compact('adminSections'));
@@ -1588,20 +1606,36 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/logs/borrado-chats/descargar', [AdminChatRetentionLogController::class, 'export'])->name('admin.chat-retention-logs.export');
 
         Route::middleware('role:admin')->group(function () {
-            Route::get('/admin/conservacion-excepcional', [AdminChatRetentionHoldController::class, 'index'])->name('admin.chat-retention-holds.index');
-            Route::post('/admin/conservacion-excepcional', [AdminChatRetentionHoldController::class, 'store'])->name('admin.chat-retention-holds.store');
-            Route::patch('/admin/conservacion-excepcional/{conversation}', [AdminChatRetentionHoldController::class, 'update'])
+            Route::get('/admin/grupos-chat', [AdminChatGroupController::class, 'index'])->name('admin.chat-groups.index');
+            Route::get('/admin/grupos-chat/crear', [AdminChatGroupController::class, 'create'])->name('admin.chat-groups.create');
+            Route::post('/admin/grupos-chat', [AdminChatGroupController::class, 'store'])->name('admin.chat-groups.store');
+            Route::get('/admin/grupos-chat/{chatGroup}/editar', [AdminChatGroupController::class, 'edit'])
+                ->whereNumber('chatGroup')
+                ->name('admin.chat-groups.edit');
+            Route::put('/admin/grupos-chat/{chatGroup}', [AdminChatGroupController::class, 'update'])
+                ->whereNumber('chatGroup')
+                ->name('admin.chat-groups.update');
+            Route::delete('/admin/grupos-chat/{chatGroup}', [AdminChatGroupController::class, 'destroy'])
+                ->whereNumber('chatGroup')
+                ->name('admin.chat-groups.destroy');
+
+            Route::get('/admin/logs/grupos-chat', [AdminChatGroupLogController::class, 'index'])->name('admin.chat-group-logs.index');
+            Route::get('/admin/logs/grupos-chat/descargar', [AdminChatGroupLogController::class, 'export'])->name('admin.chat-group-logs.export');
+
+            Route::get('/admin/conversacion-excepcional', [AdminChatRetentionHoldController::class, 'index'])->name('admin.chat-retention-holds.index');
+            Route::post('/admin/conversacion-excepcional', [AdminChatRetentionHoldController::class, 'store'])->name('admin.chat-retention-holds.store');
+            Route::patch('/admin/conversacion-excepcional/{conversation}', [AdminChatRetentionHoldController::class, 'update'])
                 ->whereNumber('conversation')
                 ->name('admin.chat-retention-holds.update');
-            Route::delete('/admin/conservacion-excepcional/{conversation}/desactivar', [AdminChatRetentionHoldController::class, 'destroy'])
+            Route::delete('/admin/conversacion-excepcional/{conversation}/desactivar', [AdminChatRetentionHoldController::class, 'destroy'])
                 ->whereNumber('conversation')
                 ->name('admin.chat-retention-holds.destroy');
-            Route::post('/admin/conservacion-excepcional/usuarios', [AdminChatRetentionHoldController::class, 'storeUser'])
+            Route::post('/admin/conversacion-excepcional/usuarios', [AdminChatRetentionHoldController::class, 'storeUser'])
                 ->name('admin.chat-retention-holds.users.store');
-            Route::patch('/admin/conservacion-excepcional/usuarios/{userHold}', [AdminChatRetentionHoldController::class, 'updateUser'])
+            Route::patch('/admin/conversacion-excepcional/usuarios/{userHold}', [AdminChatRetentionHoldController::class, 'updateUser'])
                 ->whereNumber('userHold')
                 ->name('admin.chat-retention-holds.users.update');
-            Route::delete('/admin/conservacion-excepcional/usuarios/{userHold}/desactivar', [AdminChatRetentionHoldController::class, 'destroyUser'])
+            Route::delete('/admin/conversacion-excepcional/usuarios/{userHold}/desactivar', [AdminChatRetentionHoldController::class, 'destroyUser'])
                 ->whereNumber('userHold')
                 ->name('admin.chat-retention-holds.users.destroy');
         });
