@@ -193,14 +193,14 @@ class CompanyChatTest extends TestCase
         ]);
 
         $this->actingAs($firstReader)
-            ->get(route('chat.beta', ['group' => $group->id]))
+            ->get(route('chat.beta', ['conversation' => $conversation->id]))
             ->assertOk();
 
         $message->refresh();
         $this->assertNull($message->read_at);
 
         $this->actingAs($secondReader)
-            ->get(route('chat.beta', ['group' => $group->id]))
+            ->get(route('chat.beta', ['conversation' => $conversation->id]))
             ->assertOk();
 
         $message->refresh();
@@ -230,7 +230,7 @@ class CompanyChatTest extends TestCase
             ->post(route('chat.beta.messages.store', $conversation), [
                 'body' => 'Mensaje para el grupo',
             ])
-            ->assertRedirect(route('chat.beta', ['group' => $group->id]));
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
 
         $this->assertDatabaseHas('notifications', [
             'notifiable_type' => User::class,
@@ -251,7 +251,12 @@ class CompanyChatTest extends TestCase
         ]);
 
         $this->actingAs($firstReader)
-            ->get(route('chat.beta', ['group' => $group->id]))
+            ->getJson(route('chat.beta.summary'))
+            ->assertOk()
+            ->assertJsonPath('chat_groups.0.unread_messages_count', 1);
+
+        $this->actingAs($firstReader)
+            ->get(route('chat.beta', ['conversation' => $conversation->id]))
             ->assertOk()
             ->assertSee('Emisor Grupo', false);
     }

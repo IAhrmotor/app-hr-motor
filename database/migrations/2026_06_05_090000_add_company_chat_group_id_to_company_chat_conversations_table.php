@@ -69,10 +69,6 @@ return new class extends Migration
             $table->timestamp('last_message_at')->nullable();
             $table->string('last_message_excerpt', 160)->nullable();
             $table->timestamps();
-
-            $table->unique(['user_one_id', 'user_two_id'], 'ccc_user_pair_unique');
-            $table->unique(['company_chat_group_id'], 'ccc_group_unique');
-            $table->index(['last_message_at', 'updated_at'], 'ccc_last_message_updated_idx');
         });
 
         $rows = DB::table('company_chat_conversations')->orderBy('id')->get();
@@ -93,6 +89,12 @@ return new class extends Migration
         Schema::drop('company_chat_conversations');
         Schema::rename('company_chat_conversations_tmp', 'company_chat_conversations');
 
+        Schema::table('company_chat_conversations', function (Blueprint $table): void {
+            $table->unique(['user_one_id', 'user_two_id'], 'ccc_user_pair_unique');
+            $table->unique(['company_chat_group_id'], 'ccc_group_unique');
+            $table->index(['last_message_at', 'updated_at'], 'ccc_last_message_updated_idx');
+        });
+
         DB::statement('PRAGMA foreign_keys = ON');
     }
 
@@ -107,9 +109,6 @@ return new class extends Migration
             $table->timestamp('last_message_at')->nullable();
             $table->string('last_message_excerpt', 160)->nullable();
             $table->timestamps();
-
-            $table->unique(['user_one_id', 'user_two_id'], 'ccc_user_pair_unique');
-            $table->index(['last_message_at', 'updated_at'], 'ccc_last_message_updated_idx');
         });
 
         $rows = DB::table('company_chat_conversations')->orderBy('id')->get();
@@ -128,6 +127,11 @@ return new class extends Migration
 
         Schema::drop('company_chat_conversations');
         Schema::rename('company_chat_conversations_tmp', 'company_chat_conversations');
+
+        Schema::table('company_chat_conversations', function (Blueprint $table): void {
+            $table->unique(['user_one_id', 'user_two_id'], 'ccc_user_pair_unique');
+            $table->index(['last_message_at', 'updated_at'], 'ccc_last_message_updated_idx');
+        });
 
         DB::statement('PRAGMA foreign_keys = ON');
     }

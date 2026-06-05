@@ -32,6 +32,11 @@
         ] : null);
     </script>
 
+    @php
+        $privateConversations = $conversations->filter(fn ($conversation) => ! $conversation->isGroupConversation())->values();
+        $chatUnreadTotal = (int) ($privateConversations->sum('unread_messages_count') ?? 0);
+    @endphp
+
         <section
             x-data="imageLightbox()"
             x-effect="document.body.classList.toggle('overflow-hidden', isImageOpen)"
@@ -161,12 +166,12 @@
                     <div class="px-4 py-3">
                         <div class="flex items-center justify-between">
                             <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Recientes</p>
-                            <span class="text-xs text-slate-400" data-chat-unread-total>{{ $conversations->sum('unread_messages_count') }}</span>
+                            <span class="text-xs text-slate-400" data-chat-unread-total>{{ $chatUnreadTotal }}</span>
                         </div>
                     </div>
 
                     <div class="divide-y divide-slate-100 border-y border-slate-100" data-chat-conversations-list>
-                        @forelse ($conversations as $conversation)
+                        @forelse ($privateConversations as $conversation)
                             @php
                                 $isGroupConversation = $conversation->isGroupConversation();
                                 $partner = $conversation->otherParticipant($authUser);
@@ -1416,7 +1421,7 @@
                     const isEdited = Boolean(message.edited_at && !isDeleted);
                     const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
                     const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
-                    const senderNameHtml = currentConversationIsGroup && !isDeleted
+                    const senderNameHtml = currentConversationIsGroup && !isMine && !isDeleted
                         ? `<p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(String(message.sender_name || 'Usuario'))}</p>`
                         : '';
 
@@ -1974,7 +1979,7 @@
                         editingMessageDraft = '';
 
                         updateHeader(payload);
-                        setSidebarTab(payload.conversation_is_group ? 'groups' : 'chats');
+                        setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
                         renderMessages(messages);
                         refreshSidebar();
 
@@ -2062,11 +2067,11 @@
 
                         const payload = await response.json();
                         const conversations = Array.isArray(payload.conversations) ? payload.conversations : [];
+                        const privateConversations = conversations.filter((conversation) => !conversation.conversation_is_group);
                         const favoriteContacts = Array.isArray(payload.favorite_contacts) ? payload.favorite_contacts : [];
                         const chatGroups = Array.isArray(payload.chat_groups) ? payload.chat_groups : [];
                         const unreadTotal = Number(payload.unread_messages_total || 0);
-                        const chatsUnreadTotal = conversations
-                            .filter((conversation) => !conversation.conversation_is_group)
+                        const chatsUnreadTotal = privateConversations
                             .reduce((total, conversation) => total + Number(conversation.unread_messages_count || 0), 0);
                         const groupsUnreadTotal = chatGroups
                             .reduce((total, conversation) => total + Number(conversation.unread_messages_count || 0), 0);
@@ -2084,13 +2089,13 @@
                         }
 
                         if (sidebarList) {
-                            sidebarList.innerHTML = conversations.length === 0
+                            sidebarList.innerHTML = privateConversations.length === 0
                                 ? `
                                     <div class="px-4 py-8 text-center text-sm text-slate-500">
                                         Sin conversaciones aÃƒÂºn
                                     </div>
                                 `
-                                : conversations.map(renderConversation).join('');
+                                : privateConversations.map(renderConversation).join('');
                         }
 
                         if (sidebarFavoritesList) {
@@ -2108,7 +2113,7 @@
                         }
 
                         if (sidebarGroupsList) {
-                            const groupConversations = chatGroups.length > 0 ? chatGroups : conversations.filter((conversation) => Boolean(conversation.conversation_is_group));
+                            const groupConversations = chatGroups;
 
                             sidebarGroupsList.innerHTML = groupConversations.length === 0
                                 ? `
@@ -2466,7 +2471,7 @@
                     });
                 };
 
-                setSidebarTab(window.chatInitialConversationIsGroup ? 'groups' : 'chats');
+                setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
                 setSidebarCollapsed(false);
                 setMobileSidebarOpen(false);
 

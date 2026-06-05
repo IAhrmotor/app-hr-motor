@@ -41,16 +41,30 @@ class CompanyChatController extends Controller
             ->withCount('participants')
             ->with(['participants' => function ($query): void {
                 $query->orderBy('name');
-            }, 'conversation' => function ($query) use ($authUser): void {
-                $query->withCount([
-                    'messages as unread_messages_count' => function ($messageQuery) use ($authUser): void {
-                        $messageQuery->whereNull('read_at')
-                            ->where('sender_id', '!=', $authUser->id);
-                    },
-                ]);
+            }, 'conversation' => function ($query): void {
+                $query->with(['messages' => function ($messageQuery): void {
+                    $messageQuery->with('reads');
+                }]);
             }])
             ->orderBy('name')
             ->get();
+
+        $conversations = CompanyChatConversation::query()
+            ->forUser($authUser)
+            ->whereNull('company_chat_group_id')
+            ->with(['userOne', 'userTwo'])
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $conversations->each(function (CompanyChatConversation $conversation) use ($authUser): void {
+            $conversation->setAttribute('unread_messages_count', $this->conversationUnreadMessagesCount($conversation, $authUser));
+        });
+
+        $chatGroups->each(function (CompanyChatGroup $chatGroup) use ($authUser): void {
+            $chatGroup->setRelation('conversation', $chatGroup->conversation);
+            $chatGroup->conversation?->setAttribute('unread_messages_count', $this->conversationUnreadMessagesCount($chatGroup->conversation, $authUser));
+        });
 
         if ($request->boolean('ajax')) {
             abort_unless($policyAccepted, 403);
@@ -129,7 +143,8 @@ class CompanyChatController extends Controller
 
         $conversations = CompanyChatConversation::query()
             ->forUser($authUser)
-            ->with(['userOne', 'userTwo', 'chatGroup.participants'])
+            ->whereNull('company_chat_group_id')
+            ->with(['userOne', 'userTwo'])
             ->withCount([
                 'messages as unread_messages_count' => function ($query) use ($authUser): void {
                     $query->whereNull('read_at')
@@ -145,6 +160,14 @@ class CompanyChatController extends Controller
 
         if ($conversationId) {
             $selectedConversation = $conversations->firstWhere('id', $conversationId);
+
+            if (! $selectedConversation) {
+                $selectedConversation = CompanyChatConversation::query()
+                    ->forUser($authUser)
+                    ->whereKey($conversationId)
+                    ->with(['userOne', 'userTwo', 'chatGroup.participants'])
+                    ->first();
+            }
         }
 
         if (! $selectedConversation) {
@@ -215,8 +238,12 @@ class CompanyChatController extends Controller
             ->values()
             ->all();
 
+        $privateConversations = $conversations
+            ->reject(fn (CompanyChatConversation $conversation): bool => $conversation->isGroupConversation())
+            ->values();
+
         return view('tools.chat-beta', [
-            'conversations' => $conversations,
+            'conversations' => $privateConversations,
             'selectedConversation' => $selectedConversation,
             'people' => $people,
             'favoriteContacts' => $favoriteContacts,
@@ -551,27 +578,36 @@ class CompanyChatController extends Controller
         $authUser = $request->user();
         $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
-        $conversations = CompanyChatConversation::query()
+        $privateConversations = CompanyChatConversation::query()
             ->forUser($authUser)
-            ->with(['userOne', 'userTwo', 'chatGroup.participants'])
-            ->withCount([
-                'messages as unread_messages_count' => function ($query) use ($authUser): void {
-                    $query->whereNull('read_at')
-                        ->where('sender_id', '!=', $authUser->id);
-                },
-            ])
+            ->whereNull('company_chat_group_id')
+            ->with(['userOne', 'userTwo'])
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
             ->get()
             ->map(function (CompanyChatConversation $conversation) use ($authUser, $favoriteUserIds): array {
+                $unreadMessagesCount = $this->conversationUnreadMessagesCount($conversation, $authUser);
+
                 return [
                     'id' => $conversation->id,
                     ...$this->conversationPayload($conversation, $authUser, $favoriteUserIds),
                     'last_message_excerpt' => $conversation->last_message_excerpt,
                     'last_message_at_label' => $conversation->last_message_at?->translatedFormat('d/m H:i'),
-                    'unread_messages_count' => (int) ($conversation->unread_messages_count ?? 0),
+                    'unread_messages_count' => $unreadMessagesCount,
                 ];
             });
+
+        $chatGroups = $authUser->chatGroups()
+            ->withCount('participants')
+            ->with(['participants' => function ($query): void {
+                $query->orderBy('name');
+            }, 'conversation' => function ($query): void {
+                $query->with(['messages' => function ($messageQuery): void {
+                    $messageQuery->with('reads');
+                }]);
+            }])
+            ->orderBy('name')
+            ->get();
 
         $chatGroupsPayload = $chatGroups->map(function (CompanyChatGroup $chatGroup) use ($authUser): array {
             $conversation = $chatGroup->conversation;
@@ -595,15 +631,15 @@ class CompanyChatController extends Controller
                 'conversation_participants_count' => $participants->count(),
                 'last_message_excerpt' => $conversation?->last_message_excerpt,
                 'last_message_at_label' => $conversation?->last_message_at?->translatedFormat('d/m H:i'),
-                'unread_messages_count' => (int) ($conversation?->unread_messages_count ?? 0),
+                'unread_messages_count' => $this->conversationUnreadMessagesCount($conversation, $authUser),
             ];
         })->values();
 
         $favoriteContacts = $this->favoriteContactsPayload($authUser);
 
         return response()->json([
-            'unread_messages_total' => $conversations->sum('unread_messages_count'),
-            'conversations' => $conversations,
+            'unread_messages_total' => $privateConversations->sum('unread_messages_count'),
+            'conversations' => $privateConversations,
             'chat_groups' => $chatGroupsPayload,
             'favorite_contacts' => $favoriteContacts,
         ]);
@@ -755,6 +791,27 @@ class CompanyChatController extends Controller
             ->where('type', CompanyChatMessageNotification::class)
             ->where('data->conversation_id', $conversation->id)
             ->update(['read_at' => now()]);
+    }
+
+    private function conversationUnreadMessagesCount(?CompanyChatConversation $conversation, User $user): int
+    {
+        if (! $conversation) {
+            return 0;
+        }
+
+        if ($conversation->isGroupConversation()) {
+            return (int) $conversation->messages()
+                ->where('sender_id', '!=', $user->id)
+                ->whereDoesntHave('reads', function ($query) use ($user): void {
+                    $query->where('user_id', $user->id);
+                })
+                ->count();
+        }
+
+        return (int) $conversation->messages()
+            ->whereNull('read_at')
+            ->where('sender_id', '!=', $user->id)
+            ->count();
     }
 
     private function removeChatNotificationsForMessage(CompanyChatConversation $conversation, User $user, int $messageId): void
