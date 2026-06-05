@@ -26,10 +26,14 @@ class CompanyChatMessageNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
+        $isGroupConversation = $this->conversation->isGroupConversation();
+
         return [
             'type' => 'chat.message.received',
             'priority' => false,
-            'title' => 'Nuevo mensaje de ' . $this->sender->name,
+            'title' => $isGroupConversation
+                ? 'Nuevo mensaje en ' . ($this->conversation->chatGroup?->name ?? 'grupo de chat')
+                : 'Nuevo mensaje de ' . $this->sender->name,
             'description' => $this->message->preview_text,
             'link_url' => route('chat.beta', ['conversation' => $this->conversation->id]),
             'link_label' => 'Abrir chat',
@@ -38,7 +42,11 @@ class CompanyChatMessageNotification extends Notification
             'conversation_id' => $this->conversation->id,
             'message_id' => $this->message->id,
             'sender_id' => $this->sender->id,
-            'chat_group_key' => $this->conversation->id . ':' . $this->sender->id,
+            'conversation_is_group' => $isGroupConversation,
+            'conversation_name' => $isGroupConversation
+                ? ($this->conversation->chatGroup?->name ?? 'grupo de chat')
+                : $this->sender->name,
+            'chat_group_key' => $isGroupConversation ? (string) $this->conversation->id : $this->conversation->id . ':' . $this->sender->id,
         ];
     }
 }
