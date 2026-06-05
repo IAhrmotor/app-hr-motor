@@ -545,6 +545,11 @@
                                 <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
                                     <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
                                         <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
+                                            @if ($selectedConversationIsGroup && ! $isDeleted)
+                                                <p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                                    {{ $message->sender?->name ?? 'Usuario' }}
+                                                </p>
+                                            @endif
                                             @if ($isMine && ! $isDeleted)
                                                 <button type="button"
                                                     class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100"
@@ -678,7 +683,32 @@
 
                         <div class="absolute bottom-full right-16 mb-3 hidden w-72 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-xl" data-chat-emoji-picker>
                             <div class="grid grid-cols-8 gap-1">
-                                @foreach (['Ã°Å¸Ëœâ‚¬','Ã°Å¸ËœÂ','Ã°Å¸Ëœâ€š','Ã°Å¸ËœÆ’','Ã°Å¸ËœÂ','Ã°Å¸Â¥Â°','Ã°Å¸ËœÅ½','Ã°Å¸Â¤Â©','Ã°Å¸â€™Â©','Ã°Å¸â„¢Å’','Ã°Å¸â€˜Â','Ã°Å¸â€˜Â','Ã°Å¸â€Â¥','Ã¢Å“Â¨','Ã¢ÂÂ¤Ã¯Â¸Â','Ã°Å¸â€™Â¡','Ã°Å¸Å½Â¯','Ã°Å¸Å¡â‚¬','Ã°Å¸â€™Â¬','Ã°Å¸Â¤Â ','Ã°Å¸â„¢Â','Ã°Å¸Ëœâ€ ','Ã°Å¸Â¥Â³','Ã°Å¸Â¤Â¯'] as $emoji)
+                                @foreach ([
+                                    "\u{1F600}",
+                                    "\u{1F601}",
+                                    "\u{1F602}",
+                                    "\u{1F923}",
+                                    "\u{1F60D}",
+                                    "\u{1F929}",
+                                    "\u{1F973}",
+                                    "\u{1F92A}",
+                                    "\u{1F62E}",
+                                    "\u{1F92D}",
+                                    "\u{1F44D}",
+                                    "\u{1F44E}",
+                                    "\u{1F525}",
+                                    "\u{2728}",
+                                    "\u{2764}\u{FE0F}",
+                                    "\u{1F4A1}",
+                                    "\u{1F3AF}",
+                                    "\u{1F680}",
+                                    "\u{1F4AC}",
+                                    "\u{1F92B}",
+                                    "\u{1F910}",
+                                    "\u{1F606}",
+                                    "\u{1F973}",
+                                    "\u{1F92F}",
+                                ] as $emoji)
                                     <button type="button"
                                         class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-lg transition hover:bg-slate-100"
                                         data-chat-emoji-option
@@ -934,6 +964,7 @@
                 }
 
                 const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && chatError && emojiButton && emojiPicker);
+                let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
                 const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
                 let isSubmitting = false;
                 let pollingLocked = false;
@@ -1385,11 +1416,15 @@
                     const isEdited = Boolean(message.edited_at && !isDeleted);
                     const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
                     const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
+                    const senderNameHtml = currentConversationIsGroup && !isDeleted
+                        ? `<p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(String(message.sender_name || 'Usuario'))}</p>`
+                        : '';
 
                     return `
                         <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
                             <div class="flex max-w-[78%] flex-col ${isMine ? 'items-end' : 'items-start'}">
                                 <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}">
+                                    ${senderNameHtml}
                                     ${isEditing ? `
                                         <textarea rows="1" class="min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10" data-chat-edit-input>${escapeHtml(editableBody)}</textarea>
                                         <div class="mt-3 flex items-center justify-end gap-2">
@@ -1441,12 +1476,12 @@
                         editingMessageId = null;
                         editingMessageDraft = '';
                         currentMessagesFingerprint = buildMessagesFingerprint(safeMessages);
-                        const initialConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
+                        const isGroupConversation = Boolean(currentConversationIsGroup);
                         messagesContainer.innerHTML = `
                             <div class="flex min-h-full items-center justify-center">
                                 <div class="max-w-md rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
-                                    <p class="text-lg font-bold text-brand-secondary">${initialConversationIsGroup ? 'Grupo listo para empezar' : 'Chat listo para empezar'}</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-500">${initialConversationIsGroup ? 'Aquí verás los mensajes del grupo cuando alguien escriba el primero.' : 'Aquí verás la conversación cuando elijas un compañero.'}</p>
+                                    <p class="text-lg font-bold text-brand-secondary">${isGroupConversation ? 'Grupo listo para empezar' : 'Chat listo para empezar'}</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-500">${isGroupConversation ? 'Aquí verás los mensajes del grupo cuando alguien escriba el primero.' : 'Aquí verás la conversación cuando elijas un compañero.'}</p>
                                 </div>
                             </div>
                         `;
@@ -1933,6 +1968,7 @@
                         pollUrl = buildConversationMessagesUrl(activeConversationId);
                         wrapper.dataset.pollUrl = pollUrl;
                         wrapper.dataset.conversationId = String(activeConversationId);
+                        currentConversationIsGroup = Boolean(payload.conversation_is_group);
                         activeMessageMenuId = null;
                         editingMessageId = null;
                         editingMessageDraft = '';
