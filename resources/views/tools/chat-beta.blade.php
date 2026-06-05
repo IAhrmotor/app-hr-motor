@@ -1421,7 +1421,11 @@
                     const isEdited = Boolean(message.edited_at && !isDeleted);
                     const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
                     const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
-                    const senderNameHtml = currentConversationIsGroup && !isMine && !isDeleted
+                    const showSenderName = currentConversationIsGroup
+                        && !isMine
+                        && !isDeleted
+                        && (index === 0 || previousDateKey !== currentDateKey || previousTimeLabel !== currentTimeLabel);
+                    const senderNameHtml = showSenderName
                         ? `<p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(String(message.sender_name || 'Usuario'))}</p>`
                         : '';
 
