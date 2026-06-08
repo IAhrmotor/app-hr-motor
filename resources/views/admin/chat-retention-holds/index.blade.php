@@ -465,7 +465,7 @@
                     this.selectedTarget = payload.target || '';
                     this.conversationEditReason = payload.reason || '';
                     this.conversationEditExpiresAt = payload.expiresAt || '';
-                    this.conversationEditAction = `{{ url('/admin/conservacion-excepcional') }}/${payload.id}`;
+                    this.conversationEditAction = `{{ url('/admin/conversacion-excepcional') }}/${payload.id}`;
                     this.conversationEditOpen = true;
                 },
                 closeConversationEdit() {
@@ -474,7 +474,7 @@
                 openConversationDeactivate(payload) {
                     this.selectedTarget = payload.target || '';
                     this.conversationDeactivateReason = '';
-                    this.conversationDeactivateAction = `{{ url('/admin/conservacion-excepcional') }}/${payload.id}/desactivar`;
+                    this.conversationDeactivateAction = `{{ url('/admin/conversacion-excepcional') }}/${payload.id}/desactivar`;
                     this.conversationDeactivateOpen = true;
                 },
                 closeConversationDeactivate() {
@@ -484,7 +484,7 @@
                     this.selectedTarget = payload.target || '';
                     this.userEditReason = payload.reason || '';
                     this.userEditExpiresAt = payload.expiresAt || '';
-                    this.userEditAction = `{{ url('/admin/conservacion-excepcional/usuarios') }}/${payload.id}`;
+                    this.userEditAction = `{{ url('/admin/conversacion-excepcional/usuarios') }}/${payload.id}`;
                     this.userEditOpen = true;
                 },
                 closeUserEdit() {
@@ -493,7 +493,7 @@
                 openUserDeactivate(payload) {
                     this.selectedTarget = payload.target || '';
                     this.userDeactivateReason = '';
-                    this.userDeactivateAction = `{{ url('/admin/conservacion-excepcional/usuarios') }}/${payload.id}/desactivar`;
+                    this.userDeactivateAction = `{{ url('/admin/conversacion-excepcional/usuarios') }}/${payload.id}/desactivar`;
                     this.userDeactivateOpen = true;
                 },
                 closeUserDeactivate() {

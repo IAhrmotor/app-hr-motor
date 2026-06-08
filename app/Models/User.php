@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\CompanyChatDefaultGroupSyncService;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -177,6 +179,18 @@ class User extends Authenticatable
                 $user->avatar_path = self::DEFAULT_AVATAR_PATH;
             }
         });
+
+        static::created(function (self $user): void {
+            app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, false);
+        });
+
+        static::updated(function (self $user): void {
+            if (! $user->wasChanged(['extra_role', 'dealership_id'])) {
+                return;
+            }
+
+            app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, true);
+        });
     }
 
     public function setPhoneAttribute($value): void
@@ -240,6 +254,12 @@ class User extends Authenticatable
     public function chatFavoriteContacts(): HasMany
     {
         return $this->hasMany(CompanyChatFavoriteContact::class, 'user_id');
+    }
+
+    public function chatGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(CompanyChatGroup::class, 'company_chat_group_user')
+            ->withTimestamps();
     }
 
     public function policyAcceptances(): HasMany

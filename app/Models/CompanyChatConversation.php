@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class CompanyChatConversation extends Model
 {
@@ -15,6 +17,7 @@ class CompanyChatConversation extends Model
     protected $fillable = [
         'user_one_id',
         'user_two_id',
+        'company_chat_group_id',
         'last_message_at',
         'last_message_excerpt',
         'retention_hold',
@@ -44,6 +47,11 @@ class CompanyChatConversation extends Model
         return $this->belongsTo(User::class, 'user_two_id');
     }
 
+    public function chatGroup(): BelongsTo
+    {
+        return $this->belongsTo(CompanyChatGroup::class, 'company_chat_group_id');
+    }
+
     public function retentionHoldCreatedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'retention_hold_created_by');
@@ -57,6 +65,11 @@ class CompanyChatConversation extends Model
     public function accessAudits(): HasMany
     {
         return $this->hasMany(CompanyChatConversationAccessAudit::class, 'company_chat_conversation_id');
+    }
+
+    public function isGroupConversation(): bool
+    {
+        return $this->company_chat_group_id !== null;
     }
 
     public function scopeWithActiveRetentionHold(Builder $query): Builder
@@ -114,6 +127,10 @@ class CompanyChatConversation extends Model
 
     public function getRetentionHoldTargetLabelAttribute(): string
     {
+        if ($this->isGroupConversation()) {
+            return (string) ($this->chatGroup?->name ?? '');
+        }
+
         $participants = collect([
             $this->userOne?->name,
             $this->userTwo?->name,
@@ -132,14 +149,44 @@ class CompanyChatConversation extends Model
 
     public function getConversationTypeLabelAttribute(): string
     {
-        return 'Privada';
+        return $this->isGroupConversation() ? 'Grupo' : 'Privada';
+    }
+
+    public function getConversationDisplayNameAttribute(): string
+    {
+        if ($this->isGroupConversation()) {
+            return (string) ($this->chatGroup?->name ?? 'Grupo de chat');
+        }
+
+        return (string) ($this->userOne?->name ?? $this->userTwo?->name ?? 'Conversación');
+    }
+
+    public function getConversationAvatarUrlAttribute(): string
+    {
+        return $this->isGroupConversation()
+            ? asset('images/users/hrmotor-default-user-avatar.png')
+            : (string) ($this->userOne?->avatar_url ?? $this->userTwo?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png'));
+    }
+
+    public function getConversationSubtitleAttribute(): string
+    {
+        if ($this->isGroupConversation()) {
+            return ((int) $this->chatGroup?->participants()->count() ?: 0) . ' participantes';
+        }
+
+        $participant = $this->userOne ?? $this->userTwo;
+
+        return trim((string) (app_chat_role_label($participant) . ($participant?->resolved_dealership_name ? ' · ' . $participant->resolved_dealership_name : '')));
     }
 
     public function scopeForUser(Builder $query, User $user): Builder
     {
         return $query->where(function (Builder $subquery) use ($user): void {
             $subquery->where('user_one_id', $user->id)
-                ->orWhere('user_two_id', $user->id);
+                ->orWhere('user_two_id', $user->id)
+                ->orWhereHas('chatGroup.participants', function (Builder $groupQuery) use ($user): void {
+                    $groupQuery->whereKey($user->id);
+                });
         });
     }
 
@@ -173,6 +220,10 @@ class CompanyChatConversation extends Model
 
     public function otherParticipant(User $user): ?User
     {
+        if ($this->isGroupConversation()) {
+            return null;
+        }
+
         if ($this->user_one_id === $user->id) {
             return $this->userTwo;
         }
@@ -186,6 +237,22 @@ class CompanyChatConversation extends Model
 
     public function involves(User $user): bool
     {
+        if ($this->isGroupConversation()) {
+            return $this->chatGroup?->participants()->whereKey($user->id)->exists() ?? false;
+        }
+
         return in_array($user->id, [$this->user_one_id, $this->user_two_id], true);
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function participantsFor(User $user): Collection
+    {
+        if ($this->isGroupConversation()) {
+            return $this->chatGroup?->participants ?? collect();
+        }
+
+        return collect([$this->userOne, $this->userTwo])->filter(fn ($participant): bool => $participant instanceof User)->values();
     }
 }

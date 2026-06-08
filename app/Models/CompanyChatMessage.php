@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -22,6 +23,7 @@ class CompanyChatMessage extends Model
         'attachments',
         'read_at',
         'edited_at',
+        'is_system',
     ];
 
     protected function casts(): array
@@ -31,6 +33,7 @@ class CompanyChatMessage extends Model
             'read_at' => 'datetime',
             'edited_at' => 'datetime',
             'deleted_at' => 'datetime',
+            'is_system' => 'boolean',
         ];
     }
 
@@ -44,9 +47,22 @@ class CompanyChatMessage extends Model
         return $this->belongsTo(User::class, 'sender_id');
     }
 
+    /**
+     * @return HasMany<CompanyChatMessageRead>
+     */
+    public function reads(): HasMany
+    {
+        return $this->hasMany(CompanyChatMessageRead::class, 'company_chat_message_id');
+    }
+
     public function isRead(): bool
     {
         return $this->read_at !== null;
+    }
+
+    public function isSystemMessage(): bool
+    {
+        return (bool) $this->is_system;
     }
 
     public function canBeEditedOrDeletedBy(User $user, ?Carbon $at = null): bool

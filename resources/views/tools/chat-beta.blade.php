@@ -1,13 +1,50 @@
-@extends('layouts.chat-shell')
+﻿@extends('layouts.chat-shell')
 
 @section('content')
     @php
         $authUser = auth()->user();
         $selectedParticipant = $selectedConversation?->otherParticipant($authUser);
+        $selectedConversationIsGroup = $selectedConversation?->isGroupConversation() ?? false;
+        $selectedConversationGroup = $selectedConversationIsGroup ? $selectedConversation?->chatGroup : null;
+        $selectedConversationGroupAvatarUrl = $selectedConversationGroup?->avatar_url;
         $selectedConversationMessages = $selectedConversation?->messages ?? collect();
         $favoriteUserIds = $favoriteUserIds ?? [];
         $selectedParticipantIsFavorite = $selectedParticipant?->id ? in_array($selectedParticipant->id, $favoriteUserIds, true) : false;
+        $selectedParticipantChatRoleLabel = $selectedParticipant?->chat_role_label ?? '';
+        $selectedParticipantDealershipName = $selectedParticipant?->resolved_dealership_name ?: 'Sin delegación';
+        $selectedParticipantIsDisabled = $selectedParticipant?->isDisabled() ?? false;
+        $selectedParticipantAvatarUrl = $selectedParticipant?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png');
+        $selectedParticipantName = $selectedParticipant?->name ?? 'Usuario';
+        $selectedParticipantProfileUrl = $selectedParticipant ? route('users.show', $selectedParticipant) : '#';
+        $selectedParticipantFavoriteToggleUrl = $selectedParticipant ? route('chat.beta.favorites.toggle', $selectedParticipant) : '#';
         $policyAccepted = $policyAccepted ?? true;
+        $chatUnreadTotal = (int) ($conversations->sum('unread_messages_count') ?? 0);
+        $groupUnreadTotal = (int) ($chatGroups->sum(fn ($chatGroup) => (int) ($chatGroup->conversation?->unread_messages_count ?? 0)) ?? 0);
+        $chatUnreadBadgeLabel = $chatUnreadTotal > 9 ? '+9' : (string) $chatUnreadTotal;
+        $groupUnreadBadgeLabel = $groupUnreadTotal > 9 ? '+9' : (string) $groupUnreadTotal;
+    @endphp
+    <script>
+        window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
+        window.chatInitialGroupModalData = @js($selectedConversationIsGroup && $selectedConversationGroup ? [
+            'conversation_name' => $selectedConversationGroup->name,
+            'conversation_avatar_url' => $selectedConversationGroup->avatar_url,
+            'conversation_system_group_type' => $selectedConversationGroup->system_group_type,
+            'conversation_participants' => $selectedConversationGroup->participants->map(function ($participant) {
+                return [
+                    'id' => $participant->id,
+                    'name' => $participant->name,
+                    'profile_url' => route('users.show', $participant),
+                    'avatar_url' => $participant->avatar_url,
+                    'resolved_dealership_name' => $participant->resolved_dealership_name,
+                    'extra_role_label' => $participant->extra_role ? (\App\Models\User::extraRoleLabels()[$participant->extra_role] ?? ucfirst((string) $participant->extra_role)) : null,
+                ];
+            })->values()->all(),
+        ] : null);
+    </script>
+
+    @php
+        $privateConversations = $conversations->filter(fn ($conversation) => ! $conversation->isGroupConversation())->values();
+        $chatUnreadTotal = (int) ($privateConversations->sum('unread_messages_count') ?? 0);
     @endphp
 
         <section
@@ -71,16 +108,22 @@
                 <div class="border-b border-slate-200 px-4 py-3">
                     <div class="grid grid-cols-3 rounded-2xl bg-slate-100 p-1 text-xs font-semibold">
                         <button type="button" data-chat-sidebar-tab="chats" aria-pressed="true"
-                            class="inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-primary px-3 py-2 text-white shadow-sm transition hover:bg-brand-primary/95">
+                            class="relative inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-primary px-3 py-2 text-white shadow-sm transition hover:bg-brand-primary/95">
                             Chats
+                            <span data-chat-tab-badge="chats" class="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-[#1E90FF] px-1.5 py-0.5 text-[11px] font-semibold text-white" style="{{ $chatUnreadTotal > 0 ? '' : 'display:none;' }}">
+                                {{ $chatUnreadBadgeLabel }}
+                            </span>
                         </button>
                         <button type="button" data-chat-sidebar-tab="team" aria-pressed="false"
                             class="inline-flex cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition hover:bg-slate-100">
                             Equipo
                         </button>
                         <button type="button" data-chat-sidebar-tab="groups" aria-pressed="false"
-                            class="inline-flex cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition hover:bg-slate-100">
+                            class="relative inline-flex cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-slate-500 transition hover:bg-slate-100">
                             Grupos
+                            <span data-chat-tab-badge="groups" class="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-[#1E90FF] px-1.5 py-0.5 text-[11px] font-semibold text-white" style="{{ $groupUnreadTotal > 0 ? '' : 'display:none;' }}">
+                                {{ $groupUnreadBadgeLabel }}
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -106,7 +149,7 @@
                                                         {{ $favoriteContact['name'] }}
                                                     </p>
                                                     <p class="truncate text-xs text-slate-500">
-                                                        {{ $favoriteContact['chat_role_label'] }}{{ $favoriteContact['resolved_dealership_name'] ? ' · ' . $favoriteContact['resolved_dealership_name'] : '' }}
+                                                        {{ $favoriteContact['chat_role_label'] ?? '' }}@if (! empty($favoriteContact['chat_role_label'])) &middot; @endif{{ $favoriteContact['resolved_dealership_name'] ?: 'Sin delegación' }}
                                                         @if ($favoriteContact['is_disabled'] ?? false)
                                                             <span class="ml-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>
                                                         @endif
@@ -119,7 +162,7 @@
                             </div>
                         @else
                             <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
-                                Marca contactos como favoritos para verlos aquí.
+                                Marca contactos como favoritos para verlos aquÃƒÂ­.
                             </div>
                         @endif
                     </div>
@@ -133,14 +176,16 @@
                     <div class="px-4 py-3">
                         <div class="flex items-center justify-between">
                             <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Recientes</p>
-                            <span class="text-xs text-slate-400" data-chat-unread-total>{{ $conversations->sum('unread_messages_count') }}</span>
+                            <span class="text-xs text-slate-400" data-chat-unread-total>{{ $chatUnreadTotal }}</span>
                         </div>
                     </div>
 
                     <div class="divide-y divide-slate-100 border-y border-slate-100" data-chat-conversations-list>
-                        @forelse ($conversations as $conversation)
+                        @forelse ($privateConversations as $conversation)
                             @php
+                                $isGroupConversation = $conversation->isGroupConversation();
                                 $partner = $conversation->otherParticipant($authUser);
+                                $groupParticipantsCount = $isGroupConversation ? ($conversation->chatGroup?->participants?->count() ?? 0) : 0;
                                 $isSelected = $selectedConversation?->id === $conversation->id;
                             @endphp
                             <a href="{{ route('chat.beta', ['conversation' => $conversation->id]) }}"
@@ -148,9 +193,17 @@
                                 data-chat-conversation-id="{{ $conversation->id }}"
                                 class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition {{ $isSelected ? 'bg-brand-primary/10' : 'hover:bg-slate-50' }}">
                                 <div class="relative shrink-0">
-                                    <img src="{{ $partner?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png') }}"
-                                        alt="Avatar de {{ $partner?->name ?? 'Usuario' }}"
-                                        class="h-11 w-11 rounded-2xl object-cover">
+                                    @if ($isGroupConversation)
+                                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                        </div>
+                                    @else
+                                        <img src="{{ $partner?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png') }}"
+                                            alt="Avatar de {{ $partner?->name ?? 'Usuario' }}"
+                                            class="h-11 w-11 rounded-2xl object-cover">
+                                    @endif
                                     @if (($conversation->unread_messages_count ?? 0) > 0)
                                         <span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge>
                                             {{ $conversation->unread_messages_count }}
@@ -163,19 +216,25 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="min-w-0">
-                                            <p class="truncate text-sm font-semibold {{ in_array($partner?->id, $favoriteUserIds, true) ? 'text-amber-600' : 'text-brand-secondary' }}" data-chat-partner-name>{{ $partner?->name ?? 'Conversación' }}</p>
+                                            <p class="truncate text-sm font-semibold {{ $isGroupConversation ? 'text-brand-secondary' : (in_array($partner?->id, $favoriteUserIds, true) ? 'text-amber-600' : 'text-brand-secondary') }}" data-chat-partner-name>{{ $isGroupConversation ? ($conversation->chatGroup?->name ?? 'Grupo de chat') : ($partner?->name ?? 'Conversación') }}</p>
                                             <p class="truncate text-xs text-slate-500" data-chat-partner-role>
-                                                <span>{{ $partner?->chat_role_label ?? '' }}</span>
-                                                @if ($partner?->isDisabled())
-                                                    <span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                                            <path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                                        </svg>
-                                                    </span>
+                                                @if ($isGroupConversation)
+                                                    <span>Grupo</span>
+                                                    <span class="mx-1">·</span>
+                                                    <span>{{ $groupParticipantsCount }} participante{{ $groupParticipantsCount === 1 ? '' : 's' }}</span>
+                                                @else
+                                                    <span>{{ $partner?->chat_role_label ?? '' }}</span>
+                                                    @if ($partner?->isDisabled())
+                                                        <span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                                <path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                                            </svg>
+                                                        </span>
+                                                    @endif
                                                 @endif
                                             </p>
                                             <p class="truncate text-xs text-slate-500" data-chat-last-message>
-                                                {{ $conversation->last_message_excerpt ?: 'Empieza la conversación' }}
+                                                {{ $conversation->last_message_excerpt ?: 'Empieza la conversaciÃƒÂ³n' }}
                                             </p>
                                         </div>
 
@@ -191,9 +250,9 @@
                             </a>
                         @empty
                             <div class="px-4 py-8 text-center">
-                                <p class="text-sm font-semibold text-brand-secondary">Sin conversaciones aún</p>
+                                <p class="text-sm font-semibold text-brand-secondary">Sin conversaciones aÃƒÂºn</p>
                                 <p class="mt-1 text-sm leading-6 text-slate-500">
-                                    Busca a un compañero y abre el primer chat.
+                                    Busca a un compaÃƒÂ±ero y abre el primer chat.
                                 </p>
                             </div>
                         @endforelse
@@ -221,7 +280,7 @@
                                             <div class="min-w-0 flex-1">
                                                 <p class="truncate text-sm font-semibold {{ in_array($teamUser['id'], $favoriteUserIds, true) ? 'text-amber-600' : 'text-brand-secondary' }}">{{ $teamUser['name'] }}</p>
                                                 <p class="truncate text-xs text-slate-500">
-                                                    {{ $teamUser['chat_role_label'] }}{{ $teamUser['resolved_dealership_name'] ? ' · ' . $teamUser['resolved_dealership_name'] : '' }}
+                                                    {{ $teamUser['chat_role_label'] ?? '' }}@if (! empty($teamUser['chat_role_label'])) &middot; @endif{{ $teamUser['resolved_dealership_name'] ?: 'Sin delegación' }}
                                                     @if ($teamUser['is_disabled'] ?? false)
                                                         <span class="ml-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>
                                                     @endif
@@ -240,8 +299,65 @@
                 </div>
 
                 <div class="hidden" data-chat-sidebar-panel="groups">
-                    <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
-                        Próximamente.
+                    <div class="px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Tus grupos</p>
+                            <span class="text-xs text-slate-400">{{ $chatGroups->count() }}</span>
+                        </div>
+                    </div>
+
+                    <div class="divide-y divide-slate-100 border-y border-slate-100" data-chat-groups-list>
+                        @forelse ($chatGroups as $chatGroup)
+                            @php
+                                $groupConversation = $chatGroup->conversation;
+                                $isSelectedGroup = $selectedConversationIsGroup && $selectedConversation?->company_chat_group_id === $chatGroup->id;
+                                $chatGroupAvatarUrl = filled($chatGroup->avatar_url)
+                                    ? $chatGroup->avatar_url
+                                    : null;
+                            @endphp
+                            <a href="{{ route('chat.beta', ['group' => $chatGroup->id]) }}"
+                                data-chat-group-link
+                                class="group flex w-full items-center gap-3 px-4 py-3 transition {{ $isSelectedGroup ? 'bg-brand-primary/10' : 'hover:bg-slate-50' }}">
+                                <div class="relative shrink-0">
+                                    @if ($chatGroupAvatarUrl)
+                                        <img src="{{ $chatGroupAvatarUrl }}"
+                                            alt="Avatar de {{ $chatGroup->name }}"
+                                            class="h-11 w-11 cursor-pointer rounded-2xl object-cover">
+                                    @else
+                                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                        </div>
+                                    @endif
+                                    @if ((int) ($groupConversation?->unread_messages_count ?? 0) > 0)
+                                        <span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white">
+                                            {{ $groupConversation?->unread_messages_count }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-brand-secondary">{{ $chatGroup->name }}</p>
+                                            <p class="truncate text-xs text-slate-500">
+                                                {{ $groupConversation?->last_message_excerpt ?: 'Empieza la conversación' }}
+                                            </p>
+                                        </div>
+                                        @if ($groupConversation?->last_message_at)
+                                            <span class="shrink-0 text-[11px] text-slate-400">
+                                                {{ $groupConversation->last_message_at->translatedFormat('d/m H:i') }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </a>
+                        @empty
+                            <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
+                                Aún no participas en ningún grupo.
+                            </div>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -264,9 +380,9 @@
         </aside>
 
         <section class="flex min-w-0 flex-1 flex-col bg-slate-100">
-            @if ($selectedConversation && $selectedParticipant)
+            @if ($selectedConversation)
                 <header class="flex min-h-[4.75rem] items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-2">
-                    <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex min-w-0 items-center gap-3 {{ $selectedConversationIsGroup ? '' : 'hidden' }}" data-chat-header-group-shell>
                         <button
                             type="button"
                             class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary md:hidden"
@@ -278,36 +394,96 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"></path>
                             </svg>
                         </button>
+
+                        <div class="group flex min-w-0 items-center gap-3">
+                            <button
+                                type="button"
+                                class="group/avatar relative {{ $selectedConversationGroupAvatarUrl ? 'cursor-pointer' : 'hidden' }} overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                aria-label="Ampliar imagen del grupo {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                data-chat-group-header-avatar-button
+                                data-chat-group-header-avatar-src="{{ $selectedConversationGroupAvatarUrl }}"
+                                data-chat-group-header-avatar-alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                data-chat-group-header-avatar-title="{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                @click.stop="openImage({ src: $el.dataset.chatGroupHeaderAvatarSrc, alt: $el.dataset.chatGroupHeaderAvatarAlt, title: $el.dataset.chatGroupHeaderAvatarTitle })"
+                            >
+                                <img
+                                    src="{{ $selectedConversationGroupAvatarUrl }}"
+                                    alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                    class="h-11 w-11 shrink-0 cursor-pointer rounded-2xl object-cover transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
+                                    data-chat-group-header-avatar
+                                >
+                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/avatar:bg-brand-secondary/35 group-hover/avatar:opacity-100">
+                                    Ver
+                                </span>
+                            </button>
+                            <div class="flex h-11 w-11 shrink-0 {{ $selectedConversationGroupAvatarUrl ? 'hidden' : '' }} items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary/15" data-chat-group-header-icon>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="min-w-0 cursor-pointer text-left transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                                aria-label="Ver detalles del grupo"
+                                data-chat-group-header-button
+                            >
+                            <div class="min-w-0">
+                                <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-group-header-name>{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}</h1>
+                                @if ($selectedConversationGroup)
+                                    <p class="mt-2 truncate text-xs text-slate-500" data-chat-group-header-participants>
+                                        {{ $selectedConversationGroup->participants->pluck('name')->implode(', ') ?: 'Sin participantes' }}
+                                    </p>
+                                @endif
+                            </div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex min-w-0 items-center gap-3 {{ $selectedConversationIsGroup ? 'hidden' : '' }}" data-chat-header-private-shell>
                         <button
                             type="button"
-                            @click.stop="openImage({ src: @js($selectedParticipant->avatar_url), alt: @js('Avatar de '.$selectedParticipant->name), title: @js($selectedParticipant->name) })"
-                            class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                            aria-label="Ampliar imagen de {{ $selectedParticipant->name }}"
+                            class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary md:hidden"
+                            aria-label="Abrir panel lateral"
+                            aria-expanded="false"
+                            data-chat-mobile-sidebar-toggle
                         >
-                            <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" data-chat-header-avatar>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="block h-4 w-4 shrink-0 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-chat-mobile-sidebar-icon>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"></path>
+                            </svg>
+                        </button>
+
+                        <button
+                            type="button"
+                            @click.stop="openImage({ src: @js($selectedParticipantAvatarUrl), alt: @js('Avatar de '.$selectedParticipantName), title: @js($selectedParticipantName) })"
+                            class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            aria-label="Ampliar imagen de {{ $selectedParticipantName }}"
+                        >
+                            <img src="{{ $selectedParticipantAvatarUrl }}" alt="Avatar de {{ $selectedParticipantName }}" class="h-11 w-11 rounded-2xl object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" data-chat-private-header-avatar>
                             <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
                                 Ver
                             </span>
                         </button>
                         <a
-                            href="{{ route('users.show', $selectedParticipant) }}"
+                            href="{{ $selectedParticipantProfileUrl }}"
                             class="min-w-0 transition hover:opacity-90"
-                            aria-label="Ver perfil de {{ $selectedParticipant->name }}"
+                            aria-label="Ver perfil de {{ $selectedParticipantName }}"
                             data-chat-header-profile-link
+                            data-chat-private-header-profile-link
                         >
                             <span class="flex min-w-0 items-center gap-2">
-                                <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-header-name>{{ $selectedParticipant->name }}</h1>
+                                <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-private-header-name>{{ $selectedParticipantName }}</h1>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-amber-500 {{ $selectedParticipantIsFavorite ? '' : 'hidden' }}" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-chat-favorite-star>
                                     <path d="M11.245 4.174C11.4765 3.50808 11.5922 3.17513 11.7634 3.08285C11.9115 3.00298 12.0898 3.00298 12.238 3.08285C12.4091 3.17513 12.5248 3.50808 12.7563 4.174L14.2866 8.57639C14.3525 8.76592 14.3854 8.86068 14.4448 8.93125C14.4972 8.99359 14.5641 9.04218 14.6396 9.07278C14.725 9.10743 14.8253 9.10947 15.0259 9.11356L19.6857 9.20852C20.3906 9.22288 20.743 9.23007 20.8837 9.36432C21.0054 9.48051 21.0605 9.65014 21.0303 9.81569C20.9955 10.007 20.7146 10.2199 20.1528 10.6459L16.4387 13.4616C16.2788 13.5829 16.1989 13.6435 16.1501 13.7217C16.107 13.7909 16.0815 13.8695 16.0757 13.9507C16.0692 14.0427 16.0982 14.1387 16.1563 14.3308L17.506 18.7919C17.7101 19.4667 17.8122 19.8041 17.728 19.9793C17.6551 20.131 17.5108 20.2358 17.344 20.2583C17.1513 20.2842 16.862 20.0829 16.2833 19.6802L12.4576 17.0181C12.2929 16.9035 12.2106 16.8462 12.1211 16.8239C12.042 16.8043 11.9593 16.8043 11.8803 16.8239C11.7908 16.8462 11.7084 16.9035 11.5437 17.0181L7.71805 19.6802C7.13937 20.0829 6.85003 20.2842 6.65733 20.2583C6.49056 20.2358 6.34626 20.131 6.27337 19.9793C6.18915 19.8041 6.29123 19.4667 6.49538 18.7919L7.84503 14.3308C7.90313 14.1387 7.93218 14.0427 7.92564 13.9507C7.91986 13.8695 7.89432 13.7909 7.85123 13.7217C7.80246 13.6435 7.72251 13.5829 7.56262 13.4616L3.84858 10.6459C3.28678 10.2199 3.00588 10.007 2.97101 9.81569C2.94082 9.65014 2.99594 9.48051 3.11767 9.36432C3.25831 9.23007 3.61074 9.22289 4.31559 9.20852L8.9754 9.11356C9.176 9.10947 9.27631 9.10743 9.36177 9.07278C9.43726 9.04218 9.50414 8.99359 9.55657 8.93125C9.61593 8.86068 9.64887 8.76592 9.71475 8.57639L11.245 4.174Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                             </span>
-                            <p class="truncate text-xs text-slate-500" data-chat-header-role>
-                                {{ $selectedParticipant->chat_role_label }} &middot; {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}
-                                @if ($selectedParticipant->isDisabled())
+                            <p class="truncate text-xs text-slate-500" data-chat-private-header-role>
+                                {{ $selectedParticipantChatRoleLabel }} &middot; {{ $selectedParticipantDealershipName }}
+                                @if ($selectedParticipantIsDisabled)
                                     <span class="ml-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>
                                 @endif
                             </p>
                         </a>
+                    </div>
                     </div>
 
                     <div class="relative" x-data="{ open: false }" @click.outside="open = false">
@@ -333,7 +509,7 @@
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 translate-y-1"
                             class="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
-                            <form method="POST" action="{{ route('chat.beta.favorites.toggle', $selectedParticipant) }}" data-chat-favorite-toggle-form data-chat-favorite-toggle-url-template="{{ route('chat.beta.favorites.toggle', ['user' => '__USER_ID__']) }}">
+                            <form method="POST" action="{{ $selectedParticipantFavoriteToggleUrl }}" data-chat-favorite-toggle-form data-chat-favorite-toggle-url-template="{{ $selectedParticipant ? route('chat.beta.favorites.toggle', ['user' => '__USER_ID__']) : '' }}">
                                 @csrf
                                 <button type="submit"
                                     class="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left text-sm font-medium text-brand-secondary transition hover:bg-brand-secondary/5">
@@ -389,6 +565,7 @@
                             @endphp
                             @forelse ($selectedConversationMessages as $message)
                                 @php
+                                    $isSystem = (bool) $message->is_system;
                                     $isMine = $message->sender_id === $authUser->id;
                                     $previousMessage = $selectedConversationMessages->get($loop->index - 1);
                                     $nextMessage = $selectedConversationMessages->get($loop->index + 1);
@@ -412,119 +589,135 @@
                                         </span>
                                     </div>
                                 @endif
-                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
-                                    <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
-                                        <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
-                                            @if ($isMine && ! $isDeleted)
-                                                <button type="button"
-                                                    class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100"
-                                                    aria-label="Abrir opciones del mensaje"
-                                                    data-chat-message-trigger>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                                        <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
-                                                    </svg>
-                                                </button>
-                                            @endif
-
-                                            <div data-chat-message-content>
-                                                @if ($isDeleted)
-                                                    <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
-                                                        </svg>
-                                                        <span>Este mensaje ha sido eliminado.</span>
-                                                    </div>
-                                                @elseif (filled($message->body))
-                                                    <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                <div class="flex {{ $isSystem ? 'justify-center' : ($isMine ? 'justify-end' : 'justify-start') }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
+                                    <div class="flex max-w-[78%] flex-col {{ $isSystem ? 'items-center' : ($isMine ? 'items-end' : 'items-start') }}">
+                                        @if ($isSystem)
+                                            <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
+                                                {{ $message->body }}
+                                            </div>
+                                            <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] justify-center text-slate-400">
+                                                <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
+                                            </div>
+                                        @else
+                                            <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
+                                                @if ($selectedConversationIsGroup && ! $isDeleted && ! $isSystem)
+                                                    <p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                                        {{ $message->sender?->name ?? 'Usuario' }}
+                                                    </p>
                                                 @endif
-
-                                                @if (! $isDeleted && $messageAttachments->isNotEmpty())
-                                                    <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
-                                                        @foreach ($messageAttachments as $attachment)
-                                                            @php
-                                                                $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
-                                                                $attachmentName = $attachment['original_name'] ?? 'archivo';
-                                                                $attachmentSize = $attachment['size_label'] ?? '';
-                                                                $attachmentUrl = route('chat.beta.attachments.show', [
-                                                                    'conversation' => $message->company_chat_conversation_id,
-                                                                    'message' => $message->id,
-                                                                    'attachmentIndex' => $loop->index,
-                                                                ]);
-                                                            @endphp
-
-                                                            @if ($isImageAttachment)
-                                                                <button
-                                                                    type="button"
-                                                                    data-chat-image-src="{{ $attachmentUrl }}"
-                                                                    data-chat-image-alt="{{ $attachmentName }}"
-                                                                    data-chat-image-title="{{ $attachmentName }}"
-                                                                    @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
-                                                                    class="group/image relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                                                                    aria-label="Ver {{ $attachmentName }}"
-                                                                >
-                                                                    <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover/image:scale-105 group-hover/image:brightness-75">
-                                                                    <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/image:bg-brand-secondary/30 group-hover/image:opacity-100">
-                                                                        Ver
-                                                                    </span>
-                                                                </button>
-                                                            @else
-                                                                <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
-                                                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
-                                                                        </svg>
-                                                                    </span>
-                                                                    <span class="min-w-0 flex-1">
-                                                                        <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
-                                                                        @if ($attachmentSize !== '')
-                                                                            <span class="block text-xs text-slate-500">{{ $attachmentSize }}</span>
-                                                                        @endif
-                                                                    </span>
-                                                                </a>
-                                                            @endif
-                                                        @endforeach
-                                                    </div>
-                                                @endif
-
                                                 @if ($isMine && ! $isDeleted)
-                                                    <span class="absolute bottom-1.5 right-3 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                            <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                                                            <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                                    <button type="button"
+                                                        class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100"
+                                                        aria-label="Abrir opciones del mensaje"
+                                                        data-chat-message-trigger>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                            <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
                                                         </svg>
-                                                    </span>
+                                                    </button>
+                                                @endif
+
+                                                <div data-chat-message-content>
+                                                    @if ($isDeleted)
+                                                        <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                                            </svg>
+                                                            <span>Este mensaje ha sido eliminado.</span>
+                                                        </div>
+                                                    @elseif (filled($message->body))
+                                                        <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                                    @endif
+
+                                                    @if (! $isDeleted && $messageAttachments->isNotEmpty())
+                                                        <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
+                                                            @foreach ($messageAttachments as $attachment)
+                                                                @php
+                                                                    $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
+                                                                    $attachmentName = $attachment['original_name'] ?? 'archivo';
+                                                                    $attachmentSize = $attachment['size_label'] ?? '';
+                                                                    $attachmentUrl = route('chat.beta.attachments.show', [
+                                                                        'conversation' => $message->company_chat_conversation_id,
+                                                                        'message' => $message->id,
+                                                                        'attachmentIndex' => $loop->index,
+                                                                    ]);
+                                                                @endphp
+
+                                                                @if ($isImageAttachment)
+                                                                    <button
+                                                                        type="button"
+                                                                        data-chat-image-src="{{ $attachmentUrl }}"
+                                                                        data-chat-image-alt="{{ $attachmentName }}"
+                                                                        data-chat-image-title="{{ $attachmentName }}"
+                                                                        @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
+                                                                        class="group/image relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                                                        aria-label="Ver {{ $attachmentName }}"
+                                                                    >
+                                                                        <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover/image:scale-105 group-hover/image:brightness-75">
+                                                                        <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/image:bg-brand-secondary/30 group-hover/image:opacity-100">
+                                                                            Ver
+                                                                        </span>
+                                                                    </button>
+                                                                @else
+                                                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                                                                        <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
+                                                                            </svg>
+                                                                        </span>
+                                                                        <span class="min-w-0 flex-1">
+                                                                            <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
+                                                                            @if ($attachmentSize !== '')
+                                                                                <span class="block text-xs text-slate-500">{{ $attachmentSize }}</span>
+                                                                            @endif
+                                                                        </span>
+                                                                    </a>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+
+                                                    @if ($isMine && ! $isDeleted)
+                                                        <span class="absolute bottom-1.5 right-3 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                                <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                                                                <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                                            </svg>
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                @if ($isMine)
+                                                    <div class="hidden" data-chat-message-inline-editor>
+                                                        <textarea
+                                                            rows="1"
+                                                            class="mt-1 min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                                            data-chat-edit-input>{{ $message->body }}</textarea>
+                                                        <div class="mt-3 flex items-center justify-end gap-2">
+                                                            <button type="button" class="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100" data-chat-edit-cancel>Cancelar</button>
+                                                            <button type="button" class="cursor-pointer rounded-full bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90" data-chat-edit-save>Guardar</button>
+                                                        </div>
+                                                    </div>
                                                 @endif
                                             </div>
-
-                                            @if ($isMine)
-                                                <div class="hidden" data-chat-message-inline-editor>
-                                                    <textarea
-                                                        rows="1"
-                                                        class="mt-1 min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
-                                                        data-chat-edit-input>{{ $message->body }}</textarea>
-                                                    <div class="mt-3 flex items-center justify-end gap-2">
-                                                        <button type="button" class="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100" data-chat-edit-cancel>Cancelar</button>
-                                                        <button type="button" class="cursor-pointer rounded-full bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90" data-chat-edit-save>Guardar</button>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
-                                        <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
-                                            @if ($isEdited)
-                                                <span class="text-[10px] italic text-slate-400">Editado</span>
-                                            @endif
-                                            <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
-                                        </div>
+                                            <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
+                                            <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
+                                                @if ($isEdited)
+                                                    <span class="text-[10px] italic text-slate-400">Editado</span>
+                                                @endif
+                                                <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             @empty
                                 <div class="flex min-h-full items-center justify-center">
                                     <div class="max-w-md rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
-                                        <p class="text-lg font-bold text-brand-secondary">Chat listo para empezar</p>
+                                        <p class="text-lg font-bold text-brand-secondary">
+                                            {{ $selectedConversationIsGroup ? 'Grupo listo para empezar' : 'Chat listo para empezar' }}
+                                        </p>
                                         <p class="mt-2 text-sm leading-6 text-slate-500">
-                                            Aquí verás la conversación cuando elijas un compañero.
+                                            {{ $selectedConversationIsGroup ? 'Aquí verás los mensajes del grupo cuando alguien escriba el primero.' : 'Aquí verás la conversación cuando elijas un compañero.' }}
                                         </p>
                                     </div>
                                 </div>
@@ -546,7 +739,32 @@
 
                         <div class="absolute bottom-full right-16 mb-3 hidden w-72 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-xl" data-chat-emoji-picker>
                             <div class="grid grid-cols-8 gap-1">
-                                @foreach (['😀','😁','😂','😃','😍','🥰','😎','🤩','💩','🙌','👍','👏','🔥','✨','❤️','💡','🎯','🚀','💬','🤠','🙏','😆','🥳','🤯'] as $emoji)
+                                @foreach ([
+                                    "\u{1F600}",
+                                    "\u{1F601}",
+                                    "\u{1F602}",
+                                    "\u{1F923}",
+                                    "\u{1F60D}",
+                                    "\u{1F929}",
+                                    "\u{1F973}",
+                                    "\u{1F92A}",
+                                    "\u{1F62E}",
+                                    "\u{1F92D}",
+                                    "\u{1F44D}",
+                                    "\u{1F44E}",
+                                    "\u{1F525}",
+                                    "\u{2728}",
+                                    "\u{2764}\u{FE0F}",
+                                    "\u{1F4A1}",
+                                    "\u{1F3AF}",
+                                    "\u{1F680}",
+                                    "\u{1F4AC}",
+                                    "\u{1F92B}",
+                                    "\u{1F910}",
+                                    "\u{1F606}",
+                                    "\u{1F973}",
+                                    "\u{1F92F}",
+                                ] as $emoji)
                                     <button type="button"
                                         class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-lg transition hover:bg-slate-100"
                                         data-chat-emoji-option
@@ -609,13 +827,50 @@
                 <div class="flex flex-1 items-center justify-center px-6">
                     <div class="max-w-xl rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
                         <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary">Chat</p>
-                        <h2 class="mt-4 text-2xl font-bold tracking-tight text-brand-secondary">Busca a un compañero para empezar</h2>
+                        <h2 class="mt-4 text-2xl font-bold tracking-tight text-brand-secondary">Busca una conversación para empezar</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-500">
-                            Selecciona una conversación reciente o usa la lupa para abrir un chat nuevo.
+                            Selecciona una conversación reciente, un grupo o usa la lupa para abrir un chat nuevo.
                         </p>
                     </div>
                 </div>
             @endif
+
+            <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 px-4" data-chat-group-modal-overlay>
+                <div class="w-full max-w-2xl rounded-[1.6rem] bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="chat-group-modal-title">
+                    <div class="flex items-start gap-3">
+                        <button
+                            type="button"
+                            class="group relative hidden h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            aria-label="Ampliar imagen del grupo"
+                            data-chat-group-modal-avatar-button
+                            @click.stop="openImage({ src: $el.dataset.chatGroupModalAvatarSrc, alt: $el.dataset.chatGroupModalAvatarAlt, title: $el.dataset.chatGroupModalAvatarTitle })"
+                        >
+                            <img
+                                src=""
+                                alt=""
+                                class="h-11 w-11 rounded-2xl object-cover"
+                                data-chat-group-modal-avatar
+                            >
+                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                Ver
+                            </span>
+                        </button>
+                        <div class="min-w-0 flex-1">
+                            <h3 id="chat-group-modal-title" class="truncate text-base font-semibold text-brand-secondary">{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">Haz clic en cualquier miembro para abrir su perfil.</p>
+                        </div>
+                        <button type="button" class="cursor-pointer rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar" data-chat-group-modal-close>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mt-5 max-h-[65vh] overflow-y-auto pr-1">
+                        <div class="grid gap-2" data-chat-group-modal-members></div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <div
@@ -729,18 +984,48 @@
                 const summaryRoot = document.querySelector('[data-chat-summary-url]');
                 const sidebarList = document.querySelector('[data-chat-conversations-list]');
                 const sidebarFavoritesList = document.querySelector('[data-chat-favorites-list]');
+                const sidebarGroupsList = document.querySelector('[data-chat-groups-list]');
                 const sidebarUnreadTotal = document.querySelector('[data-chat-unread-total]');
+                const tabBadges = {
+                    chats: document.querySelector('[data-chat-tab-badge="chats"]'),
+                    groups: document.querySelector('[data-chat-tab-badge="groups"]'),
+                };
+                const formatTabBadgeLabel = (count) => (count > 9 ? '+9' : String(count));
+                const syncTabBadge = (badgeElement, count) => {
+                    if (!badgeElement) {
+                        return;
+                    }
+
+                    const isVisible = count > 0;
+                    badgeElement.textContent = formatTabBadgeLabel(count);
+                    badgeElement.style.display = isVisible ? '' : 'none';
+                    badgeElement.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+                };
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
                 const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
                 const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
-                const headerName = document.querySelector('[data-chat-header-name]');
-                const headerRole = document.querySelector('[data-chat-header-role]');
-                const headerAvatar = document.querySelector('[data-chat-header-avatar]');
-                const headerProfileLink = document.querySelector('[data-chat-header-profile-link]');
+                const headerGroupShell = document.querySelector('[data-chat-header-group-shell]');
+                const headerPrivateShell = document.querySelector('[data-chat-header-private-shell]');
+                const headerGroupName = document.querySelector('[data-chat-group-header-name]');
+                const headerGroupParticipants = document.querySelector('[data-chat-group-header-participants]');
+                const headerGroupButton = document.querySelector('[data-chat-group-header-button]');
+                const headerGroupAvatar = document.querySelector('[data-chat-group-header-avatar]');
+                const headerGroupAvatarButton = document.querySelector('[data-chat-group-header-avatar-button]');
+                const headerGroupIcon = document.querySelector('[data-chat-group-header-icon]');
+                const headerPrivateName = document.querySelector('[data-chat-private-header-name]');
+                const headerPrivateRole = document.querySelector('[data-chat-private-header-role]');
+                const headerAvatar = document.querySelector('[data-chat-private-header-avatar]');
+                const headerProfileLink = document.querySelector('[data-chat-private-header-profile-link]');
                 const headerFavoriteStar = document.querySelector('[data-chat-favorite-star]');
                 const headerFavoriteToggleLabel = document.querySelector('[data-chat-favorite-toggle-label]');
                 const headerFavoriteToggleForm = document.querySelector('[data-chat-favorite-toggle-form]');
                 const headerFavoriteMenuButton = document.querySelector('[data-chat-contact-menu-button]');
+                const groupModalOverlay = document.querySelector('[data-chat-group-modal-overlay]');
+                const groupModalTitle = document.querySelector('[data-chat-group-modal-title]');
+                const groupModalMembers = document.querySelector('[data-chat-group-modal-members]');
+                const groupModalCloseButton = document.querySelector('[data-chat-group-modal-close]');
+                const groupModalAvatarButton = document.querySelector('[data-chat-group-modal-avatar-button]');
+                const groupModalAvatar = document.querySelector('[data-chat-group-modal-avatar]');
                 const mobileSidebarBackdrop = document.querySelector('[data-chat-mobile-sidebar-backdrop]');
                 const mobileSidebarToggleButton = document.querySelector('[data-chat-mobile-sidebar-toggle]');
                 const mobileSidebarIcon = document.querySelector('[data-chat-mobile-sidebar-icon]');
@@ -755,6 +1040,7 @@
                 }
 
                 const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && chatError && emojiButton && emojiPicker);
+                let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
                 const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
                 let isSubmitting = false;
                 let pollingLocked = false;
@@ -770,11 +1056,12 @@
                 let editingMessageId = null;
                 let editingMessageDraft = '';
                 let pendingDeleteMessageId = null;
+                let currentGroupModalData = window.chatInitialGroupModalData || null;
                 let sidebarCollapsed = false;
                 let mobileSidebarOpen = false;
                 const messageActionWindowMinutes = 2;
                 const messageActionWindowMs = messageActionWindowMinutes * 60 * 1000;
-                const messageActionWindowMessage = 'Solo puedes editar o eliminar un mensaje durante los 2 minutos posteriores a su envío.';
+                const messageActionWindowMessage = 'Solo puedes editar o eliminar un mensaje durante los 2 minutos posteriores a su envÃƒÂ­o.';
                 currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
                     $nextMessage = $selectedConversationMessages->get($index + 1);
                     $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
@@ -1188,6 +1475,7 @@
 
                 const renderMessage = (message, index, messages) => {
                     const isMine = Boolean(message.is_mine);
+                    const isSystem = Boolean(message.is_system);
                     const previousMessage = messages[index - 1];
                     const nextMessage = messages[index + 1];
                     const currentDateKey = getLocalDateKey(message.created_at);
@@ -1205,11 +1493,28 @@
                     const isEdited = Boolean(message.edited_at && !isDeleted);
                     const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
                     const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
+                    const showSenderName = currentConversationIsGroup
+                        && !isSystem
+                        && !isMine
+                        && !isDeleted
+                        && (index === 0 || previousDateKey !== currentDateKey || previousTimeLabel !== currentTimeLabel);
+                    const senderNameHtml = showSenderName
+                        ? `<p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(String(message.sender_name || 'Usuario'))}</p>`
+                        : '';
 
                     return `
-                        <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
-                            <div class="flex max-w-[78%] flex-col ${isMine ? 'items-end' : 'items-start'}">
+                        <div class="flex ${isSystem ? 'justify-center' : (isMine ? 'justify-end' : 'justify-start')} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
+                            <div class="flex max-w-[78%] flex-col ${isSystem ? 'items-center' : (isMine ? 'items-end' : 'items-start')}">
+                                ${isSystem ? `
+                                    <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
+                                        ${escapeHtml(body)}
+                                    </div>
+                                    <div class="${showTime ? 'mt-1' : 'mt-0.5'} flex items-center gap-1 justify-center text-[11px] text-slate-400">
+                                        <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
+                                    </div>
+                                ` : `
                                 <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}">
+                                    ${senderNameHtml}
                                     ${isEditing ? `
                                         <textarea rows="1" class="min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10" data-chat-edit-input>${escapeHtml(editableBody)}</textarea>
                                         <div class="mt-3 flex items-center justify-end gap-2">
@@ -1244,6 +1549,7 @@
                                     ${isEdited ? '<span class="text-[10px] italic text-slate-400">Editado</span>' : ''}
                                     <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                 </div>
+                                `}
                             </div>
                         </div>
                     `;
@@ -1261,11 +1567,12 @@
                         editingMessageId = null;
                         editingMessageDraft = '';
                         currentMessagesFingerprint = buildMessagesFingerprint(safeMessages);
+                        const isGroupConversation = Boolean(currentConversationIsGroup);
                         messagesContainer.innerHTML = `
                             <div class="flex min-h-full items-center justify-center">
                                 <div class="max-w-md rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm">
-                                    <p class="text-lg font-bold text-brand-secondary">Chat listo para empezar</p>
-                                    <p class="mt-2 text-sm leading-6 text-slate-500">Aquí verás la conversación cuando elijas un compañero.</p>
+                                    <p class="text-lg font-bold text-brand-secondary">${isGroupConversation ? 'Grupo listo para empezar' : 'Chat listo para empezar'}</p>
+                                    <p class="mt-2 text-sm leading-6 text-slate-500">${isGroupConversation ? 'Aquí verás los mensajes del grupo cuando alguien escriba el primero.' : 'Aquí verás la conversación cuando elijas un compañero.'}</p>
                                 </div>
                             </div>
                         `;
@@ -1502,33 +1809,47 @@
                 };
 
                 const renderConversation = (conversation) => {
-                    const isSelected = Number(conversation.id) === Number(sidebarSelectedConversationId);
+                    const isGroup = Boolean(conversation.conversation_is_group);
+                    const isDealershipGroup = isGroup && conversation.conversation_system_group_type === '{{ \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP }}';
+                    const selectedId = isGroup ? Number(conversation.conversation_id || 0) : Number(conversation.id);
+                    const isSelected = selectedId === Number(sidebarSelectedConversationId);
                     const itemClass = isSelected ? 'bg-brand-primary/10' : 'hover:bg-slate-50';
                     const unreadBadge = Number(conversation.unread_messages_count || 0);
-                    const nameClass = conversation.partner_is_favorite ? 'text-amber-600' : 'text-brand-secondary';
+                    const participantCount = Number(conversation.conversation_participants_count || 0);
+                    const nameClass = isGroup ? 'text-brand-secondary' : (conversation.partner_is_favorite ? 'text-amber-600' : 'text-brand-secondary');
                     const unreadHtml = unreadBadge > 0
                         ? `<span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge>${unreadBadge}</span>`
                         : `<span class="absolute -right-1 -top-1 hidden h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge></span>`;
+                    const avatarHtml = isGroup
+                        ? (conversation.conversation_avatar_url
+                            ? `<img src="${escapeHtml(conversation.conversation_avatar_url)}" alt="Avatar de ${escapeHtml(conversation.conversation_name || 'Grupo')}" class="h-11 w-11 rounded-2xl object-cover">`
+                            : `<div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`)
+                        : `<img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.partner_name || 'Usuario')}" class="h-11 w-11 rounded-2xl object-cover">`;
+                    const roleHtml = isGroup
+                        ? `<span>${participantCount} participante${participantCount === 1 ? '' : 's'}</span>`
+                        : `<span>${escapeHtml(conversation.partner_chat_role_label || '')}</span>${conversation.partner_is_disabled ? '<span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}`;
+
+                    const href = isGroup
+                        ? `{{ route('chat.beta') }}?group=${encodeURIComponent(conversation.group_id || conversation.id)}`
+                        : `{{ route('chat.beta') }}?conversation=${encodeURIComponent(conversation.id)}`;
+                    const linkAttribute = isGroup ? 'data-chat-group-link' : 'data-chat-conversation-link';
 
                     return `
-                        <a href="{{ route('chat.beta') }}?conversation=${encodeURIComponent(conversation.id)}"
-                            data-chat-conversation-link
-                            data-chat-conversation-id="${conversation.id}"
+                        <a href="${href}"
+                            ${linkAttribute}
+                            ${isGroup ? '' : `data-chat-conversation-id="${conversation.id}"`}
                             class="group flex w-full cursor-pointer items-center gap-3 px-4 py-3 transition ${itemClass}">
                             <div class="relative shrink-0">
-                                <img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}"
-                                    alt="Avatar de ${escapeHtml(conversation.partner_name || 'Usuario')}"
-                                    class="h-11 w-11 rounded-2xl object-cover">
+                                ${avatarHtml}
                                 ${unreadHtml}
                             </div>
 
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold ${nameClass}" data-chat-partner-name>${escapeHtml(conversation.partner_name || 'Conversación')}</p>
+                                        <p class="truncate text-sm font-semibold ${nameClass}" data-chat-partner-name>${escapeHtml(conversation.conversation_name || conversation.partner_name || 'Conversación')}</p>
                                         <p class="truncate text-xs text-slate-500" data-chat-partner-role>
-                                            <span>${escapeHtml(conversation.partner_chat_role_label || '')}</span>
-                                            ${conversation.partner_is_disabled ? '<span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
+                                            ${roleHtml}
                                         </p>
                                         <p class="truncate text-xs text-slate-500" data-chat-last-message>${escapeHtml(conversation.last_message_excerpt || 'Empieza la conversación')}</p>
                                     </div>
@@ -1554,7 +1875,7 @@
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-amber-600">${escapeHtml(contact.name || 'Usuario')}</p>
-                                        <p class="truncate text-xs text-slate-500">${escapeHtml(contact.chat_role_label || '')}${contact.resolved_dealership_name ? ' · ' + escapeHtml(contact.resolved_dealership_name) : ''}</p>
+                                        <p class="truncate text-xs text-slate-500">${escapeHtml(contact.chat_role_label || "")}${contact.chat_role_label ? " &middot; " : ""}${escapeHtml(contact.resolved_dealership_name || "Sin delegación")}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1573,34 +1894,185 @@
                 };
 
                 const renderHeaderRole = (payload) => {
-                    if (!headerRole) {
+                    if (!headerPrivateRole) {
                         return;
                     }
 
+                    if (payload.conversation_is_group) {
+                        headerPrivateRole.textContent = '';
+                        headerPrivateRole.classList.add('hidden');
+                        return;
+                    }
+
+                    headerPrivateRole.classList.remove('hidden');
                     const partnerRoleLabel = escapeHtml(payload.partner_chat_role_label || '');
                     const partnerDealershipName = escapeHtml(payload.partner_dealership_name || 'Sin delegación');
                     const disabledBadge = payload.partner_is_disabled
                         ? ' <span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
                         : '';
 
-                    headerRole.innerHTML = `${partnerRoleLabel}${partnerRoleLabel ? ' &middot; ' : ''}${partnerDealershipName}${disabledBadge}`;
+                    headerPrivateRole.innerHTML = `${partnerRoleLabel}${partnerRoleLabel ? ' &middot; ' : ''}${partnerDealershipName}${disabledBadge}`;
+                };
+
+                const closeGroupModal = () => {
+                    if (!groupModalOverlay) {
+                        return;
+                    }
+
+                    groupModalOverlay.classList.add('hidden');
+                    groupModalOverlay.classList.remove('flex');
+                    if (groupModalMembers) {
+                        groupModalMembers.innerHTML = '';
+                    }
+                };
+
+                const renderGroupModalMembers = (members = []) => {
+                    if (!groupModalMembers) {
+                        return;
+                    }
+
+                    if (!members.length) {
+                        groupModalMembers.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-500">No hay participantes para mostrar.</div>';
+                        return;
+                    }
+
+                    groupModalMembers.innerHTML = members.map((member) => `
+                        <a href="${escapeHtml(member.profile_url || '#')}"
+                            class="group flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 transition hover:border-brand-primary/30 hover:bg-slate-50">
+                            <img src="${escapeHtml(member.avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}"
+                                alt="Avatar de ${escapeHtml(member.name || 'Usuario')}"
+                                class="h-11 w-11 shrink-0 rounded-2xl object-cover">
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-semibold text-brand-secondary">${escapeHtml(member.name || 'Usuario')}</p>
+                                <p class="truncate text-xs text-slate-500">
+                                    ${member.extra_role_label ? `${escapeHtml(member.extra_role_label)}` : 'Sin rol extra'}
+                                    ·
+                                    ${member.resolved_dealership_name ? `${escapeHtml(member.resolved_dealership_name)}` : 'Sin delegación'}
+                                </p>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-slate-400 transition group-hover:text-brand-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6" />
+                            </svg>
+                        </a>
+                    `).join('');
+                };
+
+                const updateGroupModalAvatar = (data = null) => {
+                    if (!groupModalAvatarButton || !groupModalAvatar) {
+                        return;
+                    }
+
+                    const hasGroupAvatar = Boolean(data && data.conversation_avatar_url);
+
+                    groupModalAvatarButton.classList.toggle('hidden', !hasGroupAvatar);
+                    groupModalAvatar.src = hasGroupAvatar
+                        ? data.conversation_avatar_url
+                        : '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                    groupModalAvatar.alt = `Avatar de ${data?.conversation_name || 'Grupo de chat'}`;
+                    groupModalAvatarButton.dataset.chatGroupModalAvatarSrc = hasGroupAvatar ? data.conversation_avatar_url : '';
+                    groupModalAvatarButton.dataset.chatGroupModalAvatarAlt = `Avatar de ${data?.conversation_name || 'Grupo de chat'}`;
+                    groupModalAvatarButton.dataset.chatGroupModalAvatarTitle = data?.conversation_name || 'Grupo de chat';
+                };
+
+                const openGroupModal = (groupData = null) => {
+                    if (!groupModalOverlay) {
+                        return;
+                    }
+
+                    const data = groupData || currentGroupModalData;
+
+                    if (!data) {
+                        return;
+                    }
+
+                    currentGroupModalData = data;
+                    updateGroupModalAvatar(data);
+
+                    if (groupModalTitle) {
+                        groupModalTitle.textContent = data.conversation_name || headerGroupName?.textContent || 'Grupo de chat';
+                    }
+
+                    renderGroupModalMembers(Array.isArray(data.conversation_participants) ? data.conversation_participants : []);
+                    groupModalOverlay.classList.remove('hidden');
+                    groupModalOverlay.classList.add('flex');
                 };
 
                 const updateHeader = (payload) => {
-                    if (headerName && payload.partner_name) {
-                        headerName.textContent = payload.partner_name;
+                    if (headerGroupShell && headerPrivateShell) {
+                        const isGroupConversation = Boolean(payload.conversation_is_group);
+                        headerGroupShell.classList.toggle('hidden', !isGroupConversation);
+                        headerPrivateShell.classList.toggle('hidden', isGroupConversation);
                     }
 
-                    renderHeaderRole(payload);
+                    if (payload.conversation_is_group) {
+                        if (headerGroupName) {
+                            headerGroupName.textContent = payload.conversation_name || 'Grupo de chat';
+                        }
 
-                    if (headerAvatar && payload.partner_avatar_url) {
-                        headerAvatar.src = payload.partner_avatar_url;
-                        headerAvatar.alt = `Avatar de ${payload.partner_name || 'Usuario'}`;
+                        if (headerGroupParticipants) {
+                            headerGroupParticipants.textContent = payload.conversation_participants_text || 'Sin participantes';
+                            headerGroupParticipants.classList.remove('hidden');
+                        }
+
+                        const hasGroupAvatar = Boolean(payload.conversation_system_group_type === '{{ \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP }}' && payload.conversation_avatar_url);
+
+                        if (headerGroupAvatarButton && headerGroupAvatar && headerGroupIcon) {
+                            headerGroupAvatarButton.classList.toggle('hidden', !hasGroupAvatar);
+                            headerGroupIcon.classList.toggle('hidden', hasGroupAvatar);
+                            headerGroupAvatar.src = hasGroupAvatar
+                                ? payload.conversation_avatar_url
+                                : '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                            headerGroupAvatar.alt = `Avatar de ${payload.conversation_name || 'Grupo de chat'}`;
+                            headerGroupAvatarButton.dataset.chatGroupHeaderAvatarSrc = hasGroupAvatar
+                                ? payload.conversation_avatar_url
+                                : '';
+                            headerGroupAvatarButton.dataset.chatGroupHeaderAvatarAlt = `Avatar de ${payload.conversation_name || 'Grupo de chat'}`;
+                            headerGroupAvatarButton.dataset.chatGroupHeaderAvatarTitle = payload.conversation_name || 'Grupo de chat';
+                        }
+
+                        currentGroupModalData = {
+                            conversation_name: payload.conversation_name || 'Grupo de chat',
+                            conversation_avatar_url: payload.conversation_avatar_url || '',
+                            conversation_system_group_type: payload.conversation_system_group_type || null,
+                            conversation_participants: Array.isArray(payload.conversation_participants) ? payload.conversation_participants : [],
+                        };
+                        updateGroupModalAvatar(currentGroupModalData);
+                    } else {
+                        if (headerPrivateName) {
+                            headerPrivateName.textContent = payload.partner_name || 'Conversación';
+                        }
+
+                        renderHeaderRole(payload);
+                        currentGroupModalData = null;
+                        updateGroupModalAvatar(null);
                     }
 
-                    if (headerProfileLink && payload.partner_profile_url) {
-                        headerProfileLink.href = payload.partner_profile_url;
-                        headerProfileLink.setAttribute('aria-label', `Ver perfil de ${payload.partner_name || 'Usuario'}`);
+                    if (headerAvatar && !payload.conversation_is_group && payload.conversation_avatar_url) {
+                        headerAvatar.src = payload.conversation_avatar_url;
+                        headerAvatar.alt = `Avatar de ${payload.conversation_name || payload.partner_name || 'Usuario'}`;
+                    }
+
+                    if (headerGroupAvatar && headerGroupIcon) {
+                        const hasGroupAvatar = Boolean(payload.conversation_is_group && payload.conversation_avatar_url);
+                        headerGroupAvatar.src = hasGroupAvatar
+                            ? payload.conversation_avatar_url
+                            : '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                        headerGroupAvatar.alt = `Avatar de ${payload.conversation_name || 'Grupo de chat'}`;
+                        headerGroupAvatar.classList.toggle('hidden', !hasGroupAvatar);
+                        headerGroupIcon.classList.toggle('hidden', hasGroupAvatar);
+                    }
+
+                    if (headerProfileLink) {
+                        if (payload.conversation_is_group) {
+                            headerProfileLink.href = '#';
+                            headerProfileLink.classList.add('pointer-events-none');
+                            headerProfileLink.setAttribute('aria-hidden', 'true');
+                        } else if (payload.partner_profile_url) {
+                            headerProfileLink.href = payload.partner_profile_url;
+                            headerProfileLink.classList.remove('pointer-events-none');
+                            headerProfileLink.removeAttribute('aria-hidden');
+                            headerProfileLink.setAttribute('aria-label', `Ver perfil de ${payload.partner_name || 'Usuario'}`);
+                        }
                     }
 
                     if (headerFavoriteToggleForm && payload.partner_id) {
@@ -1609,6 +2081,13 @@
 
                     setHeaderFavoriteState(Boolean(payload.partner_is_favorite));
                 };
+
+                if (headerGroupButton) {
+                    headerGroupButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        openGroupModal();
+                    });
+                }
 
                 const loadConversation = async (conversationId, { pushState = true } = {}) => {
                     if (!conversationId) {
@@ -1637,11 +2116,13 @@
                         pollUrl = buildConversationMessagesUrl(activeConversationId);
                         wrapper.dataset.pollUrl = pollUrl;
                         wrapper.dataset.conversationId = String(activeConversationId);
+                        currentConversationIsGroup = Boolean(payload.conversation_is_group);
                         activeMessageMenuId = null;
                         editingMessageId = null;
                         editingMessageDraft = '';
 
                         updateHeader(payload);
+                        setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
                         renderMessages(messages);
                         refreshSidebar();
 
@@ -1695,7 +2176,7 @@
                         return;
                     }
 
-                    const previewText = attachmentSnapshot.map((file) => `${file.name} (${Math.ceil(file.size / 1024)} KB)`).join(' · ');
+                    const previewText = attachmentSnapshot.map((file) => `${file.name} (${Math.ceil(file.size / 1024)} KB)`).join(' Ã‚Â· ');
                     attachmentsPreview.textContent = `${attachmentSnapshot.length} archivo${attachmentSnapshot.length === 1 ? '' : 's'} seleccionado${attachmentSnapshot.length === 1 ? '' : 's'}: ${previewText}`;
                     attachmentsPreview.classList.remove('hidden');
 
@@ -1703,7 +2184,7 @@
                         <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-brand-secondary">
                             <span class="truncate max-w-[9rem]">${escapeHtml(file.name)}</span>
                             <button type="button" class="cursor-pointer text-slate-400 transition hover:text-rose-500" data-chat-remove-attachment-index="${index}" aria-label="Quitar ${escapeHtml(file.name)}">
-                                ×
+                                Ãƒâ€”
                             </button>
                         </span>
                     `).join('');
@@ -1711,7 +2192,7 @@
                 };
 
                 const refreshSidebar = async () => {
-                    if (!summaryUrl || (!sidebarList && !sidebarFavoritesList)) {
+                    if (!summaryUrl || (!sidebarList && !sidebarFavoritesList && !sidebarGroupsList)) {
                         return;
                     }
 
@@ -1729,28 +2210,42 @@
 
                         const payload = await response.json();
                         const conversations = Array.isArray(payload.conversations) ? payload.conversations : [];
+                        const privateConversations = conversations.filter((conversation) => !conversation.conversation_is_group);
                         const favoriteContacts = Array.isArray(payload.favorite_contacts) ? payload.favorite_contacts : [];
+                        const chatGroups = Array.isArray(payload.chat_groups) ? payload.chat_groups : [];
                         const unreadTotal = Number(payload.unread_messages_total || 0);
+                        const chatsUnreadTotal = privateConversations
+                            .reduce((total, conversation) => total + Number(conversation.unread_messages_count || 0), 0);
+                        const groupsUnreadTotal = chatGroups
+                            .reduce((total, conversation) => total + Number(conversation.unread_messages_count || 0), 0);
 
                         if (sidebarUnreadTotal) {
                             sidebarUnreadTotal.textContent = String(unreadTotal);
                         }
 
+                        if (tabBadges.chats) {
+                            syncTabBadge(tabBadges.chats, chatsUnreadTotal);
+                        }
+
+                        if (tabBadges.groups) {
+                            syncTabBadge(tabBadges.groups, groupsUnreadTotal);
+                        }
+
                         if (sidebarList) {
-                            sidebarList.innerHTML = conversations.length === 0
+                            sidebarList.innerHTML = privateConversations.length === 0
                                 ? `
                                     <div class="px-4 py-8 text-center text-sm text-slate-500">
-                                        Sin conversaciones aún
+                                        Sin conversaciones aÃƒÂºn
                                     </div>
                                 `
-                                : conversations.map(renderConversation).join('');
+                                : privateConversations.map(renderConversation).join('');
                         }
 
                         if (sidebarFavoritesList) {
                             sidebarFavoritesList.innerHTML = favoriteContacts.length === 0
                                 ? `
                                     <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
-                                        Marca contactos como favoritos para verlos aquí.
+                                        Marca contactos como favoritos para verlos aquÃƒÂ­.
                                     </div>
                                 `
                                 : `
@@ -1758,6 +2253,18 @@
                                         ${favoriteContacts.map(renderFavoriteContact).join('')}
                                     </div>
                                 `;
+                        }
+
+                        if (sidebarGroupsList) {
+                            const groupConversations = chatGroups;
+
+                            sidebarGroupsList.innerHTML = groupConversations.length === 0
+                                ? `
+                                    <div class="px-4 py-8 text-center text-sm text-slate-500">
+                                        Aún no participas en ningún grupo.
+                                    </div>
+                                `
+                                : groupConversations.map(renderConversation).join('');
                         }
                     } catch (error) {
                         console.error(error);
@@ -1913,7 +2420,7 @@
                         const firstRejectedName = firstRejected?.name || 'el archivo';
 
                         if (hitTotalLimit) {
-                            showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
+                            showChatError('El conjunto de archivos adjuntos supera el peso mÃƒÂ¡ximo permitido de 30 MB.');
                             return;
                         }
 
@@ -2002,7 +2509,7 @@
                     const conversationId = Number(wrapper.dataset.conversationId || sidebarSelectedConversationId || 0);
 
                     if (!conversationId) {
-                        showChatError('No hay ninguna conversación activa.');
+                        showChatError('No hay ninguna conversaciÃƒÂ³n activa.');
                         return;
                     }
 
@@ -2012,7 +2519,7 @@
                     }
 
                     if (getAttachmentSnapshotTotalBytes() > maxAttachmentTotalBytes) {
-                        showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
+                        showChatError('El conjunto de archivos adjuntos supera el peso mÃƒÂ¡ximo permitido de 30 MB.');
                         return;
                     }
 
@@ -2042,7 +2549,7 @@
 
                         if (!response.ok) {
                             if (response.status === 413) {
-                                showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
+                                showChatError('El conjunto de archivos adjuntos supera el peso mÃƒÂ¡ximo permitido de 30 MB.');
                                 return;
                             }
 
@@ -2107,7 +2614,7 @@
                     });
                 };
 
-                setSidebarTab('chats');
+                setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
                 setSidebarCollapsed(false);
                 setMobileSidebarOpen(false);
 
@@ -2210,9 +2717,23 @@
                     }
                 });
 
+                document.addEventListener('click', (event) => {
+                    const overlay = event.target.closest('[data-chat-group-modal-overlay]');
+
+                    if (!overlay) {
+                        return;
+                    }
+
+                    if (event.target.closest('[data-chat-group-modal-close]') || event.target === overlay) {
+                        event.preventDefault();
+                        closeGroupModal();
+                    }
+                });
+
                 document.addEventListener('keydown', (event) => {
                     if (event.key === 'Escape') {
                         closeDeleteConfirmModal();
+                        closeGroupModal();
                     }
                 });
 
@@ -2329,7 +2850,7 @@
                 }
 
                 root.addEventListener('click', async (event) => {
-                    const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link]');
+                    const link = event.target.closest('[data-chat-conversation-link], [data-chat-recipient-link], [data-chat-group-link]');
 
                     if (!link) {
                         closeMessageMenu();
@@ -2410,7 +2931,7 @@
                         </div>
                         <h2 class="mt-5 text-lg font-bold text-brand-secondary">Política de uso del chat corporativo</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-500">
-                            Antes de continuar, acepta la política vigente para poder ver conversaciones, buscar compañeros y enviar mensajes.
+                            Antes de continuar, acepta la polÃƒÂ­tica vigente para poder ver conversaciones, buscar compaÃƒÂ±eros y enviar mensajes.
                         </p>
                     </div>
                 </div>
@@ -2436,19 +2957,19 @@
                     </div>
 
                     <div class="mt-6 space-y-4 text-sm leading-6 text-slate-600">
-                        <p>No debe utilizarse para compartir contraseñas, credenciales, datos bancarios, documentación confidencial no necesaria, datos personales de clientes o empleados que no sean imprescindibles, datos de salud ni cualquier otra información especialmente sensible.</p>
-                        <p>Los mensajes enviados a través del chat serán conservados por la empresa durante un plazo de 6 meses, salvo que exista una obligación legal, incidencia de seguridad o necesidad justificada que requiera conservar determinada información durante más tiempo.</p>
-                        <p>Las conversaciones y ficheros asociados podrán formar parte de copias de seguridad cifradas y custodiadas por IT fuera del repositorio del proyecto, con retención operativa separada y sin publicar datos sensibles en GitHub ni en ubicaciones públicas.</p>
-                        <p>El acceso al contenido de las conversaciones estará limitado a los usuarios participantes y, de forma excepcional, a personal autorizado de IT o dirección cuando exista una causa justificada relacionada con seguridad, cumplimiento normativo, investigación de incidencias, mantenimiento técnico o control laboral proporcionado. Todo acceso administrativo al contenido de conversaciones deberá quedar registrado.</p>
-                        <p>Los logs técnicos de la aplicación no incluyen el contenido de los mensajes, sino únicamente eventos técnicos necesarios para seguridad, mantenimiento, errores y auditoría.</p>
-                        <p>El uso de este chat no implica obligación de responder fuera del horario laboral, salvo situaciones excepcionales justificadas conforme a la política interna de la empresa y al derecho de desconexión digital.</p>
+                        <p>No debe utilizarse para compartir contraseÃƒÂ±as, credenciales, datos bancarios, documentaciÃƒÂ³n confidencial no necesaria, datos personales de clientes o empleados que no sean imprescindibles, datos de salud ni cualquier otra informaciÃƒÂ³n especialmente sensible.</p>
+                        <p>Los mensajes enviados a travÃƒÂ©s del chat serÃƒÂ¡n conservados por la empresa durante un plazo de 6 meses, salvo que exista una obligaciÃƒÂ³n legal, incidencia de seguridad o necesidad justificada que requiera conservar determinada informaciÃƒÂ³n durante mÃƒÂ¡s tiempo.</p>
+                        <p>Las conversaciones y ficheros asociados podrÃƒÂ¡n formar parte de copias de seguridad cifradas y custodiadas por IT fuera del repositorio del proyecto, con retenciÃƒÂ³n operativa separada y sin publicar datos sensibles en GitHub ni en ubicaciones pÃƒÂºblicas.</p>
+                        <p>El acceso al contenido de las conversaciones estarÃƒÂ¡ limitado a los usuarios participantes y, de forma excepcional, a personal autorizado de IT o direcciÃƒÂ³n cuando exista una causa justificada relacionada con seguridad, cumplimiento normativo, investigaciÃƒÂ³n de incidencias, mantenimiento tÃƒÂ©cnico o control laboral proporcionado. Todo acceso administrativo al contenido de conversaciones deberÃƒÂ¡ quedar registrado.</p>
+                        <p>Los logs tÃƒÂ©cnicos de la aplicaciÃƒÂ³n no incluyen el contenido de los mensajes, sino ÃƒÂºnicamente eventos tÃƒÂ©cnicos necesarios para seguridad, mantenimiento, errores y auditorÃƒÂ­a.</p>
+                        <p>El uso de este chat no implica obligaciÃƒÂ³n de responder fuera del horario laboral, salvo situaciones excepcionales justificadas conforme a la polÃƒÂ­tica interna de la empresa y al derecho de desconexiÃƒÂ³n digital.</p>
                         <p>Al pulsar “Aceptar y continuar”, el usuario confirma que ha leído y entendido esta política de uso.</p>
                     </div>
 
                     <div class="mt-10 border-t border-slate-200 pt-6 pb-6 sm:pb-8">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div class="text-xs text-slate-400">
-                                <span>Versión: {{ $policyVersion }}</span>
+                                <span>VersiÃƒÂ³n: {{ $policyVersion }}</span>
                             </div>
 
                             <form method="POST" action="{{ $policyAcceptUrl }}" class="sm:ml-auto">
@@ -2458,6 +2979,9 @@
                                 @endif
                                 @if (filled($policyReturnConversation))
                                     <input type="hidden" name="conversation" value="{{ $policyReturnConversation }}">
+                                @endif
+                                @if (filled($policyReturnGroup))
+                                    <input type="hidden" name="group" value="{{ $policyReturnGroup }}">
                                 @endif
                                 <button type="submit" class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90">
                                     Aceptar y continuar

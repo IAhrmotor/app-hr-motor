@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompanyChatConversation;
+use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatFavoriteContact;
 use App\Models\CompanyChatMessage;
+use App\Models\CompanyChatMessageRead;
 use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,6 +38,35 @@ class CompanyChatController extends Controller
         $policyVersion = ChatPolicy::version();
         $policyAccepted = $this->hasAcceptedChatPolicy($authUser);
         $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
+        $chatGroups = $authUser->chatGroups()
+            ->withCount('participants')
+            ->with(['participants' => function ($query): void {
+                $query->orderBy('name');
+            }, 'conversation' => function ($query): void {
+                $query->with(['messages' => function ($messageQuery): void {
+                    $messageQuery->with('reads');
+                }]);
+            }])
+            ->get();
+        $chatGroups = $this->sortChatGroupsForSidebar($chatGroups);
+
+        $conversations = CompanyChatConversation::query()
+            ->forUser($authUser)
+            ->whereNull('company_chat_group_id')
+            ->with(['userOne', 'userTwo'])
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $conversations->each(function (CompanyChatConversation $conversation) use ($authUser): void {
+            $conversation->setAttribute('unread_messages_count', $this->conversationUnreadMessagesCount($conversation, $authUser));
+        });
+
+        $chatGroups->each(function (CompanyChatGroup $chatGroup) use ($authUser): void {
+            $chatGroup->setAttribute('avatar_url', $this->groupAvatarUrl($chatGroup));
+            $chatGroup->setRelation('conversation', $chatGroup->conversation);
+            $chatGroup->conversation?->setAttribute('unread_messages_count', $this->conversationUnreadMessagesCount($chatGroup->conversation, $authUser));
+        });
 
         if ($request->boolean('ajax')) {
             abort_unless($policyAccepted, 403);
@@ -76,6 +108,21 @@ class CompanyChatController extends Controller
             ]);
         }
 
+        if ($policyAccepted && $request->filled('group')) {
+            $group = CompanyChatGroup::query()
+                ->whereKey($request->integer('group'))
+                ->whereHas('participants', function ($query) use ($authUser): void {
+                    $query->whereKey($authUser->id);
+                })
+                ->firstOrFail();
+
+            $conversation = $this->findOrCreateGroupConversation($group);
+
+            return redirect()->route('chat.beta', [
+                'conversation' => $conversation->id,
+            ]);
+        }
+
         if (! $policyAccepted) {
             return view('tools.chat-beta', [
                 'conversations' => collect(),
@@ -85,17 +132,20 @@ class CompanyChatController extends Controller
                 'teamUsers' => [],
                 'search' => $search,
                 'favoriteUserIds' => [],
+                'chatGroups' => collect(),
                 'policyAccepted' => false,
                 'policyVersion' => $policyVersion,
                 'policyStatusUrl' => route('chat.beta.policy.status'),
                 'policyAcceptUrl' => route('chat.beta.policy.accept'),
                 'policyReturnRecipient' => $request->filled('recipient') ? $request->integer('recipient') : null,
                 'policyReturnConversation' => $request->filled('conversation') ? $request->integer('conversation') : null,
+                'policyReturnGroup' => $request->filled('group') ? $request->integer('group') : null,
             ]);
         }
 
         $conversations = CompanyChatConversation::query()
             ->forUser($authUser)
+            ->whereNull('company_chat_group_id')
             ->with(['userOne', 'userTwo'])
             ->withCount([
                 'messages as unread_messages_count' => function ($query) use ($authUser): void {
@@ -112,6 +162,14 @@ class CompanyChatController extends Controller
 
         if ($conversationId) {
             $selectedConversation = $conversations->firstWhere('id', $conversationId);
+
+            if (! $selectedConversation) {
+                $selectedConversation = CompanyChatConversation::query()
+                    ->forUser($authUser)
+                    ->whereKey($conversationId)
+                    ->with(['userOne', 'userTwo', 'chatGroup.participants'])
+                    ->first();
+            }
         }
 
         if (! $selectedConversation) {
@@ -122,10 +180,16 @@ class CompanyChatController extends Controller
             $selectedConversation->load([
                 'userOne',
                 'userTwo',
+                'chatGroup.participants',
                 'messages' => function ($query) {
                     $query->withTrashed()->with('sender')->orderBy('created_at');
                 },
             ]);
+
+            $selectedConversation->chatGroup?->setAttribute(
+                'avatar_url',
+                $this->groupAvatarUrl($selectedConversation->chatGroup)
+            );
 
             $this->markConversationAsRead($selectedConversation, $authUser);
             $this->markConversationNotificationsAsRead($selectedConversation, $authUser);
@@ -133,10 +197,15 @@ class CompanyChatController extends Controller
             $selectedConversation->load([
                 'userOne',
                 'userTwo',
+                'chatGroup.participants',
                 'messages' => function ($query) {
                     $query->withTrashed()->with('sender')->orderBy('created_at');
                 },
             ]);
+            $selectedConversation->chatGroup?->setAttribute(
+                'avatar_url',
+                $this->groupAvatarUrl($selectedConversation->chatGroup)
+            );
         }
 
         $people = User::query()
@@ -180,12 +249,17 @@ class CompanyChatController extends Controller
             ->values()
             ->all();
 
+        $privateConversations = $conversations
+            ->reject(fn (CompanyChatConversation $conversation): bool => $conversation->isGroupConversation())
+            ->values();
+
         return view('tools.chat-beta', [
-            'conversations' => $conversations,
+            'conversations' => $privateConversations,
             'selectedConversation' => $selectedConversation,
             'people' => $people,
             'favoriteContacts' => $favoriteContacts,
             'teamUsers' => $teamUsers,
+            'chatGroups' => $chatGroups,
             'search' => $search,
             'favoriteUserIds' => $favoriteUserIds,
             'policyAccepted' => true,
@@ -243,6 +317,8 @@ class CompanyChatController extends Controller
             $redirectParams['recipient'] = $request->integer('recipient');
         } elseif ($request->filled('conversation')) {
             $redirectParams['conversation'] = $request->integer('conversation');
+        } elseif ($request->filled('group')) {
+            $redirectParams['group'] = $request->integer('group');
         }
 
         return redirect()->route('chat.beta', $redirectParams);
@@ -293,9 +369,7 @@ class CompanyChatController extends Controller
             return $message->load('sender');
         });
 
-        if ($recipient = $conversation->otherParticipant($request->user())) {
-            $recipient->notify(new CompanyChatMessageNotification($conversation, $message, $request->user()));
-        }
+        $this->notifyConversationParticipants($conversation, $message, $request->user());
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -477,17 +551,19 @@ class CompanyChatController extends Controller
             $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
             $currentDateKey = $message->created_at?->format('Y-m-d');
             $nextDateKey = $nextMessage?->created_at?->format('Y-m-d');
+            $isSystem = $message->isSystemMessage();
 
             return [
                 'id' => $message->id,
                 'body' => $message->body,
                 'preview_text' => $message->preview_text,
                 'sender_id' => $message->sender_id,
-                'sender_name' => $message->sender?->name,
-                'sender_chat_role_label' => app_chat_role_label($message->sender),
-                'sender_is_active' => $message->sender?->is_active,
-                'sender_is_disabled' => $message->sender?->isDisabled(),
-                'is_mine' => $message->sender_id === $authUser->id,
+                'sender_name' => $isSystem ? null : $message->sender?->name,
+                'sender_chat_role_label' => $isSystem ? 'Sistema' : app_chat_role_label($message->sender),
+                'sender_is_active' => $isSystem ? false : $message->sender?->is_active,
+                'sender_is_disabled' => $isSystem ? false : $message->sender?->isDisabled(),
+                'is_mine' => ! $isSystem && $message->sender_id === $authUser->id,
+                'is_system' => $isSystem,
                 'created_at' => $message->created_at?->toIso8601String(),
                 'updated_at' => $message->updated_at?->toIso8601String(),
                 'edited_at' => $message->edited_at?->toIso8601String(),
@@ -499,20 +575,9 @@ class CompanyChatController extends Controller
             ];
         });
 
-        $partner = $conversation->otherParticipant($authUser);
-
         return response()->json([
             'conversation_id' => $conversation->id,
-            'partner_id' => $partner?->id,
-            'partner_name' => $partner?->name,
-            'partner_avatar_url' => $partner?->avatar_url,
-            'partner_profile_url' => $partner ? route('users.show', $partner) : null,
-            'partner_chat_role_label' => app_chat_role_label($partner),
-            'partner_dealership_name' => $partner?->resolved_dealership_name ?? 'Sin delegación',
-            'partner_is_active' => $partner?->is_active,
-            'partner_is_disabled' => $partner?->isDisabled(),
-            'partner_status_label' => $partner?->isDisabled() ? 'Usuario desactivado' : ($partner?->is_active ? 'Activo' : 'Pendiente'),
-            'partner_is_favorite' => $partner?->id ? in_array($partner->id, $favoriteUserIds, true) : false,
+            ...$this->conversationPayload($conversation, $authUser, $favoriteUserIds),
             'last_message_at' => $conversation->last_message_at?->toIso8601String(),
             'messages' => $messagesPayload,
         ]);
@@ -526,41 +591,70 @@ class CompanyChatController extends Controller
         $authUser = $request->user();
         $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
-        $conversations = CompanyChatConversation::query()
+        $privateConversations = CompanyChatConversation::query()
             ->forUser($authUser)
+            ->whereNull('company_chat_group_id')
             ->with(['userOne', 'userTwo'])
-            ->withCount([
-                'messages as unread_messages_count' => function ($query) use ($authUser): void {
-                    $query->whereNull('read_at')
-                        ->where('sender_id', '!=', $authUser->id);
-                },
-            ])
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
             ->get()
-            ->map(static function (CompanyChatConversation $conversation) use ($authUser, $favoriteUserIds): array {
-                $partner = $conversation->otherParticipant($authUser);
+            ->map(function (CompanyChatConversation $conversation) use ($authUser, $favoriteUserIds): array {
+                $unreadMessagesCount = $this->conversationUnreadMessagesCount($conversation, $authUser);
 
                 return [
                     'id' => $conversation->id,
-                    'partner_name' => $partner?->name,
-                    'partner_avatar_url' => $partner?->avatar_url,
-                    'partner_chat_role_label' => app_chat_role_label($partner),
-                    'partner_is_active' => $partner?->is_active,
-                    'partner_is_disabled' => $partner?->isDisabled(),
-                    'partner_status_label' => $partner?->isDisabled() ? 'Usuario desactivado' : ($partner?->is_active ? 'Activo' : 'Pendiente'),
-                    'partner_is_favorite' => $partner?->id ? in_array($partner->id, $favoriteUserIds, true) : false,
+                    ...$this->conversationPayload($conversation, $authUser, $favoriteUserIds),
                     'last_message_excerpt' => $conversation->last_message_excerpt,
                     'last_message_at_label' => $conversation->last_message_at?->translatedFormat('d/m H:i'),
-                    'unread_messages_count' => (int) ($conversation->unread_messages_count ?? 0),
+                    'unread_messages_count' => $unreadMessagesCount,
                 ];
             });
+
+        $chatGroups = $authUser->chatGroups()
+            ->withCount('participants')
+            ->with(['participants' => function ($query): void {
+                $query->orderBy('name');
+            }, 'conversation' => function ($query): void {
+                $query->with(['messages' => function ($messageQuery): void {
+                    $messageQuery->with('reads');
+                }]);
+            }])
+            ->get();
+        $chatGroups = $this->sortChatGroupsForSidebar($chatGroups);
+
+        $chatGroupsPayload = $chatGroups->map(function (CompanyChatGroup $chatGroup) use ($authUser): array {
+            $conversation = $chatGroup->conversation;
+            $participants = $chatGroup->participants;
+
+            return [
+                'id' => $chatGroup->id,
+                'group_id' => $chatGroup->id,
+                'system_group_type' => $chatGroup->system_group_type,
+                'conversation_id' => $conversation?->id,
+                'conversation_is_group' => true,
+                'conversation_type_label' => 'Grupo',
+                'conversation_name' => $chatGroup->name,
+                'conversation_avatar_url' => $this->groupAvatarUrl($chatGroup),
+                'conversation_profile_url' => null,
+                'conversation_chat_role_label' => 'Grupo',
+                'conversation_dealership_name' => $participants->count() . ' participantes',
+                'conversation_is_active' => true,
+                'conversation_is_disabled' => false,
+                'conversation_status_label' => $participants->count() . ' participantes',
+                'conversation_is_favorite' => false,
+                'conversation_participants_count' => $participants->count(),
+                'last_message_excerpt' => $conversation?->last_message_excerpt,
+                'last_message_at_label' => $conversation?->last_message_at?->translatedFormat('d/m H:i'),
+                'unread_messages_count' => $this->conversationUnreadMessagesCount($conversation, $authUser),
+            ];
+        })->values();
 
         $favoriteContacts = $this->favoriteContactsPayload($authUser);
 
         return response()->json([
-            'unread_messages_total' => $conversations->sum('unread_messages_count'),
-            'conversations' => $conversations,
+            'unread_messages_total' => $privateConversations->sum('unread_messages_count'),
+            'conversations' => $privateConversations,
+            'chat_groups' => $chatGroupsPayload,
             'favorite_contacts' => $favoriteContacts,
         ]);
     }
@@ -614,6 +708,49 @@ class CompanyChatController extends Controller
         });
     }
 
+    private function findOrCreateGroupConversation(CompanyChatGroup $group): CompanyChatConversation
+    {
+        return DB::transaction(function () use ($group): CompanyChatConversation {
+            return CompanyChatConversation::query()->firstOrCreate([
+                'company_chat_group_id' => $group->id,
+            ]);
+        });
+    }
+
+    /**
+     * @param  Collection<int, CompanyChatGroup>  $chatGroups
+     * @return Collection<int, CompanyChatGroup>
+     */
+    private function sortChatGroupsForSidebar(Collection $chatGroups): Collection
+    {
+        return $chatGroups
+            ->sort(function (CompanyChatGroup $leftGroup, CompanyChatGroup $rightGroup): int {
+                $leftConversation = $leftGroup->conversation;
+                $rightConversation = $rightGroup->conversation;
+                $leftTimestamp = $leftConversation?->last_message_at?->timestamp;
+                $rightTimestamp = $rightConversation?->last_message_at?->timestamp;
+
+                if ($leftTimestamp === null && $rightTimestamp === null) {
+                    return strcasecmp($leftGroup->name, $rightGroup->name);
+                }
+
+                if ($leftTimestamp === null) {
+                    return 1;
+                }
+
+                if ($rightTimestamp === null) {
+                    return -1;
+                }
+
+                if ($leftTimestamp !== $rightTimestamp) {
+                    return $rightTimestamp <=> $leftTimestamp;
+                }
+
+                return strcasecmp($leftGroup->name, $rightGroup->name);
+            })
+            ->values();
+    }
+
     private function hasAcceptedChatPolicy(?User $user): bool
     {
         return (bool) $user && $user->hasAcceptedPolicyVersion(ChatPolicy::version());
@@ -626,10 +763,84 @@ class CompanyChatController extends Controller
 
     private function markConversationAsRead(CompanyChatConversation $conversation, User $user): void
     {
+        if ($conversation->isGroupConversation()) {
+            $this->markGroupConversationAsRead($conversation, $user);
+
+            return;
+        }
+
         $conversation->messages()
             ->where('sender_id', '!=', $user->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+    }
+
+    private function markGroupConversationAsRead(CompanyChatConversation $conversation, User $user): void
+    {
+        $messages = $conversation->messages()
+            ->with('sender')
+            ->where(function ($query) use ($user): void {
+                $query->whereNull('sender_id')
+                    ->orWhere('sender_id', '!=', $user->id);
+            })
+            ->get();
+
+        if ($messages->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+
+        foreach ($messages as $message) {
+            CompanyChatMessageRead::query()->updateOrCreate(
+                [
+                    'company_chat_message_id' => $message->id,
+                    'user_id' => $user->id,
+                ],
+                [
+                    'read_at' => $now,
+                ],
+            );
+
+            $this->refreshGroupMessageReadState($conversation, $message);
+        }
+    }
+
+    private function refreshGroupMessageReadState(CompanyChatConversation $conversation, CompanyChatMessage $message): void
+    {
+        if (! $conversation->isGroupConversation()) {
+            return;
+        }
+
+        if ($message->isSystemMessage() || ! $message->sender instanceof User) {
+            $requiredReaderIds = $conversation->chatGroup?->participants
+                ->pluck('id')
+                ->filter()
+                ->values();
+        } else {
+            $requiredReaderIds = $conversation->participantsFor($message->sender)
+                ->pluck('id')
+                ->reject(fn (int $userId): bool => $userId === $message->sender_id)
+                ->values();
+        }
+
+        if ($requiredReaderIds->isEmpty()) {
+            if ($message->read_at === null) {
+                $message->forceFill(['read_at' => now()])->save();
+            }
+
+            return;
+        }
+
+        $readCount = CompanyChatMessageRead::query()
+            ->where('company_chat_message_id', $message->id)
+            ->whereIn('user_id', $requiredReaderIds->all())
+            ->distinct()
+            ->count('user_id');
+
+        if ($readCount >= $requiredReaderIds->count() && $message->read_at === null) {
+            $message->forceFill(['read_at' => now()])->save();
+        }
     }
 
     private function markConversationNotificationsAsRead(CompanyChatConversation $conversation, User $user): void
@@ -640,19 +851,46 @@ class CompanyChatController extends Controller
             ->update(['read_at' => now()]);
     }
 
+    private function conversationUnreadMessagesCount(?CompanyChatConversation $conversation, User $user): int
+    {
+        if (! $conversation) {
+            return 0;
+        }
+
+        if ($conversation->isGroupConversation()) {
+            return (int) $conversation->messages()
+                ->where(function ($query) use ($user): void {
+                    $query->whereNull('sender_id')
+                        ->orWhere('sender_id', '!=', $user->id);
+                })
+                ->whereDoesntHave('reads', function ($query) use ($user): void {
+                    $query->where('user_id', $user->id);
+                })
+                ->count();
+        }
+
+        return (int) $conversation->messages()
+            ->whereNull('read_at')
+            ->where('sender_id', '!=', $user->id)
+            ->count();
+    }
+
     private function removeChatNotificationsForMessage(CompanyChatConversation $conversation, User $user, int $messageId): void
     {
-        $recipient = $conversation->otherParticipant($user);
+        $recipients = $conversation->participantsFor($user)
+            ->reject(fn (User $participant): bool => $participant->id === $user->id);
 
-        if (! $recipient) {
+        if ($recipients->isEmpty()) {
             return;
         }
 
-        $recipient->notifications()
-            ->where('type', CompanyChatMessageNotification::class)
-            ->where('data->conversation_id', $conversation->id)
-            ->where('data->message_id', $messageId)
-            ->delete();
+        foreach ($recipients as $recipient) {
+            $recipient->notifications()
+                ->where('type', CompanyChatMessageNotification::class)
+                ->where('data->conversation_id', $conversation->id)
+                ->where('data->message_id', $messageId)
+                ->delete();
+        }
     }
 
     private function refreshConversationSummary(CompanyChatConversation $conversation): void
@@ -703,6 +941,93 @@ class CompanyChatController extends Controller
                 'is_favorite' => true,
             ];
         })->values()->all();
+    }
+
+    private function notifyConversationParticipants(CompanyChatConversation $conversation, CompanyChatMessage $message, User $sender): void
+    {
+        $conversation->participantsFor($sender)
+            ->reject(fn (User $participant): bool => $participant->id === $sender->id)
+            ->each(function (User $participant) use ($conversation, $message, $sender): void {
+                $participant->notify(new CompanyChatMessageNotification($conversation, $message, $sender));
+            });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function conversationPayload(CompanyChatConversation $conversation, User $authUser, array $favoriteUserIds = []): array
+    {
+        $isGroup = $conversation->isGroupConversation();
+        $partner = $conversation->otherParticipant($authUser);
+        $group = $conversation->chatGroup;
+        $participants = $conversation->participantsFor($authUser);
+        $participantsCount = $participants->count();
+        $partnerRoleLabel = app_chat_role_label($partner);
+        $partnerDealershipName = $partner?->resolved_dealership_name ?? 'Sin delegación';
+
+        return [
+            'conversation_is_group' => $isGroup,
+            'conversation_system_group_type' => $isGroup ? $group?->system_group_type : null,
+            'conversation_type_label' => $isGroup ? 'Grupo' : 'Privada',
+            'partner_id' => $isGroup ? null : $partner?->id,
+            'partner_name' => $isGroup ? ($group?->name ?? 'Grupo de chat') : $partner?->name,
+            'partner_avatar_url' => $isGroup
+                ? $this->groupAvatarUrl($group)
+                : ($partner?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png')),
+            'partner_profile_url' => $isGroup ? null : ($partner ? route('users.show', $partner) : null),
+            'partner_chat_role_label' => $isGroup ? 'Grupo' : $partnerRoleLabel,
+            'partner_dealership_name' => $isGroup ? ($participantsCount . ' participantes') : $partnerDealershipName,
+            'partner_is_active' => $isGroup ? true : $partner?->is_active,
+            'partner_is_disabled' => $isGroup ? false : $partner?->isDisabled(),
+            'partner_status_label' => $isGroup
+                ? ($participantsCount . ' participantes')
+                : ($partner?->isDisabled() ? 'Usuario desactivado' : ($partner?->is_active ? 'Activo' : 'Pendiente')),
+            'partner_is_favorite' => $isGroup ? false : ($partner?->id ? in_array($partner->id, $favoriteUserIds, true) : false),
+            'conversation_name' => $isGroup ? ($group?->name ?? 'Grupo de chat') : ($partner?->name ?? 'Conversación'),
+            'conversation_avatar_url' => $isGroup
+                ? $this->groupAvatarUrl($group)
+                : ($partner?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png')),
+            'conversation_profile_url' => $isGroup ? null : ($partner ? route('users.show', $partner) : null),
+            'conversation_chat_role_label' => $isGroup ? 'Grupo' : $partnerRoleLabel,
+            'conversation_dealership_name' => $isGroup ? ($participantsCount . ' participantes') : $partnerDealershipName,
+            'conversation_is_active' => $isGroup ? true : $partner?->is_active,
+            'conversation_is_disabled' => $isGroup ? false : $partner?->isDisabled(),
+            'conversation_status_label' => $isGroup
+                ? ($participantsCount . ' participantes')
+                : ($partner?->isDisabled() ? 'Usuario desactivado' : ($partner?->is_active ? 'Activo' : 'Pendiente')),
+            'conversation_is_favorite' => $isGroup ? false : ($partner?->id ? in_array($partner->id, $favoriteUserIds, true) : false),
+            'conversation_participants_count' => $participantsCount,
+            'conversation_participants_text' => $participants->pluck('name')->implode(', '),
+            'conversation_participants' => $participants->map(function (User $participant) use ($favoriteUserIds): array {
+                return [
+                    'id' => $participant->id,
+                    'name' => $participant->name,
+                    'profile_url' => route('users.show', $participant),
+                    'avatar_url' => $participant->avatar_url,
+                    'resolved_dealership_name' => $participant->resolved_dealership_name,
+                    'extra_role_label' => $participant->extra_role ? (User::extraRoleLabels()[$participant->extra_role] ?? ucfirst((string) $participant->extra_role)) : null,
+                    'chat_role_label' => app_chat_role_label($participant),
+                    'is_disabled' => $participant->isDisabled(),
+                    'is_favorite' => in_array($participant->id, $favoriteUserIds, true),
+                ];
+            })->values()->all(),
+            'conversation_participants_preview' => $participants->take(3)->map(function (User $participant) use ($favoriteUserIds): array {
+                return [
+                    'id' => $participant->id,
+                    'name' => $participant->name,
+                    'avatar_url' => $participant->avatar_url,
+                    'chat_role_label' => app_chat_role_label($participant),
+                    'resolved_dealership_name' => $participant->resolved_dealership_name,
+                    'is_disabled' => $participant->isDisabled(),
+                    'is_favorite' => in_array($participant->id, $favoriteUserIds, true),
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    private function groupAvatarUrl(?CompanyChatGroup $group): string
+    {
+        return $group?->avatar_url ?? '';
     }
 
     /**
