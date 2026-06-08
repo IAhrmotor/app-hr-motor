@@ -7,7 +7,6 @@ use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatFavoriteContact;
 use App\Models\CompanyChatMessage;
 use App\Models\CompanyChatMessageRead;
-use App\Models\Dealership;
 use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
@@ -1019,19 +1018,7 @@ class CompanyChatController extends Controller
 
     private function groupAvatarUrl(?CompanyChatGroup $group): string
     {
-        if (! $group) {
-            return asset('images/users/hrmotor-default-user-avatar.png');
-        }
-
-        if ($group->system_group_type === CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP) {
-            $dealership = Dealership::query()->find($group->system_group_key);
-
-            if ($dealership?->image_url) {
-                return $dealership->image_url;
-            }
-        }
-
-        return '';
+        return $group?->avatar_url ?? '';
     }
 
     /**
