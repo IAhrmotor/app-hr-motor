@@ -48,11 +48,21 @@ class CompanyChatGroup extends Model
     protected function avatarUrl(): Attribute
     {
         return Attribute::get(function (): ?string {
-            if ($this->system_group_type !== self::SYSTEM_GROUP_TYPE_DEALERSHIP || blank($this->system_group_key)) {
+            if ($this->system_group_type === self::SYSTEM_GROUP_TYPE_DEALERSHIP && filled($this->system_group_key)) {
+                $dealership = Dealership::query()->find($this->system_group_key);
+
+                if ($dealership?->image_url) {
+                    return $dealership->image_url;
+                }
+            }
+
+            if (blank($this->name)) {
                 return null;
             }
 
-            $dealership = Dealership::query()->find($this->system_group_key);
+            $dealership = Dealership::query()
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower((string) $this->name)])
+                ->first();
 
             return $dealership?->image_url;
         });

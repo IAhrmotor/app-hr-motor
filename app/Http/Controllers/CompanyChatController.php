@@ -186,6 +186,11 @@ class CompanyChatController extends Controller
                 },
             ]);
 
+            $selectedConversation->chatGroup?->setAttribute(
+                'avatar_url',
+                $this->groupAvatarUrl($selectedConversation->chatGroup)
+            );
+
             $this->markConversationAsRead($selectedConversation, $authUser);
             $this->markConversationNotificationsAsRead($selectedConversation, $authUser);
             $selectedConversation->refresh();
@@ -197,6 +202,10 @@ class CompanyChatController extends Controller
                     $query->withTrashed()->with('sender')->orderBy('created_at');
                 },
             ]);
+            $selectedConversation->chatGroup?->setAttribute(
+                'avatar_url',
+                $this->groupAvatarUrl($selectedConversation->chatGroup)
+            );
         }
 
         $people = User::query()

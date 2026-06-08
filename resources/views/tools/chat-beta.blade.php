@@ -322,7 +322,7 @@
                                     @if ($chatGroupAvatarUrl)
                                         <img src="{{ $chatGroupAvatarUrl }}"
                                             alt="Avatar de {{ $chatGroup->name }}"
-                                            class="h-11 w-11 rounded-2xl object-cover">
+                                            class="h-11 w-11 cursor-pointer rounded-2xl object-cover">
                                     @else
                                         <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -843,7 +843,7 @@
                     <div class="flex items-start gap-3">
                         <button
                             type="button"
-                            class="group relative hidden h-11 w-11 shrink-0 overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            class="group relative hidden h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                             aria-label="Ampliar imagen del grupo"
                             data-chat-group-modal-avatar-button
                             @click.stop="openImage({ src: $el.dataset.chatGroupModalAvatarSrc, alt: $el.dataset.chatGroupModalAvatarAlt, title: $el.dataset.chatGroupModalAvatarTitle })"
