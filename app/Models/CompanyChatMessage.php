@@ -23,6 +23,7 @@ class CompanyChatMessage extends Model
         'attachments',
         'read_at',
         'edited_at',
+        'is_system',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class CompanyChatMessage extends Model
             'read_at' => 'datetime',
             'edited_at' => 'datetime',
             'deleted_at' => 'datetime',
+            'is_system' => 'boolean',
         ];
     }
 
@@ -56,6 +58,11 @@ class CompanyChatMessage extends Model
     public function isRead(): bool
     {
         return $this->read_at !== null;
+    }
+
+    public function isSystemMessage(): bool
+    {
+        return (bool) $this->is_system;
     }
 
     public function canBeEditedOrDeletedBy(User $user, ?Carbon $at = null): bool

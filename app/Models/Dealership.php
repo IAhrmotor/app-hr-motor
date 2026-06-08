@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CompanyChatDefaultGroupSyncService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,13 @@ class Dealership extends Model
         'google_business_profile_location_name',
         'google_business_profile_location_title',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function (self $dealership): void {
+            app(CompanyChatDefaultGroupSyncService::class)->syncDealership($dealership);
+        });
+    }
 
     public function users(): HasMany
     {

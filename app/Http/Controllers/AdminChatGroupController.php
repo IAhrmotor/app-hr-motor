@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatGroupActivityLog;
 use App\Models\User;
+use App\Services\CompanyChatGroupSystemMessageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -127,6 +128,7 @@ class AdminChatGroupController extends Controller
 
         $chatGroup->load('participants');
         $participantIds = collect($validated['participants'])->map(fn ($value) => (int) $value)->unique()->values();
+        $previousParticipantIds = $chatGroup->participants->pluck('id')->map(fn ($value) => (int) $value)->values();
 
         if ($participantIds->count() < 2) {
             return back()
@@ -134,6 +136,8 @@ class AdminChatGroupController extends Controller
                 ->withInput();
         }
         $changes = [];
+        $addedParticipantIds = $participantIds->diff($previousParticipantIds)->values();
+        $removedParticipantIds = $previousParticipantIds->diff($participantIds)->values();
 
         if ($chatGroup->name !== $validated['name']) {
             $changes['name'] = ['from' => $chatGroup->name, 'to' => $validated['name']];
@@ -146,7 +150,7 @@ class AdminChatGroupController extends Controller
             $changes['participants'] = ['from' => $previousParticipantsSummary, 'to' => $newParticipantsSummary];
         }
 
-        DB::transaction(function () use ($request, $chatGroup, $validated, $participantIds, $changes): void {
+        DB::transaction(function () use ($request, $chatGroup, $validated, $participantIds, $changes, $addedParticipantIds, $removedParticipantIds): void {
             $chatGroup->update([
                 'name' => $validated['name'],
             ]);
@@ -161,6 +165,29 @@ class AdminChatGroupController extends Controller
                     action: CompanyChatGroupActivityLog::ACTION_UPDATED,
                     changes: $changes,
                 );
+            }
+
+            if ($addedParticipantIds->isNotEmpty() || $removedParticipantIds->isNotEmpty()) {
+                $systemMessageService = app(CompanyChatGroupSystemMessageService::class);
+                $actor = $request->user();
+
+                $groupParticipants = $chatGroup->participants->keyBy('id');
+
+                $addedParticipantIds->each(function (int $participantId) use ($systemMessageService, $chatGroup, $groupParticipants, $actor): void {
+                    $participant = $groupParticipants->get($participantId);
+
+                    if ($participant) {
+                        $systemMessageService->recordParticipantAdded($chatGroup, $participant, $actor);
+                    }
+                });
+
+                $removedParticipantIds->each(function (int $participantId) use ($systemMessageService, $actor, $chatGroup): void {
+                    $participant = User::query()->find($participantId);
+
+                    if ($participant) {
+                        $systemMessageService->recordParticipantRemoved($chatGroup, $participant, $actor);
+                    }
+                });
             }
         });
 
