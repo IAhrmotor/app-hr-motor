@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CompanyChatDefaultGroupSyncService;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -177,6 +178,18 @@ class User extends Authenticatable
             if (blank($user->avatar_path)) {
                 $user->avatar_path = self::DEFAULT_AVATAR_PATH;
             }
+        });
+
+        static::created(function (self $user): void {
+            app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, false);
+        });
+
+        static::updated(function (self $user): void {
+            if (! $user->wasChanged(['extra_role', 'dealership_id'])) {
+                return;
+            }
+
+            app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, true);
         });
     }
 

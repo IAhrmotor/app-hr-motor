@@ -261,6 +261,40 @@ class CompanyChatTest extends TestCase
             ->assertSee('Emisor Grupo', false);
     }
 
+    public function test_admin_group_member_changes_write_system_messages_in_the_group_chat(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'name' => 'Admin de pruebas',
+        ]);
+        $firstMember = User::factory()->create(['name' => 'Miembro Uno']);
+        $secondMember = User::factory()->create(['name' => 'Miembro Dos']);
+        $replacementMember = User::factory()->create(['name' => 'Miembro Tres']);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo sistema',
+        ]);
+        $group->participants()->sync([$firstMember->id, $secondMember->id]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.chat-groups.update', $group), [
+                'name' => $group->name,
+                'participants' => [$firstMember->id, $replacementMember->id],
+            ])
+            ->assertRedirect(route('admin.chat-groups.index'));
+
+        $conversation = CompanyChatConversation::query()
+            ->where('company_chat_group_id', $group->id)
+            ->firstOrFail();
+
+        $messages = $conversation->messages()->orderBy('created_at')->get();
+
+        $this->assertCount(2, $messages);
+        $this->assertTrue($messages->every(fn (CompanyChatMessage $message): bool => (bool) $message->is_system));
+        $this->assertTrue($messages->contains(fn (CompanyChatMessage $message): bool => str_contains($message->body, 'salió') && str_contains($message->body, $secondMember->name)));
+        $this->assertTrue($messages->contains(fn (CompanyChatMessage $message): bool => str_contains($message->body, 'añadió') && str_contains($message->body, $replacementMember->name)));
+    }
+
     public function test_chat_attachment_route_serves_files_for_conversation_participants(): void
     {
         $sender = User::factory()->create();

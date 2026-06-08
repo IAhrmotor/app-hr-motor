@@ -541,17 +541,19 @@ class CompanyChatController extends Controller
             $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
             $currentDateKey = $message->created_at?->format('Y-m-d');
             $nextDateKey = $nextMessage?->created_at?->format('Y-m-d');
+            $isSystem = $message->isSystemMessage();
 
             return [
                 'id' => $message->id,
                 'body' => $message->body,
                 'preview_text' => $message->preview_text,
                 'sender_id' => $message->sender_id,
-                'sender_name' => $message->sender?->name,
-                'sender_chat_role_label' => app_chat_role_label($message->sender),
-                'sender_is_active' => $message->sender?->is_active,
-                'sender_is_disabled' => $message->sender?->isDisabled(),
-                'is_mine' => $message->sender_id === $authUser->id,
+                'sender_name' => $isSystem ? null : $message->sender?->name,
+                'sender_chat_role_label' => $isSystem ? 'Sistema' : app_chat_role_label($message->sender),
+                'sender_is_active' => $isSystem ? false : $message->sender?->is_active,
+                'sender_is_disabled' => $isSystem ? false : $message->sender?->isDisabled(),
+                'is_mine' => ! $isSystem && $message->sender_id === $authUser->id,
+                'is_system' => $isSystem,
                 'created_at' => $message->created_at?->toIso8601String(),
                 'updated_at' => $message->updated_at?->toIso8601String(),
                 'edited_at' => $message->edited_at?->toIso8601String(),
@@ -766,7 +768,10 @@ class CompanyChatController extends Controller
     {
         $messages = $conversation->messages()
             ->with('sender')
-            ->where('sender_id', '!=', $user->id)
+            ->where(function ($query) use ($user): void {
+                $query->whereNull('sender_id')
+                    ->orWhere('sender_id', '!=', $user->id);
+            })
             ->get();
 
         if ($messages->isEmpty()) {
@@ -792,14 +797,21 @@ class CompanyChatController extends Controller
 
     private function refreshGroupMessageReadState(CompanyChatConversation $conversation, CompanyChatMessage $message): void
     {
-        if (! $conversation->isGroupConversation() || ! $message->sender instanceof User) {
+        if (! $conversation->isGroupConversation()) {
             return;
         }
 
-        $requiredReaderIds = $conversation->participantsFor($message->sender)
-            ->pluck('id')
-            ->reject(fn (int $userId): bool => $userId === $message->sender_id)
-            ->values();
+        if ($message->isSystemMessage() || ! $message->sender instanceof User) {
+            $requiredReaderIds = $conversation->chatGroup?->participants
+                ->pluck('id')
+                ->filter()
+                ->values();
+        } else {
+            $requiredReaderIds = $conversation->participantsFor($message->sender)
+                ->pluck('id')
+                ->reject(fn (int $userId): bool => $userId === $message->sender_id)
+                ->values();
+        }
 
         if ($requiredReaderIds->isEmpty()) {
             if ($message->read_at === null) {
@@ -836,7 +848,10 @@ class CompanyChatController extends Controller
 
         if ($conversation->isGroupConversation()) {
             return (int) $conversation->messages()
-                ->where('sender_id', '!=', $user->id)
+                ->where(function ($query) use ($user): void {
+                    $query->whereNull('sender_id')
+                        ->orWhere('sender_id', '!=', $user->id);
+                })
                 ->whereDoesntHave('reads', function ($query) use ($user): void {
                     $query->where('user_id', $user->id);
                 })

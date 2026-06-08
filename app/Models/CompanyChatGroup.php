@@ -12,9 +12,20 @@ class CompanyChatGroup extends Model
 {
     use HasFactory;
 
+    public const SYSTEM_GROUP_TYPE_EXTRA_ROLE = 'extra_role';
+
+    public const SYSTEM_GROUP_TYPE_DEALERSHIP = 'dealership';
+
     protected $fillable = [
         'name',
+        'system_group_type',
+        'system_group_key',
     ];
+
+    public function isSystemManaged(): bool
+    {
+        return filled($this->system_group_type) && filled($this->system_group_key);
+    }
 
     public function logs(): HasMany
     {

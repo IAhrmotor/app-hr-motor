@@ -9,6 +9,13 @@
         $selectedConversationMessages = $selectedConversation?->messages ?? collect();
         $favoriteUserIds = $favoriteUserIds ?? [];
         $selectedParticipantIsFavorite = $selectedParticipant?->id ? in_array($selectedParticipant->id, $favoriteUserIds, true) : false;
+        $selectedParticipantChatRoleLabel = $selectedParticipant?->chat_role_label ?? '';
+        $selectedParticipantDealershipName = $selectedParticipant?->resolved_dealership_name ?: 'Sin delegación';
+        $selectedParticipantIsDisabled = $selectedParticipant?->isDisabled() ?? false;
+        $selectedParticipantAvatarUrl = $selectedParticipant?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png');
+        $selectedParticipantName = $selectedParticipant?->name ?? 'Usuario';
+        $selectedParticipantProfileUrl = $selectedParticipant ? route('users.show', $selectedParticipant) : '#';
+        $selectedParticipantFavoriteToggleUrl = $selectedParticipant ? route('chat.beta.favorites.toggle', $selectedParticipant) : '#';
         $policyAccepted = $policyAccepted ?? true;
         $chatUnreadTotal = (int) ($conversations->sum('unread_messages_count') ?? 0);
         $groupUnreadTotal = (int) ($chatGroups->sum(fn ($chatGroup) => (int) ($chatGroup->conversation?->unread_messages_count ?? 0)) ?? 0);
@@ -363,44 +370,7 @@
         <section class="flex min-w-0 flex-1 flex-col bg-slate-100">
             @if ($selectedConversation)
                 <header class="flex min-h-[4.75rem] items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-2">
-                    @if ($selectedConversationIsGroup)
-                        <div class="flex min-w-0 items-center gap-3">
-                            <button
-                                type="button"
-                                class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary md:hidden"
-                                aria-label="Abrir panel lateral"
-                                aria-expanded="false"
-                                data-chat-mobile-sidebar-toggle
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="block h-4 w-4 shrink-0 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-chat-mobile-sidebar-icon>
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"></path>
-                                </svg>
-                            </button>
-
-                            <button
-                                type="button"
-                                class="group flex min-w-0 cursor-pointer items-center gap-3 text-left transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                                aria-label="Ver detalles del grupo"
-                                data-chat-group-header-button
-                            >
-                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary/15">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                    </svg>
-                                </div>
-
-                                <div class="min-w-0">
-                                    <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-header-name>{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}</h1>
-                                    @if ($selectedConversationGroup)
-                                        <p class="mt-2 truncate text-xs text-slate-500" data-chat-header-participants>
-                                            {{ $selectedConversationGroup->participants->pluck('name')->implode(', ') ?: 'Sin participantes' }}
-                                        </p>
-                                    @endif
-                                </div>
-                            </button>
-                        </div>
-                    @else
-                    <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex min-w-0 items-center gap-3 {{ $selectedConversationIsGroup ? '' : 'hidden' }}" data-chat-header-group-shell>
                         <button
                             type="button"
                             class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary md:hidden"
@@ -412,36 +382,74 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"></path>
                             </svg>
                         </button>
+
                         <button
                             type="button"
-                            @click.stop="openImage({ src: @js($selectedParticipant->avatar_url), alt: @js('Avatar de '.$selectedParticipant->name), title: @js($selectedParticipant->name) })"
-                            class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                            aria-label="Ampliar imagen de {{ $selectedParticipant->name }}"
+                            class="group flex min-w-0 cursor-pointer items-center gap-3 text-left transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                            aria-label="Ver detalles del grupo"
+                            data-chat-group-header-button
                         >
-                            <img src="{{ $selectedParticipant->avatar_url }}" alt="Avatar de {{ $selectedParticipant->name }}" class="h-11 w-11 rounded-2xl object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" data-chat-header-avatar>
+                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary/15">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-group-header-name>{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}</h1>
+                                @if ($selectedConversationGroup)
+                                    <p class="mt-2 truncate text-xs text-slate-500" data-chat-group-header-participants>
+                                        {{ $selectedConversationGroup->participants->pluck('name')->implode(', ') ?: 'Sin participantes' }}
+                                    </p>
+                                @endif
+                            </div>
+                        </button>
+                    </div>
+                    <div class="flex min-w-0 items-center gap-3 {{ $selectedConversationIsGroup ? 'hidden' : '' }}" data-chat-header-private-shell>
+                        <button
+                            type="button"
+                            class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary md:hidden"
+                            aria-label="Abrir panel lateral"
+                            aria-expanded="false"
+                            data-chat-mobile-sidebar-toggle
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="block h-4 w-4 shrink-0 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-chat-mobile-sidebar-icon>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"></path>
+                            </svg>
+                        </button>
+
+                        <button
+                            type="button"
+                            @click.stop="openImage({ src: @js($selectedParticipantAvatarUrl), alt: @js('Avatar de '.$selectedParticipantName), title: @js($selectedParticipantName) })"
+                            class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            aria-label="Ampliar imagen de {{ $selectedParticipantName }}"
+                        >
+                            <img src="{{ $selectedParticipantAvatarUrl }}" alt="Avatar de {{ $selectedParticipantName }}" class="h-11 w-11 rounded-2xl object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" data-chat-private-header-avatar>
                             <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
                                 Ver
                             </span>
                         </button>
                         <a
-                            href="{{ route('users.show', $selectedParticipant) }}"
+                            href="{{ $selectedParticipantProfileUrl }}"
                             class="min-w-0 transition hover:opacity-90"
-                            aria-label="Ver perfil de {{ $selectedParticipant->name }}"
+                            aria-label="Ver perfil de {{ $selectedParticipantName }}"
                             data-chat-header-profile-link
+                            data-chat-private-header-profile-link
                         >
                             <span class="flex min-w-0 items-center gap-2">
-                                <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-header-name>{{ $selectedParticipant->name }}</h1>
+                                <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-private-header-name>{{ $selectedParticipantName }}</h1>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-amber-500 {{ $selectedParticipantIsFavorite ? '' : 'hidden' }}" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-chat-favorite-star>
                                     <path d="M11.245 4.174C11.4765 3.50808 11.5922 3.17513 11.7634 3.08285C11.9115 3.00298 12.0898 3.00298 12.238 3.08285C12.4091 3.17513 12.5248 3.50808 12.7563 4.174L14.2866 8.57639C14.3525 8.76592 14.3854 8.86068 14.4448 8.93125C14.4972 8.99359 14.5641 9.04218 14.6396 9.07278C14.725 9.10743 14.8253 9.10947 15.0259 9.11356L19.6857 9.20852C20.3906 9.22288 20.743 9.23007 20.8837 9.36432C21.0054 9.48051 21.0605 9.65014 21.0303 9.81569C20.9955 10.007 20.7146 10.2199 20.1528 10.6459L16.4387 13.4616C16.2788 13.5829 16.1989 13.6435 16.1501 13.7217C16.107 13.7909 16.0815 13.8695 16.0757 13.9507C16.0692 14.0427 16.0982 14.1387 16.1563 14.3308L17.506 18.7919C17.7101 19.4667 17.8122 19.8041 17.728 19.9793C17.6551 20.131 17.5108 20.2358 17.344 20.2583C17.1513 20.2842 16.862 20.0829 16.2833 19.6802L12.4576 17.0181C12.2929 16.9035 12.2106 16.8462 12.1211 16.8239C12.042 16.8043 11.9593 16.8043 11.8803 16.8239C11.7908 16.8462 11.7084 16.9035 11.5437 17.0181L7.71805 19.6802C7.13937 20.0829 6.85003 20.2842 6.65733 20.2583C6.49056 20.2358 6.34626 20.131 6.27337 19.9793C6.18915 19.8041 6.29123 19.4667 6.49538 18.7919L7.84503 14.3308C7.90313 14.1387 7.93218 14.0427 7.92564 13.9507C7.91986 13.8695 7.89432 13.7909 7.85123 13.7217C7.80246 13.6435 7.72251 13.5829 7.56262 13.4616L3.84858 10.6459C3.28678 10.2199 3.00588 10.007 2.97101 9.81569C2.94082 9.65014 2.99594 9.48051 3.11767 9.36432C3.25831 9.23007 3.61074 9.22289 4.31559 9.20852L8.9754 9.11356C9.176 9.10947 9.27631 9.10743 9.36177 9.07278C9.43726 9.04218 9.50414 8.99359 9.55657 8.93125C9.61593 8.86068 9.64887 8.76592 9.71475 8.57639L11.245 4.174Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                             </span>
-                            <p class="truncate text-xs text-slate-500" data-chat-header-role>
-                                {{ $selectedParticipant->chat_role_label }} &middot; {{ $selectedParticipant->resolved_dealership_name ?: 'Sin delegación' }}
-                                @if ($selectedParticipant->isDisabled())
+                            <p class="truncate text-xs text-slate-500" data-chat-private-header-role>
+                                {{ $selectedParticipantChatRoleLabel }} &middot; {{ $selectedParticipantDealershipName }}
+                                @if ($selectedParticipantIsDisabled)
                                     <span class="ml-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Desactivado</span>
                                 @endif
                             </p>
                         </a>
+                    </div>
                     </div>
 
                     <div class="relative" x-data="{ open: false }" @click.outside="open = false">
@@ -467,7 +475,7 @@
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 translate-y-1"
                             class="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
-                            <form method="POST" action="{{ route('chat.beta.favorites.toggle', $selectedParticipant) }}" data-chat-favorite-toggle-form data-chat-favorite-toggle-url-template="{{ route('chat.beta.favorites.toggle', ['user' => '__USER_ID__']) }}">
+                            <form method="POST" action="{{ $selectedParticipantFavoriteToggleUrl }}" data-chat-favorite-toggle-form data-chat-favorite-toggle-url-template="{{ $selectedParticipant ? route('chat.beta.favorites.toggle', ['user' => '__USER_ID__']) : '' }}">
                                 @csrf
                                 <button type="submit"
                                     class="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left text-sm font-medium text-brand-secondary transition hover:bg-brand-secondary/5">
@@ -479,7 +487,6 @@
                             </form>
                         </div>
                     </div>
-                    @endif
 
                 </header>
 
@@ -524,6 +531,7 @@
                             @endphp
                             @forelse ($selectedConversationMessages as $message)
                                 @php
+                                    $isSystem = (bool) $message->is_system;
                                     $isMine = $message->sender_id === $authUser->id;
                                     $previousMessage = $selectedConversationMessages->get($loop->index - 1);
                                     $nextMessage = $selectedConversationMessages->get($loop->index + 1);
@@ -547,116 +555,125 @@
                                         </span>
                                     </div>
                                 @endif
-                                <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
-                                    <div class="flex max-w-[78%] flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
-                                        <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
-                                            @if ($selectedConversationIsGroup && ! $isDeleted)
-                                                <p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                                                    {{ $message->sender?->name ?? 'Usuario' }}
-                                                </p>
-                                            @endif
-                                            @if ($isMine && ! $isDeleted)
-                                                <button type="button"
-                                                    class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100"
-                                                    aria-label="Abrir opciones del mensaje"
-                                                    data-chat-message-trigger>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                                        <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
-                                                    </svg>
-                                                </button>
-                                            @endif
-
-                                            <div data-chat-message-content>
-                                                @if ($isDeleted)
-                                                    <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
-                                                        </svg>
-                                                        <span>Este mensaje ha sido eliminado.</span>
-                                                    </div>
-                                                @elseif (filled($message->body))
-                                                    <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                <div class="flex {{ $isSystem ? 'justify-center' : ($isMine ? 'justify-end' : 'justify-start') }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
+                                    <div class="flex max-w-[78%] flex-col {{ $isSystem ? 'items-center' : ($isMine ? 'items-end' : 'items-start') }}">
+                                        @if ($isSystem)
+                                            <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
+                                                {{ $message->body }}
+                                            </div>
+                                            <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] justify-center text-slate-400">
+                                                <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
+                                            </div>
+                                        @else
+                                            <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
+                                                @if ($selectedConversationIsGroup && ! $isDeleted && ! $isSystem)
+                                                    <p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                                        {{ $message->sender?->name ?? 'Usuario' }}
+                                                    </p>
                                                 @endif
-
-                                                @if (! $isDeleted && $messageAttachments->isNotEmpty())
-                                                    <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
-                                                        @foreach ($messageAttachments as $attachment)
-                                                            @php
-                                                                $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
-                                                                $attachmentName = $attachment['original_name'] ?? 'archivo';
-                                                                $attachmentSize = $attachment['size_label'] ?? '';
-                                                                $attachmentUrl = route('chat.beta.attachments.show', [
-                                                                    'conversation' => $message->company_chat_conversation_id,
-                                                                    'message' => $message->id,
-                                                                    'attachmentIndex' => $loop->index,
-                                                                ]);
-                                                            @endphp
-
-                                                            @if ($isImageAttachment)
-                                                                <button
-                                                                    type="button"
-                                                                    data-chat-image-src="{{ $attachmentUrl }}"
-                                                                    data-chat-image-alt="{{ $attachmentName }}"
-                                                                    data-chat-image-title="{{ $attachmentName }}"
-                                                                    @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
-                                                                    class="group/image relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                                                                    aria-label="Ver {{ $attachmentName }}"
-                                                                >
-                                                                    <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover/image:scale-105 group-hover/image:brightness-75">
-                                                                    <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/image:bg-brand-secondary/30 group-hover/image:opacity-100">
-                                                                        Ver
-                                                                    </span>
-                                                                </button>
-                                                            @else
-                                                                <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
-                                                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
-                                                                        </svg>
-                                                                    </span>
-                                                                    <span class="min-w-0 flex-1">
-                                                                        <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
-                                                                        @if ($attachmentSize !== '')
-                                                                            <span class="block text-xs text-slate-500">{{ $attachmentSize }}</span>
-                                                                        @endif
-                                                                    </span>
-                                                                </a>
-                                                            @endif
-                                                        @endforeach
-                                                    </div>
-                                                @endif
-
                                                 @if ($isMine && ! $isDeleted)
-                                                    <span class="absolute bottom-1.5 right-3 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                            <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                                                            <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                                    <button type="button"
+                                                        class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100"
+                                                        aria-label="Abrir opciones del mensaje"
+                                                        data-chat-message-trigger>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                            <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
                                                         </svg>
-                                                    </span>
+                                                    </button>
+                                                @endif
+
+                                                <div data-chat-message-content>
+                                                    @if ($isDeleted)
+                                                        <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 2.82 18a2 2 0 0 0 1.75 3h15.86a2 2 0 0 0 1.75-3L14.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                                            </svg>
+                                                            <span>Este mensaje ha sido eliminado.</span>
+                                                        </div>
+                                                    @elseif (filled($message->body))
+                                                        <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                                    @endif
+
+                                                    @if (! $isDeleted && $messageAttachments->isNotEmpty())
+                                                        <div class="{{ filled($message->body) ? 'mt-2' : '' }} space-y-2">
+                                                            @foreach ($messageAttachments as $attachment)
+                                                                @php
+                                                                    $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
+                                                                    $attachmentName = $attachment['original_name'] ?? 'archivo';
+                                                                    $attachmentSize = $attachment['size_label'] ?? '';
+                                                                    $attachmentUrl = route('chat.beta.attachments.show', [
+                                                                        'conversation' => $message->company_chat_conversation_id,
+                                                                        'message' => $message->id,
+                                                                        'attachmentIndex' => $loop->index,
+                                                                    ]);
+                                                                @endphp
+
+                                                                @if ($isImageAttachment)
+                                                                    <button
+                                                                        type="button"
+                                                                        data-chat-image-src="{{ $attachmentUrl }}"
+                                                                        data-chat-image-alt="{{ $attachmentName }}"
+                                                                        data-chat-image-title="{{ $attachmentName }}"
+                                                                        @click="openImage({ src: $el.dataset.chatImageSrc, alt: $el.dataset.chatImageAlt, title: $el.dataset.chatImageTitle })"
+                                                                        class="group/image relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                                                        aria-label="Ver {{ $attachmentName }}"
+                                                                    >
+                                                                        <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover/image:scale-105 group-hover/image:brightness-75">
+                                                                        <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/image:bg-brand-secondary/30 group-hover/image:opacity-100">
+                                                                            Ver
+                                                                        </span>
+                                                                    </button>
+                                                                @else
+                                                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                                                                        <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
+                                                                            </svg>
+                                                                        </span>
+                                                                        <span class="min-w-0 flex-1">
+                                                                            <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
+                                                                            @if ($attachmentSize !== '')
+                                                                                <span class="block text-xs text-slate-500">{{ $attachmentSize }}</span>
+                                                                            @endif
+                                                                        </span>
+                                                                    </a>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+
+                                                    @if ($isMine && ! $isDeleted)
+                                                        <span class="absolute bottom-1.5 right-3 inline-flex items-center {{ $message->read_at ? 'text-sky-500' : 'text-slate-400' }}" data-message-checks>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                                <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                                                                <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
+                                                            </svg>
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                @if ($isMine)
+                                                    <div class="hidden" data-chat-message-inline-editor>
+                                                        <textarea
+                                                            rows="1"
+                                                            class="mt-1 min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                                            data-chat-edit-input>{{ $message->body }}</textarea>
+                                                        <div class="mt-3 flex items-center justify-end gap-2">
+                                                            <button type="button" class="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100" data-chat-edit-cancel>Cancelar</button>
+                                                            <button type="button" class="cursor-pointer rounded-full bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90" data-chat-edit-save>Guardar</button>
+                                                        </div>
+                                                    </div>
                                                 @endif
                                             </div>
-
-                                            @if ($isMine)
-                                                <div class="hidden" data-chat-message-inline-editor>
-                                                    <textarea
-                                                        rows="1"
-                                                        class="mt-1 min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
-                                                        data-chat-edit-input>{{ $message->body }}</textarea>
-                                                    <div class="mt-3 flex items-center justify-end gap-2">
-                                                        <button type="button" class="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100" data-chat-edit-cancel>Cancelar</button>
-                                                        <button type="button" class="cursor-pointer rounded-full bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90" data-chat-edit-save>Guardar</button>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
-                                        <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
-                                            @if ($isEdited)
-                                                <span class="text-[10px] italic text-slate-400">Editado</span>
-                                            @endif
-                                            <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
-                                        </div>
+                                            <div class="hidden mt-0.5" data-chat-message-menu-slot></div>
+                                            <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] {{ $isMine ? 'justify-end text-slate-500' : 'justify-start text-slate-400' }}">
+                                                @if ($isEdited)
+                                                    <span class="text-[10px] italic text-slate-400">Editado</span>
+                                                @endif
+                                                <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             @empty
@@ -941,12 +958,15 @@
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
                 const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
                 const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
-                const headerName = document.querySelector('[data-chat-header-name]');
-                const headerRole = document.querySelector('[data-chat-header-role]');
-                const headerAvatar = document.querySelector('[data-chat-header-avatar]');
-                const headerProfileLink = document.querySelector('[data-chat-header-profile-link]');
-                const headerParticipants = document.querySelector('[data-chat-header-participants]');
+                const headerGroupShell = document.querySelector('[data-chat-header-group-shell]');
+                const headerPrivateShell = document.querySelector('[data-chat-header-private-shell]');
+                const headerGroupName = document.querySelector('[data-chat-group-header-name]');
+                const headerGroupParticipants = document.querySelector('[data-chat-group-header-participants]');
                 const headerGroupButton = document.querySelector('[data-chat-group-header-button]');
+                const headerPrivateName = document.querySelector('[data-chat-private-header-name]');
+                const headerPrivateRole = document.querySelector('[data-chat-private-header-role]');
+                const headerAvatar = document.querySelector('[data-chat-private-header-avatar]');
+                const headerProfileLink = document.querySelector('[data-chat-private-header-profile-link]');
                 const headerFavoriteStar = document.querySelector('[data-chat-favorite-star]');
                 const headerFavoriteToggleLabel = document.querySelector('[data-chat-favorite-toggle-label]');
                 const headerFavoriteToggleForm = document.querySelector('[data-chat-favorite-toggle-form]');
@@ -1404,6 +1424,7 @@
 
                 const renderMessage = (message, index, messages) => {
                     const isMine = Boolean(message.is_mine);
+                    const isSystem = Boolean(message.is_system);
                     const previousMessage = messages[index - 1];
                     const nextMessage = messages[index + 1];
                     const currentDateKey = getLocalDateKey(message.created_at);
@@ -1422,6 +1443,7 @@
                     const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
                     const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
                     const showSenderName = currentConversationIsGroup
+                        && !isSystem
                         && !isMine
                         && !isDeleted
                         && (index === 0 || previousDateKey !== currentDateKey || previousTimeLabel !== currentTimeLabel);
@@ -1430,8 +1452,16 @@
                         : '';
 
                     return `
-                        <div class="flex ${isMine ? 'justify-end' : 'justify-start'} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
-                            <div class="flex max-w-[78%] flex-col ${isMine ? 'items-end' : 'items-start'}">
+                        <div class="flex ${isSystem ? 'justify-center' : (isMine ? 'justify-end' : 'justify-start')} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
+                            <div class="flex max-w-[78%] flex-col ${isSystem ? 'items-center' : (isMine ? 'items-end' : 'items-start')}">
+                                ${isSystem ? `
+                                    <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
+                                        ${escapeHtml(body)}
+                                    </div>
+                                    <div class="${showTime ? 'mt-1' : 'mt-0.5'} flex items-center gap-1 justify-center text-[11px] text-slate-400">
+                                        <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
+                                    </div>
+                                ` : `
                                 <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}">
                                     ${senderNameHtml}
                                     ${isEditing ? `
@@ -1468,6 +1498,7 @@
                                     ${isEdited ? '<span class="text-[10px] italic text-slate-400">Editado</span>' : ''}
                                     <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                 </div>
+                                `}
                             </div>
                         </div>
                     `;
@@ -1809,24 +1840,24 @@
                 };
 
                 const renderHeaderRole = (payload) => {
-                    if (!headerRole) {
+                    if (!headerPrivateRole) {
                         return;
                     }
 
                     if (payload.conversation_is_group) {
-                        headerRole.textContent = '';
-                        headerRole.classList.add('hidden');
+                        headerPrivateRole.textContent = '';
+                        headerPrivateRole.classList.add('hidden');
                         return;
                     }
 
-                    headerRole.classList.remove('hidden');
+                    headerPrivateRole.classList.remove('hidden');
                     const partnerRoleLabel = escapeHtml(payload.partner_chat_role_label || '');
                     const partnerDealershipName = escapeHtml(payload.partner_dealership_name || 'Sin delegación');
                     const disabledBadge = payload.partner_is_disabled
                         ? ' <span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
                         : '';
 
-                    headerRole.innerHTML = `${partnerRoleLabel}${partnerRoleLabel ? ' &middot; ' : ''}${partnerDealershipName}${disabledBadge}`;
+                    headerPrivateRole.innerHTML = `${partnerRoleLabel}${partnerRoleLabel ? ' &middot; ' : ''}${partnerDealershipName}${disabledBadge}`;
                 };
 
                 const closeGroupModal = () => {
@@ -1895,20 +1926,27 @@
                 };
 
                 const updateHeader = (payload) => {
-                    if (headerName) {
-                        headerName.textContent = payload.conversation_name || payload.partner_name || 'Conversación';
+                    if (headerGroupShell && headerPrivateShell) {
+                        const isGroupConversation = Boolean(payload.conversation_is_group);
+                        headerGroupShell.classList.toggle('hidden', !isGroupConversation);
+                        headerPrivateShell.classList.toggle('hidden', isGroupConversation);
                     }
 
-                    renderHeaderRole(payload);
-
-                    if (headerParticipants) {
-                        if (payload.conversation_is_group) {
-                            headerParticipants.textContent = payload.conversation_participants_text || 'Sin participantes';
-                            headerParticipants.classList.remove('hidden');
-                        } else {
-                            headerParticipants.textContent = '';
-                            headerParticipants.classList.add('hidden');
+                    if (payload.conversation_is_group) {
+                        if (headerGroupName) {
+                            headerGroupName.textContent = payload.conversation_name || 'Grupo de chat';
                         }
+
+                        if (headerGroupParticipants) {
+                            headerGroupParticipants.textContent = payload.conversation_participants_text || 'Sin participantes';
+                            headerGroupParticipants.classList.remove('hidden');
+                        }
+                    } else {
+                        if (headerPrivateName) {
+                            headerPrivateName.textContent = payload.partner_name || 'Conversación';
+                        }
+
+                        renderHeaderRole(payload);
                     }
 
                     currentGroupModalData = payload.conversation_is_group
@@ -1918,7 +1956,7 @@
                         }
                         : null;
 
-                    if (headerAvatar && payload.conversation_avatar_url) {
+                    if (headerAvatar && !payload.conversation_is_group && payload.conversation_avatar_url) {
                         headerAvatar.src = payload.conversation_avatar_url;
                         headerAvatar.alt = `Avatar de ${payload.conversation_name || payload.partner_name || 'Usuario'}`;
                     }
@@ -2790,7 +2828,7 @@
                                 <ellipse cx="9" cy="10.5" rx="1" ry="1.5" fill="#1C274C"/>
                             </svg>
                         </div>
-                        <h2 class="mt-5 text-lg font-bold text-brand-secondary">PolÃƒÂ­tica de uso del chat corporativo</h2>
+                        <h2 class="mt-5 text-lg font-bold text-brand-secondary">Política de uso del chat corporativo</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-500">
                             Antes de continuar, acepta la polÃƒÂ­tica vigente para poder ver conversaciones, buscar compaÃƒÂ±eros y enviar mensajes.
                         </p>
@@ -2810,7 +2848,7 @@
                             </svg>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <h1 class="text-2xl font-bold text-brand-secondary">PolÃƒÂ­tica de uso del chat corporativo</h1>
+                            <h1 class="text-2xl font-bold text-brand-secondary">Política de uso del chat corporativo</h1>
                             <p class="mt-2 text-sm leading-6 text-slate-500">
                                 Este chat es una herramienta interna de HRMOTOR destinada exclusivamente a comunicaciones profesionales entre usuarios autorizados.
                             </p>
@@ -2824,7 +2862,7 @@
                         <p>El acceso al contenido de las conversaciones estarÃƒÂ¡ limitado a los usuarios participantes y, de forma excepcional, a personal autorizado de IT o direcciÃƒÂ³n cuando exista una causa justificada relacionada con seguridad, cumplimiento normativo, investigaciÃƒÂ³n de incidencias, mantenimiento tÃƒÂ©cnico o control laboral proporcionado. Todo acceso administrativo al contenido de conversaciones deberÃƒÂ¡ quedar registrado.</p>
                         <p>Los logs tÃƒÂ©cnicos de la aplicaciÃƒÂ³n no incluyen el contenido de los mensajes, sino ÃƒÂºnicamente eventos tÃƒÂ©cnicos necesarios para seguridad, mantenimiento, errores y auditorÃƒÂ­a.</p>
                         <p>El uso de este chat no implica obligaciÃƒÂ³n de responder fuera del horario laboral, salvo situaciones excepcionales justificadas conforme a la polÃƒÂ­tica interna de la empresa y al derecho de desconexiÃƒÂ³n digital.</p>
-                        <p>Al pulsar Ã¢â‚¬Å“Aceptar y continuarÃ¢â‚¬Â, el usuario confirma que ha leÃƒÂ­do y entendido esta polÃƒÂ­tica de uso.</p>
+                        <p>Al pulsar “Aceptar y continuar”, el usuario confirma que ha leído y entendido esta política de uso.</p>
                     </div>
 
                     <div class="mt-10 border-t border-slate-200 pt-6 pb-6 sm:pb-8">
