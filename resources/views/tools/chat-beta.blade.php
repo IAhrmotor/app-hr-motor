@@ -6,6 +6,9 @@
         $selectedParticipant = $selectedConversation?->otherParticipant($authUser);
         $selectedConversationIsGroup = $selectedConversation?->isGroupConversation() ?? false;
         $selectedConversationGroup = $selectedConversationIsGroup ? $selectedConversation?->chatGroup : null;
+        $selectedConversationGroupAvatarUrl = $selectedConversationGroup?->system_group_type === \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP
+            ? (\App\Models\Dealership::query()->find($selectedConversationGroup->system_group_key)?->image_url)
+            : null;
         $selectedConversationMessages = $selectedConversation?->messages ?? collect();
         $favoriteUserIds = $favoriteUserIds ?? [];
         $selectedParticipantIsFavorite = $selectedParticipant?->id ? in_array($selectedParticipant->id, $favoriteUserIds, true) : false;
@@ -392,29 +395,42 @@
                             </svg>
                         </button>
 
-                        <button
-                            type="button"
-                            class="group flex min-w-0 cursor-pointer items-center gap-3 text-left transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                            aria-label="Ver detalles del grupo"
-                            data-chat-group-header-button
-                        >
-                            @php
-                                $selectedConversationGroupAvatarUrl = $selectedConversationGroup?->system_group_type === \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP
-                                    ? (\App\Models\Dealership::query()->find($selectedConversationGroup->system_group_key)?->image_url)
-                                    : null;
-                            @endphp
-                            <img
-                                src="{{ $selectedConversationGroupAvatarUrl ?: asset('images/users/hrmotor-default-user-avatar.png') }}"
-                                alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
-                                class="h-11 w-11 shrink-0 rounded-2xl object-cover transition {{ $selectedConversationGroupAvatarUrl ? 'group-hover:brightness-95' : 'hidden' }}"
-                                data-chat-group-header-avatar
-                            >
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition {{ $selectedConversationGroupAvatarUrl ? 'hidden' : 'group-hover:bg-brand-primary/15' }}" data-chat-group-header-icon>
+                        <div class="group flex min-w-0 items-center gap-3">
+                            @if ($selectedConversationGroupAvatarUrl)
+                                <button
+                                    type="button"
+                                    class="group/avatar relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                    aria-label="Ampliar imagen del grupo {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                    data-chat-group-header-avatar-button
+                                    data-chat-group-header-avatar-src="{{ $selectedConversationGroupAvatarUrl }}"
+                                    data-chat-group-header-avatar-alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                    data-chat-group-header-avatar-title="{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                    @click.stop="openImage({ src: $el.dataset.chatGroupHeaderAvatarSrc, alt: $el.dataset.chatGroupHeaderAvatarAlt, title: $el.dataset.chatGroupHeaderAvatarTitle })"
+                                >
+                                    <img
+                                        src="{{ $selectedConversationGroupAvatarUrl }}"
+                                        alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                        class="h-11 w-11 shrink-0 rounded-2xl object-cover transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
+                                        data-chat-group-header-avatar
+                                    >
+                                    <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/avatar:bg-brand-secondary/35 group-hover/avatar:opacity-100">
+                                        Ver
+                                    </span>
+                                </button>
+                            @else
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary/15" data-chat-group-header-icon>
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                         <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
                                 </div>
+                            @endif
 
+                            <button
+                                type="button"
+                                class="min-w-0 cursor-pointer text-left transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                                aria-label="Ver detalles del grupo"
+                                data-chat-group-header-button
+                            >
                             <div class="min-w-0">
                                 <h1 class="truncate text-base font-semibold text-brand-secondary" data-chat-group-header-name>{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}</h1>
                                 @if ($selectedConversationGroup)
@@ -423,7 +439,8 @@
                                     </p>
                                 @endif
                             </div>
-                        </button>
+                            </button>
+                        </div>
                     </div>
                     <div class="flex min-w-0 items-center gap-3 {{ $selectedConversationIsGroup ? 'hidden' : '' }}" data-chat-header-private-shell>
                         <button
@@ -984,6 +1001,7 @@
                 const headerGroupParticipants = document.querySelector('[data-chat-group-header-participants]');
                 const headerGroupButton = document.querySelector('[data-chat-group-header-button]');
                 const headerGroupAvatar = document.querySelector('[data-chat-group-header-avatar]');
+                const headerGroupAvatarButton = document.querySelector('[data-chat-group-header-avatar-button]');
                 const headerGroupIcon = document.querySelector('[data-chat-group-header-icon]');
                 const headerPrivateName = document.querySelector('[data-chat-private-header-name]');
                 const headerPrivateRole = document.querySelector('[data-chat-private-header-role]');
@@ -1793,7 +1811,7 @@
                         : `<span class="absolute -right-1 -top-1 hidden h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge></span>`;
                     const avatarHtml = isGroup
                         ? (isDealershipGroup
-                            ? `<img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.partner_name || 'Grupo')}" class="h-11 w-11 rounded-2xl object-cover">`
+                            ? `<img src="${escapeHtml(conversation.conversation_avatar_url || conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.conversation_name || conversation.partner_name || 'Grupo')}" class="h-11 w-11 rounded-2xl object-cover">`
                             : `<div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`)
                         : `<img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.partner_name || 'Usuario')}" class="h-11 w-11 rounded-2xl object-cover">`;
                     const roleHtml = isGroup
@@ -1965,6 +1983,22 @@
                         if (headerGroupParticipants) {
                             headerGroupParticipants.textContent = payload.conversation_participants_text || 'Sin participantes';
                             headerGroupParticipants.classList.remove('hidden');
+                        }
+
+                        const hasGroupAvatar = Boolean(payload.conversation_system_group_type === '{{ \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP }}' && payload.conversation_avatar_url);
+
+                        if (headerGroupAvatarButton && headerGroupAvatar && headerGroupIcon) {
+                            headerGroupAvatarButton.classList.toggle('hidden', !hasGroupAvatar);
+                            headerGroupIcon.classList.toggle('hidden', hasGroupAvatar);
+                            headerGroupAvatar.src = hasGroupAvatar
+                                ? payload.conversation_avatar_url
+                                : '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                            headerGroupAvatar.alt = `Avatar de ${payload.conversation_name || 'Grupo de chat'}`;
+                            headerGroupAvatarButton.dataset.chatGroupHeaderAvatarSrc = hasGroupAvatar
+                                ? payload.conversation_avatar_url
+                                : '';
+                            headerGroupAvatarButton.dataset.chatGroupHeaderAvatarAlt = `Avatar de ${payload.conversation_name || 'Grupo de chat'}`;
+                            headerGroupAvatarButton.dataset.chatGroupHeaderAvatarTitle = payload.conversation_name || 'Grupo de chat';
                         }
                     } else {
                         if (headerPrivateName) {

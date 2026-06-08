@@ -553,6 +553,14 @@ class CompanyChatTest extends TestCase
 
         $this->assertNotNull($groupPayload);
         $this->assertSame(asset($dealership->image_path), $groupPayload['conversation_avatar_url']);
+
+        $this->actingAs($user)
+            ->followingRedirects()
+            ->get(route('chat.beta', ['group' => $groupPayload['group_id']]))
+            ->assertOk()
+            ->assertSee(asset($dealership->image_path), false)
+            ->assertSee('data-chat-group-header-avatar-src="' . asset($dealership->image_path) . '"', false)
+            ->assertSee('data-chat-group-header-avatar-button', false);
     }
 
     public function test_chat_contact_can_be_marked_as_favorite_and_appears_in_the_summary(): void
