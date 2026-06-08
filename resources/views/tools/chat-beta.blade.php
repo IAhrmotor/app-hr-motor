@@ -308,16 +308,15 @@
                             @php
                                 $groupConversation = $chatGroup->conversation;
                                 $isSelectedGroup = $selectedConversationIsGroup && $selectedConversation?->company_chat_group_id === $chatGroup->id;
+                                $chatGroupAvatarUrl = $chatGroup->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png');
                             @endphp
                             <a href="{{ route('chat.beta', ['group' => $chatGroup->id]) }}"
                                 data-chat-group-link
                                 class="group flex w-full items-center gap-3 px-4 py-3 transition {{ $isSelectedGroup ? 'bg-brand-primary/10' : 'hover:bg-slate-50' }}">
                                 <div class="relative shrink-0">
-                                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                            <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                    </div>
+                                    <img src="{{ $chatGroupAvatarUrl }}"
+                                        alt="Avatar de {{ $chatGroup->name }}"
+                                        class="h-11 w-11 rounded-2xl object-cover">
                                     @if ((int) ($groupConversation?->unread_messages_count ?? 0) > 0)
                                         <span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white">
                                             {{ $groupConversation?->unread_messages_count }}
@@ -1769,7 +1768,7 @@
                         ? `<span class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge>${unreadBadge}</span>`
                         : `<span class="absolute -right-1 -top-1 hidden h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge></span>`;
                     const avatarHtml = isGroup
-                        ? `<div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
+                        ? `<img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.partner_name || 'Grupo')}" class="h-11 w-11 rounded-2xl object-cover">`
                         : `<img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.partner_name || 'Usuario')}" class="h-11 w-11 rounded-2xl object-cover">`;
                     const roleHtml = isGroup
                         ? `<span>Grupo</span><span class="mx-1">·</span><span>${participantCount} participante${participantCount === 1 ? '' : 's'}</span>`
