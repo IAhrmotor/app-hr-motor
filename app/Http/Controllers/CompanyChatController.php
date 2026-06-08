@@ -621,6 +621,7 @@ class CompanyChatController extends Controller
             return [
                 'id' => $chatGroup->id,
                 'group_id' => $chatGroup->id,
+                'system_group_type' => $chatGroup->system_group_type,
                 'conversation_id' => $conversation?->id,
                 'conversation_is_group' => true,
                 'conversation_type_label' => 'Grupo',
@@ -958,6 +959,7 @@ class CompanyChatController extends Controller
 
         return [
             'conversation_is_group' => $isGroup,
+            'conversation_system_group_type' => $isGroup ? $group?->system_group_type : null,
             'conversation_type_label' => $isGroup ? 'Grupo' : 'Privada',
             'partner_id' => $isGroup ? null : $partner?->id,
             'partner_name' => $isGroup ? ($group?->name ?? 'Grupo de chat') : $partner?->name,
@@ -1029,7 +1031,7 @@ class CompanyChatController extends Controller
             }
         }
 
-        return asset('images/users/hrmotor-default-user-avatar.png');
+        return '';
     }
 
     /**
