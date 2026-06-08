@@ -13,7 +13,9 @@ class CompanyChatDefaultGroupSyncService
 {
     public function ensureDefaultGroupsExist(): void
     {
-        foreach (array_keys(User::extraRoleLabels()) as $extraRole) {
+        $this->removeCommercialExtraRoleGroups();
+
+        foreach ($this->managedExtraRoles() as $extraRole) {
             $this->ensureExtraRoleGroup($extraRole);
         }
 
@@ -85,6 +87,10 @@ class CompanyChatDefaultGroupSyncService
 
     public function ensureExtraRoleGroup(string $extraRole): CompanyChatGroup
     {
+        if (! $this->isManagedExtraRole($extraRole)) {
+            throw new \InvalidArgumentException('El grupo automático solicitado no está gestionado por chat.');
+        }
+
         $groupName = (string) (User::extraRoleLabels()[$extraRole] ?? ucfirst($extraRole));
 
         return $this->ensureSystemGroup(
@@ -141,11 +147,44 @@ class CompanyChatDefaultGroupSyncService
 
     private function desiredExtraRoleGroupId(User $user): Collection
     {
-        if (blank($user->extra_role)) {
+        if (blank($user->extra_role) || ! $this->isManagedExtraRole($user->extra_role)) {
             return collect();
         }
 
         return collect([$this->ensureExtraRoleGroup($user->extra_role)->id]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function managedExtraRoles(): array
+    {
+        return array_values(array_filter(
+            array_keys(User::extraRoleLabels()),
+            fn (string $extraRole): bool => $this->isManagedExtraRole($extraRole),
+        ));
+    }
+
+    private function isManagedExtraRole(string $extraRole): bool
+    {
+        return $extraRole !== User::ROLE_COMMERCIAL;
+    }
+
+    private function removeCommercialExtraRoleGroups(): void
+    {
+        $groups = CompanyChatGroup::query()
+            ->where('system_group_type', CompanyChatGroup::SYSTEM_GROUP_TYPE_EXTRA_ROLE)
+            ->where('system_group_key', User::ROLE_COMMERCIAL)
+            ->get();
+
+        if ($groups->isEmpty()) {
+            return;
+        }
+
+        $groups->each(function (CompanyChatGroup $group): void {
+            $group->participants()->detach();
+            $group->delete();
+        });
     }
 
     private function desiredDealershipGroupId(User $user): Collection
