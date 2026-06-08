@@ -7,6 +7,7 @@ use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatFavoriteContact;
 use App\Models\CompanyChatMessage;
 use App\Models\CompanyChatMessageRead;
+use App\Models\Dealership;
 use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
@@ -63,6 +64,7 @@ class CompanyChatController extends Controller
         });
 
         $chatGroups->each(function (CompanyChatGroup $chatGroup) use ($authUser): void {
+            $chatGroup->setAttribute('avatar_url', $this->groupAvatarUrl($chatGroup));
             $chatGroup->setRelation('conversation', $chatGroup->conversation);
             $chatGroup->conversation?->setAttribute('unread_messages_count', $this->conversationUnreadMessagesCount($chatGroup->conversation, $authUser));
         });
@@ -623,7 +625,7 @@ class CompanyChatController extends Controller
                 'conversation_is_group' => true,
                 'conversation_type_label' => 'Grupo',
                 'conversation_name' => $chatGroup->name,
-                'conversation_avatar_url' => asset('images/users/hrmotor-default-user-avatar.png'),
+                'conversation_avatar_url' => $this->groupAvatarUrl($chatGroup),
                 'conversation_profile_url' => null,
                 'conversation_chat_role_label' => 'Grupo',
                 'conversation_dealership_name' => $participants->count() . ' participantes',
@@ -960,7 +962,7 @@ class CompanyChatController extends Controller
             'partner_id' => $isGroup ? null : $partner?->id,
             'partner_name' => $isGroup ? ($group?->name ?? 'Grupo de chat') : $partner?->name,
             'partner_avatar_url' => $isGroup
-                ? asset('images/users/hrmotor-default-user-avatar.png')
+                ? $this->groupAvatarUrl($group)
                 : ($partner?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png')),
             'partner_profile_url' => $isGroup ? null : ($partner ? route('users.show', $partner) : null),
             'partner_chat_role_label' => $isGroup ? 'Grupo' : $partnerRoleLabel,
@@ -973,7 +975,7 @@ class CompanyChatController extends Controller
             'partner_is_favorite' => $isGroup ? false : ($partner?->id ? in_array($partner->id, $favoriteUserIds, true) : false),
             'conversation_name' => $isGroup ? ($group?->name ?? 'Grupo de chat') : ($partner?->name ?? 'Conversación'),
             'conversation_avatar_url' => $isGroup
-                ? asset('images/users/hrmotor-default-user-avatar.png')
+                ? $this->groupAvatarUrl($group)
                 : ($partner?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png')),
             'conversation_profile_url' => $isGroup ? null : ($partner ? route('users.show', $partner) : null),
             'conversation_chat_role_label' => $isGroup ? 'Grupo' : $partnerRoleLabel,
@@ -1011,6 +1013,23 @@ class CompanyChatController extends Controller
                 ];
             })->values()->all(),
         ];
+    }
+
+    private function groupAvatarUrl(?CompanyChatGroup $group): string
+    {
+        if (! $group) {
+            return asset('images/users/hrmotor-default-user-avatar.png');
+        }
+
+        if ($group->system_group_type === CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP) {
+            $dealership = Dealership::query()->find($group->system_group_key);
+
+            if ($dealership?->image_url) {
+                return $dealership->image_url;
+            }
+        }
+
+        return asset('images/users/hrmotor-default-user-avatar.png');
     }
 
     /**

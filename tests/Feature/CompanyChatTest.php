@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatMessage;
+use App\Models\Dealership;
 use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
@@ -525,6 +526,33 @@ class CompanyChatTest extends TestCase
             ->assertJsonPath('unread_messages_total', 1);
 
         $this->assertSame(1, $recipient->unreadNotifications()->count());
+    }
+
+    public function test_chat_group_sidebar_uses_the_dealership_image_for_dealership_groups(): void
+    {
+        $dealership = Dealership::factory()->create([
+            'name' => 'Sevilla',
+            'image_path' => 'images/dealerships/sevilla.png',
+        ]);
+
+        $user = User::factory()->create([
+            'dealership_id' => $dealership->id,
+            'dealership' => $dealership->name,
+            'extra_role' => User::ROLE_COMMERCIAL,
+        ]);
+
+        $this->acceptChatPolicy($user);
+
+        $response = $this->actingAs($user)->getJson(route('chat.beta.summary'));
+
+        $response
+            ->assertOk();
+
+        $groupPayload = collect($response->json('chat_groups'))
+            ->firstWhere('conversation_name', $dealership->name);
+
+        $this->assertNotNull($groupPayload);
+        $this->assertSame(asset($dealership->image_path), $groupPayload['conversation_avatar_url']);
     }
 
     public function test_chat_contact_can_be_marked_as_favorite_and_appears_in_the_summary(): void
