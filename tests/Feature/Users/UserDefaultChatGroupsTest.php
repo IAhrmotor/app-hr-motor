@@ -174,7 +174,7 @@ class UserDefaultChatGroupsTest extends TestCase
     {
         $dealership = Dealership::factory()->create(['name' => 'Barcelona']);
         $user = User::factory()->create([
-            'extra_role' => User::ROLE_COMMERCIAL,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
             'dealership_id' => $dealership->id,
             'dealership' => $dealership->name,
         ]);
@@ -190,6 +190,40 @@ class UserDefaultChatGroupsTest extends TestCase
         $this->assertTrue(
             $user->chatGroups()->where('system_group_type', CompanyChatGroup::SYSTEM_GROUP_TYPE_EXTRA_ROLE)->exists(),
         );
+        $this->assertTrue(
+            $user->chatGroups()->where('system_group_type', CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP)->exists(),
+        );
+    }
+
+    public function test_commercial_extra_role_does_not_create_a_default_group_and_cleans_existing_ones(): void
+    {
+        $dealership = Dealership::factory()->create(['name' => 'Madrid']);
+
+        $user = User::factory()->create([
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'dealership_id' => $dealership->id,
+            'dealership' => $dealership->name,
+        ]);
+
+        $commercialGroup = CompanyChatGroup::query()->create([
+            'name' => 'Comercial',
+            'system_group_type' => CompanyChatGroup::SYSTEM_GROUP_TYPE_EXTRA_ROLE,
+            'system_group_key' => User::ROLE_COMMERCIAL,
+        ]);
+
+        $user->chatGroups()->attach($commercialGroup->id);
+
+        Artisan::call('chat:sync-default-groups');
+
+        $user->refresh();
+
+        $this->assertFalse(
+            CompanyChatGroup::query()
+                ->where('system_group_type', CompanyChatGroup::SYSTEM_GROUP_TYPE_EXTRA_ROLE)
+                ->where('system_group_key', User::ROLE_COMMERCIAL)
+                ->exists(),
+        );
+        $this->assertFalse($user->chatGroups()->whereKey($commercialGroup->id)->exists());
         $this->assertTrue(
             $user->chatGroups()->where('system_group_type', CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP)->exists(),
         );

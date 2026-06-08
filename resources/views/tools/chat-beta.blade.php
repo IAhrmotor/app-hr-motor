@@ -1027,8 +1027,8 @@
                 const groupModalAvatarButton = document.querySelector('[data-chat-group-modal-avatar-button]');
                 const groupModalAvatar = document.querySelector('[data-chat-group-modal-avatar]');
                 const mobileSidebarBackdrop = document.querySelector('[data-chat-mobile-sidebar-backdrop]');
-                const mobileSidebarToggleButton = document.querySelector('[data-chat-mobile-sidebar-toggle]');
-                const mobileSidebarIcon = document.querySelector('[data-chat-mobile-sidebar-icon]');
+                const mobileSidebarToggleButtons = Array.from(document.querySelectorAll('[data-chat-mobile-sidebar-toggle]'));
+                const mobileSidebarIcons = Array.from(document.querySelectorAll('[data-chat-mobile-sidebar-icon]'));
                 const sidebarExpandedShell = document.querySelector('[data-chat-sidebar-expanded-shell]');
                 const sidebarCollapsedShell = document.querySelector('[data-chat-sidebar-collapsed-shell]');
                 const sidebarCollapseButton = document.querySelector('[data-chat-sidebar-collapse-button]');
@@ -1146,7 +1146,7 @@
                 window.chatSetSidebarCollapsed = setSidebarCollapsed;
 
                 const setMobileSidebarOpen = (open) => {
-                    if (!mobileSidebarBackdrop || !mobileSidebarToggleButton || !mobileSidebarIcon) {
+                    if (!mobileSidebarBackdrop || !mobileSidebarToggleButtons.length || !mobileSidebarIcons.length) {
                         return;
                     }
 
@@ -1170,8 +1170,12 @@
                     }
 
                     mobileSidebarBackdrop.classList.toggle('hidden', !mobileSidebarOpen);
-                    mobileSidebarToggleButton.setAttribute('aria-expanded', mobileSidebarOpen ? 'true' : 'false');
-                    mobileSidebarIcon.classList.toggle('rotate-180', mobileSidebarOpen);
+                    mobileSidebarToggleButtons.forEach((button) => {
+                        button.setAttribute('aria-expanded', mobileSidebarOpen ? 'true' : 'false');
+                    });
+                    mobileSidebarIcons.forEach((icon) => {
+                        icon.classList.toggle('rotate-180', mobileSidebarOpen);
+                    });
                 };
                 window.chatToggleMobileSidebar = (nextState = null) => {
                     setMobileSidebarOpen(nextState === null ? !mobileSidebarOpen : Boolean(nextState));
@@ -2625,11 +2629,11 @@
                     });
                 });
 
-                if (mobileSidebarToggleButton) {
-                    mobileSidebarToggleButton.addEventListener('click', () => {
+                mobileSidebarToggleButtons.forEach((button) => {
+                    button.addEventListener('click', () => {
                         setMobileSidebarOpen(!mobileSidebarOpen);
                     });
-                }
+                });
 
                 sidebarCollapseButton.addEventListener('click', () => {
                     setSidebarCollapsed(true);
