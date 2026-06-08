@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -42,5 +43,18 @@ class CompanyChatGroup extends Model
         return $this->belongsToMany(User::class, 'company_chat_group_user')
             ->withTimestamps()
             ->orderBy('name');
+    }
+
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            if ($this->system_group_type !== self::SYSTEM_GROUP_TYPE_DEALERSHIP || blank($this->system_group_key)) {
+                return null;
+            }
+
+            $dealership = Dealership::query()->find($this->system_group_key);
+
+            return $dealership?->image_url;
+        });
     }
 }

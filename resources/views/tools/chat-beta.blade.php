@@ -6,9 +6,7 @@
         $selectedParticipant = $selectedConversation?->otherParticipant($authUser);
         $selectedConversationIsGroup = $selectedConversation?->isGroupConversation() ?? false;
         $selectedConversationGroup = $selectedConversationIsGroup ? $selectedConversation?->chatGroup : null;
-        $selectedConversationGroupAvatarUrl = $selectedConversationGroup?->system_group_type === \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP
-            ? (\App\Models\Dealership::query()->find($selectedConversationGroup->system_group_key)?->image_url)
-            : null;
+        $selectedConversationGroupAvatarUrl = $selectedConversationGroup?->avatar_url;
         $selectedConversationMessages = $selectedConversation?->messages ?? collect();
         $favoriteUserIds = $favoriteUserIds ?? [];
         $selectedParticipantIsFavorite = $selectedParticipant?->id ? in_array($selectedParticipant->id, $favoriteUserIds, true) : false;
@@ -29,6 +27,8 @@
         window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
         window.chatInitialGroupModalData = @js($selectedConversationIsGroup && $selectedConversationGroup ? [
             'conversation_name' => $selectedConversationGroup->name,
+            'conversation_avatar_url' => $selectedConversationGroup->avatar_url,
+            'conversation_system_group_type' => $selectedConversationGroup->system_group_type,
             'conversation_participants' => $selectedConversationGroup->participants->map(function ($participant) {
                 return [
                     'id' => $participant->id,
@@ -841,7 +841,24 @@
             <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 px-4" data-chat-group-modal-overlay>
                 <div class="w-full max-w-2xl rounded-[1.6rem] bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="chat-group-modal-title">
                     <div class="flex items-start gap-3">
-                        <div class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary">
+                        <button
+                            type="button"
+                            class="group relative hidden h-11 w-11 shrink-0 overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                            aria-label="Ampliar imagen del grupo"
+                            data-chat-group-modal-avatar-button
+                            @click.stop="openImage({ src: $el.dataset.chatGroupModalAvatarSrc, alt: $el.dataset.chatGroupModalAvatarAlt, title: $el.dataset.chatGroupModalAvatarTitle })"
+                        >
+                            <img
+                                src=""
+                                alt=""
+                                class="h-11 w-11 rounded-2xl object-cover"
+                                data-chat-group-modal-avatar
+                            >
+                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
+                                Ver
+                            </span>
+                        </button>
+                        <div class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary" data-chat-group-modal-icon>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
@@ -1015,6 +1032,9 @@
                 const groupModalTitle = document.querySelector('[data-chat-group-modal-title]');
                 const groupModalMembers = document.querySelector('[data-chat-group-modal-members]');
                 const groupModalCloseButton = document.querySelector('[data-chat-group-modal-close]');
+                const groupModalAvatarButton = document.querySelector('[data-chat-group-modal-avatar-button]');
+                const groupModalAvatar = document.querySelector('[data-chat-group-modal-avatar]');
+                const groupModalIcon = document.querySelector('[data-chat-group-modal-icon]');
                 const mobileSidebarBackdrop = document.querySelector('[data-chat-mobile-sidebar-backdrop]');
                 const mobileSidebarToggleButton = document.querySelector('[data-chat-mobile-sidebar-toggle]');
                 const mobileSidebarIcon = document.querySelector('[data-chat-mobile-sidebar-icon]');
@@ -1811,7 +1831,7 @@
                         : `<span class="absolute -right-1 -top-1 hidden h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[11px] font-semibold text-white" data-chat-unread-badge></span>`;
                     const avatarHtml = isGroup
                         ? (isDealershipGroup
-                            ? `<img src="${escapeHtml(conversation.conversation_avatar_url || conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.conversation_name || conversation.partner_name || 'Grupo')}" class="h-11 w-11 rounded-2xl object-cover">`
+                            ? `<img src="${escapeHtml(conversation.conversation_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.conversation_name || 'Grupo')}" class="h-11 w-11 rounded-2xl object-cover">`
                             : `<div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`)
                         : `<img src="${escapeHtml(conversation.partner_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}')}" alt="Avatar de ${escapeHtml(conversation.partner_name || 'Usuario')}" class="h-11 w-11 rounded-2xl object-cover">`;
                     const roleHtml = isGroup
@@ -1946,6 +1966,28 @@
                     `).join('');
                 };
 
+                const updateGroupModalAvatar = (data = null) => {
+                    if (!groupModalAvatarButton || !groupModalAvatar || !groupModalIcon) {
+                        return;
+                    }
+
+                    const hasGroupAvatar = Boolean(
+                        data
+                        && data.conversation_system_group_type === '{{ \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP }}'
+                        && data.conversation_avatar_url
+                    );
+
+                    groupModalAvatarButton.classList.toggle('hidden', !hasGroupAvatar);
+                    groupModalIcon.classList.toggle('hidden', hasGroupAvatar);
+                    groupModalAvatar.src = hasGroupAvatar
+                        ? data.conversation_avatar_url
+                        : '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                    groupModalAvatar.alt = `Avatar de ${data?.conversation_name || 'Grupo de chat'}`;
+                    groupModalAvatarButton.dataset.chatGroupModalAvatarSrc = hasGroupAvatar ? data.conversation_avatar_url : '';
+                    groupModalAvatarButton.dataset.chatGroupModalAvatarAlt = `Avatar de ${data?.conversation_name || 'Grupo de chat'}`;
+                    groupModalAvatarButton.dataset.chatGroupModalAvatarTitle = data?.conversation_name || 'Grupo de chat';
+                };
+
                 const openGroupModal = (groupData = null) => {
                     if (!groupModalOverlay) {
                         return;
@@ -1958,9 +2000,10 @@
                     }
 
                     currentGroupModalData = data;
+                    updateGroupModalAvatar(data);
 
                     if (groupModalTitle) {
-                        groupModalTitle.textContent = data.conversation_name || 'Grupo';
+                        groupModalTitle.textContent = data.conversation_name || 'Grupo de chat';
                     }
 
                     renderGroupModalMembers(Array.isArray(data.conversation_participants) ? data.conversation_participants : []);
@@ -2000,20 +2043,23 @@
                             headerGroupAvatarButton.dataset.chatGroupHeaderAvatarAlt = `Avatar de ${payload.conversation_name || 'Grupo de chat'}`;
                             headerGroupAvatarButton.dataset.chatGroupHeaderAvatarTitle = payload.conversation_name || 'Grupo de chat';
                         }
+
+                        currentGroupModalData = {
+                            conversation_name: payload.conversation_name || 'Grupo de chat',
+                            conversation_avatar_url: payload.conversation_avatar_url || '',
+                            conversation_system_group_type: payload.conversation_system_group_type || null,
+                            conversation_participants: Array.isArray(payload.conversation_participants) ? payload.conversation_participants : [],
+                        };
+                        updateGroupModalAvatar(currentGroupModalData);
                     } else {
                         if (headerPrivateName) {
                             headerPrivateName.textContent = payload.partner_name || 'Conversación';
                         }
 
                         renderHeaderRole(payload);
+                        currentGroupModalData = null;
+                        updateGroupModalAvatar(null);
                     }
-
-                    currentGroupModalData = payload.conversation_is_group
-                        ? {
-                            conversation_name: payload.conversation_name || 'Grupo',
-                            conversation_participants: Array.isArray(payload.conversation_participants) ? payload.conversation_participants : [],
-                        }
-                        : null;
 
                     if (headerAvatar && !payload.conversation_is_group && payload.conversation_avatar_url) {
                         headerAvatar.src = payload.conversation_avatar_url;
