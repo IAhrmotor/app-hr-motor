@@ -25,6 +25,18 @@
     @endphp
     <script>
         window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
+        window.chatInitialConversationParticipants = @js($selectedConversationIsGroup && $selectedConversationGroup ? $selectedConversationGroup->participants->map(function ($participant) {
+            return [
+                'id' => $participant->id,
+                'name' => $participant->name,
+                'profile_url' => route('users.show', $participant),
+                'avatar_url' => $participant->avatar_url,
+                'resolved_dealership_name' => $participant->resolved_dealership_name,
+                'extra_role_label' => $participant->extra_role ? (\App\Models\User::extraRoleLabels()[$participant->extra_role] ?? ucfirst((string) $participant->extra_role)) : null,
+                'chat_role_label' => $participant->chat_role_label,
+                'is_disabled' => $participant->isDisabled(),
+            ];
+        })->values()->all() : []);
         window.chatInitialGroupModalData = @js($selectedConversationIsGroup && $selectedConversationGroup ? [
             'conversation_name' => $selectedConversationGroup->name,
             'conversation_avatar_url' => $selectedConversationGroup->avatar_url,
@@ -599,7 +611,7 @@
                                                 <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
                                             </div>
                                         @else
-                                            <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }}">
+                                            <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }} {{ (! $isDeleted && ! $isMine && (bool) ($message->mentions_auth_user ?? false)) ? 'ring-2 ring-sky-300 bg-sky-50/80 shadow-md' : '' }}">
                                                 @if ($selectedConversationIsGroup && ! $isDeleted && ! $isSystem)
                                                     <p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                                                         {{ $message->sender?->name ?? 'Usuario' }}
@@ -625,7 +637,7 @@
                                                             <span>Este mensaje ha sido eliminado.</span>
                                                         </div>
                                                     @elseif (filled($message->body))
-                                                        <p class="whitespace-pre-line text-[15px] leading-[1.45]">{{ $message->body }}</p>
+                                                        <p class="whitespace-pre-line text-[15px] leading-[1.45]">{!! $message->rendered_body_html ?? e($message->body) !!}</p>
                                                     @endif
 
                                                     @if (! $isDeleted && $messageAttachments->isNotEmpty())
@@ -774,6 +786,13 @@
                                     </button>
                                 @endforeach
                             </div>
+                        </div>
+
+                        <div class="absolute bottom-full left-4 right-4 z-20 mb-3 hidden max-w-2xl overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white shadow-2xl" data-chat-mention-suggestions>
+                            <div class="border-b border-slate-100 px-4 py-3">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Menciones sugeridas</p>
+                            </div>
+                            <div class="max-h-72 overflow-y-auto p-2" data-chat-mention-suggestions-list></div>
                         </div>
 
                         <div class="flex items-end gap-3 rounded-[1.75rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
@@ -978,6 +997,8 @@
                 const chatError = document.querySelector('[data-chat-error]');
                 const emojiButton = document.querySelector('[data-chat-emoji-button]');
                 const emojiPicker = document.querySelector('[data-chat-emoji-picker]');
+                const mentionSuggestionsPanel = document.querySelector('[data-chat-mention-suggestions]');
+                const mentionSuggestionsList = document.querySelector('[data-chat-mention-suggestions-list]');
                 const searchInput = document.querySelector('[data-chat-search-input]');
                 const searchResults = document.querySelector('[data-chat-search-results]');
                 let pollUrl = wrapper?.dataset.pollUrl;
@@ -1039,8 +1060,9 @@
                     return;
                 }
 
-                const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && chatError && emojiButton && emojiPicker);
+                const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && chatError && emojiButton && emojiPicker && mentionSuggestionsPanel && mentionSuggestionsList);
                 let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
+                let currentConversationParticipants = Array.isArray(window.chatInitialConversationParticipants) ? window.chatInitialConversationParticipants : [];
                 const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
                 let isSubmitting = false;
                 let pollingLocked = false;
@@ -1057,6 +1079,15 @@
                 let editingMessageDraft = '';
                 let pendingDeleteMessageId = null;
                 let currentGroupModalData = window.chatInitialGroupModalData || null;
+                let composerMentionState = {
+                    isOpen: false,
+                    query: '',
+                    start: null,
+                    end: null,
+                    selectedIndex: 0,
+                    suggestions: [],
+                };
+                let composerMentionIds = [];
                 let sidebarCollapsed = false;
                 let mobileSidebarOpen = false;
                 const messageActionWindowMinutes = 2;
@@ -1072,8 +1103,12 @@
                     return [
                         'id' => $message->id,
                         'body' => $message->body,
+                        'rendered_body_html' => $message->rendered_body_html ?? e($message->body ?? ''),
                         'attachments' => $message->attachments ?? [],
                         'is_mine' => $message->sender_id === $authUser->id,
+                        'mentions_me' => (bool) ($message->mentions_auth_user ?? false),
+                        'mentioned_user_ids' => $message->mentioned_user_ids ?? [],
+                        'mentioned_users' => $message->mentioned_users ?? [],
                         'read_at' => $message->read_at?->toIso8601String(),
                         'created_at' => $message->created_at?->toIso8601String(),
                         'updated_at' => $message->updated_at?->toIso8601String(),
@@ -1092,6 +1127,8 @@
                             updated_at: String(message.updated_at ?? ''),
                             edited_at: String(message.edited_at ?? ''),
                             deleted_at: String(message.deleted_at ?? ''),
+                            mentioned_user_ids: Array.isArray(message.mentioned_user_ids) ? message.mentioned_user_ids.map((value) => Number(value)).sort((first, second) => first - second) : [],
+                            mentions_me: Boolean(message.mentions_me),
                             attachments_count: Array.isArray(message.attachments) ? message.attachments.length : 0,
                         })),
                     );
@@ -1185,6 +1222,220 @@
                     const span = document.createElement('span');
                     span.textContent = value ?? '';
                     return span.innerHTML;
+                };
+
+                const normalizeSearchText = (value) => {
+                    return String(value ?? '')
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .toLowerCase();
+                };
+
+                const clearComposerMentions = () => {
+                    composerMentionState = {
+                        isOpen: false,
+                        query: '',
+                        start: null,
+                        end: null,
+                        selectedIndex: 0,
+                        suggestions: [],
+                    };
+
+                    if (mentionSuggestionsPanel) {
+                        mentionSuggestionsPanel.classList.add('hidden');
+                    }
+
+                    if (mentionSuggestionsList) {
+                        mentionSuggestionsList.innerHTML = '';
+                    }
+                };
+
+                const getComposerMentionContext = () => {
+                    if (!currentConversationIsGroup || !input) {
+                        return null;
+                    }
+
+                    const cursorPosition = input.selectionStart ?? input.value.length;
+                    const textBeforeCursor = input.value.slice(0, cursorPosition);
+                    const atIndex = textBeforeCursor.lastIndexOf('@');
+
+                    if (atIndex === -1) {
+                        return null;
+                    }
+
+                    const previousChar = atIndex > 0 ? textBeforeCursor[atIndex - 1] : '';
+                    if (previousChar && !/[\s([{.,;:!?]/.test(previousChar)) {
+                        return null;
+                    }
+
+                    const query = textBeforeCursor.slice(atIndex + 1);
+
+                    if (/\s/.test(query) || /@/.test(query)) {
+                        return null;
+                    }
+
+                    return {
+                        start: atIndex,
+                        end: cursorPosition,
+                        query,
+                    };
+                };
+
+                const getComposerMentionSuggestions = (query) => {
+                    const normalizedQuery = normalizeSearchText(query);
+                    const participants = Array.isArray(currentConversationParticipants)
+                        ? currentConversationParticipants.filter((participant) => Number(participant?.id ?? 0) > 0)
+                        : [];
+                    const currentUserId = Number(@js($authUser->id ?? 0));
+
+                    return participants
+                        .filter((participant) => Number(participant.id) !== currentUserId)
+                        .map((participant) => {
+                            const name = String(participant.name || '');
+                            const normalizedName = normalizeSearchText(name);
+                            let score = 0;
+
+                            if (normalizedQuery === '') {
+                                score = 10;
+                            } else if (normalizedName.startsWith(normalizedQuery)) {
+                                score = 100 - Math.min(name.length, 40);
+                            } else if (normalizedName.includes(normalizedQuery)) {
+                                score = 50 - normalizedName.indexOf(normalizedQuery);
+                            } else {
+                                score = -1;
+                            }
+
+                            return score < 0 ? null : {
+                                id: Number(participant.id),
+                                name,
+                                avatar_url: participant.avatar_url || '',
+                                resolved_dealership_name: participant.resolved_dealership_name || 'Sin delegación',
+                                extra_role_label: participant.extra_role_label || '',
+                                chat_role_label: participant.chat_role_label || '',
+                                is_disabled: Boolean(participant.is_disabled),
+                                score,
+                            };
+                        })
+                        .filter(Boolean)
+                        .sort((first, second) => {
+                            if (second.score !== first.score) {
+                                return second.score - first.score;
+                            }
+
+                            return first.name.localeCompare(second.name, 'es');
+                        })
+                        .slice(0, 8);
+                };
+
+                const renderComposerMentionSuggestions = () => {
+                    if (!mentionSuggestionsPanel || !mentionSuggestionsList) {
+                        return;
+                    }
+
+                    const suggestions = Array.isArray(composerMentionState.suggestions) ? composerMentionState.suggestions : [];
+
+                    if (!currentConversationIsGroup || suggestions.length === 0) {
+                        mentionSuggestionsPanel.classList.add('hidden');
+                        mentionSuggestionsList.innerHTML = '';
+                        return;
+                    }
+
+                    mentionSuggestionsPanel.classList.remove('hidden');
+                    mentionSuggestionsList.innerHTML = suggestions.map((suggestion, index) => {
+                        const isActive = index === composerMentionState.selectedIndex;
+                        const avatarUrl = suggestion.avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                        const roleLabel = [suggestion.extra_role_label, suggestion.resolved_dealership_name].filter(Boolean).join(' · ') || suggestion.chat_role_label || 'Sin delegación';
+
+                        return `
+                            <button
+                                type="button"
+                                class="flex w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 text-left transition ${isActive ? 'bg-brand-primary/10 ring-1 ring-brand-primary/20' : 'hover:bg-slate-50'}"
+                                data-chat-mention-option
+                                data-mention-user-id="${escapeHtml(String(suggestion.id))}"
+                                data-mention-user-name="${escapeHtml(suggestion.name)}"
+                                data-mention-user-avatar="${escapeHtml(avatarUrl)}"
+                                data-mention-user-role="${escapeHtml(roleLabel)}"
+                                aria-selected="${isActive ? 'true' : 'false'}"
+                            >
+                                <img src="${escapeHtml(avatarUrl)}" alt="Avatar de ${escapeHtml(suggestion.name)}" class="h-10 w-10 shrink-0 rounded-2xl object-cover ${suggestion.is_disabled ? 'grayscale opacity-75' : ''}">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-semibold text-brand-secondary">${escapeHtml(suggestion.name)}</p>
+                                    <p class="truncate text-xs text-slate-500">${escapeHtml(roleLabel)}</p>
+                                </div>
+                            </button>
+                        `;
+                    }).join('');
+                };
+
+                const updateComposerMentionSuggestions = () => {
+                    if (!currentConversationIsGroup) {
+                        clearComposerMentions();
+                        return;
+                    }
+
+                    const context = getComposerMentionContext();
+
+                    if (!context) {
+                        clearComposerMentions();
+                        return;
+                    }
+
+                    const suggestions = getComposerMentionSuggestions(context.query);
+
+                    composerMentionState = {
+                        isOpen: suggestions.length > 0,
+                        query: context.query,
+                        start: context.start,
+                        end: context.end,
+                        selectedIndex: Math.min(composerMentionState.selectedIndex, Math.max(suggestions.length - 1, 0)),
+                        suggestions,
+                    };
+
+                    if (!suggestions.length) {
+                        clearComposerMentions();
+                        return;
+                    }
+
+                    renderComposerMentionSuggestions();
+                };
+
+                const insertComposerMention = (suggestion) => {
+                    if (!suggestion || !input) {
+                        return;
+                    }
+
+                    const { start, end } = composerMentionState;
+
+                    if (start === null || end === null) {
+                        return;
+                    }
+
+                    const value = input.value;
+                    const nextValue = `${value.slice(0, start)}@${suggestion.name} ${value.slice(end)}`;
+                    const nextCursor = start + suggestion.name.length + 2;
+
+                    input.value = nextValue;
+                    input.focus();
+                    input.setSelectionRange(nextCursor, nextCursor);
+
+                    composerMentionIds = Array.from(new Set([...composerMentionIds, Number(suggestion.id)]));
+
+                    composerMentionState = {
+                        isOpen: false,
+                        query: '',
+                        start: null,
+                        end: null,
+                        selectedIndex: 0,
+                        suggestions: [],
+                    };
+
+                    if (mentionSuggestionsPanel) {
+                        mentionSuggestionsPanel.classList.add('hidden');
+                    }
+
+                    if (mentionSuggestionsList) {
+                        mentionSuggestionsList.innerHTML = '';
+                    }
                 };
 
                 const getLocalDateKey = (value) => {
@@ -1505,6 +1756,10 @@
                     const senderNameHtml = showSenderName
                         ? `<p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(String(message.sender_name || 'Usuario'))}</p>`
                         : '';
+                    const mentionHighlightClass = !isMine && !isSystem && !isDeleted && Boolean(message.mentions_me)
+                        ? ' ring-2 ring-sky-300 bg-sky-50/80 shadow-md'
+                        : '';
+                    const renderedBodyHtml = String(message.rendered_body_html || '');
 
                     return `
                         <div class="flex ${isSystem ? 'justify-center' : (isMine ? 'justify-end' : 'justify-start')} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
@@ -1517,7 +1772,7 @@
                                         <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                     </div>
                                 ` : `
-                                <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}">
+                                <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}${mentionHighlightClass}">
                                     ${senderNameHtml}
                                     ${isEditing ? `
                                         <textarea rows="1" class="min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10" data-chat-edit-input>${escapeHtml(editableBody)}</textarea>
@@ -1533,7 +1788,7 @@
                                             <span>Este mensaje ha sido eliminado.</span>
                                         </div>
                                     ` : `
-                                        ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${escapeHtml(body)}</p>` : ''}
+                                        ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${renderedBodyHtml || escapeHtml(body)}</p>` : ''}
                                         ${attachmentsHtml !== '' ? `<div class="${body !== '' ? 'mt-2' : ''} space-y-2">${attachmentsHtml}</div>` : ''}
                                         ${isMine && !isDeleted ? `<button type="button" class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100" aria-label="Abrir opciones del mensaje" data-chat-message-trigger>
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -2040,6 +2295,7 @@
                             conversation_system_group_type: payload.conversation_system_group_type || null,
                             conversation_participants: Array.isArray(payload.conversation_participants) ? payload.conversation_participants : [],
                         };
+                        currentConversationParticipants = Array.isArray(payload.conversation_participants) ? payload.conversation_participants : [];
                         updateGroupModalAvatar(currentGroupModalData);
                     } else {
                         if (headerPrivateName) {
@@ -2048,6 +2304,7 @@
 
                         renderHeaderRole(payload);
                         currentGroupModalData = null;
+                        currentConversationParticipants = [];
                         updateGroupModalAvatar(null);
                     }
 
@@ -2124,6 +2381,8 @@
                         activeMessageMenuId = null;
                         editingMessageId = null;
                         editingMessageDraft = '';
+                        composerMentionIds = [];
+                        clearComposerMentions();
 
                         updateHeader(payload);
                         setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
@@ -2532,6 +2791,9 @@
                     formData.append('_token', csrfToken);
                     formData.append('conversation_id', String(conversationId));
                     formData.append('body', input.value);
+                    composerMentionIds.forEach((mentionedUserId) => {
+                        formData.append('mentioned_user_ids[]', String(mentionedUserId));
+                    });
 
                     attachmentSnapshot.forEach((file) => {
                         formData.append('attachments[]', file, file.name);
@@ -2568,9 +2830,11 @@
 
                         input.value = '';
                         attachmentSnapshot = [];
+                        composerMentionIds = [];
                         syncAttachmentInputFiles();
                         renderAttachmentsPreview();
                         closeEmojiPicker();
+                        clearComposerMentions();
 
                         if (payload.conversation_id) {
                             await loadConversation(payload.conversation_id, { pushState: false });
@@ -2777,6 +3041,16 @@
                 });
 
                 input.addEventListener('paste', handleComposerPaste);
+                input.addEventListener('input', () => {
+                    if (!String(input.value || '').includes('@')) {
+                        composerMentionIds = [];
+                    }
+
+                    updateComposerMentionSuggestions();
+                });
+                input.addEventListener('keyup', updateComposerMentionSuggestions);
+                input.addEventListener('click', updateComposerMentionSuggestions);
+                input.addEventListener('focus', updateComposerMentionSuggestions);
 
                 attachmentsChips.addEventListener('click', (event) => {
                     const removeButton = event.target.closest('[data-chat-remove-attachment-index]');
@@ -2810,12 +3084,31 @@
                     insertEmoji(emojiButton.dataset.emoji || emojiButton.textContent || '');
                 });
 
+                mentionSuggestionsList.addEventListener('click', (event) => {
+                    const option = event.target.closest('[data-chat-mention-option]');
+
+                    if (!option) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    insertComposerMention({
+                        id: Number(option.dataset.mentionUserId || 0),
+                        name: option.dataset.mentionUserName || '',
+                    });
+                });
+
                 document.addEventListener('click', (event) => {
                     if (emojiPicker.contains(event.target) || emojiButton.contains(event.target)) {
                         return;
                     }
 
+                    if (mentionSuggestionsPanel.contains(event.target) || input.contains(event.target)) {
+                        return;
+                    }
+
                     closeEmojiPicker();
+                    clearComposerMentions();
                 });
 
                 }
@@ -2842,6 +3135,34 @@
                 });
 
                 input.addEventListener('keydown', (event) => {
+                    if (composerMentionState.isOpen && composerMentionState.suggestions.length > 0) {
+                        if (event.key === 'Tab') {
+                            event.preventDefault();
+                            const selectedSuggestion = composerMentionState.suggestions[composerMentionState.selectedIndex] || composerMentionState.suggestions[0];
+                            insertComposerMention(selectedSuggestion);
+                            return;
+                        }
+
+                        if (event.key === 'ArrowDown') {
+                            event.preventDefault();
+                            composerMentionState.selectedIndex = (composerMentionState.selectedIndex + 1) % composerMentionState.suggestions.length;
+                            renderComposerMentionSuggestions();
+                            return;
+                        }
+
+                        if (event.key === 'ArrowUp') {
+                            event.preventDefault();
+                            composerMentionState.selectedIndex = (composerMentionState.selectedIndex - 1 + composerMentionState.suggestions.length) % composerMentionState.suggestions.length;
+                            renderComposerMentionSuggestions();
+                            return;
+                        }
+
+                        if (event.key === 'Escape') {
+                            clearComposerMentions();
+                            return;
+                        }
+                    }
+
                     if (event.key === 'Enter' && !event.shiftKey) {
                         event.preventDefault();
                         void sendMessage();
@@ -2961,19 +3282,19 @@
                     </div>
 
                     <div class="mt-6 space-y-4 text-sm leading-6 text-slate-600">
-                        <p>No debe utilizarse para compartir contraseÃƒÂ±as, credenciales, datos bancarios, documentaciÃƒÂ³n confidencial no necesaria, datos personales de clientes o empleados que no sean imprescindibles, datos de salud ni cualquier otra informaciÃƒÂ³n especialmente sensible.</p>
-                        <p>Los mensajes enviados a travÃƒÂ©s del chat serÃƒÂ¡n conservados por la empresa durante un plazo de 6 meses, salvo que exista una obligaciÃƒÂ³n legal, incidencia de seguridad o necesidad justificada que requiera conservar determinada informaciÃƒÂ³n durante mÃƒÂ¡s tiempo.</p>
-                        <p>Las conversaciones y ficheros asociados podrÃƒÂ¡n formar parte de copias de seguridad cifradas y custodiadas por IT fuera del repositorio del proyecto, con retenciÃƒÂ³n operativa separada y sin publicar datos sensibles en GitHub ni en ubicaciones pÃƒÂºblicas.</p>
-                        <p>El acceso al contenido de las conversaciones estarÃƒÂ¡ limitado a los usuarios participantes y, de forma excepcional, a personal autorizado de IT o direcciÃƒÂ³n cuando exista una causa justificada relacionada con seguridad, cumplimiento normativo, investigaciÃƒÂ³n de incidencias, mantenimiento tÃƒÂ©cnico o control laboral proporcionado. Todo acceso administrativo al contenido de conversaciones deberÃƒÂ¡ quedar registrado.</p>
-                        <p>Los logs tÃƒÂ©cnicos de la aplicaciÃƒÂ³n no incluyen el contenido de los mensajes, sino ÃƒÂºnicamente eventos tÃƒÂ©cnicos necesarios para seguridad, mantenimiento, errores y auditorÃƒÂ­a.</p>
-                        <p>El uso de este chat no implica obligaciÃƒÂ³n de responder fuera del horario laboral, salvo situaciones excepcionales justificadas conforme a la polÃƒÂ­tica interna de la empresa y al derecho de desconexiÃƒÂ³n digital.</p>
-                        <p>Al pulsar “Aceptar y continuar”, el usuario confirma que ha leído y entendido esta política de uso.</p>
+                        <p>No debe utilizarse para compartir contraseñas, credenciales, datos bancarios, documentación confidencial no necesaria, datos personales de clientes o empleados que no sean imprescindibles, datos de salud ni cualquier otra información especialmente sensible.</p>
+                        <p>Los mensajes enviados a través del chat serán conservados por la empresa durante un plazo de 6 meses, salvo que exista una obligación legal, incidencia de seguridad o necesidad justificada que requiera conservar determinada información durante más tiempo.</p>
+                        <p>Las conversaciones y ficheros asociados podrán formar parte de copias de seguridad cifradas y custodiadas por IT fuera del repositorio del proyecto, con retención operativa separada y sin publicar datos sensibles en GitHub ni en ubicaciones públicas.</p>
+                        <p>El acceso al contenido de las conversaciones estará limitado a los usuarios participantes y, de forma excepcional, a personal autorizado de IT o dirección cuando exista una causa justificada relacionada con seguridad, cumplimiento normativo, investigación de incidencias, mantenimiento técnico o control laboral proporcionado. Todo acceso administrativo al contenido de conversaciones deberá quedar registrado.</p>
+                        <p>Los logs técnicos de la aplicación no incluyen el contenido de los mensajes, sino únicamente eventos técnicos necesarios para seguridad, mantenimiento, errores y auditoría.</p>
+                        <p>El uso de este chat no implica obligación de responder fuera del horario laboral, salvo situaciones excepcionales justificadas conforme a la política interna de la empresa y al derecho de desconexión digital.</p>
+                        <p>Al pulsar "Aceptar y continuar", el usuario confirma que ha leído y entendido esta política de uso.</p>
                     </div>
 
                     <div class="mt-10 border-t border-slate-200 pt-6 pb-6 sm:pb-8">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div class="text-xs text-slate-400">
-                                <span>VersiÃƒÂ³n: {{ $policyVersion }}</span>
+                                <span>Versión: {{ $policyVersion }}</span>
                             </div>
 
                             <form method="POST" action="{{ $policyAcceptUrl }}" class="sm:ml-auto">
