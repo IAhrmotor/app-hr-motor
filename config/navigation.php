@@ -44,8 +44,7 @@ return [
             'route' => 'reviews.index',
         ],
         [
-            'label' => 'Vídeos',
-            'route' => 'videos',
+            'label' => 'Empresa',
         ],
     ],
 
@@ -70,6 +69,10 @@ return [
             [
                 'label' => 'Vídeos',
                 'route' => 'videos',
+            ],
+            [
+                'label' => 'Quiénes somos',
+                'route' => 'empresa.index',
             ],
             [
                 'label' => 'Foro',
