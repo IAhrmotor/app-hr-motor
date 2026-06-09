@@ -95,19 +95,21 @@ class NavigationVisibilityTest extends TestCase
 
     public function test_users_with_video_access_see_videos_and_quienes_somos_under_empresa_in_the_navbar(): void
     {
-        $user = User::factory()->create([
-            'role' => User::ROLE_COMMERCIAL,
-            'email' => 'videos@example.com',
-        ]);
+        foreach ([User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER] as $role) {
+            $user = User::factory()->create([
+                'role' => $role,
+                'email' => strtolower(str_replace(' ', '-', $role)) . '@example.com',
+            ]);
 
-        $this->actingAs($user);
+            $this->actingAs($user);
 
-        $navbarHtml = view('components.layout.navbar')->render();
+            $navbarHtml = view('components.layout.navbar')->render();
 
-        $this->assertStringContainsString('Empresa', $navbarHtml);
-        $this->assertStringContainsString(route('videos'), $navbarHtml);
-        $this->assertStringContainsString(route('empresa.index'), $navbarHtml);
-        $this->assertStringContainsString('Qui&eacute;nes somos', $navbarHtml);
+            $this->assertStringContainsString('Empresa', $navbarHtml);
+            $this->assertStringContainsString(route('videos'), $navbarHtml);
+            $this->assertStringContainsString(route('empresa.index'), $navbarHtml);
+            $this->assertStringContainsString('Quiénes somos', $navbarHtml);
+        }
     }
 
     public function test_users_without_video_access_see_quienes_somos_under_empresa_in_the_navbar(): void
@@ -124,7 +126,7 @@ class NavigationVisibilityTest extends TestCase
 
         $this->assertStringContainsString('Empresa', $navbarHtml);
         $this->assertStringContainsString(route('empresa.index'), $navbarHtml);
-        $this->assertStringContainsString('Qui&eacute;nes somos', $navbarHtml);
+        $this->assertStringContainsString('Quiénes somos', $navbarHtml);
         $this->assertStringNotContainsString(route('videos'), $navbarHtml);
     }
 
