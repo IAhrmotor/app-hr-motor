@@ -190,6 +190,7 @@ class CompanyChatController extends Controller
                 'avatar_url',
                 $this->groupAvatarUrl($selectedConversation->chatGroup)
             );
+            $this->hydrateMessageMentions($selectedConversation->messages, $authUser);
 
             $this->markConversationAsRead($selectedConversation, $authUser);
             $this->markConversationNotificationsAsRead($selectedConversation, $authUser);
@@ -206,6 +207,7 @@ class CompanyChatController extends Controller
                 'avatar_url',
                 $this->groupAvatarUrl($selectedConversation->chatGroup)
             );
+            $this->hydrateMessageMentions($selectedConversation->messages, $authUser);
         }
 
         $people = User::query()
@@ -336,6 +338,8 @@ class CompanyChatController extends Controller
             'body' => ['nullable', 'string', 'max:4000'],
             'attachments' => ['nullable', 'array', 'max:4'],
             'attachments.*' => ['file', 'max:' . self::MAX_ATTACHMENT_FILE_KILOBYTES, 'mimes:jpg,jpeg,png,webp,gif,svg,pdf,txt,md,csv,doc,docx,xls,xlsx,ppt,pptx,zip,rar'],
+            'mentioned_user_ids' => ['nullable', 'array'],
+            'mentioned_user_ids.*' => ['integer'],
         ]);
 
         if ($this->attachmentsTotalSize($request) > self::MAX_ATTACHMENT_TOTAL_BYTES) {
@@ -346,6 +350,11 @@ class CompanyChatController extends Controller
 
         $body = trim((string) ($validated['body'] ?? ''));
         $attachments = $this->storeAttachments($request);
+        $mentionedUserIds = $this->sanitizeMentionedUserIds(
+            $conversation,
+            $request->user(),
+            (array) ($validated['mentioned_user_ids'] ?? [])
+        );
 
         if ($body === '' && $attachments === []) {
             throw ValidationException::withMessages([
@@ -353,11 +362,12 @@ class CompanyChatController extends Controller
             ]);
         }
 
-        $message = DB::transaction(function () use ($conversation, $request, $body, $attachments): CompanyChatMessage {
+        $message = DB::transaction(function () use ($conversation, $request, $body, $attachments, $mentionedUserIds): CompanyChatMessage {
             $message = $conversation->messages()->create([
                 'sender_id' => $request->user()->id,
                 'body' => $body,
                 'attachments' => $attachments,
+                'mentioned_user_ids' => $mentionedUserIds,
                 'read_at' => null,
             ]);
 
@@ -369,27 +379,13 @@ class CompanyChatController extends Controller
             return $message->load('sender');
         });
 
+        $this->hydrateMessageMentions(collect([$message]), $request->user());
+
         $this->notifyConversationParticipants($conversation, $message, $request->user());
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => [
-                    'id' => $message->id,
-                    'body' => $message->body,
-                    'preview_text' => $message->preview_text,
-                    'sender_id' => $message->sender_id,
-                    'sender_name' => $message->sender?->name,
-                    'sender_chat_role_label' => app_chat_role_label($message->sender),
-                    'sender_is_active' => $message->sender?->is_active,
-                    'sender_is_disabled' => $message->sender?->isDisabled(),
-                    'is_mine' => true,
-                    'created_at' => $message->created_at?->toIso8601String(),
-                    'updated_at' => $message->updated_at?->toIso8601String(),
-                    'created_at_label' => $message->created_at?->translatedFormat('H:i'),
-                    'show_time' => true,
-                    'read_at' => $message->read_at?->toIso8601String(),
-                    'attachments' => $this->formatAttachmentsForPayload($message),
-                ],
+                'message' => $this->messagePayload($message, $request->user(), null, true),
                 'conversation_id' => $conversation->id,
                 'last_message_at' => $conversation->last_message_at?->toIso8601String(),
                 'last_message_excerpt' => $conversation->last_message_excerpt,
@@ -544,35 +540,11 @@ class CompanyChatController extends Controller
             ->orderBy('created_at')
             ->get()
             ->values();
+        $this->hydrateMessageMentions($messages, $authUser);
 
         $messagesPayload = $messages->map(function (CompanyChatMessage $message, int $index) use ($authUser, $messages): array {
             $nextMessage = $messages->get($index + 1);
-            $currentLabel = $message->created_at?->translatedFormat('H:i');
-            $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
-            $currentDateKey = $message->created_at?->format('Y-m-d');
-            $nextDateKey = $nextMessage?->created_at?->format('Y-m-d');
-            $isSystem = $message->isSystemMessage();
-
-            return [
-                'id' => $message->id,
-                'body' => $message->body,
-                'preview_text' => $message->preview_text,
-                'sender_id' => $message->sender_id,
-                'sender_name' => $isSystem ? null : $message->sender?->name,
-                'sender_chat_role_label' => $isSystem ? 'Sistema' : app_chat_role_label($message->sender),
-                'sender_is_active' => $isSystem ? false : $message->sender?->is_active,
-                'sender_is_disabled' => $isSystem ? false : $message->sender?->isDisabled(),
-                'is_mine' => ! $isSystem && $message->sender_id === $authUser->id,
-                'is_system' => $isSystem,
-                'created_at' => $message->created_at?->toIso8601String(),
-                'updated_at' => $message->updated_at?->toIso8601String(),
-                'edited_at' => $message->edited_at?->toIso8601String(),
-                'deleted_at' => $message->deleted_at?->toIso8601String(),
-                'created_at_label' => $currentLabel,
-                'show_time' => $nextDateKey !== $currentDateKey || $nextLabel !== $currentLabel,
-                'read_at' => $message->read_at?->toIso8601String(),
-                'attachments' => $this->formatAttachmentsForPayload($message),
-            ];
+            return $this->messagePayload($message, $authUser, $nextMessage);
         });
 
         return response()->json([
@@ -1022,6 +994,156 @@ class CompanyChatController extends Controller
                     'is_favorite' => in_array($participant->id, $favoriteUserIds, true),
                 ];
             })->values()->all(),
+        ];
+    }
+
+    /**
+     * @param Collection<int, CompanyChatMessage> $messages
+     */
+    private function hydrateMessageMentions(Collection $messages, User $authUser): void
+    {
+        $mentionUserIds = $messages
+            ->flatMap(function (CompanyChatMessage $message): array {
+                return array_map(
+                    static fn ($value): int => (int) $value,
+                    (array) ($message->mentioned_user_ids ?? [])
+                );
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        $mentionedUsersById = $mentionUserIds->isEmpty()
+            ? collect()
+            : User::query()->whereIn('id', $mentionUserIds->all())->get()->keyBy('id');
+
+        $messages->each(function (CompanyChatMessage $message) use ($authUser, $mentionedUsersById): void {
+            $mentionedUserIds = collect((array) ($message->mentioned_user_ids ?? []))
+                ->map(static fn ($value): int => (int) $value)
+                ->filter()
+                ->unique()
+                ->values();
+
+            $mentionedUsers = $mentionedUserIds
+                ->map(fn (int $mentionedUserId): ?User => $mentionedUsersById->get($mentionedUserId))
+                ->filter()
+                ->values();
+
+            $message->setAttribute('mentioned_user_ids', $mentionedUserIds->all());
+            $message->setAttribute('mentioned_users', $mentionedUsers->map(function (User $mentionedUser): array {
+                return [
+                    'id' => $mentionedUser->id,
+                    'name' => $mentionedUser->name,
+                ];
+            })->values()->all());
+            $message->setAttribute('mentions_auth_user', $mentionedUserIds->contains($authUser->id));
+            $message->setAttribute('rendered_body_html', $this->renderMessageBodyHtml((string) $message->body, $mentionedUsers->all()));
+        });
+    }
+
+    /**
+     * @param array<int, int|string> $mentionedUserIds
+     * @return array<int, int>
+     */
+    private function sanitizeMentionedUserIds(CompanyChatConversation $conversation, User $sender, array $mentionedUserIds): array
+    {
+        if (! $conversation->isGroupConversation()) {
+            return [];
+        }
+
+        $participantIds = $conversation->participantsFor($sender)
+            ->pluck('id')
+            ->map(static fn ($value): int => (int) $value)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return collect($mentionedUserIds)
+            ->map(static fn ($value): int => (int) $value)
+            ->filter(fn (int $value): bool => $value !== $sender->id)
+            ->filter(fn (int $value): bool => in_array($value, $participantIds, true))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param array<int, User|array{id:int,name:string}> $mentionedUsers
+     */
+    private function renderMessageBodyHtml(string $body, array $mentionedUsers = []): string
+    {
+        $escapedBody = e($body);
+
+        if ($escapedBody === '' || $mentionedUsers === []) {
+            return $escapedBody;
+        }
+
+        usort($mentionedUsers, static function ($first, $second): int {
+            $firstName = (string) (is_array($first) ? ($first['name'] ?? '') : $first->name);
+            $secondName = (string) (is_array($second) ? ($second['name'] ?? '') : $second->name);
+
+            return mb_strlen($secondName) <=> mb_strlen($firstName);
+        });
+
+        foreach ($mentionedUsers as $mentionedUser) {
+            $name = trim((string) (is_array($mentionedUser) ? ($mentionedUser['name'] ?? '') : $mentionedUser->name));
+
+            if ($name === '') {
+                continue;
+            }
+
+            $escapedMention = e('@' . $name);
+            $replacement = '<span class="font-semibold text-sky-600">@' . e($name) . '</span>';
+            $escapedBody = str_replace($escapedMention, $replacement, $escapedBody);
+        }
+
+        return $escapedBody;
+    }
+
+    private function messagePayload(CompanyChatMessage $message, User $authUser, ?CompanyChatMessage $nextMessage = null, bool $forceShowTime = false): array
+    {
+        $currentLabel = $message->created_at?->translatedFormat('H:i');
+        $nextLabel = $nextMessage?->created_at?->translatedFormat('H:i');
+        $currentDateKey = $message->created_at?->format('Y-m-d');
+        $nextDateKey = $nextMessage?->created_at?->format('Y-m-d');
+        $isSystem = $message->isSystemMessage();
+
+        return [
+            'id' => $message->id,
+            'body' => $message->body,
+            'rendered_body_html' => (string) ($message->rendered_body_html ?? e((string) $message->body)),
+            'preview_text' => $message->preview_text,
+            'sender_id' => $message->sender_id,
+            'sender_name' => $isSystem ? null : $message->sender?->name,
+            'sender_chat_role_label' => $isSystem ? 'Sistema' : app_chat_role_label($message->sender),
+            'sender_is_active' => $isSystem ? false : $message->sender?->is_active,
+            'sender_is_disabled' => $isSystem ? false : $message->sender?->isDisabled(),
+            'is_mine' => ! $isSystem && $message->sender_id === $authUser->id,
+            'is_system' => $isSystem,
+            'mentioned_user_ids' => collect((array) ($message->mentioned_user_ids ?? []))
+                ->map(static fn ($value): int => (int) $value)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
+            'mentioned_users' => collect((array) ($message->mentioned_users ?? []))
+                ->map(static fn ($user): array => [
+                    'id' => (int) ($user['id'] ?? 0),
+                    'name' => (string) ($user['name'] ?? ''),
+                ])
+                ->filter(fn (array $user): bool => $user['id'] > 0 && $user['name'] !== '')
+                ->values()
+                ->all(),
+            'mentions_me' => (bool) ($message->mentions_auth_user ?? false),
+            'created_at' => $message->created_at?->toIso8601String(),
+            'updated_at' => $message->updated_at?->toIso8601String(),
+            'edited_at' => $message->edited_at?->toIso8601String(),
+            'deleted_at' => $message->deleted_at?->toIso8601String(),
+            'created_at_label' => $currentLabel,
+            'show_time' => $forceShowTime || $nextDateKey !== $currentDateKey || $nextLabel !== $currentLabel,
+            'read_at' => $message->read_at?->toIso8601String(),
+            'attachments' => $this->formatAttachmentsForPayload($message),
         ];
     }
 

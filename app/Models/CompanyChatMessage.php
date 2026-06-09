@@ -21,6 +21,7 @@ class CompanyChatMessage extends Model
         'sender_id',
         'body',
         'attachments',
+        'mentioned_user_ids',
         'read_at',
         'edited_at',
         'is_system',
@@ -30,6 +31,7 @@ class CompanyChatMessage extends Model
     {
         return [
             'attachments' => 'array',
+            'mentioned_user_ids' => 'array',
             'read_at' => 'datetime',
             'edited_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -63,6 +65,11 @@ class CompanyChatMessage extends Model
     public function isSystemMessage(): bool
     {
         return (bool) $this->is_system;
+    }
+
+    public function mentionsUser(User $user): bool
+    {
+        return in_array($user->id, $this->mentioned_user_ids ?? [], true);
     }
 
     public function canBeEditedOrDeletedBy(User $user, ?Carbon $at = null): bool

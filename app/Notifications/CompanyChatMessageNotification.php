@@ -27,13 +27,18 @@ class CompanyChatMessageNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         $isGroupConversation = $this->conversation->isGroupConversation();
+        $isMentionedRecipient = $notifiable instanceof User
+            ? $this->message->mentionsUser($notifiable)
+            : false;
 
         return [
             'type' => 'chat.message.received',
-            'priority' => false,
-            'title' => $isGroupConversation
-                ? 'Nuevo mensaje en ' . ($this->conversation->chatGroup?->name ?? 'grupo de chat')
-                : 'Nuevo mensaje de ' . $this->sender->name,
+            'priority' => $isMentionedRecipient,
+            'title' => $isMentionedRecipient
+                ? 'Te han mencionado en ' . ($this->conversation->chatGroup?->name ?? 'grupo de chat')
+                : ($isGroupConversation
+                    ? 'Nuevo mensaje en ' . ($this->conversation->chatGroup?->name ?? 'grupo de chat')
+                    : 'Nuevo mensaje de ' . $this->sender->name),
             'description' => $this->message->preview_text,
             'link_url' => route('chat.beta', ['conversation' => $this->conversation->id]),
             'link_label' => 'Abrir chat',

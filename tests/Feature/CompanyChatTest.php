@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class CompanyChatTest extends TestCase
@@ -260,6 +261,59 @@ class CompanyChatTest extends TestCase
             ->get(route('chat.beta', ['conversation' => $conversation->id]))
             ->assertOk()
             ->assertSee('Emisor Grupo', false);
+    }
+
+    public function test_group_mentions_are_stored_and_prioritised_for_the_mentioned_user(): void
+    {
+        $sender = User::factory()->create(['name' => 'Emisor Menciones']);
+        $mentioned = User::factory()->create(['name' => 'Michael Perez']);
+        $other = User::factory()->create(['name' => 'Lector Normal']);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($mentioned);
+        $this->acceptChatPolicy($other);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo menciones',
+        ]);
+        $group->participants()->sync([$sender->id, $mentioned->id, $other->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        Notification::fake();
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Hola @Michael Perez, revisa esto por favor.',
+                'mentioned_user_ids' => [$mentioned->id],
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $message = CompanyChatMessage::query()->latest('id')->first();
+
+        $this->assertNotNull($message);
+        $this->assertSame([$mentioned->id], $message->mentioned_user_ids);
+
+        $this->actingAs($mentioned)
+            ->getJson(route('chat.beta.messages.index', ['conversation' => $conversation->id]))
+            ->assertOk()
+            ->assertJsonPath('messages.0.mentioned_user_ids.0', $mentioned->id)
+            ->assertJsonPath('messages.0.mentions_me', true)
+            ->assertJsonPath('messages.0.rendered_body_html', 'Hola <span class="font-semibold text-sky-600">@Michael Perez</span>, revisa esto por favor.');
+
+        Notification::assertSentTo($mentioned, CompanyChatMessageNotification::class, function (CompanyChatMessageNotification $notification) use ($mentioned, $conversation): bool {
+            $payload = $notification->toDatabase($mentioned);
+
+            return $payload['priority'] === true
+                && str_contains($payload['title'], 'Te han mencionado')
+                && $payload['conversation_id'] === $conversation->id;
+        });
+
+        Notification::assertSentTo($other, CompanyChatMessageNotification::class, function (CompanyChatMessageNotification $notification) use ($other): bool {
+            return $notification->toDatabase($other)['priority'] === false;
+        });
     }
 
     public function test_admin_group_member_changes_write_system_messages_in_the_group_chat(): void
