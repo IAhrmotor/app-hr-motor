@@ -86,7 +86,7 @@
                     </div>
                 </article>
 
-                <aside class="rounded-[1.5rem] border border-slate-200 bg-brand-secondary p-5 text-white shadow-[0_20px_50px_rgba(15,23,42,0.12)] lg:p-6">
+                <aside class="rounded-[1.5rem] border border-transparent bg-brand-secondary p-5 text-white shadow-[0_20px_50px_rgba(15,23,42,0.12)] lg:p-6">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">HR Motor</p>
                     <h2 class="mt-2 text-xl font-bold tracking-tight text-white">
                         Una red nacional en expansión
