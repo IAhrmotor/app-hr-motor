@@ -1,4 +1,4 @@
-﻿@php
+@php
     $authUser = auth()->user();
     $navItems = collect(config('navigation.main', []))
         ->map(function (array $item) use ($authUser) {
@@ -29,14 +29,14 @@
             if (($item['label'] ?? null) === 'Empresa') {
                 $item['children'] = [
                     [
-                        'label' => 'Qui&eacute;nes somos',
+                        'label' => 'Quiénes somos',
                         'route' => 'empresa.index',
                     ],
                 ];
 
                 if (app_can_access_videos($authUser)) {
                     array_unshift($item['children'], [
-                        'label' => 'V&iacute;deos',
+                        'label' => 'Vídeos',
                         'route' => 'videos',
                     ]);
                 }

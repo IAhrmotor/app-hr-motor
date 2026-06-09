@@ -9,6 +9,12 @@
     --color-brand-secondary: #1F2944;
 }
 
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
 [x-cloak] {
     display: none !important;
 }
