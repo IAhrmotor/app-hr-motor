@@ -75,4 +75,8 @@ return [
         'login_hint' => env('GOOGLE_BUSINESS_PROFILE_LOGIN_HINT'),
     ],
 
+    'company' => [
+        'my_maps_embed_url' => env('COMPANY_MY_MAPS_EMBED_URL', 'https://www.google.com/maps/d/embed?mid=1BuhTvvVFqOEHfrW81pbp4xteNZi8SNA&ehbc=2E312F'),
+    ],
+
 ];
