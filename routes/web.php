@@ -1423,6 +1423,12 @@ Route::middleware('auth')->group(function () {
         return view('videos', compact('videos'));
     })->name('videos');
 
+    Route::get('/empresa', function () {
+        return view('empresa.index', [
+            'myMapsEmbedUrl' => config('services.company.my_maps_embed_url'),
+        ]);
+    })->name('empresa.index');
+
     Route::middleware('role:admin,gestor')->group(function () {
         Route::get('/admin', function () {
             $authUser = auth()->user();

@@ -1,4 +1,4 @@
-@php
+﻿@php
     $authUser = auth()->user();
     $navItems = collect(config('navigation.main', []))
         ->map(function (array $item) use ($authUser) {
@@ -24,6 +24,22 @@
 
             if (($item['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews($authUser)) {
                 return null;
+            }
+
+            if (($item['label'] ?? null) === 'Empresa') {
+                $item['children'] = [
+                    [
+                        'label' => 'Qui&eacute;nes somos',
+                        'route' => 'empresa.index',
+                    ],
+                ];
+
+                if (app_can_access_videos($authUser)) {
+                    array_unshift($item['children'], [
+                        'label' => 'V&iacute;deos',
+                        'route' => 'videos',
+                    ]);
+                }
             }
 
             if (($item['label'] ?? null) === 'Rankings' && ! empty($item['children'])) {
@@ -120,7 +136,7 @@
                                         @php $isChildActive = request()->routeIs($child['route']); @endphp
                                         <a href="{{ route($child['route']) }}"
                                             class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
-                                            {{ $child['label'] }}
+                                            {!! $child['label'] !!}
                                         </a>
                                     @endforeach
                                 </div>
@@ -272,7 +288,7 @@
                             @forelse ($forumUnreadNotifications as $notification)
                                 @php
                                     $isPriorityNotification = (bool) data_get($notification->data, 'priority', false);
-                                    $notificationTitle = data_get($notification->data, 'title', data_get($notification->data, 'message', 'Notificación'));
+                                    $notificationTitle = data_get($notification->data, 'title', data_get($notification->data, 'message', 'NotificaciÃ³n'));
                                     $notificationDescription = data_get($notification->data, 'description', data_get($notification->data, 'thread_title', ''));
                                     $notificationLinkLabel = data_get($notification->data, 'link_label', 'Abrir');
                                     $notificationLinkLabel = $notificationLinkLabel === 'Abrir enlace' ? 'Abrir' : $notificationLinkLabel;
@@ -790,3 +806,5 @@
         </div>
     </div>
 </nav>
+
+
