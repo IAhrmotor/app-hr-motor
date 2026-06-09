@@ -185,6 +185,11 @@ class User extends Authenticatable
         });
 
         static::updated(function (self $user): void {
+            if ($user->wasChanged('is_active')) {
+                app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, false);
+                return;
+            }
+
             if (! $user->wasChanged(['extra_role', 'dealership_id'])) {
                 return;
             }
