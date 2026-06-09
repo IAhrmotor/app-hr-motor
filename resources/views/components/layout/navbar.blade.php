@@ -753,7 +753,7 @@
                         @php $isChildActive = request()->routeIs($child['route']); @endphp
                         <a href="{{ route($child['route']) }}" @click="open = false"
                             class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isChildActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
-                            {{ $child['label'] }}
+                            {!! $child['label'] !!}
                         </a>
                     @endforeach
                 @else
