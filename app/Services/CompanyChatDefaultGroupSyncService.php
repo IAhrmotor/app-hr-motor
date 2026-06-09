@@ -31,12 +31,18 @@ class CompanyChatDefaultGroupSyncService
         DB::transaction(function () use ($user, $recordSystemMessages): void {
             $systemMessageService = app(CompanyChatGroupSystemMessageService::class);
 
-            $currentManagedGroups = CompanyChatGroup::query()
+            $currentGroups = $user->chatGroups()->get();
+
+            if (! $user->is_active || $user->isDisabled()) {
+                if ($currentGroups->isNotEmpty()) {
+                    $user->chatGroups()->detach($currentGroups->pluck('id')->all());
+                }
+
+                return;
+            }
+
+            $currentManagedGroups = $currentGroups
                 ->whereNotNull('system_group_type')
-                ->whereHas('participants', function ($query) use ($user): void {
-                    $query->whereKey($user->id);
-                })
-                ->get()
                 ->keyBy('id');
 
             $desiredGroupIds = collect()

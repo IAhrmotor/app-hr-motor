@@ -3282,19 +3282,19 @@
                     </div>
 
                     <div class="mt-6 space-y-4 text-sm leading-6 text-slate-600">
-                        <p>No debe utilizarse para compartir contraseÃƒÂ±as, credenciales, datos bancarios, documentaciÃƒÂ³n confidencial no necesaria, datos personales de clientes o empleados que no sean imprescindibles, datos de salud ni cualquier otra informaciÃƒÂ³n especialmente sensible.</p>
-                        <p>Los mensajes enviados a travÃƒÂ©s del chat serÃƒÂ¡n conservados por la empresa durante un plazo de 6 meses, salvo que exista una obligaciÃƒÂ³n legal, incidencia de seguridad o necesidad justificada que requiera conservar determinada informaciÃƒÂ³n durante mÃƒÂ¡s tiempo.</p>
-                        <p>Las conversaciones y ficheros asociados podrÃƒÂ¡n formar parte de copias de seguridad cifradas y custodiadas por IT fuera del repositorio del proyecto, con retenciÃƒÂ³n operativa separada y sin publicar datos sensibles en GitHub ni en ubicaciones pÃƒÂºblicas.</p>
-                        <p>El acceso al contenido de las conversaciones estarÃƒÂ¡ limitado a los usuarios participantes y, de forma excepcional, a personal autorizado de IT o direcciÃƒÂ³n cuando exista una causa justificada relacionada con seguridad, cumplimiento normativo, investigaciÃƒÂ³n de incidencias, mantenimiento tÃƒÂ©cnico o control laboral proporcionado. Todo acceso administrativo al contenido de conversaciones deberÃƒÂ¡ quedar registrado.</p>
-                        <p>Los logs tÃƒÂ©cnicos de la aplicaciÃƒÂ³n no incluyen el contenido de los mensajes, sino ÃƒÂºnicamente eventos tÃƒÂ©cnicos necesarios para seguridad, mantenimiento, errores y auditorÃƒÂ­a.</p>
-                        <p>El uso de este chat no implica obligaciÃƒÂ³n de responder fuera del horario laboral, salvo situaciones excepcionales justificadas conforme a la polÃƒÂ­tica interna de la empresa y al derecho de desconexiÃƒÂ³n digital.</p>
-                        <p>Al pulsar “Aceptar y continuar”, el usuario confirma que ha leído y entendido esta política de uso.</p>
+                        <p>No debe utilizarse para compartir contraseñas, credenciales, datos bancarios, documentación confidencial no necesaria, datos personales de clientes o empleados que no sean imprescindibles, datos de salud ni cualquier otra información especialmente sensible.</p>
+                        <p>Los mensajes enviados a través del chat serán conservados por la empresa durante un plazo de 6 meses, salvo que exista una obligación legal, incidencia de seguridad o necesidad justificada que requiera conservar determinada información durante más tiempo.</p>
+                        <p>Las conversaciones y ficheros asociados podrán formar parte de copias de seguridad cifradas y custodiadas por IT fuera del repositorio del proyecto, con retención operativa separada y sin publicar datos sensibles en GitHub ni en ubicaciones públicas.</p>
+                        <p>El acceso al contenido de las conversaciones estará limitado a los usuarios participantes y, de forma excepcional, a personal autorizado de IT o dirección cuando exista una causa justificada relacionada con seguridad, cumplimiento normativo, investigación de incidencias, mantenimiento técnico o control laboral proporcionado. Todo acceso administrativo al contenido de conversaciones deberá quedar registrado.</p>
+                        <p>Los logs técnicos de la aplicación no incluyen el contenido de los mensajes, sino únicamente eventos técnicos necesarios para seguridad, mantenimiento, errores y auditoría.</p>
+                        <p>El uso de este chat no implica obligación de responder fuera del horario laboral, salvo situaciones excepcionales justificadas conforme a la política interna de la empresa y al derecho de desconexión digital.</p>
+                        <p>Al pulsar "Aceptar y continuar", el usuario confirma que ha leído y entendido esta política de uso.</p>
                     </div>
 
                     <div class="mt-10 border-t border-slate-200 pt-6 pb-6 sm:pb-8">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div class="text-xs text-slate-400">
-                                <span>VersiÃƒÂ³n: {{ $policyVersion }}</span>
+                                <span>Versión: {{ $policyVersion }}</span>
                             </div>
 
                             <form method="POST" action="{{ $policyAcceptUrl }}" class="sm:ml-auto">
