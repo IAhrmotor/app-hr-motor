@@ -67,7 +67,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])
         ->whereNumber('dealership')
         ->name('dealerships.show');
-    Route::get('/usuarios/{user}', [UserController::class, 'show'])->name('users.show');
+    Route::get('/usuarios/{user}', [UserController::class, 'show'])
+        ->whereNumber('user')
+        ->name('users.show');
     Route::get('/web', function () {
         abort_unless(app_can_access_web(), 403);
 
@@ -1574,16 +1576,24 @@ Route::middleware('auth')->group(function () {
         Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
         Route::get('/usuarios/crear', [UserController::class, 'create'])->name('users.create');
         Route::post('/usuarios', [UserController::class, 'store'])->name('users.store');
-        Route::post('/usuarios/{user}/reenviar-invitacion', [UserController::class, 'resendInvitation'])->name('users.resend-invitation');
+        Route::post('/usuarios/{user}/reenviar-invitacion', [UserController::class, 'resendInvitation'])
+            ->whereNumber('user')
+            ->name('users.resend-invitation');
         Route::patch('/usuarios/{user}/desactivar', [UserController::class, 'disable'])
             ->whereNumber('user')
             ->name('users.disable');
         Route::patch('/usuarios/{user}/reactivar', [UserController::class, 'reactivate'])
             ->whereNumber('user')
             ->name('users.reactivate');
-        Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])->name('users.edit');
-        Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('users.update');
-        Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/usuarios/{user}/editar', [UserController::class, 'edit'])
+            ->whereNumber('user')
+            ->name('users.edit');
+        Route::put('/usuarios/{user}', [UserController::class, 'update'])
+            ->whereNumber('user')
+            ->name('users.update');
+        Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])
+            ->whereNumber('user')
+            ->name('users.destroy');
 
         Route::get('/delegaciones/crear', [DealershipController::class, 'create'])->name('dealerships.create');
         Route::post('/delegaciones', [DealershipController::class, 'store'])->name('dealerships.store');
