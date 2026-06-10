@@ -410,7 +410,7 @@
                         <div class="group flex min-w-0 items-center gap-3">
                             <button
                                 type="button"
-                                class="group/avatar relative {{ $selectedConversationGroupAvatarUrl ? 'cursor-pointer' : 'hidden' }} overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                class="group/avatar relative {{ $selectedConversationGroupAvatarUrl ? 'cursor-pointer' : 'hidden' }} inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                                 aria-label="Ampliar imagen del grupo {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
                                 data-chat-group-header-avatar-button
                                 data-chat-group-header-avatar-src="{{ $selectedConversationGroupAvatarUrl }}"
@@ -421,7 +421,7 @@
                                 <img
                                     src="{{ $selectedConversationGroupAvatarUrl }}"
                                     alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
-                                    class="h-11 w-11 shrink-0 cursor-pointer rounded-2xl object-cover transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
+                                    class="block h-full w-full min-h-full min-w-full shrink-0 cursor-pointer rounded-2xl object-cover object-center transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
                                     data-chat-group-header-avatar
                                 >
                                 <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/avatar:bg-brand-secondary/35 group-hover/avatar:opacity-100">
