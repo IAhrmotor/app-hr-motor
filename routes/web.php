@@ -1093,6 +1093,11 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/google-meet.webp'),
                     ],
                     [
+                        'label' => 'Bitwarden',
+                        'url' => 'https://vault.bitwarden.eu/#/vault',
+                        'image' => asset('images/tools/bitwarden.webp'),
+                    ],
+                    [
                         'label' => 'n8n VPS',
                         'url' => 'https://n8n.hrmotor.com/',
                         'image' => asset('images/tools/n8n-vps.webp'),
