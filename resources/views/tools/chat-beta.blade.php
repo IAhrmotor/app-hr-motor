@@ -174,7 +174,7 @@
                             </div>
                         @else
                             <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
-                                Marca contactos como favoritos para verlos aquÃƒÂ­.
+                                Marca contactos como favoritos para verlos aquí.
                             </div>
                         @endif
                     </div>
@@ -246,7 +246,7 @@
                                                 @endif
                                             </p>
                                             <p class="truncate text-xs text-slate-500" data-chat-last-message>
-                                                {{ $conversation->last_message_excerpt ?: 'Empieza la conversaciÃƒÂ³n' }}
+                                                {{ $conversation->last_message_excerpt ?: 'Empieza la conversación' }}
                                             </p>
                                         </div>
 
@@ -262,9 +262,9 @@
                             </a>
                         @empty
                             <div class="px-4 py-8 text-center">
-                                <p class="text-sm font-semibold text-brand-secondary">Sin conversaciones aÃƒÂºn</p>
+                                <p class="text-sm font-semibold text-brand-secondary">Sin conversaciones aún</p>
                                 <p class="mt-1 text-sm leading-6 text-slate-500">
-                                    Busca a un compaÃƒÂ±ero y abre el primer chat.
+                                    Busca a un compañero y abre el primer chat.
                                 </p>
                             </div>
                         @endforelse
@@ -410,7 +410,7 @@
                         <div class="group flex min-w-0 items-center gap-3">
                             <button
                                 type="button"
-                                class="group/avatar relative {{ $selectedConversationGroupAvatarUrl ? 'cursor-pointer' : 'hidden' }} overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                class="group/avatar relative {{ $selectedConversationGroupAvatarUrl ? 'cursor-pointer' : 'hidden' }} inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                                 aria-label="Ampliar imagen del grupo {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
                                 data-chat-group-header-avatar-button
                                 data-chat-group-header-avatar-src="{{ $selectedConversationGroupAvatarUrl }}"
@@ -421,7 +421,7 @@
                                 <img
                                     src="{{ $selectedConversationGroupAvatarUrl }}"
                                     alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
-                                    class="h-11 w-11 shrink-0 cursor-pointer rounded-2xl object-cover transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
+                                    class="block h-full w-full min-h-full min-w-full shrink-0 cursor-pointer rounded-2xl object-cover object-center transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
                                     data-chat-group-header-avatar
                                 >
                                 <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/avatar:bg-brand-secondary/35 group-hover/avatar:opacity-100">
@@ -1092,7 +1092,7 @@
                 let mobileSidebarOpen = false;
                 const messageActionWindowMinutes = 2;
                 const messageActionWindowMs = messageActionWindowMinutes * 60 * 1000;
-                const messageActionWindowMessage = 'Solo puedes editar o eliminar un mensaje durante los 2 minutos posteriores a su envÃƒÂ­o.';
+                const messageActionWindowMessage = 'Solo puedes editar o eliminar un mensaje durante los 2 minutos posteriores a su envío.';
                 currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
                     $nextMessage = $selectedConversationMessages->get($index + 1);
                     $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
@@ -2439,7 +2439,7 @@
                         return;
                     }
 
-                    const previewText = attachmentSnapshot.map((file) => `${file.name} (${Math.ceil(file.size / 1024)} KB)`).join(' Ã‚Â· ');
+                    const previewText = attachmentSnapshot.map((file) => `${file.name} (${Math.ceil(file.size / 1024)} KB)`).join(' · ');
                     attachmentsPreview.textContent = `${attachmentSnapshot.length} archivo${attachmentSnapshot.length === 1 ? '' : 's'} seleccionado${attachmentSnapshot.length === 1 ? '' : 's'}: ${previewText}`;
                     attachmentsPreview.classList.remove('hidden');
 
@@ -2447,7 +2447,7 @@
                         <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-brand-secondary">
                             <span class="truncate max-w-[9rem]">${escapeHtml(file.name)}</span>
                             <button type="button" class="cursor-pointer text-slate-400 transition hover:text-rose-500" data-chat-remove-attachment-index="${index}" aria-label="Quitar ${escapeHtml(file.name)}">
-                                Ãƒâ€”
+                                ×
                             </button>
                         </span>
                     `).join('');
@@ -2498,7 +2498,7 @@
                             sidebarList.innerHTML = privateConversations.length === 0
                                 ? `
                                     <div class="px-4 py-8 text-center text-sm text-slate-500">
-                                        Sin conversaciones aÃƒÂºn
+                                        Sin conversaciones aún
                                     </div>
                                 `
                                 : privateConversations.map(renderConversation).join('');
@@ -2508,7 +2508,7 @@
                             sidebarFavoritesList.innerHTML = favoriteContacts.length === 0
                                 ? `
                                     <div class="border-y border-slate-100 px-4 py-8 text-center text-sm text-slate-500">
-                                        Marca contactos como favoritos para verlos aquÃƒÂ­.
+                                        Marca contactos como favoritos para verlos aquí.
                                     </div>
                                 `
                                 : `
@@ -2683,7 +2683,7 @@
                         const firstRejectedName = firstRejected?.name || 'el archivo';
 
                         if (hitTotalLimit) {
-                            showChatError('El conjunto de archivos adjuntos supera el peso mÃƒÂ¡ximo permitido de 30 MB.');
+                            showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
                             return;
                         }
 
@@ -2772,7 +2772,7 @@
                     const conversationId = Number(wrapper.dataset.conversationId || sidebarSelectedConversationId || 0);
 
                     if (!conversationId) {
-                        showChatError('No hay ninguna conversaciÃƒÂ³n activa.');
+                        showChatError('No hay ninguna conversación activa.');
                         return;
                     }
 
@@ -2782,7 +2782,7 @@
                     }
 
                     if (getAttachmentSnapshotTotalBytes() > maxAttachmentTotalBytes) {
-                        showChatError('El conjunto de archivos adjuntos supera el peso mÃƒÂ¡ximo permitido de 30 MB.');
+                        showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
                         return;
                     }
 
@@ -2815,7 +2815,7 @@
 
                         if (!response.ok) {
                             if (response.status === 413) {
-                                showChatError('El conjunto de archivos adjuntos supera el peso mÃƒÂ¡ximo permitido de 30 MB.');
+                                showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
                                 return;
                             }
 
@@ -3256,7 +3256,7 @@
                         </div>
                         <h2 class="mt-5 text-lg font-bold text-brand-secondary">Política de uso del chat corporativo</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-500">
-                            Antes de continuar, acepta la polÃƒÂ­tica vigente para poder ver conversaciones, buscar compaÃƒÂ±eros y enviar mensajes.
+                            Antes de continuar, acepta la política vigente para poder ver conversaciones, buscar compañeros y enviar mensajes.
                         </p>
                     </div>
                 </div>
