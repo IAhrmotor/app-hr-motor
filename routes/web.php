@@ -180,6 +180,11 @@ Route::middleware('auth')->group(function () {
                         'open_in_new_tab' => $webHrMotorOpenInNewTab,
                     ],
                     [
+                        'label' => 'Dataprius',
+                        'url' => 'https://dataprius.net/hrmotor',
+                        'image' => asset('images/tools/dataprius.webp'),
+                    ],
+                    [
                         'label' => 'ChatGPT',
                         'url' => 'https://chatgpt.com/',
                         'image' => asset('images/tools/chatgpt.webp'),
@@ -745,6 +750,9 @@ Route::middleware('auth')->group(function () {
                     ) || (
                         in_array($button['label'] ?? null, ['Google Drive', 'Occident', 'Calcular IVA'], true)
                         && app_user_has_any_role($authUser, [User::ROLE_ADMINISTRATION])
+                    ) || (
+                        ($button['label'] ?? null) === 'Dataprius'
+                        && app_user_has_any_role($authUser, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER, User::ROLE_WORKSHOP])
                     ) || (
                         in_array($button['label'] ?? null, $legalButtonLabels, true)
                         && (
