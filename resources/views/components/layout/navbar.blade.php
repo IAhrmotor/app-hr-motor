@@ -102,8 +102,8 @@
             <img src="{{ asset('images/logo-horizontal.svg') }}" alt="HR Motor" class="h-10 w-auto shrink-0">
         </a>
 
-        <div class="flex items-center gap-2 md:gap-6">
-            <div class="hidden items-center gap-8 xl:flex">
+        <div class="flex min-w-0 items-center gap-2 md:gap-6">
+            <div class="hidden min-w-0 items-center gap-8 xl:flex">
                 @foreach ($navItems as $item)
                     @if (! empty($item['children']))
                         @php
@@ -178,7 +178,7 @@
             @auth
                 @if (app_role_viewer_enabled($authUser))
                     <button type="button" @click="roleViewerOpen = !roleViewerOpen; notificationsOpen = false; profileOpen = false"
-                        class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} transition xl:hidden"
+                        class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} transition xl:hidden"
                         aria-label="Abrir visor de roles" :aria-expanded="roleViewerOpen.toString()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -189,9 +189,9 @@
                         </svg>
                     </button>
 
-                    <div class="relative hidden xl:block" @click.outside="roleViewerOpen = false">
+                    <div class="relative hidden shrink-0 xl:block" @click.outside="roleViewerOpen = false">
                         <button type="button" @click="roleViewerOpen = !roleViewerOpen; notificationsOpen = false; profileOpen = false"
-                            class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} px-3 transition"
+                            class="inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border {{ $roleViewerActive ? 'border-brand-primary/20 bg-brand-primary/5 text-brand-primary' : 'border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900' }} px-3 transition"
                             aria-label="Abrir visor de roles" :aria-expanded="roleViewerOpen.toString()">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -248,9 +248,9 @@
                     </div>
                 @endif
 
-                <div class="relative" @click.outside="notificationsOpen = false" data-notification-summary-url="{{ route('notifications.summary') }}">
+                <div class="relative shrink-0" @click.outside="notificationsOpen = false" data-notification-summary-url="{{ route('notifications.summary') }}">
                     <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false"
-                        class="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
+                        class="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
                         aria-label="Ver notificaciones" :aria-expanded="notificationsOpen.toString()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor" stroke-width="1.8">
@@ -616,12 +616,12 @@
                     });
                 </script>
 
-                <div class="relative hidden xl:block" @click.outside="profileOpen = false">
+                <div class="relative hidden shrink-0 xl:block" @click.outside="profileOpen = false">
                     <button type="button" @click="profileOpen = !profileOpen"
-                        class="flex cursor-pointer items-center rounded-full bg-white/90 p-0.5 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
+                        class="flex shrink-0 cursor-pointer items-center rounded-full bg-white/90 p-0.5 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
                         aria-label="Abrir menu de perfil" :aria-expanded="profileOpen.toString()">
                         <img src="{{ auth()->user()->avatar_url }}" alt="Avatar de {{ auth()->user()->name }}"
-                            class="h-10 w-10 rounded-full object-cover">
+                            class="h-10 w-10 shrink-0 rounded-full object-cover">
                     </button>
 
                     <div x-show="profileOpen" x-cloak x-transition:enter="transition ease-out duration-150"
@@ -668,7 +668,7 @@
             @endauth
 
             <button type="button" @click="open = !open"
-                class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 xl:hidden"
+                class="inline-flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 xl:hidden"
                 aria-label="Abrir menu de navegacion" :aria-expanded="open.toString()">
                 <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
