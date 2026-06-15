@@ -36,6 +36,10 @@ return [
             'route' => 'tools.informes',
         ],
         [
+            'label' => 'Currículums',
+            'route' => 'curriculums.index',
+        ],
+        [
             'label' => 'Chat',
             'route' => 'chat.beta',
         ],
@@ -65,6 +69,10 @@ return [
             [
                 'label' => 'Chat',
                 'route' => 'chat.beta',
+            ],
+            [
+                'label' => 'Currículums',
+                'route' => 'curriculums.index',
             ],
             [
                 'label' => 'Vídeos',

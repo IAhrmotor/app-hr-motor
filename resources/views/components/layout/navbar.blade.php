@@ -26,6 +26,10 @@
                 return null;
             }
 
+            if (($item['route'] ?? null) === 'curriculums.index' && ! app_can_access_curriculums($authUser)) {
+                return null;
+            }
+
             if (($item['label'] ?? null) === 'Empresa') {
                 $item['children'] = [
                     [
@@ -806,5 +810,4 @@
         </div>
     </div>
 </nav>
-
 

@@ -15,6 +15,13 @@ body {
     padding: 0;
 }
 
+button,
+[type='button'],
+[type='submit'],
+[role='button'] {
+    cursor: pointer;
+}
+
 [x-cloak] {
     display: none !important;
 }

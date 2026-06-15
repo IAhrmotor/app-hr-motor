@@ -77,6 +77,41 @@ class NavigationVisibilityTest extends TestCase
         $this->assertStringNotContainsString(route('tools.informes'), $footerHtml);
     }
 
+    public function test_human_resources_extra_role_sees_curriculums_in_the_navbar_and_footer(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_HUMAN_RESOURCES,
+            'email' => 'rrhh@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+        $footerHtml = view('components.layout.footer')->render();
+
+        $this->assertStringContainsString(route('curriculums.index'), $navbarHtml);
+        $this->assertStringContainsString(route('curriculums.index'), $footerHtml);
+        $this->assertStringContainsString('Currículums', $navbarHtml);
+        $this->assertStringContainsString('Currículums', $footerHtml);
+    }
+
+    public function test_regular_user_does_not_see_curriculums_in_the_navbar_or_footer(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'email' => 'comercial-curriculums@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+        $footerHtml = view('components.layout.footer')->render();
+
+        $this->assertStringNotContainsString(route('curriculums.index'), $navbarHtml);
+        $this->assertStringNotContainsString(route('curriculums.index'), $footerHtml);
+    }
+
     public function test_all_users_see_quienes_somos_in_the_footer(): void
     {
         $user = User::factory()->create([
@@ -162,6 +197,29 @@ class NavigationVisibilityTest extends TestCase
 
         $this->actingAs($deniedUser)
             ->get(route('tools.informes'))
+            ->assertForbidden();
+    }
+
+    public function test_only_human_resources_extra_role_can_open_curriculums(): void
+    {
+        $allowedUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_HUMAN_RESOURCES,
+            'email' => 'rrhh2@example.com',
+        ]);
+
+        $this->actingAs($allowedUser)
+            ->get(route('curriculums.index'))
+            ->assertOk();
+
+        $deniedUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'email' => 'comercial3@example.com',
+        ]);
+
+        $this->actingAs($deniedUser)
+            ->get(route('curriculums.index'))
             ->assertForbidden();
     }
 }
