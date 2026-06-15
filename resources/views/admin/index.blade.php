@@ -131,6 +131,16 @@
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M16 6C14.3432 6 13 7.34315 13 9C13 10.6569 14.3432 12 16 12C17.6569 12 19 10.6569 19 9C19 7.34315 17.6569 6 16 6ZM11 9C11 6.23858 13.2386 4 16 4C18.7614 4 21 6.23858 21 9C21 10.3193 20.489 11.5193 19.6542 12.4128C21.4951 13.0124 22.9176 14.1993 23.8264 15.5329C24.1374 15.9893 24.0195 16.6114 23.5631 16.9224C23.1068 17.2334 22.4846 17.1155 22.1736 16.6591C21.1979 15.2273 19.4178 14 17 14C13.166 14 11 17.0742 11 19C11 19.5523 10.5523 20 10 20C9.44773 20 9.00001 19.5523 9.00001 19C9.00001 18.308 9.15848 17.57 9.46082 16.8425C9.38379 16.7931 9.3123 16.7323 9.24889 16.6602C8.42804 15.7262 7.15417 15 5.50001 15C3.84585 15 2.57199 15.7262 1.75114 16.6602C1.38655 17.075 0.754692 17.1157 0.339855 16.7511C-0.0749807 16.3865 -0.115709 15.7547 0.248886 15.3398C0.809035 14.7025 1.51784 14.1364 2.35725 13.7207C1.51989 12.9035 1.00001 11.7625 1.00001 10.5C1.00001 8.01472 3.01473 6 5.50001 6C7.98529 6 10 8.01472 10 10.5C10 11.7625 9.48013 12.9035 8.64278 13.7207C9.36518 14.0785 9.99085 14.5476 10.5083 15.0777C11.152 14.2659 11.9886 13.5382 12.9922 12.9945C11.7822 12.0819 11 10.6323 11 9ZM3.00001 10.5C3.00001 9.11929 4.1193 8 5.50001 8C6.88072 8 8.00001 9.11929 8.00001 10.5C8.00001 11.8807 6.88072 13 5.50001 13C4.1193 13 3.00001 11.8807 3.00001 10.5Z" fill="currentColor"/>
                 </svg>
             SVG,
+            'permissions' => <<<'SVG'
+                <svg class="h-11 w-11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            SVG,
+            'permissions-log' => <<<'SVG'
+                <svg class="h-11 w-11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            SVG,
             'default' => <<<'SVG'
                 <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M13.5 4.5 20.25 12 13.5 19.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -154,6 +164,8 @@
                 'chat-retention-hold' => 'Conservación excepcional',
                 'chat-groups' => 'Grupos chat',
                 'chat-groups-log' => 'Logs grupos',
+                'permissions' => 'Permisos',
+                'permissions-log' => 'Logs permisos',
                 default => $section['label'] ?? '',
             };
         };
@@ -284,49 +296,51 @@
                     </div>
                 </section>
 
-                <section class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50 p-5 shadow-sm md:p-6">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                        <div class="max-w-2xl">
-                            <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary">
-                                Auditoría
+                @if ($logs->isNotEmpty())
+                    <section class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50 p-5 shadow-sm md:p-6">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div class="max-w-2xl">
+                                <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary">
+                                    Auditoría
+                                </span>
+
+                                <h3 class="mt-3 text-2xl font-semibold text-brand-secondary">
+                                    Logs y trazabilidad
+                                </h3>
+
+                                <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
+                                    Consulta el historial de cambios con accesos pequeños y directos, tipo launcher.
+                                </p>
+                            </div>
+
+                            <span class="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60 shadow-sm">
+                                Acceso rápido
                             </span>
-
-                            <h3 class="mt-3 text-2xl font-semibold text-brand-secondary">
-                                Logs y trazabilidad
-                            </h3>
-
-                            <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                                Consulta el historial de cambios con accesos pequeños y directos, tipo launcher.
-                            </p>
                         </div>
 
-                        <span class="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60 shadow-sm">
-                            Acceso rápido
-                        </span>
-                    </div>
+                        <div class="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6">
+                            @foreach ($logs as $section)
+                                <div class="flex flex-col items-center rounded-[1.5rem] px-4 py-5 text-center">
+                                    <a
+                                        href="{{ route($section['route']) }}"
+                                        aria-label="{{ $compactLabel($section) }}"
+                                        class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-brand-primary ring-1 ring-slate-200 transition duration-300 ease-out hover:-translate-y-1.5 hover:scale-[1.04] hover:bg-brand-primary/10 hover:ring-brand-primary/20 hover:shadow-[0_18px_34px_rgba(15,23,42,0.10)]"
+                                    >
+                                        {!! $groupIcon($section) !!}
+                                    </a>
 
-                    <div class="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6">
-                        @foreach ($logs as $section)
-                            <div class="flex flex-col items-center rounded-[1.5rem] px-4 py-5 text-center">
-                                <a
-                                    href="{{ route($section['route']) }}"
-                                    aria-label="{{ $compactLabel($section) }}"
-                                    class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-brand-primary ring-1 ring-slate-200 transition duration-300 ease-out hover:-translate-y-1.5 hover:scale-[1.04] hover:bg-brand-primary/10 hover:ring-brand-primary/20 hover:shadow-[0_18px_34px_rgba(15,23,42,0.10)]"
-                                >
-                                    {!! $groupIcon($section) !!}
-                                </a>
+                                    <span class="mt-4 text-sm font-semibold leading-5 text-brand-secondary">
+                                        {{ $compactLabel($section) }}
+                                    </span>
 
-                                <span class="mt-4 text-sm font-semibold leading-5 text-brand-secondary">
-                                    {{ $compactLabel($section) }}
-                                </span>
-
-                                <span class="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-brand-secondary/45">
-                                    Ver log
-                                </span>
-                            </div>
-                        @endforeach
-                    </div>
-                </section>
+                                    <span class="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-brand-secondary/45">
+                                        Ver log
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
             </div>
         </section>
 
