@@ -10,19 +10,7 @@
                 return null;
             }
 
-            if (($item['route'] ?? null) === 'tools.informes' && ! app_user_has_any_role($authUser, [\App\Models\User::ROLE_MANAGEMENT, \App\Models\User::ROLE_AREA_MANAGER])) {
-                return null;
-            }
-
             if (($item['route'] ?? null) === 'chat.beta' && ! app_can_access_chat_beta($authUser)) {
-                return null;
-            }
-
-            if (($item['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
-                return null;
-            }
-
-            if (($item['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews($authUser)) {
                 return null;
             }
 
@@ -31,18 +19,27 @@
             }
 
             if (($item['label'] ?? null) === 'Empresa') {
-                $item['children'] = [
-                    [
-                        'label' => 'Quiénes somos',
-                        'route' => 'empresa.index',
-                    ],
-                ];
+                $item['children'] = collect($item['children'] ?? [])
+                    ->filter(function (array $child) use ($authUser): bool {
+                        if (($child['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
+                            return false;
+                        }
 
-                if (app_can_access_videos($authUser)) {
-                    array_unshift($item['children'], [
-                        'label' => 'Vídeos',
-                        'route' => 'videos',
-                    ]);
+                        if (($child['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews($authUser)) {
+                            return false;
+                        }
+
+                        if (($child['route'] ?? null) === 'tools.informes' && ! app_user_has_any_role($authUser, [\App\Models\User::ROLE_MANAGEMENT, \App\Models\User::ROLE_AREA_MANAGER])) {
+                            return false;
+                        }
+
+                        return true;
+                    })
+                    ->values()
+                    ->all();
+
+                if ($item['children'] === []) {
+                    return null;
                 }
             }
 
@@ -108,57 +105,77 @@
 
         <div class="flex min-w-0 items-center gap-2 md:gap-6">
             <div class="hidden min-w-0 items-center gap-8 xl:flex">
-                @foreach ($navItems as $item)
-                    @if (! empty($item['children']))
-                        @php
-                            $dropdownKey = 'nav-' . \Illuminate\Support\Str::slug($item['label']);
-                            $isParentActive = collect($item['children'])->contains(fn ($child) => request()->routeIs($child['route']));
-                        @endphp
-                        <div class="relative" @mouseenter="activeDropdown = '{{ $dropdownKey }}'" @mouseleave="activeDropdown = null">
-                            <button type="button"
-                                class="{{ $navItemClass }} gap-1.5 {{ $isParentActive ? $navItemActiveClass : $navItemInactiveClass }}"
-                                :aria-expanded="(activeDropdown === '{{ $dropdownKey }}').toString()">
-                                <span>{{ $item['label'] }}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition"
-                                    :class="{ 'rotate-180': activeDropdown === '{{ $dropdownKey }}' }" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor" stroke-width="1.8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                </svg>
-                            </button>
+                @foreach (collect($navItems)->filter(fn (array $item) => empty($item['children'] ?? [])) as $item)
+                    @php
+                        $isItemActive = $item['route'] === 'agenda.index'
+                            ? request()->routeIs('agenda.index', 'agenda.contacts.*')
+                            : ($item['route'] === 'reviews.index'
+                                ? request()->routeIs('reviews.*')
+                                : request()->routeIs($item['route']));
+                    @endphp
+                    <a href="{{ route($item['route']) }}"
+                        class="{{ $navItemClass }} {{ $isItemActive ? $navItemActiveClass : $navItemInactiveClass }}">
+                        {{ $item['label'] }}
+                    </a>
+                @endforeach
 
-                            <div x-show="activeDropdown === '{{ $dropdownKey }}'" x-cloak class="absolute left-0 top-full h-3 w-full"></div>
+                @foreach (collect($navItems)->filter(fn (array $item) => ! empty($item['children'] ?? [])) as $item)
+                    @php
+                        $dropdownKey = 'nav-' . \Illuminate\Support\Str::slug($item['label']);
+                        $visibleChildren = collect($item['children'])
+                            ->filter(function (array $child) use ($authUser): bool {
+                                if (($child['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
+                                    return false;
+                                }
 
-                            <div x-show="activeDropdown === '{{ $dropdownKey }}'" x-cloak x-transition:enter="transition ease-out duration-150"
-                                x-transition:enter-start="opacity-0 translate-y-1"
-                                x-transition:enter-end="opacity-100 translate-y-0"
-                                x-transition:leave="transition ease-in duration-100"
-                                x-transition:leave-start="opacity-100 translate-y-0"
-                                x-transition:leave-end="opacity-0 translate-y-1"
-                                class="absolute left-1/2 top-full mt-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
-                                <div class="p-2">
-                                    @foreach ($item['children'] as $child)
-                                        @php $isChildActive = request()->routeIs($child['route']); @endphp
-                                        <a href="{{ route($child['route']) }}"
-                                            class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
-                                            {!! $child['label'] !!}
-                                        </a>
-                                    @endforeach
-                                </div>
+                                if (($child['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews($authUser)) {
+                                    return false;
+                                }
+
+                                if (($child['route'] ?? null) === 'tools.informes' && ! app_user_has_any_role($authUser, [\App\Models\User::ROLE_MANAGEMENT, \App\Models\User::ROLE_AREA_MANAGER])) {
+                                    return false;
+                                }
+
+                                return true;
+                            })
+                            ->values();
+                        $isParentActive = $visibleChildren->contains(fn ($child) => request()->routeIs($child['route']));
+                    @endphp
+                    @if ($visibleChildren->isEmpty())
+                        @continue
+                    @endif
+                    <div class="relative" @mouseenter="activeDropdown = '{{ $dropdownKey }}'" @mouseleave="activeDropdown = null">
+                        <button type="button"
+                            class="{{ $navItemClass }} gap-1.5 {{ $isParentActive ? $navItemActiveClass : $navItemInactiveClass }}"
+                            :aria-expanded="(activeDropdown === '{{ $dropdownKey }}').toString()">
+                            <span>{{ $item['label'] }}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition"
+                                :class="{ 'rotate-180': activeDropdown === '{{ $dropdownKey }}' }" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </button>
+
+                        <div x-show="activeDropdown === '{{ $dropdownKey }}'" x-cloak class="absolute left-0 top-full h-3 w-full"></div>
+
+                        <div x-show="activeDropdown === '{{ $dropdownKey }}'" x-cloak x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-1"
+                            class="absolute left-1/2 top-full mt-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl">
+                            <div class="p-2">
+                                @foreach ($visibleChildren as $child)
+                                    @php $isChildActive = request()->routeIs($child['route']); @endphp
+                                    <a href="{{ route($child['route']) }}"
+                                        class="block rounded-xl px-4 py-3 text-sm font-medium {{ $isChildActive ? 'text-brand-primary' : 'text-brand-secondary transition hover:text-brand-primary' }}">
+                                        {!! $child['label'] !!}
+                                    </a>
+                                @endforeach
                             </div>
                         </div>
-                    @else
-                        @php
-                            $isItemActive = $item['route'] === 'agenda.index'
-                                ? request()->routeIs('agenda.index', 'agenda.contacts.*')
-                                : ($item['route'] === 'reviews.index'
-                                    ? request()->routeIs('reviews.*')
-                                    : request()->routeIs($item['route']));
-                        @endphp
-                        <a href="{{ route($item['route']) }}"
-                            class="{{ $navItemClass }} {{ $isItemActive ? $navItemActiveClass : $navItemInactiveClass }}">
-                            {{ $item['label'] }}
-                        </a>
-                    @endif
+                    </div>
                 @endforeach
                 @auth
                     @if (in_array($visibleRole, ['admin', 'gestor'], true))
@@ -753,7 +770,29 @@
 
             @foreach ($navItems as $item)
                 @if (! empty($item['children']))
-                    @foreach ($item['children'] as $child)
+                    @php
+                        $visibleChildren = collect($item['children'])
+                            ->filter(function (array $child) use ($authUser): bool {
+                                if (($child['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
+                                    return false;
+                                }
+
+                                if (($child['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews($authUser)) {
+                                    return false;
+                                }
+
+                                if (($child['route'] ?? null) === 'tools.informes' && ! app_user_has_any_role($authUser, [\App\Models\User::ROLE_MANAGEMENT, \App\Models\User::ROLE_AREA_MANAGER])) {
+                                    return false;
+                                }
+
+                                return true;
+                            })
+                            ->values();
+                    @endphp
+                    @if ($visibleChildren->isEmpty())
+                        @continue
+                    @endif
+                    @foreach ($visibleChildren as $child)
                         @php $isChildActive = request()->routeIs($child['route']); @endphp
                         <a href="{{ route($child['route']) }}" @click="open = false"
                             class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isChildActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">

@@ -26,6 +26,31 @@
                 return false;
             }
 
+            if (! empty($item['children'])) {
+                $item['children'] = collect($item['children'])
+                    ->filter(function (array $child) use ($authUser): bool {
+                        if (($child['route'] ?? null) === 'videos' && ! app_can_access_videos($authUser)) {
+                            return false;
+                        }
+
+                        if (($child['route'] ?? null) === 'reviews.index' && ! app_can_access_reviews($authUser)) {
+                            return false;
+                        }
+
+                        if (($child['route'] ?? null) === 'tools.informes' && ! app_user_has_any_role($authUser, [\App\Models\User::ROLE_MANAGEMENT, \App\Models\User::ROLE_AREA_MANAGER])) {
+                            return false;
+                        }
+
+                        return true;
+                    })
+                    ->values()
+                    ->all();
+
+                if ($item['children'] === []) {
+                    return false;
+                }
+            }
+
             return true;
         })
         ->values()
@@ -55,14 +80,27 @@
                     <div class="mt-4 grid gap-3 text-sm text-white/75 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-3">
                         @foreach ($footerPlatformColumns as $column)
                             <ul class="space-y-3">
-                                @foreach ($column as $item)
-                                    <li>
-                                        <a href="{{ route($item['route']) }}" class="transition hover:text-white">
-                                            {{ $item['label'] }}
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
+                        @foreach ($column as $item)
+                            <li>
+                                @if (! empty($item['children']))
+                                    <p class="font-semibold text-white/90">{{ $item['label'] }}</p>
+                                    <ul class="mt-2 space-y-2 pl-3">
+                                        @foreach ($item['children'] as $child)
+                                            <li>
+                                                <a href="{{ route($child['route']) }}" class="transition hover:text-white">
+                                                    {{ $child['label'] }}
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <a href="{{ route($item['route']) }}" class="transition hover:text-white">
+                                        {{ $item['label'] }}
+                                    </a>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
                         @endforeach
                     </div>
                 </div>
