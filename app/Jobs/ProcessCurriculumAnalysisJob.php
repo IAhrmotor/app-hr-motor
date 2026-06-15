@@ -139,6 +139,30 @@ class ProcessCurriculumAnalysisJob implements ShouldQueue
         ])->saveQuietly();
     }
 
+    public function failed(Throwable $exception): void
+    {
+        $analysis = CurriculumAnalysis::query()->with('documents')->find($this->analysisId);
+
+        if (! $analysis) {
+            return;
+        }
+
+        foreach ($analysis->documents as $document) {
+            if ($document->status === 'processing') {
+                $document->forceFill([
+                    'status' => 'failed',
+                    'error_message' => $document->error_message ?: $exception->getMessage(),
+                ])->saveQuietly();
+            }
+        }
+
+        $analysis->forceFill([
+            'status' => 'failed',
+            'error_message' => $exception->getMessage(),
+            'finished_at' => Carbon::now(),
+        ])->saveQuietly();
+    }
+
     /**
      * @param  array<string, mixed>  $candidateAnalysis
      * @return array<string, mixed>

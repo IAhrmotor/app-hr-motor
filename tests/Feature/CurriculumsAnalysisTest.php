@@ -283,6 +283,49 @@ class CurriculumsAnalysisTest extends TestCase
         $this->assertNotEmpty($analysis->report_data['recommended_next_steps']);
     }
 
+    public function test_failed_job_marks_processing_documents_and_analysis_as_failed(): void
+    {
+        $analysis = CurriculumAnalysis::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'title' => 'Fallo duro',
+            'job_title' => 'Asesor comercial',
+            'location' => 'Madrid',
+            'offer_description' => 'Oferta',
+            'mandatory_requirements' => ['Uno'],
+            'valuable_requirements' => ['Dos'],
+            'top_candidates_count' => 5,
+            'status' => 'processing',
+            'total_candidates' => 1,
+            'processed_candidates' => 0,
+            'openai_model' => 'gpt-5.5',
+        ]);
+
+        $documentPath = 'curriculums/' . $analysis->id . '/candidato.pdf';
+        $absolutePath = storage_path('app/private/' . $documentPath);
+        File::ensureDirectoryExists(dirname($absolutePath));
+        File::put($absolutePath, 'CV');
+
+        CurriculumAnalysisDocument::query()->create([
+            'curriculum_analysis_id' => $analysis->id,
+            'original_name' => 'candidato.pdf',
+            'stored_path' => $documentPath,
+            'mime_type' => 'application/pdf',
+            'file_size' => 2048,
+            'order_index' => 0,
+            'status' => 'processing',
+        ]);
+
+        $job = new ProcessCurriculumAnalysisJob($analysis->id);
+        $job->failed(new \RuntimeException('Fallo de prueba'));
+
+        $analysis->refresh()->load('documents');
+
+        $this->assertSame('failed', $analysis->status);
+        $this->assertSame('Fallo de prueba', $analysis->error_message);
+        $this->assertSame('failed', $analysis->documents->first()->status);
+        $this->assertSame('Fallo de prueba', $analysis->documents->first()->error_message);
+    }
+
     public function test_hr_user_cannot_upload_more_than_twenty_cv_files(): void
     {
         Queue::fake();
