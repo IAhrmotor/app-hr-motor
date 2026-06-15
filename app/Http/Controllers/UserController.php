@@ -92,7 +92,7 @@ class UserController extends Controller
     {
         $authUser = request()->user();
 
-        $availableBaseRoles = app_visible_role($authUser) === User::ROLE_ADMIN
+        $availableBaseRoles = $authUser?->role === User::ROLE_ADMIN
             ? array_keys(User::baseRoleLabels())
             : [User::ROLE_USER];
         $availableExtraRoles = array_keys(User::extraRoleLabels());
@@ -112,15 +112,15 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $authUser = $request->user();
-        $visibleRole = app_visible_role($authUser);
+        $canManageUsers = app_user_can_manage_admin_tool($authUser, 'users.manage');
 
-        if (! in_array($visibleRole, [User::ROLE_ADMIN, User::ROLE_MANAGER], true)) {
+        if (! $canManageUsers && $authUser?->role !== User::ROLE_ADMIN && $authUser?->role !== User::ROLE_MANAGER) {
             return redirect()
                 ->route('users.index')
                 ->with('error', 'No tienes permisos para crear usuarios desde esta vista.');
         }
 
-        $allowedBaseRoles = $visibleRole === User::ROLE_ADMIN
+        $allowedBaseRoles = $authUser?->role === User::ROLE_ADMIN
             ? array_keys(User::baseRoleLabels())
             : [User::ROLE_USER];
         $allowedExtraRoles = array_keys(User::extraRoleLabels());
@@ -205,8 +205,9 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         $authUser = request()->user();
+        $canManageUsers = app_user_can_manage_admin_tool($authUser, 'users.manage');
 
-        if (app_visible_role($authUser) !== User::ROLE_ADMIN) {
+        if (! $canManageUsers && $authUser?->role !== User::ROLE_ADMIN) {
             return redirect()
                 ->route('users.index')
                 ->with('error', 'Solo un administrador puede eliminar definitivamente usuarios.');
@@ -338,7 +339,7 @@ class UserController extends Controller
             return $response;
         }
 
-        $availableBaseRoles = app_visible_role($authUser) === User::ROLE_ADMIN
+        $availableBaseRoles = $authUser?->role === User::ROLE_ADMIN
             ? array_keys(User::baseRoleLabels())
             : [User::ROLE_USER];
         $availableExtraRoles = array_keys(User::extraRoleLabels());
@@ -355,7 +356,7 @@ class UserController extends Controller
             return $response;
         }
 
-        $allowedBaseRoles = app_visible_role($authUser) === User::ROLE_ADMIN
+        $allowedBaseRoles = $authUser?->role === User::ROLE_ADMIN
             ? array_keys(User::baseRoleLabels())
             : [User::ROLE_USER];
         $allowedExtraRoles = array_keys(User::extraRoleLabels());
@@ -484,7 +485,7 @@ class UserController extends Controller
 
     protected function ensureCanManageListedUser(User $authUser, User $targetUser, string $action, bool $preventSelf = false): ?RedirectResponse
     {
-        $visibleRole = app_visible_role($authUser);
+        $canManageUsers = app_user_can_manage_admin_tool($authUser, 'users.manage');
 
         if ($preventSelf && $authUser->id === $targetUser->id) {
             return redirect()
@@ -492,13 +493,13 @@ class UserController extends Controller
                 ->with('error', "No puedes {$action} tu propio usuario.");
         }
 
-        if (! in_array($visibleRole, [User::ROLE_ADMIN, User::ROLE_MANAGER], true)) {
+        if (! $canManageUsers && ! in_array($authUser->role, [User::ROLE_ADMIN, User::ROLE_MANAGER], true)) {
             return redirect()
                 ->route('users.index')
                 ->with('error', "No tienes permisos para {$action} este usuario.");
         }
 
-        if ($visibleRole === User::ROLE_MANAGER && ! $targetUser->isCommercialLike()) {
+        if ($authUser->role !== User::ROLE_ADMIN && ! $targetUser->isCommercialLike()) {
             return redirect()
                 ->route('users.index')
                 ->with('error', "No tienes permisos para {$action} este usuario.");

@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
+            'admin.access' => \App\Http\Middleware\CheckAdminAccess::class,
         ]);
 
         $middleware->appendToGroup('web', [

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AdminPermissionGrant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -43,6 +44,30 @@ class NavigationVisibilityTest extends TestCase
         $navbarHtml = view('components.layout.navbar')->render();
 
         $this->assertStringNotContainsString(route('reviews.index'), $navbarHtml);
+    }
+
+    public function test_admin_in_role_viewer_mode_sees_admin_nav_when_the_visible_role_has_admin_access(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email' => 'admin-viewer@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'notifications.manage',
+            'user_id' => null,
+            'group_id' => null,
+            'group_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'granted_by_user_id' => null,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['role_viewer.active_role' => User::ROLE_INFORMATION_TECHNOLOGY]);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+
+        $this->assertStringContainsString('Admin', $navbarHtml);
+        $this->assertStringContainsString(route('admin.index'), $navbarHtml);
     }
 
     public function test_management_user_sees_informes_in_the_navbar_and_footer(): void
