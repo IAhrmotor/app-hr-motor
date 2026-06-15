@@ -7,10 +7,6 @@ return [
             'route' => 'forum.index',
         ],
         [
-            'label' => 'Agenda',
-            'route' => 'agenda.index',
-        ],
-        [
             'label' => 'Rankings',
             'children' => [
                 [
@@ -32,23 +28,42 @@ return [
             'route' => 'tools.web',
         ],
         [
-            'label' => 'Informes',
-            'route' => 'tools.informes',
-        ],
-        [
             'label' => 'Currículums',
             'route' => 'curriculums.index',
         ],
         [
-            'label' => 'Chat',
-            'route' => 'chat.beta',
-        ],
-        [
-            'label' => 'Reseñas',
-            'route' => 'reviews.index',
-        ],
-        [
             'label' => 'Empresa',
+            'children' => [
+                [
+                    'label' => 'Quiénes somos',
+                    'route' => 'empresa.index',
+                ],
+                [
+                    'label' => 'Vídeos',
+                    'route' => 'videos',
+                ],
+                [
+                    'label' => 'Reseñas',
+                    'route' => 'reviews.index',
+                ],
+                [
+                    'label' => 'Informes',
+                    'route' => 'tools.informes',
+                ],
+            ],
+        ],
+        [
+            'label' => 'Comunicación',
+            'children' => [
+                [
+                    'label' => 'Agenda',
+                    'route' => 'agenda.index',
+                ],
+                [
+                    'label' => 'Chat',
+                    'route' => 'chat.beta',
+                ],
+            ],
         ],
     ],
 
