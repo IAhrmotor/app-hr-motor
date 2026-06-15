@@ -8,6 +8,8 @@ use App\Http\Controllers\AdminChatRetentionLogController;
 use App\Http\Controllers\AdminChatRetentionHoldController;
 use App\Http\Controllers\AdminChatGroupController;
 use App\Http\Controllers\AdminChatGroupLogController;
+use App\Http\Controllers\AdminPermissionController;
+use App\Http\Controllers\AdminPermissionLogController;
 use App\Http\Controllers\AdminPolicyAcceptanceLogController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\ContactController;
@@ -1592,7 +1594,9 @@ Route::middleware('auth')->group(function () {
                 ];
             }
 
-            return view('admin.index', compact('adminSections'));
+            return view('admin.index', [
+                'adminSections' => app_admin_visible_sections($authUser),
+            ]);
         })->name('admin.index');
 
         Route::get('/integraciones/salesforce/conectar', [SalesforceAuthController::class, 'redirect'])->name('salesforce.connect');
@@ -1704,4 +1708,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/acceso-conversacion', [AdminConversationAccessController::class, 'store'])->name('admin.conversation-access.store');
     Route::get('/admin/logs/acceso-conversacion', [AdminConversationAccessLogController::class, 'index'])->name('admin.conversation-access.logs.index');
     Route::get('/admin/logs/acceso-conversacion/descargar', [AdminConversationAccessLogController::class, 'export'])->name('admin.conversation-access.logs.export');
+
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/admin/permisos', [AdminPermissionController::class, 'index'])->name('admin.permissions.index');
+        Route::post('/admin/permisos/grupos', [AdminPermissionController::class, 'storeGroup'])->name('admin.permissions.groups.store');
+        Route::put('/admin/permisos/grupos/{group}', [AdminPermissionController::class, 'updateGroup'])
+            ->whereNumber('group')
+            ->name('admin.permissions.groups.update');
+        Route::delete('/admin/permisos/grupos/{group}', [AdminPermissionController::class, 'destroyGroup'])
+            ->whereNumber('group')
+            ->name('admin.permissions.groups.destroy');
+        Route::put('/admin/permisos/objetivo', [AdminPermissionController::class, 'syncTargetPermissions'])
+            ->name('admin.permissions.targets.sync');
+        Route::put('/admin/permisos/{permissionKey}', [AdminPermissionController::class, 'syncPermission'])
+            ->where('permissionKey', '[A-Za-z0-9_.-]+')
+            ->name('admin.permissions.sync');
+        Route::get('/admin/logs/permisos', [AdminPermissionLogController::class, 'index'])->name('admin.permission-logs.index');
+        Route::get('/admin/logs/permisos/descargar', [AdminPermissionLogController::class, 'export'])->name('admin.permission-logs.export');
+    });
 });

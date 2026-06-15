@@ -267,6 +267,18 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function adminPermissionGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(AdminPermissionGroup::class, 'admin_permission_group_user')
+            ->withTimestamps()
+            ->orderBy('name');
+    }
+
+    public function adminPermissionGrants(): HasMany
+    {
+        return $this->hasMany(AdminPermissionGrant::class);
+    }
+
     public function policyAcceptances(): HasMany
     {
         return $this->hasMany(PolicyAcceptance::class);

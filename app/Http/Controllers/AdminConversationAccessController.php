@@ -140,7 +140,7 @@ class AdminConversationAccessController extends Controller
 
     private function authorizeAdmin(Request $request): void
     {
-        if ($this->isAdmin($request->user())) {
+        if ($this->isAdmin($request->user()) || app_user_can_manage_admin_tool($request->user(), 'conversation-access.manage')) {
             return;
         }
 

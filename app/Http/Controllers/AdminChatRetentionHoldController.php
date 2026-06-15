@@ -368,7 +368,11 @@ class AdminChatRetentionHoldController extends Controller
 
     private function authorizeAdmin(): void
     {
-        abort_unless(app_real_role(auth()->user()) === User::ROLE_ADMIN, 403);
+        abort_unless(
+            app_real_role(auth()->user()) === User::ROLE_ADMIN
+                || app_user_can_manage_admin_tool(auth()->user(), 'chat-retention-holds.manage'),
+            403
+        );
     }
 
     private function ensureSchemaReady(): void
