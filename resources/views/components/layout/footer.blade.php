@@ -18,6 +18,10 @@
                 return false;
             }
 
+            if (($item['route'] ?? null) === 'curriculums.index' && ! app_can_access_curriculums()) {
+                return false;
+            }
+
             if (in_array($item['route'] ?? null, ['leaderboard.sales', 'leaderboard.purchases', 'leaderboard.vehicles'], true) && ! app_can_access_rankings()) {
                 return false;
             }

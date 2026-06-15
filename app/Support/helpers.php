@@ -183,6 +183,19 @@ if (! function_exists('app_can_access_reviews')) {
     }
 }
 
+if (! function_exists('app_can_access_curriculums')) {
+    function app_can_access_curriculums(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return app_user_has_any_role($user, [User::ROLE_HUMAN_RESOURCES]);
+    }
+}
+
 if (! function_exists('app_visible_role')) {
     function app_visible_role(?User $user = null): ?string
     {

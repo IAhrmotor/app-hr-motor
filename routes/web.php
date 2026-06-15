@@ -24,6 +24,7 @@ use App\Http\Controllers\ForumThreadController;
 use App\Http\Controllers\ForumTagController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyChatController;
+use App\Http\Controllers\CurriculumsController;
 use App\Http\Controllers\FeedbackReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesforceAuthController;
@@ -86,6 +87,18 @@ Route::middleware('auth')->group(function () {
             'title' => 'Informes',
         ]);
     })->name('tools.informes');
+
+    Route::get('/curriculums', [CurriculumsController::class, 'index'])->name('curriculums.index');
+    Route::post('/curriculums', [CurriculumsController::class, 'store'])->name('curriculums.store');
+    Route::get('/curriculums/{analysis}', [CurriculumsController::class, 'show'])
+        ->whereNumber('analysis')
+        ->name('curriculums.show');
+    Route::delete('/curriculums/{analysis}', [CurriculumsController::class, 'destroy'])
+        ->whereNumber('analysis')
+        ->name('curriculums.destroy');
+    Route::get('/curriculums/{analysis}/estado', [CurriculumsController::class, 'status'])
+        ->whereNumber('analysis')
+        ->name('curriculums.status');
 
     Route::get('/chat', [CompanyChatController::class, 'index'])->name('chat.beta');
     Route::get('/chat/politica', [CompanyChatController::class, 'policyStatus'])->name('chat.beta.policy.status');
