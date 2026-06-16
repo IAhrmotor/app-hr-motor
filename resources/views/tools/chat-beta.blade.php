@@ -1250,6 +1250,18 @@
                     }
                 };
 
+                const focusComposer = () => {
+                    if (!input) {
+                        return;
+                    }
+
+                    try {
+                        input.focus({ preventScroll: true });
+                    } catch (error) {
+                        input.focus();
+                    }
+                };
+
                 const getComposerMentionContext = () => {
                     if (!currentConversationIsGroup || !input) {
                         return null;
@@ -2835,6 +2847,7 @@
                         renderAttachmentsPreview();
                         closeEmojiPicker();
                         clearComposerMentions();
+                        focusComposer();
 
                         if (payload.conversation_id) {
                             await loadConversation(payload.conversation_id, { pushState: false });
@@ -2848,7 +2861,9 @@
                         showChatError('No se pudo enviar el mensaje.');
                     } finally {
                         isSubmitting = false;
-                        input.focus();
+                        window.requestAnimationFrame(() => {
+                            focusComposer();
+                        });
                     }
                 };
 
@@ -3191,6 +3206,9 @@
                     }
 
                     event.preventDefault();
+                    if (window.matchMedia('(max-width: 767px)').matches) {
+                        window.chatToggleMobileSidebar?.(false);
+                    }
                     closeMessageMenu();
                     await window.openConversationFromLink?.(link.href);
                 });
