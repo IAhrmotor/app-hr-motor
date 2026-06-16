@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 
 class AdminPermissionController extends Controller
 {
@@ -34,22 +35,46 @@ class AdminPermissionController extends Controller
             return $definition;
         })->values();
 
+        $usersSearch = trim($request->string('users_search')->toString());
+        $groupsSearch = trim($request->string('groups_search')->toString());
+
         $users = $missingTables
             ? $this->emptyPaginator('users_page', $request)
             : User::query()
+                ->when($usersSearch !== '', function (Builder $query) use ($usersSearch): void {
+                    $search = '%' . $usersSearch . '%';
+                    $normalizedSearch = Str::lower($usersSearch);
+                    $matchedRoles = collect(User::extraRoleLabels())
+                        ->filter(function (string $label, string $role) use ($normalizedSearch): bool {
+                            return Str::contains(Str::lower($label), $normalizedSearch)
+                                || Str::contains(Str::lower($role), $normalizedSearch);
+                        })
+                        ->keys()
+                        ->all();
+
+                    $query->where(function (Builder $innerQuery) use ($search, $matchedRoles): void {
+                        $innerQuery->where('name', 'like', $search)
+                            ->orWhere('email', 'like', $search)
+                            ->orWhere('role', 'like', $search)
+                            ->orWhere('extra_role', 'like', $search);
+
+                        if ($matchedRoles !== []) {
+                            $innerQuery->orWhereIn('extra_role', $matchedRoles);
+                        }
+                    });
+                })
                 ->orderBy('name')
                 ->paginate(10, ['id', 'name', 'email', 'role', 'extra_role', 'is_active'], 'users_page')
                 ->withQueryString();
 
         $groups = $missingTables
             ? $this->emptyPaginator('groups_page', $request)
-            : DB::table('users')
-                ->selectRaw('extra_role as role_key, COUNT(*) as users_count')
-                ->whereNotNull('extra_role')
-                ->groupBy('extra_role')
-                ->orderBy('extra_role')
-                ->paginate(10, ['*'], 'groups_page')
-                ->withQueryString();
+            : $this->paginateCollection(
+                $this->filteredGroups($groupsSearch),
+                10,
+                'groups_page',
+                $request,
+            );
 
         $userGrantCounts = $missingTables
             ? collect()
@@ -83,6 +108,8 @@ class AdminPermissionController extends Controller
             'selectedTarget',
             'selectedPermissionKeys',
             'missingTables',
+            'usersSearch',
+            'groupsSearch',
         ));
     }
 
@@ -162,6 +189,8 @@ class AdminPermissionController extends Controller
                 'target_type' => $targetType,
                 'target_user_id' => $targetUserId,
                 'target_role' => $targetRole,
+                'users_search' => $request->string('users_search')->toString() ?: null,
+                'groups_search' => $request->string('groups_search')->toString() ?: null,
             ], static fn ($value) => $value !== null && $value !== ''))
             ->with('success', 'Permisos actualizados correctamente.');
     }
@@ -233,10 +262,47 @@ class AdminPermissionController extends Controller
 
     private function emptyPaginator(string $pageName, Request $request): LengthAwarePaginator
     {
-        return new LengthAwarePaginator([], 0, 10, 1, [
+        return (new LengthAwarePaginator([], 0, 10, 1, [
             'path' => $request->url(),
             'pageName' => $pageName,
-        ]);
+        ]))->appends($request->except($pageName));
+    }
+
+    private function filteredGroups(string $search): Collection
+    {
+        $groups = DB::table('users')
+            ->selectRaw('extra_role as role_key, COUNT(*) as users_count')
+            ->whereNotNull('extra_role')
+            ->groupBy('extra_role')
+            ->orderBy('extra_role')
+            ->get();
+
+        if ($search === '') {
+            return $groups->values();
+        }
+
+        $searchLower = Str::lower($search);
+
+        return $groups
+            ->filter(function ($group) use ($searchLower): bool {
+                $roleKey = (string) $group->role_key;
+                $roleLabel = User::extraRoleLabels()[$roleKey] ?? $roleKey;
+
+                return Str::contains(Str::lower($roleKey), $searchLower)
+                    || Str::contains(Str::lower($roleLabel), $searchLower);
+            })
+            ->values();
+    }
+
+    private function paginateCollection(Collection $items, int $perPage, string $pageName, Request $request): LengthAwarePaginator
+    {
+        $currentPage = max(1, (int) $request->integer($pageName, 1));
+        $pageItems = $items->forPage($currentPage, $perPage)->values();
+
+        return (new LengthAwarePaginator($pageItems, $items->count(), $perPage, $currentPage, [
+            'path' => $request->url(),
+            'pageName' => $pageName,
+        ]))->appends($request->except($pageName));
     }
 
     public function storeGroup(Request $request): RedirectResponse

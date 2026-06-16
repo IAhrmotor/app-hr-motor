@@ -3,7 +3,7 @@
 @section('content')
     @php
         $selectedPermissionKeys = collect($selectedPermissionKeys ?? []);
-        $baseQuery = request()->except(['target_type', 'target_user_id', 'target_role']);
+        $baseQuery = request()->except(['target_type', 'target_user_id', 'target_role', 'users_page', 'groups_page']);
         $targetUrl = function (array $params) use ($baseQuery): string {
             return route('admin.permissions.index', array_merge($baseQuery, $params));
         };
@@ -60,21 +60,23 @@
                             </span>
                         </div>
 
-                        <div class="mt-5">
+                        <div class="mt-5 space-y-2">
                             <label for="group-search" class="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/45">
                                 Buscar grupo
                             </label>
                             <input
                                 id="group-search"
                                 type="search"
+                                name="groups_search"
+                                value="{{ $groupsSearch ?? request('groups_search', '') }}"
                                 autocomplete="off"
                                 placeholder="Escribe un rol o parte del nombre..."
                                 class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
-                                data-permissions-filter="groups"
+                                data-permissions-search="groups"
                             >
                         </div>
 
-                        <div class="mt-5 overflow-hidden rounded-[1.5rem] border border-brand-secondary/10 bg-white shadow-sm">
+                        <div id="permissions-groups-results" class="mt-5 overflow-hidden rounded-[1.5rem] border border-brand-secondary/10 bg-white shadow-sm">
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                                     <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.14em] text-brand-secondary/45">
@@ -85,7 +87,7 @@
                                             <th class="px-4 py-3 text-right">Acción</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-slate-100" data-permissions-filter-body="groups">
+                                    <tbody class="divide-y divide-slate-100">
                                         @forelse ($groups as $group)
                                             @php
                                                 $groupKey = (string) $group->role_key;
@@ -93,7 +95,7 @@
                                                 $groupPermissionCount = (int) ($groupGrantCounts[$groupKey] ?? 0);
                                                 $isSelected = data_get($selectedTarget, 'type') === 'group' && data_get($selectedTarget, 'role') === $groupKey;
                                             @endphp
-                                            <tr class="{{ $isSelected ? 'bg-brand-primary/5' : 'hover:bg-slate-50' }}" data-permissions-filter-row="groups" data-filter-text="{{ strtolower($groupLabel . ' ' . $groupKey) }}">
+                                            <tr class="{{ $isSelected ? 'bg-brand-primary/5' : 'hover:bg-slate-50' }}">
                                                 <td class="px-4 py-4">
                                                     <div class="font-semibold text-brand-secondary">{{ $groupLabel }}</div>
                                                     <div class="mt-1 text-xs text-brand-secondary/55">{{ $groupKey }}</div>
@@ -109,7 +111,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500" data-permissions-filter-empty="groups">
+                                                <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">
                                                     Todavía no hay usuarios con `extra_role` asignado.
                                                 </td>
                                             </tr>
@@ -140,21 +142,23 @@
                             </span>
                         </div>
 
-                        <div class="mt-5">
+                        <div class="mt-5 space-y-2">
                             <label for="user-search" class="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/45">
                                 Buscar usuario
                             </label>
                             <input
                                 id="user-search"
                                 type="search"
+                                name="users_search"
+                                value="{{ $usersSearch ?? request('users_search', '') }}"
                                 autocomplete="off"
                                 placeholder="Escribe un nombre, email o rol..."
                                 class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
-                                data-permissions-filter="users"
+                                data-permissions-search="users"
                             >
                         </div>
 
-                        <div class="mt-5 overflow-hidden rounded-[1.5rem] border border-brand-secondary/10 bg-white shadow-sm">
+                        <div id="permissions-users-results" class="mt-5 overflow-hidden rounded-[1.5rem] border border-brand-secondary/10 bg-white shadow-sm">
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                                     <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.14em] text-brand-secondary/45">
@@ -165,14 +169,14 @@
                                             <th class="px-4 py-3 text-right">Acción</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-slate-100" data-permissions-filter-body="users">
+                                    <tbody class="divide-y divide-slate-100">
                                         @forelse ($users as $user)
                                             @php
                                                 $userPermissionCount = (int) ($userGrantCounts[$user->id] ?? 0);
                                                 $isSelected = data_get($selectedTarget, 'type') === 'user' && (int) data_get($selectedTarget, 'id') === $user->id;
                                                 $userRoleLabel = $user->extra_role ? (\App\Models\User::extraRoleLabels()[$user->extra_role] ?? $user->extra_role) : 'Sin rol extra';
                                             @endphp
-                                            <tr class="{{ $isSelected ? 'bg-brand-primary/5' : 'hover:bg-slate-50' }}" data-permissions-filter-row="users" data-filter-text="{{ strtolower($user->name . ' ' . $user->email . ' ' . $userRoleLabel) }}">
+                                            <tr class="{{ $isSelected ? 'bg-brand-primary/5' : 'hover:bg-slate-50' }}">
                                                 <td class="px-4 py-4">
                                                     <div class="font-semibold text-brand-secondary">{{ $user->name }}</div>
                                                     <div class="mt-1 text-xs text-brand-secondary/55">{{ $user->email }}</div>
@@ -188,7 +192,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500" data-permissions-filter-empty="users">
+                                                <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">
                                                     No hay usuarios para mostrar.
                                                 </td>
                                             </tr>
@@ -289,49 +293,84 @@
         </section>
     </main>
 
+    <style>
+        input[type="search"]::-webkit-search-cancel-button {
+            cursor: pointer;
+        }
+
+        input[type="search"]::-webkit-search-decoration,
+        input[type="search"]::-webkit-search-results-button,
+        input[type="search"]::-webkit-search-results-decoration {
+            cursor: pointer;
+        }
+    </style>
+
     <script>
         (() => {
-            const normalize = (value) => (value || '')
-                .toString()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase()
-                .trim();
-
-            const bindFilter = (scope) => {
-                const input = document.querySelector(`[data-permissions-filter="${scope}"]`);
-                const rows = Array.from(document.querySelectorAll(`[data-permissions-filter-row="${scope}"]`));
-                const empty = document.querySelector(`[data-permissions-filter-empty="${scope}"]`);
-
-                if (!input || rows.length === 0) {
-                    return;
-                }
-
-                const applyFilter = () => {
-                    const query = normalize(input.value);
-                    let visibleCount = 0;
-
-                    rows.forEach((row) => {
-                        const haystack = normalize(row.dataset.filterText || row.textContent);
-                        const match = query === '' || haystack.includes(query);
-
-                        row.classList.toggle('hidden', !match);
-                        if (match) {
-                            visibleCount += 1;
-                        }
-                    });
-
-                    if (empty) {
-                        empty.classList.toggle('hidden', visibleCount !== 0 || query === '');
-                    }
-                };
-
-                input.addEventListener('input', applyFilter);
-                applyFilter();
+            const state = {
+                timer: null,
+                controller: null,
             };
 
-            bindFilter('groups');
-            bindFilter('users');
+            const fetchPermissions = () => {
+                const url = new URL(window.location.href);
+                const groupInput = document.querySelector('[data-permissions-search="groups"]');
+                const userInput = document.querySelector('[data-permissions-search="users"]');
+
+                url.searchParams.delete('users_page');
+                url.searchParams.delete('groups_page');
+                url.searchParams.set('groups_search', groupInput?.value ?? '');
+                url.searchParams.set('users_search', userInput?.value ?? '');
+
+                if (state.controller) {
+                    state.controller.abort();
+                }
+
+                state.controller = new AbortController();
+
+                window.history.replaceState({}, '', url.toString());
+
+                fetch(url.toString(), {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html',
+                    },
+                    signal: state.controller.signal,
+                })
+                    .then((response) => response.text())
+                    .then((html) => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const nextGroups = doc.getElementById('permissions-groups-results');
+                        const nextUsers = doc.getElementById('permissions-users-results');
+                        const currentGroups = document.getElementById('permissions-groups-results');
+                        const currentUsers = document.getElementById('permissions-users-results');
+
+                        if (nextGroups && currentGroups) {
+                            currentGroups.outerHTML = nextGroups.outerHTML;
+                        }
+
+                        if (nextUsers && currentUsers) {
+                            currentUsers.outerHTML = nextUsers.outerHTML;
+                        }
+                    })
+                    .catch((error) => {
+                        if (error?.name !== 'AbortError') {
+                            console.error(error);
+                        }
+                    });
+            };
+
+            const scheduleFetch = () => {
+                window.clearTimeout(state.timer);
+                state.timer = window.setTimeout(fetchPermissions, 250);
+            };
+
+            document.addEventListener('input', (event) => {
+                if (event.target?.matches?.('[data-permissions-search]')) {
+                    scheduleFetch();
+                }
+            });
         })();
     </script>
 @endsection
