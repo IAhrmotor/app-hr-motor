@@ -104,6 +104,31 @@ class AdminPermissionsTest extends TestCase
         ]);
     }
 
+    public function test_permissions_page_searches_users_across_all_pages(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email' => 'admin-search@example.com',
+        ]);
+
+        User::factory()->count(15)->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+        ]);
+
+        User::factory()->create([
+            'name' => 'Usuario Buscado',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'email' => 'buscado@example.com',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.permissions.index', ['users_search' => 'Buscado']))
+            ->assertOk()
+            ->assertSee('Usuario Buscado');
+    }
+
     public function test_non_admins_cannot_open_the_permissions_logs_page(): void
     {
         $manager = User::factory()->create([
