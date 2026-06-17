@@ -22,6 +22,14 @@ class UserActivityLogTest extends TestCase
         $this->withoutVite();
     }
 
+    private function baseUserPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'company_entry_date' => '2026-01-01',
+            'job_position' => 'Puesto base',
+        ], $overrides);
+    }
+
     public function test_user_creation_is_logged_with_actor_and_target_data(): void
     {
         Notification::fake();
@@ -35,13 +43,14 @@ class UserActivityLogTest extends TestCase
             'name' => 'Pamplona',
         ]);
 
-        $this->actingAs($admin)->post(route('users.store'), [
+        $this->actingAs($admin)->post(route('users.store'), $this->baseUserPayload([
             'name' => 'Usuario Nuevo',
             'email' => 'nuevo@example.com',
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'salesforce_user_id' => 'SF-NEW-001',
             'dealership_id' => $dealership->id,
-        ])->assertRedirect(route('users.index'));
+        ]))->assertRedirect(route('users.index'));
 
         $this->assertDatabaseHas('user_activity_logs', [
             'action' => UserActivityLog::ACTION_CREATED,
@@ -70,19 +79,21 @@ class UserActivityLogTest extends TestCase
         $user = User::factory()->create([
             'name' => 'Usuario Original',
             'email' => 'original@example.com',
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'salesforce_user_id' => 'SF-OLD-001',
         ]);
 
-        $this->actingAs($admin)->put(route('users.update', $user), [
+        $this->actingAs($admin)->put(route('users.update', $user), $this->baseUserPayload([
             'name' => 'Usuario Editado',
             'email' => 'editado@example.com',
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'salesforce_user_id' => 'SF-NEW-002',
             'dealership_id' => $dealership->id,
             'password' => '',
             'password_confirmation' => '',
-        ])->assertRedirect(route('users.index'));
+        ]))->assertRedirect(route('users.index'));
 
         $log = UserActivityLog::query()
             ->where('action', UserActivityLog::ACTION_UPDATED)
@@ -171,7 +182,7 @@ class UserActivityLogTest extends TestCase
 
         $content = $downloadResponse->streamedContent();
 
-        $this->assertStringContainsString('fecha_hora;accion;gestionado_por', $content);
+        $this->assertStringContainsString('fecha_hora;accion;resultado;gestionado_por', $content);
         $this->assertStringContainsString('Usuario Audit', $content);
         $this->assertStringContainsString('Admin Principal', $content);
         $this->assertStringContainsString('Email: ""antes@example.com"" -> ""audit@example.com""', $content);

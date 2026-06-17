@@ -25,6 +25,14 @@ class UserInvitationTest extends TestCase
         $this->withoutVite();
     }
 
+    private function baseUserPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'company_entry_date' => '2026-01-01',
+            'job_position' => 'Puesto base',
+        ], $overrides);
+    }
+
     private function assertOnboardingNotificationsWereSentTo(User $user): void
     {
         Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
@@ -99,14 +107,14 @@ class UserInvitationTest extends TestCase
             'name' => 'Torrejon',
         ]);
 
-        $response = $this->actingAs($admin)->post(route('users.store'), [
+        $response = $this->actingAs($admin)->post(route('users.store'), $this->baseUserPayload([
             'name' => 'Usuario Invitado',
             'email' => 'invitado@example.com',
             'role' => User::ROLE_USER,
             'extra_role' => User::ROLE_COMMERCIAL,
             'salesforce_user_id' => 'SF-USER-001',
             'dealership_id' => $dealership->id,
-        ]);
+        ]));
 
         $createdUser = User::where('email', 'invitado@example.com')->first();
 
@@ -139,14 +147,14 @@ class UserInvitationTest extends TestCase
             'name' => 'Bilbao',
         ]);
 
-        $response = $this->actingAs($admin)->post(route('users.store'), [
+        $response = $this->actingAs($admin)->post(route('users.store'), $this->baseUserPayload([
             'name' => 'Jefe Tienda',
             'email' => 'jefe.tienda@example.com',
             'role' => User::ROLE_USER,
             'is_store_manager' => '1',
             'salesforce_user_id' => 'SF-STORE-001',
             'dealership_id' => $dealership->id,
-        ]);
+        ]));
 
         $createdUser = User::where('email', 'jefe.tienda@example.com')->first();
 
@@ -174,12 +182,12 @@ class UserInvitationTest extends TestCase
             'role' => 'admin',
         ]);
 
-        $response = $this->actingAs($admin)->post(route('users.store'), [
+        $response = $this->actingAs($admin)->post(route('users.store'), $this->baseUserPayload([
             'name' => 'Area Manager',
             'email' => 'area.manager@example.com',
             'role' => User::ROLE_USER,
             'extra_role' => User::ROLE_AREA_MANAGER,
-        ]);
+        ]));
 
         $createdUser = User::where('email', 'area.manager@example.com')->first();
 
@@ -201,11 +209,11 @@ class UserInvitationTest extends TestCase
             'role' => 'admin',
         ]);
 
-        $response = $this->actingAs($admin)->post(route('users.store'), [
+        $response = $this->actingAs($admin)->post(route('users.store'), $this->baseUserPayload([
             'name' => 'Usuario Normal',
             'email' => 'usuario.normal@example.com',
             'role' => User::ROLE_USER,
-        ]);
+        ]));
 
         $createdUser = User::where('email', 'usuario.normal@example.com')->first();
 
@@ -276,11 +284,11 @@ class UserInvitationTest extends TestCase
 
         $response = $this->from(route('users.create'))
             ->actingAs($admin)
-            ->post(route('users.store'), [
+            ->post(route('users.store'), $this->baseUserPayload([
                 'name' => 'Usuario Fallido',
                 'email' => 'test@tesstgsetgeatghaethaethbt.com',
                 'role' => 'gestor',
-            ]);
+            ]));
 
         $response
             ->assertRedirect(route('users.create'))
