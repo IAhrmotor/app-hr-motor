@@ -330,6 +330,11 @@ class User extends Authenticatable
         return $this->role === self::ROLE_USER && filled($this->extra_role);
     }
 
+    public function isCommercialProfile(): bool
+    {
+        return $this->role === self::ROLE_USER && $this->extra_role === self::ROLE_COMMERCIAL;
+    }
+
     public function isRankedCommercial(): bool
     {
         return $this->role === self::ROLE_USER
@@ -364,6 +369,27 @@ class User extends Authenticatable
         }
 
         return self::baseRoleLabels()[$this->role] ?? 'Usuario';
+    }
+
+    public function getTenureBadgeAttribute(): ?array
+    {
+        if (! $this->company_entry_date) {
+            return null;
+        }
+
+        $years = (int) $this->company_entry_date->diffInYears(now());
+
+        if ($years < 1) {
+            return null;
+        }
+
+        $tone = $years >= 5 ? 'legacy' : ($years >= 3 ? 'veteran' : 'starter');
+
+        return [
+            'years' => $years,
+            'label' => '+'.$years.' '.($years === 1 ? 'año' : 'años'),
+            'tone' => $tone,
+        ];
     }
 
     public function getIsStoreManagerAttribute(): bool
