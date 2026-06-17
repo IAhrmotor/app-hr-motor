@@ -106,27 +106,6 @@
                 <h2 class="text-lg font-semibold text-brand-secondary">Información general</h2>
 
                 <dl class="mt-5 grid gap-5 text-sm md:grid-cols-3">
-                    <div>
-                        <dt class="text-brand-secondary/60">Rol</dt>
-                        <dd class="mt-1">
-                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ $user->role_label }}</span>
-                        </dd>
-                    </div>
-
-                    @if (filled($user->phone))
-                        <div>
-                            <dt class="text-brand-secondary/60">Teléfono</dt>
-                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->phone }}</dd>
-                        </div>
-                    @endif
-
-                    @if (filled($user->enreach_extension))
-                        <div>
-                            <dt class="text-brand-secondary/60">Extensión Enreach</dt>
-                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->enreach_extension }}</dd>
-                        </div>
-                    @endif
-
                     @if (filled($user->job_position))
                         <div>
                             <dt class="text-brand-secondary/60">Puesto</dt>
@@ -147,6 +126,27 @@
                                     <span class="font-semibold text-brand-secondary">{{ $user->resolved_dealership_name }}</span>
                                 @endif
                             </dd>
+                        </div>
+                    @endif
+
+                    <div>
+                        <dt class="text-brand-secondary/60">Rol</dt>
+                        <dd class="mt-1">
+                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ $user->role_label }}</span>
+                        </dd>
+                    </div>
+
+                    @if (filled($user->phone))
+                        <div>
+                            <dt class="text-brand-secondary/60">Teléfono</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->phone }}</dd>
+                        </div>
+                    @endif
+
+                    @if (filled($user->enreach_extension))
+                        <div>
+                            <dt class="text-brand-secondary/60">Extensión Enreach</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->enreach_extension }}</dd>
                         </div>
                     @endif
 
