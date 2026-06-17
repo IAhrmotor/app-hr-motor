@@ -18,31 +18,39 @@
         class="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-8"
     >
         <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm md:p-8">
-            <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                <div class="flex items-center gap-5">
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                <div class="flex min-w-0 items-center gap-5">
                     <button
                         type="button"
                         @click="openImage({ src: @js($user->avatar_url), alt: @js('Avatar de '.$user->name), title: @js($user->name) })"
-                        class="group relative cursor-pointer overflow-hidden rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                        class="group relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                         aria-label="Ampliar imagen de {{ $user->name }}"
                     >
-                        <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="h-24 w-24 rounded-full object-cover ring-2 ring-brand-primary/10 transition duration-300 group-hover:scale-105 group-hover:brightness-75">
+                        <img src="{{ $user->avatar_url }}" alt="Avatar de {{ $user->name }}" class="block h-full w-full rounded-full object-cover ring-2 ring-brand-primary/10 transition duration-300 group-hover:scale-105 group-hover:brightness-75">
                         <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/35 group-hover:opacity-100">
                             Ver
                         </span>
                     </button>
 
-                    <div>
+                    <div class="min-w-0">
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary/80">Perfil de usuario</p>
                         <h1 class="mt-2 text-3xl font-bold tracking-tight text-brand-secondary">{{ $user->name }}</h1>
                         <p class="mt-2 text-sm text-brand-secondary/65">{{ $user->email }}</p>
-                        <div class="mt-3">
+                        <div class="mt-2 space-y-2">
+                            @if (filled($user->job_position))
+                                <p class="text-base font-medium tracking-tight text-brand-secondary/80 md:text-lg">
+                                    {{ $user->job_position }}
+                                </p>
+                            @endif
+
+                            @if ($user->company_entry_date)
+                                <p class="text-sm text-brand-secondary/60">
+                                    Desde: {{ $user->company_entry_date->format('d/m/Y') }}
+                                </p>
+                            @endif
+
                             @if ($user->isDisabled())
-                                <span class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Desactivado</span>
-                            @elseif ($user->is_active)
-                                <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-700">Activo</span>
-                            @else
-                                <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Pendiente</span>
+                                <span class="mt-3 inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Desactivado</span>
                             @endif
                         </div>
                         @if ($user->isDisabled())
@@ -63,7 +71,7 @@
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center justify-start gap-3 lg:justify-end">
                     @unless ($isOwnProfile)
                         <a href="{{ route('chat.beta', ['recipient' => $user->id]) }}" class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-primary text-white transition hover:opacity-90" title="Chatear" aria-label="Chatear con {{ $user->name }}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -98,42 +106,6 @@
                 <h2 class="text-lg font-semibold text-brand-secondary">Información general</h2>
 
                 <dl class="mt-5 grid gap-5 text-sm md:grid-cols-3">
-                    <div>
-                        <dt class="text-brand-secondary/60">Nombre</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->name }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-brand-secondary/60">Correo</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->email }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-brand-secondary/60">Rol</dt>
-                        <dd class="mt-1">
-                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ $user->role_label }}</span>
-                        </dd>
-                    </div>
-
-                    @if (filled($user->phone))
-                        <div>
-                            <dt class="text-brand-secondary/60">Teléfono</dt>
-                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->phone }}</dd>
-                        </div>
-                    @endif
-
-                    @if (filled($user->enreach_extension))
-                        <div>
-                            <dt class="text-brand-secondary/60">Extensión Enreach</dt>
-                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->enreach_extension }}</dd>
-                        </div>
-                    @endif
-
-                    @if ($user->company_entry_date)
-                        <div>
-                            <dt class="text-brand-secondary/60">Día que entró en la empresa</dt>
-                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->company_entry_date->format('d/m/Y') }}</dd>
-                        </div>
-                    @endif
-
                     @if (filled($user->job_position))
                         <div>
                             <dt class="text-brand-secondary/60">Puesto</dt>
@@ -154,6 +126,27 @@
                                     <span class="font-semibold text-brand-secondary">{{ $user->resolved_dealership_name }}</span>
                                 @endif
                             </dd>
+                        </div>
+                    @endif
+
+                    <div>
+                        <dt class="text-brand-secondary/60">Rol</dt>
+                        <dd class="mt-1">
+                            <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary">{{ $user->role_label }}</span>
+                        </dd>
+                    </div>
+
+                    @if (filled($user->phone))
+                        <div>
+                            <dt class="text-brand-secondary/60">Teléfono</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->phone }}</dd>
+                        </div>
+                    @endif
+
+                    @if (filled($user->enreach_extension))
+                        <div>
+                            <dt class="text-brand-secondary/60">Extensión Enreach</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->enreach_extension }}</dd>
                         </div>
                     @endif
 
