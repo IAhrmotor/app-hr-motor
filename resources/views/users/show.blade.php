@@ -8,6 +8,28 @@
         $salesTotal = $rankingPositions['sales']['total'] ?? 0;
         $purchaseRankingPosition = $rankingPositions['purchases']['position'] ?? null;
         $purchaseTotal = $rankingPositions['purchases']['total'] ?? 0;
+        $tenureBadge = $user->tenure_badge;
+        $tenureBadgeStyles = [
+            'starter' => [
+                'container' => 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white text-amber-950 shadow-amber-100/40',
+                'icon' => 'bg-amber-100 text-amber-700 ring-1 ring-amber-200/80',
+                'eyebrow' => 'text-amber-700/70',
+                'label' => 'text-amber-950',
+            ],
+            'veteran' => [
+                'container' => 'border-sky-200/80 bg-gradient-to-br from-sky-50 to-white text-sky-950 shadow-sky-100/40',
+                'icon' => 'bg-sky-100 text-sky-700 ring-1 ring-sky-200/80',
+                'eyebrow' => 'text-sky-700/70',
+                'label' => 'text-sky-950',
+            ],
+            'legacy' => [
+                'container' => 'border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white text-emerald-950 shadow-emerald-100/40',
+                'icon' => 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200/80',
+                'eyebrow' => 'text-emerald-700/70',
+                'label' => 'text-emerald-950',
+            ],
+        ];
+        $tenureBadgeStyle = $tenureBadge ? ($tenureBadgeStyles[$tenureBadge['tone']] ?? $tenureBadgeStyles['starter']) : null;
     @endphp
 
     <main
@@ -43,16 +65,16 @@
                                 </p>
                             @endif
 
-                            @if ($user->company_entry_date)
-                                <p class="text-sm text-brand-secondary/60">
-                                    Desde: {{ $user->company_entry_date->format('d/m/Y') }}
-                                </p>
-                            @endif
+                        @if ($user->company_entry_date)
+                            <p class="text-sm text-brand-secondary/60">
+                                Desde: {{ $user->company_entry_date->format('d/m/Y') }}
+                            </p>
+                        @endif
 
-                            @if ($user->isDisabled())
-                                <span class="mt-3 inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Desactivado</span>
-                            @endif
-                        </div>
+                        @if ($user->isDisabled())
+                            <span class="mt-3 inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Desactivado</span>
+                        @endif
+                    </div>
                         @if ($user->isDisabled())
                             <div class="mt-4 inline-flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                                 <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
@@ -71,7 +93,8 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-start gap-3 lg:justify-end">
+                <div class="flex flex-col items-start gap-4 lg:items-end">
+                    <div class="flex items-center justify-start gap-3 lg:justify-end">
                     @unless ($isOwnProfile)
                         <a href="{{ route('chat.beta', ['recipient' => $user->id]) }}" class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-primary text-white transition hover:opacity-90" title="Chatear" aria-label="Chatear con {{ $user->name }}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -94,10 +117,20 @@
                         <a href="{{ route('profile.edit') }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Editar perfil</a>
                     @endif
 
-                    @if (in_array($visibleRole, ['admin', 'gestor'], true))
-                        <a href="{{ route('users.index') }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Volver a usuarios</a>
-                    @else
-                        <a href="{{ route('agenda.index') }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Volver a agenda</a>
+                    </div>
+
+                    @if ($tenureBadge)
+                        <div class="inline-flex items-center gap-3 rounded-3xl border px-4 py-3 shadow-sm {{ $tenureBadgeStyle['container'] }}">
+                            <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl {{ $tenureBadgeStyle['icon'] }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M3.19623 6.43783C2.64395 5.48125 2.9717 4.25807 3.92828 3.70578L7.39238 1.70578C8.34897 1.1535 9.57215 1.48125 10.1244 2.43783L12.0436 5.76189L13.9627 2.43783C14.515 1.48125 15.7382 1.1535 16.6948 1.70578L20.1589 3.70578C21.1155 4.25807 21.4432 5.48125 20.8909 6.43783L18.0155 11.4183C18.6408 12.4661 19 13.6911 19 15C19 18.866 15.866 22 12 22C8.13401 22 5 18.866 5 15C5 13.6603 5.37636 12.4085 6.02912 11.3445L3.19623 6.43783ZM16.656 9.77293L19.1589 5.43783L15.6948 3.43783L13.1983 7.76189L13.4188 8.14391C14.6457 8.39647 15.7553 8.97003 16.656 9.77293ZM8.39238 3.43783L11.0623 8.06229C9.67124 8.24852 8.4095 8.84331 7.40175 9.72201L4.92828 5.43783L8.39238 3.43783ZM12 20C14.7614 20 17 17.7615 17 15C17 12.2386 14.7614 10 12 10C9.23858 10 7 12.2386 7 15C7 17.7615 9.23858 20 12 20Z"/>
+                                </svg>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.24em] {{ $tenureBadgeStyle['eyebrow'] }}">Antigüedad</p>
+                                <p class="mt-0.5 text-sm font-bold {{ $tenureBadgeStyle['label'] }}">{{ $tenureBadge['label'] }}</p>
+                            </div>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -106,13 +139,6 @@
                 <h2 class="text-lg font-semibold text-brand-secondary">Información general</h2>
 
                 <dl class="mt-5 grid gap-5 text-sm md:grid-cols-3">
-                    @if (filled($user->job_position))
-                        <div>
-                            <dt class="text-brand-secondary/60">Puesto</dt>
-                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->job_position }}</dd>
-                        </div>
-                    @endif
-
                     @if ($user->resolved_dealership_name)
                         <div>
                             <dt class="text-brand-secondary/60">Delegación</dt>
