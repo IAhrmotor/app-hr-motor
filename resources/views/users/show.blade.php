@@ -113,15 +113,33 @@
                         </dd>
                     </div>
 
-                    <div>
-                        <dt class="text-brand-secondary/60">Teléfono</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->phone ?: 'No disponible' }}</dd>
-                    </div>
+                    @if (filled($user->phone))
+                        <div>
+                            <dt class="text-brand-secondary/60">Teléfono</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->phone }}</dd>
+                        </div>
+                    @endif
 
-                    <div>
-                        <dt class="text-brand-secondary/60">Extensión Enreach</dt>
-                        <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->enreach_extension ?: 'No disponible' }}</dd>
-                    </div>
+                    @if (filled($user->enreach_extension))
+                        <div>
+                            <dt class="text-brand-secondary/60">Extensión Enreach</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->enreach_extension }}</dd>
+                        </div>
+                    @endif
+
+                    @if ($user->company_entry_date)
+                        <div>
+                            <dt class="text-brand-secondary/60">Día que entró en la empresa</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->company_entry_date->format('d/m/Y') }}</dd>
+                        </div>
+                    @endif
+
+                    @if (filled($user->job_position))
+                        <div>
+                            <dt class="text-brand-secondary/60">Puesto</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary">{{ $user->job_position }}</dd>
+                        </div>
+                    @endif
 
                     @if ($user->resolved_dealership_name)
                         <div>

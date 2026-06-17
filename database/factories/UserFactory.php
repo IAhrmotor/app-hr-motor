@@ -31,6 +31,8 @@ class UserFactory extends Factory
             'role' => User::ROLE_USER,
             'extra_role' => User::ROLE_COMMERCIAL,
             'salesforce_user_id' => null,
+            'company_entry_date' => fake()->date(),
+            'job_position' => fake()->jobTitle(),
             'dealership' => null,
             'dealership_id' => null,
             'avatar_path' => User::DEFAULT_AVATAR_PATH,

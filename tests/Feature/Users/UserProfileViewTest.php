@@ -32,6 +32,8 @@ class UserProfileViewTest extends TestCase
         $user = User::factory()->create([
             'name' => 'Perfil Comercial',
             'linkedin_url' => 'https://www.linkedin.com/in/perfil-comercial/',
+            'company_entry_date' => '2024-02-15',
+            'job_position' => 'Responsable de tienda',
             'dealership' => 'Bilbao',
             'dealership_id' => $dealership->id,
         ]);
@@ -48,9 +50,39 @@ class UserProfileViewTest extends TestCase
             ->assertDontSeeText($user->linkedin_url)
             ->assertSee('Delegación')
             ->assertSee('Bilbao')
+            ->assertSee('15/02/2024')
+            ->assertSee('Responsable de tienda')
             ->assertSee(route('dealerships.show', $dealership), false)
             ->assertDontSee('Estado')
             ->assertDontSee('ID Salesforce');
+    }
+
+    public function test_user_profile_hides_empty_optional_fields_instead_of_showing_no_disponible(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $user = User::factory()->create([
+            'name' => 'Perfil Sin Extras',
+            'phone' => null,
+            'enreach_extension' => null,
+            'company_entry_date' => null,
+            'job_position' => null,
+            'dealership' => null,
+            'dealership_id' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.show', $user));
+
+        $response
+            ->assertOk()
+            ->assertDontSee('No disponible')
+            ->assertDontSee('Teléfono')
+            ->assertDontSee('Extensión Enreach')
+            ->assertDontSee('Día que entró en la empresa')
+            ->assertDontSee('Puesto')
+            ->assertDontSee('Delegación');
     }
 
     public function test_any_registered_user_can_open_another_users_profile_view(): void
