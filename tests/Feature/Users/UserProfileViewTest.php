@@ -219,4 +219,49 @@ class UserProfileViewTest extends TestCase
             ->assertOk()
             ->assertSee(route('users.show', $user), false);
     }
+
+    public function test_any_profile_can_show_the_tenure_medal_with_the_expected_label_and_color(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $commercial = User::factory()->create([
+            'name' => 'Comercial Veterano',
+            'role' => User::ROLE_ADMIN,
+            'extra_role' => null,
+            'company_entry_date' => now()->subYears(3)->toDateString(),
+            'job_position' => 'Asesor comercial',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.show', $commercial));
+
+        $response
+            ->assertOk()
+            ->assertSee('Antigüedad')
+            ->assertSee('+3 años')
+            ->assertSee('bg-sky-100');
+    }
+
+    public function helper_non_commercial_profiles_do_not_show_the_tenure_medal(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $profileUser = User::factory()->create([
+            'name' => 'Usuario Normal',
+            'company_entry_date' => now()->subYears(4)->toDateString(),
+            'job_position' => 'Responsable interno',
+            'extra_role' => User::ROLE_STORE_MANAGER,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.show', $profileUser));
+
+        $response
+            ->assertOk()
+            ->assertDontSee('Antigüedad')
+            ->assertDontSee('+4 años')
+            ->assertDontSee('bg-emerald-100');
+    }
 }
