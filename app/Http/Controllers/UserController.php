@@ -131,6 +131,8 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'company_entry_date' => ['required', 'date'],
+            'job_position' => ['required', 'string', 'max:255'],
             'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
@@ -158,6 +160,8 @@ class UserController extends Controller
                 $user = User::create([
                     'name' => $validated['name'],
                     'email' => $validated['email'],
+                    'company_entry_date' => $validated['company_entry_date'],
+                    'job_position' => $validated['job_position'],
                     'role' => $submittedBaseRole,
                     'extra_role' => $submittedExtraRole,
                     'phone' => $validated['phone'] ?? null,
@@ -367,6 +371,8 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'company_entry_date' => ['required', 'date'],
+            'job_position' => ['required', 'string', 'max:255'],
             'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
@@ -393,6 +399,8 @@ class UserController extends Controller
         $changes = $this->buildChangeSet($user, [
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'company_entry_date' => $validated['company_entry_date'],
+            'job_position' => $validated['job_position'],
             'role' => $submittedBaseRole,
             'extra_role' => $submittedExtraRole,
             'phone' => $validated['phone'] ?? null,
@@ -403,6 +411,8 @@ class UserController extends Controller
 
         $user->name = $validated['name'];
         $user->email = $validated['email'];
+        $user->company_entry_date = $validated['company_entry_date'];
+        $user->job_position = $validated['job_position'];
         $user->role = $submittedBaseRole;
         $user->extra_role = $submittedExtraRole;
         $user->phone = $validated['phone'] ?? null;
@@ -561,6 +571,8 @@ class UserController extends Controller
         $labels = [
             'name' => 'Nombre',
             'email' => 'Email',
+            'company_entry_date' => 'Día que entró en la empresa',
+            'job_position' => 'Puesto',
             'phone' => 'Telefono',
             'enreach_extension' => 'Extension Enreach',
             'role' => 'Rol',
@@ -570,14 +582,60 @@ class UserController extends Controller
         ];
 
         return collect($newValues)
-            ->filter(fn ($value, $field) => $user->{$field} !== $value)
+            ->filter(fn ($value, $field) => $this->compareUserFieldValue($user, $field, $value))
             ->mapWithKeys(fn ($value, $field) => [
                 $labels[$field] ?? $field => [
-                    'from' => $user->{$field},
-                    'to' => $value,
+                    'from' => $this->displayUserFieldValue($this->getUserFieldValue($user, $field), $field),
+                    'to' => $this->displayUserFieldValue($value, $field),
                 ],
             ])
             ->all();
+    }
+
+    protected function getUserFieldValue(User $user, string $field): mixed
+    {
+        if ($field === 'company_entry_date') {
+            return $user->getRawOriginal($field);
+        }
+
+        return $user->{$field};
+    }
+
+    protected function compareUserFieldValue(User $user, string $field, mixed $newValue): bool
+    {
+        if ($field === 'company_entry_date') {
+            return $this->normalizeDateValue($user->getRawOriginal($field)) !== $this->normalizeDateValue($newValue);
+        }
+
+        return $user->{$field} !== $newValue;
+    }
+
+    protected function displayUserFieldValue(mixed $value, string $field): mixed
+    {
+        if ($field === 'company_entry_date') {
+            $normalized = $this->normalizeDateValue($value);
+
+            return $normalized ? $normalized->format('d/m/Y') : null;
+        }
+
+        return $value;
+    }
+
+    protected function normalizeDateValue(mixed $value): ?\Illuminate\Support\Carbon
+    {
+        if ($value instanceof \Illuminate\Support\Carbon) {
+            return $value->copy()->startOfDay();
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return \Illuminate\Support\Carbon::instance($value)->startOfDay();
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::parse($value)->startOfDay();
     }
 
     protected function buildRankingPositions(User $user): array

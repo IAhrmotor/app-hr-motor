@@ -35,14 +35,36 @@
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="name" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Nombre</label>
+                        <label for="name" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            Nombre <span class="text-rose-600">*</span>
+                        </label>
                         <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
 
                     <div>
-                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Correo electrónico</label>
+                        <label for="email" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            Correo electrónico <span class="text-rose-600">*</span>
+                        </label>
                         <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required
+                            class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                    </div>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div>
+                        <label for="company_entry_date" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            Día que entró en la empresa <span class="text-rose-600">*</span>
+                        </label>
+                        <input id="company_entry_date" name="company_entry_date" type="date" value="{{ old('company_entry_date', optional($user->company_entry_date)->format('Y-m-d')) }}" required
+                            class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                    </div>
+
+                    <div>
+                        <label for="job_position" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            Puesto <span class="text-rose-600">*</span>
+                        </label>
+                        <input id="job_position" name="job_position" type="text" value="{{ old('job_position', $user->job_position) }}" required
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
                 </div>
@@ -58,7 +80,6 @@
                         <label for="enreach_extension" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Extensión Enreach</label>
                         <input id="enreach_extension" name="enreach_extension" type="text" value="{{ old('enreach_extension', $user->enreach_extension) }}"
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Si existe, también tiene que ser única.</p>
                     </div>
                 </div>
 
@@ -79,7 +100,9 @@
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>
-                        <label for="role" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Rol base</label>
+                        <label for="role" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            Rol base <span class="text-rose-600">*</span>
+                        </label>
 
                         @if ($isManager)
                             <input type="hidden" name="role" value="{{ \App\Models\User::ROLE_USER }}">
@@ -119,10 +142,9 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Los roles adicionales controlan el acceso comercial y el tipo de usuario.</p>
                     </div>
 
-                    <div id="dealership-wrapper" class="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4">
+                    <div id="dealership-wrapper">
                         <label for="dealership" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">Delegación</label>
                         <div class="relative">
                             <select id="dealership" name="dealership_id"
@@ -142,10 +164,11 @@
                     </div>
 
                     <div id="salesforce-user-id-wrapper" @class(['rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4', 'hidden' => ! $showSalesforceFields])>
-                        <label for="salesforce_user_id" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">ID de usuario en Salesforce</label>
+                        <label for="salesforce_user_id" class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">
+                            ID de usuario en Salesforce <span class="text-rose-600">*</span>
+                        </label>
                         <input id="salesforce_user_id" name="salesforce_user_id" type="text" value="{{ old('salesforce_user_id', $user->salesforce_user_id) }}" @required($showSalesforceFields)
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
-                        <p class="mt-2 pl-2 text-xs text-brand-secondary/60">Solo es obligatorio para usuarios con rol comercial o jefe de tienda.</p>
                     </div>
                 </div>
 

@@ -152,6 +152,8 @@ class User extends Authenticatable
         'role',
         'extra_role',
         'salesforce_user_id',
+        'company_entry_date',
+        'job_position',
         'dealership',
         'dealership_id',
         'avatar_path',
@@ -227,6 +229,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'company_entry_date' => 'date',
             'activated_at' => 'datetime',
             'disabled_at' => 'datetime',
             'invitation_sent_at' => 'datetime',
