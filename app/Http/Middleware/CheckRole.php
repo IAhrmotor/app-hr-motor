@@ -65,6 +65,7 @@ class CheckRole
             'admin.contacts.',
             'admin.forum-tags.',
             'admin.magazine.',
+            'admin.tablon.',
             'admin.notifications.',
             'admin.chat-retention-holds.',
             'admin.conversation-access.',
@@ -78,6 +79,7 @@ class CheckRole
         return Str::startsWith($routeName, [
             'admin.logs.',
             'admin.content-logs.',
+            'admin.bulletin-logs.',
             'admin.dealership-logs.',
             'admin.notification-logs.',
             'admin.policy-acceptance-logs.',

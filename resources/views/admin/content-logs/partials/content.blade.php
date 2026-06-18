@@ -11,6 +11,7 @@
         \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE => 'Revista mensual',
         \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG => 'Tags del foro',
         \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT => 'Contactos',
+        \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN => 'Tablón',
         default => 'Todo el contenido',
     };
 @endphp
@@ -46,6 +47,7 @@
                                         \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE => 'Revista mensual',
                                         \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG => 'Tags del foro',
                                         \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT => 'Contactos',
+                                        \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN => 'Tablón',
                                         default => 'Todo el contenido',
                                     } }}
                                 </div>
@@ -55,6 +57,7 @@
                                     <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE)>Revista mensual</option>
                                     <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG)>Tags del foro</option>
                                     <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT)>Contactos</option>
+                                    <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)>Tablón</option>
                                 </select>
 
                                 <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-brand-secondary/70">
