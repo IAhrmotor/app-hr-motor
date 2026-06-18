@@ -1,4 +1,4 @@
-@php
+﻿@php
     $authUser = auth()->user();
     $navItems = collect(config('navigation.main', []))
         ->map(function (array $item) use ($authUser) {
@@ -183,9 +183,11 @@
                             $isAdminActive = request()->routeIs('admin.index');
                             $isAdminLogsActive = request()->routeIs('admin.logs.*');
                             $isContentLogsActive = request()->routeIs('admin.content-logs.*');
+                            $isBulletinLogsActive = request()->routeIs('admin.bulletin-logs.*');
                             $isUsersActive = request()->routeIs('users.*');
                             $isDealershipsActive = request()->routeIs('dealerships.*');
                             $isMagazineActive = request()->routeIs('admin.magazine.*');
+                            $isBulletinActive = request()->routeIs('admin.tablon.*');
                             $isContactsActive = request()->routeIs('admin.contacts.*');
                             $isPermissionsActive = request()->routeIs('admin.permissions.*');
                             $isPermissionLogsActive = request()->routeIs('admin.permission-logs.*');
@@ -195,7 +197,7 @@
                             $isNotificationsActive = request()->routeIs('admin.notifications.*');
                         @endphp
                         <a href="{{ route('admin.index') }}"
-                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? $navItemActiveClass : $navItemInactiveClass }}">
+                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? $navItemActiveClass : $navItemInactiveClass }}">
                             Admin
                         </a>
                     @endif
@@ -315,7 +317,7 @@
                             @forelse ($forumUnreadNotifications as $notification)
                                 @php
                                     $isPriorityNotification = (bool) data_get($notification->data, 'priority', false);
-                                    $notificationTitle = data_get($notification->data, 'title', data_get($notification->data, 'message', 'NotificaciÃ³n'));
+                                    $notificationTitle = data_get($notification->data, 'title', data_get($notification->data, 'message', 'Notificación'));
                                     $notificationDescription = data_get($notification->data, 'description', data_get($notification->data, 'thread_title', ''));
                                     $notificationLinkLabel = data_get($notification->data, 'link_label', 'Abrir');
                                     $notificationLinkLabel = $notificationLinkLabel === 'Abrir enlace' ? 'Abrir' : $notificationLinkLabel;
@@ -826,9 +828,11 @@
                         $isAdminActive = request()->routeIs('admin.index');
                         $isAdminLogsActive = request()->routeIs('admin.logs.*');
                         $isContentLogsActive = request()->routeIs('admin.content-logs.*');
+                        $isBulletinLogsActive = request()->routeIs('admin.bulletin-logs.*');
                         $isUsersActive = request()->routeIs('users.*');
                         $isDealershipsActive = request()->routeIs('dealerships.*');
                         $isMagazineActive = request()->routeIs('admin.magazine.*');
+                        $isBulletinActive = request()->routeIs('admin.tablon.*');
                         $isContactsActive = request()->routeIs('admin.contacts.*');
                         $isPermissionsActive = request()->routeIs('admin.permissions.*');
                         $isPermissionLogsActive = request()->routeIs('admin.permission-logs.*');
@@ -838,9 +842,9 @@
                         $isNotificationsActive = request()->routeIs('admin.notifications.*');
                     @endphp
                     <a href="{{ route('admin.index') }}" @click="open = false"
-                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
-                        Admin
-                    </a>
+                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            Admin
+                        </a>
                 @endif
 
             @endauth
@@ -861,3 +865,4 @@
         </div>
     </div>
 </nav>
+

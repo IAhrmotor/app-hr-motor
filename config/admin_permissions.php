@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\User;
 
@@ -52,6 +52,15 @@ return [
             'default_roles' => [
                 User::ROLE_ADMIN,
                 User::ROLE_MANAGER,
+            ],
+        ],
+        'bulletin.manage' => [
+            'label' => 'Gestión del tablón',
+            'description' => 'Publica avisos internos visibles para toda la plantilla.',
+            'route' => 'admin.tablon.index',
+            'icon' => 'bulletin',
+            'default_roles' => [
+                User::ROLE_ADMIN,
             ],
         ],
         'notifications.manage' => [
