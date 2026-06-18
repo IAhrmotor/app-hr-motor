@@ -16,6 +16,8 @@ class ContentActivityLog extends Model
 
     public const CONTENT_TYPE_CONTACT = 'contact';
 
+    public const CONTENT_TYPE_BULLETIN = 'bulletin';
+
     public const ACTION_CREATED = 'created';
 
     public const ACTION_UPDATED = 'updated';
@@ -55,6 +57,7 @@ class ContentActivityLog extends Model
             self::CONTENT_TYPE_MAGAZINE => 'Revista mensual',
             self::CONTENT_TYPE_FORUM_TAG => 'Tag del foro',
             self::CONTENT_TYPE_CONTACT => 'Contacto',
+            self::CONTENT_TYPE_BULLETIN => 'Tablón',
             default => ucfirst((string) $this->content_type),
         };
     }

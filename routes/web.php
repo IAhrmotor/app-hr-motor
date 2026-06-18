@@ -12,6 +12,7 @@ use App\Http\Controllers\AdminPermissionController;
 use App\Http\Controllers\AdminPermissionLogController;
 use App\Http\Controllers\AdminPolicyAcceptanceLogController;
 use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\AdminTablonController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AdminNotificationLogController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\CompanyChatController;
 use App\Http\Controllers\CurriculumsController;
 use App\Http\Controllers\FeedbackReportController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TablonController;
 use App\Http\Controllers\SalesforceAuthController;
 use App\Http\Controllers\SalesforceLeaderboardSyncController;
 use App\Http\Controllers\UserController;
@@ -62,6 +64,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
     Route::get('/agenda/usuarios/{user}', [UserController::class, 'show'])->name('agenda.users.show');
     Route::get('/agenda/contactos/{contact}', [ContactController::class, 'show'])->name('agenda.contacts.show');
+    Route::get('/tablon', [TablonController::class, 'index'])->name('tablon.index');
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
@@ -1725,5 +1728,24 @@ Route::middleware('auth')->group(function () {
             ->name('admin.permissions.sync');
         Route::get('/admin/logs/permisos', [AdminPermissionLogController::class, 'index'])->name('admin.permission-logs.index');
         Route::get('/admin/logs/permisos/descargar', [AdminPermissionLogController::class, 'export'])->name('admin.permission-logs.export');
+    });
+
+    Route::middleware('role:admin')->group(function () {
+        Route::redirect('/admin/logs/tablon', '/admin/logs/contenidos?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)
+            ->name('admin.bulletin-logs.index');
+        Route::redirect('/admin/logs/tablon/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)
+            ->name('admin.bulletin-logs.export');
+        Route::get('/admin/tablon', [AdminTablonController::class, 'index'])->name('admin.tablon.index');
+        Route::get('/admin/tablon/crear', [AdminTablonController::class, 'create'])->name('admin.tablon.create');
+        Route::post('/admin/tablon', [AdminTablonController::class, 'store'])->name('admin.tablon.store');
+        Route::get('/admin/tablon/{bulletin}/editar', [AdminTablonController::class, 'edit'])
+            ->whereNumber('bulletin')
+            ->name('admin.tablon.edit');
+        Route::put('/admin/tablon/{bulletin}', [AdminTablonController::class, 'update'])
+            ->whereNumber('bulletin')
+            ->name('admin.tablon.update');
+        Route::delete('/admin/tablon/{bulletin}', [AdminTablonController::class, 'destroy'])
+            ->whereNumber('bulletin')
+            ->name('admin.tablon.destroy');
     });
 });

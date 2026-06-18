@@ -151,6 +151,7 @@ class AdminContentLogController extends Controller
             ContentActivityLog::CONTENT_TYPE_MAGAZINE,
             ContentActivityLog::CONTENT_TYPE_FORUM_TAG,
             ContentActivityLog::CONTENT_TYPE_CONTACT,
+            ContentActivityLog::CONTENT_TYPE_BULLETIN,
         ];
 
         return in_array($contentType, $allowedTypes, true) ? $contentType : null;

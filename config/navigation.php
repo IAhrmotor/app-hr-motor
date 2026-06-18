@@ -60,6 +60,10 @@ return [
                     'route' => 'agenda.index',
                 ],
                 [
+                    'label' => 'Tablón',
+                    'route' => 'tablon.index',
+                ],
+                [
                     'label' => 'Chat',
                     'route' => 'chat.beta',
                 ],

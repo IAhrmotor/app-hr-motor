@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Models\AdminPermissionGrant;
 use App\Models\User;
@@ -357,6 +357,7 @@ if (! function_exists('app_admin_permission_key_for_route')) {
             Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
             Str::startsWith($routeName, ['admin.forum-tags.']) => 'forum-tags.manage',
             Str::startsWith($routeName, ['admin.magazine.']) => 'magazine.manage',
+            Str::startsWith($routeName, ['admin.tablon.']) => 'bulletin.manage',
             Str::startsWith($routeName, ['admin.notifications.']) => 'notifications.manage',
             Str::startsWith($routeName, ['admin.chat-retention-holds.']) => 'chat-retention-holds.manage',
             Str::startsWith($routeName, ['admin.conversation-access.']) => 'conversation-access.manage',
@@ -414,32 +415,39 @@ if (! function_exists('app_admin_visible_sections')) {
         if (app_user_can_view_admin_logs($user) && ! $isAdminViewerMode) {
             $sections = array_merge($sections, [
                 [
-                    'label' => 'Logs de notificaciones',
+                    'label' => 'Notificaciones',
                     'description' => 'Revisa qué notificaciones prioritarias se enviaron, a quién iban dirigidas y cuántos usuarios las recibieron.',
                     'route' => 'admin.notification-logs.index',
                     'kind' => 'logs',
                     'icon' => 'notification-log',
                 ],
                 [
-                    'label' => 'Logs de usuarios',
+                    'label' => 'Usuarios',
                     'description' => 'Consulta el historial de altas, ediciones y eliminaciones de usuarios.',
                     'route' => 'admin.logs.index',
                     'kind' => 'logs',
                     'icon' => 'user-log',
                 ],
                 [
-                    'label' => 'Logs de delegaciones',
+                    'label' => 'Delegaciones',
                     'description' => 'Consulta el historial de altas, ediciones y eliminaciones de delegaciones.',
                     'route' => 'admin.dealership-logs.index',
                     'kind' => 'logs',
                     'icon' => 'dealership-log',
                 ],
                 [
-                    'label' => 'Logs de contenidos',
+                    'label' => 'Contenidos',
                     'description' => 'Consulta el historial de la revista mensual, los tags del foro y los contactos en un único lugar.',
                     'route' => 'admin.content-logs.index',
                     'kind' => 'logs',
                     'icon' => 'content-log',
+                ],
+                [
+                    'label' => 'Tablón',
+                    'description' => 'Consulta el historial de altas, cambios y borrados de las publicaciones del tablón.',
+                    'route' => 'admin.bulletin-logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'bulletin-log',
                 ],
                 [
                     'label' => 'Política de aceptación',
@@ -463,14 +471,14 @@ if (! function_exists('app_admin_visible_sections')) {
                     'icon' => 'conversation-access-log',
                 ],
                 [
-                    'label' => 'Logs de grupos del chat',
+                    'label' => 'Grupos del chat',
                     'description' => 'Consulta el histórico de altas, ediciones y eliminaciones de grupos del chat.',
                     'route' => 'admin.chat-group-logs.index',
                     'kind' => 'logs',
                     'icon' => 'chat-groups-log',
                 ],
                 [
-                    'label' => 'Logs de permisos',
+                    'label' => 'Permisos',
                     'description' => 'Consulta el histórico de cambios en grupos, asignaciones y permisos concedidos.',
                     'route' => 'admin.permission-logs.index',
                     'kind' => 'logs',
@@ -609,3 +617,8 @@ if (! function_exists('app_it_support_url_for')) {
         return config('portal.links.it_support');
     }
 }
+
+
+
+
+
