@@ -1,4 +1,4 @@
-﻿@php
+@php
     $authUser = auth()->user();
     $navItems = collect(config('navigation.main', []))
         ->map(function (array $item) use ($authUser) {
