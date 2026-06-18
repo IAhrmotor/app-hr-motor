@@ -1,4 +1,4 @@
-﻿@extends('layouts.chat-shell')
+@extends('layouts.chat-shell')
 
 @section('content')
     @php
