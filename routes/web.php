@@ -1124,6 +1124,11 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/bitwarden.webp'),
                     ],
                     [
+                        'label' => 'GitHub',
+                        'url' => 'https://github.com/IAhrmotor/app-hr-motor',
+                        'image' => asset('images/tools/github.webp'),
+                    ],
+                    [
                         'label' => 'n8n VPS',
                         'url' => 'https://n8n.hrmotor.com/',
                         'image' => asset('images/tools/n8n-vps.webp'),
