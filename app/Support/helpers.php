@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\AdminPermissionGrant;
 use App\Models\User;
