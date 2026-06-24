@@ -2600,17 +2600,22 @@
 
                 const getAttachmentSnapshotTotalBytes = () => attachmentSnapshot.reduce((total, file) => total + Number(file?.size || 0), 0);
 
-                const buildPastedImageFile = (blob) => {
-                    if (!(blob instanceof Blob)) {
+                const buildPastedAttachmentFile = (file) => {
+                    if (!(file instanceof Blob)) {
                         return null;
                     }
 
-                    const mimeType = String(blob.type || '').toLowerCase();
-                    const extension = pastedImageMimeToExtension[mimeType] || 'png';
+                    const mimeType = String(file.type || '').toLowerCase();
+                    const extension = pastedImageMimeToExtension[mimeType] || (mimeType.split('/')[1] || 'bin');
+                    const fileName = String(file.name || '').trim();
                     const safeTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
-                    return new File([blob], `captura-portapapeles-${safeTimestamp}.${extension}`, {
-                        type: mimeType || 'image/png',
+                    if (fileName !== '') {
+                        return file;
+                    }
+
+                    return new File([file], `adjunto-portapapeles-${safeTimestamp}.${extension}`, {
+                        type: mimeType || 'application/octet-stream',
                         lastModified: Date.now(),
                     });
                 };
@@ -2626,14 +2631,8 @@
                         return;
                     }
 
-                    const images = pastedFiles.filter((file) => String(file.type || '').startsWith('image/'));
-
-                    if (!images.length) {
-                        return;
-                    }
-
                     event.preventDefault();
-                    appendAttachments(images.map((file) => buildPastedImageFile(file)).filter(Boolean));
+                    appendAttachments(pastedFiles.map((file) => buildPastedAttachmentFile(file)).filter(Boolean));
                 };
 
                 const showChatError = (message) => {
