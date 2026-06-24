@@ -69,6 +69,7 @@ class PurchaseLeaderboardService
             ->values();
 
         $entries = $this->appendCommercialUsersWithoutPurchases($entries, $syncedAt);
+        $entries = $this->normalizeRankingPositions($entries);
 
         DB::transaction(function () use ($entries, $connection, $syncedAt): void {
             PurchaseLeaderboardEntry::query()->delete();
@@ -282,6 +283,17 @@ class PurchaseLeaderboardService
         });
 
         return $entries->concat($missingEntries)->values();
+    }
+
+    private function normalizeRankingPositions(Collection $entries): Collection
+    {
+        return $entries
+            ->values()
+            ->map(function (array $entry, int $index): array {
+                $entry['ranking_position'] = $index + 1;
+
+                return $entry;
+            });
     }
 
     private function excludedLeaderboardUserIds(): array

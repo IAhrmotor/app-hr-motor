@@ -87,6 +87,7 @@ class SalesforceLeaderboardService
             ->values();
 
         $entries = $this->appendCommercialUsersWithoutSales($entries, $syncedAt);
+        $entries = $this->normalizeRankingPositions($entries);
 
         DB::transaction(function () use ($entries, $connection, $syncedAt): void {
             SalesLeaderboardEntry::query()->delete();
@@ -307,6 +308,17 @@ class SalesforceLeaderboardService
         });
 
         return $entries->concat($missingEntries)->values();
+    }
+
+    private function normalizeRankingPositions(Collection $entries): Collection
+    {
+        return $entries
+            ->values()
+            ->map(function (array $entry, int $index): array {
+                $entry['ranking_position'] = $index + 1;
+
+                return $entry;
+            });
     }
 
     private function excludedLeaderboardUserIds(): array
