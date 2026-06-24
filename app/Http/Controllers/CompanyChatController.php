@@ -1075,30 +1075,58 @@ class CompanyChatController extends Controller
     {
         $escapedBody = e($body);
 
-        if ($escapedBody === '' || $mentionedUsers === []) {
+        if ($escapedBody === '') {
             return $escapedBody;
         }
 
-        usort($mentionedUsers, static function ($first, $second): int {
-            $firstName = (string) (is_array($first) ? ($first['name'] ?? '') : $first->name);
-            $secondName = (string) (is_array($second) ? ($second['name'] ?? '') : $second->name);
+        if ($mentionedUsers !== []) {
+            usort($mentionedUsers, static function ($first, $second): int {
+                $firstName = (string) (is_array($first) ? ($first['name'] ?? '') : $first->name);
+                $secondName = (string) (is_array($second) ? ($second['name'] ?? '') : $second->name);
 
-            return mb_strlen($secondName) <=> mb_strlen($firstName);
-        });
+                return mb_strlen($secondName) <=> mb_strlen($firstName);
+            });
 
-        foreach ($mentionedUsers as $mentionedUser) {
-            $name = trim((string) (is_array($mentionedUser) ? ($mentionedUser['name'] ?? '') : $mentionedUser->name));
+            foreach ($mentionedUsers as $mentionedUser) {
+                $name = trim((string) (is_array($mentionedUser) ? ($mentionedUser['name'] ?? '') : $mentionedUser->name));
 
-            if ($name === '') {
-                continue;
+                if ($name === '') {
+                    continue;
+                }
+
+                $escapedMention = e('@' . $name);
+                $replacement = '<span class="font-semibold text-sky-600">@' . e($name) . '</span>';
+                $escapedBody = str_replace($escapedMention, $replacement, $escapedBody);
             }
-
-            $escapedMention = e('@' . $name);
-            $replacement = '<span class="font-semibold text-sky-600">@' . e($name) . '</span>';
-            $escapedBody = str_replace($escapedMention, $replacement, $escapedBody);
         }
 
-        return $escapedBody;
+        return $this->linkifyMessageBodyHtml($escapedBody);
+    }
+
+    private function linkifyMessageBodyHtml(string $html): string
+    {
+        return (string) preg_replace_callback(
+            '/\b((?:https?:\/\/|www\.)[^\s<]+)/i',
+            static function (array $matches): string {
+                $url = $matches[1];
+                $trailing = '';
+
+                while ($url !== '' && preg_match('/[)\]\}.,!?;:]+$/', $url) === 1) {
+                    $trailingChar = mb_substr($url, -1);
+                    $trailing = $trailingChar . $trailing;
+                    $url = mb_substr($url, 0, -1);
+                }
+
+                if ($url === '') {
+                    return $matches[1];
+                }
+
+                $href = str_starts_with($url, 'www.') ? 'https://' . $url : $url;
+
+                return '<a href="' . e($href) . '" target="_blank" rel="noopener noreferrer" class="font-medium text-sky-600 underline decoration-sky-400/70 underline-offset-2 transition hover:text-sky-700">' . e($url) . '</a>' . e($trailing);
+            },
+            $html
+        );
     }
 
     private function messagePayload(CompanyChatMessage $message, User $authUser, ?CompanyChatMessage $nextMessage = null, bool $forceShowTime = false): array

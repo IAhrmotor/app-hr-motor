@@ -391,8 +391,24 @@
             </div>
         </aside>
 
-        <section class="flex min-w-0 flex-1 flex-col bg-slate-100">
+        <section class="relative flex min-w-0 flex-1 flex-col bg-slate-100" data-chat-conversation-pane>
             @if ($selectedConversation)
+                <div class="pointer-events-none absolute inset-0 z-20 hidden rounded-none border-2 border-dashed border-sky-400/80 bg-sky-50/85 px-6 py-6 shadow-[inset_0_0_0_1px_rgba(186,230,253,0.65)] backdrop-blur-[1px]" data-chat-conversation-dropzone-hint aria-hidden="true">
+                    <div class="flex h-full items-center justify-center">
+                        <div class="max-w-xl rounded-[1.6rem] border border-sky-200 bg-white/95 px-6 py-5 text-center shadow-xl">
+                            <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-700 ring-1 ring-sky-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 10l5-5 5 5" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v12" />
+                                </svg>
+                            </div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">Adjuntar archivos</p>
+                            <p class="mt-2 text-base font-semibold text-brand-secondary">Suelta las imágenes o archivos aquí para añadirlos al mensaje</p>
+                        </div>
+                    </div>
+                </div>
+
                 <header class="flex min-h-[4.75rem] items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-2">
                     <div class="flex min-w-0 items-center gap-3 {{ $selectedConversationIsGroup ? '' : 'hidden' }}" data-chat-header-group-shell>
                         <button
@@ -605,7 +621,7 @@
                                     <div class="flex max-w-[78%] flex-col {{ $isSystem ? 'items-center' : ($isMine ? 'items-end' : 'items-start') }}">
                                         @if ($isSystem)
                                             <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
-                                                {{ $message->body }}
+                                                {!! $message->rendered_body_html ?? e($message->body) !!}
                                             </div>
                                             <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] justify-center text-slate-400">
                                                 <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
@@ -795,7 +811,15 @@
                             <div class="max-h-72 overflow-y-auto p-2" data-chat-mention-suggestions-list></div>
                         </div>
 
-                        <div class="flex items-end gap-3 rounded-[1.75rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                        <div class="relative flex items-end gap-3 rounded-[1.75rem] border border-slate-200 bg-white px-4 py-3 shadow-sm transition" data-chat-composer-shell>
+                            <div class="pointer-events-none absolute inset-0 z-10 hidden rounded-[1.75rem] border-2 border-dashed border-sky-400/80 bg-sky-50/85 px-4 py-3 shadow-lg ring-1 ring-sky-200/60 backdrop-blur-[1px]" data-chat-dropzone-hint aria-hidden="true">
+                                <div class="flex h-full items-center justify-center">
+                                    <div class="rounded-full bg-white/90 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700 shadow-sm ring-1 ring-sky-200">
+                                        Suelta los archivos para adjuntarlos
+                                    </div>
+                                </div>
+                            </div>
+
                             <button type="button"
                                 class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
                                 aria-label="Adjuntar archivo"
@@ -995,6 +1019,10 @@
                 const attachmentsButton = document.querySelector('[data-chat-attachments-button]');
                 const attachmentsPreview = document.querySelector('[data-chat-attachments-preview]');
                 const attachmentsChips = document.querySelector('[data-chat-attachments-chips]');
+                const composerShell = document.querySelector('[data-chat-composer-shell]');
+                const composerDropzoneHint = document.querySelector('[data-chat-dropzone-hint]');
+                const conversationPane = document.querySelector('[data-chat-conversation-pane]');
+                const conversationDropzoneHint = document.querySelector('[data-chat-conversation-dropzone-hint]');
                 const chatError = document.querySelector('[data-chat-error]');
                 const emojiButton = document.querySelector('[data-chat-emoji-button]');
                 const emojiPicker = document.querySelector('[data-chat-emoji-picker]');
@@ -1061,7 +1089,7 @@
                     return;
                 }
 
-                const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && chatError && emojiButton && emojiPicker && mentionSuggestionsPanel && mentionSuggestionsList);
+                const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && composerShell && composerDropzoneHint && conversationPane && conversationDropzoneHint && chatError && emojiButton && emojiPicker && mentionSuggestionsPanel && mentionSuggestionsList);
                 let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
                 let currentConversationParticipants = Array.isArray(window.chatInitialConversationParticipants) ? window.chatInitialConversationParticipants : [];
                 const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
@@ -1091,6 +1119,9 @@
                 let composerMentionIds = [];
                 let sidebarCollapsed = false;
                 let mobileSidebarOpen = false;
+                let composerDropDepth = 0;
+                let composerDropActive = false;
+                let conversationDropActive = false;
                 const messageActionWindowMinutes = 2;
                 const messageActionWindowMs = messageActionWindowMinutes * 60 * 1000;
                 const messageActionWindowMessage = 'Solo puedes editar o eliminar un mensaje durante los 2 minutos posteriores a su envío.';
@@ -2600,19 +2631,133 @@
 
                 const getAttachmentSnapshotTotalBytes = () => attachmentSnapshot.reduce((total, file) => total + Number(file?.size || 0), 0);
 
-                const buildPastedImageFile = (blob) => {
-                    if (!(blob instanceof Blob)) {
+                const buildPastedAttachmentFile = (file) => {
+                    if (!(file instanceof Blob)) {
                         return null;
                     }
 
-                    const mimeType = String(blob.type || '').toLowerCase();
-                    const extension = pastedImageMimeToExtension[mimeType] || 'png';
+                    const mimeType = String(file.type || '').toLowerCase();
+                    const extension = pastedImageMimeToExtension[mimeType] || (mimeType.split('/')[1] || 'bin');
+                    const fileName = String(file.name || '').trim();
                     const safeTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
-                    return new File([blob], `captura-portapapeles-${safeTimestamp}.${extension}`, {
-                        type: mimeType || 'image/png',
+                    if (fileName !== '') {
+                        return file;
+                    }
+
+                    return new File([file], `adjunto-portapapeles-${safeTimestamp}.${extension}`, {
+                        type: mimeType || 'application/octet-stream',
                         lastModified: Date.now(),
                     });
+                };
+
+                const setComposerDropActive = (active) => {
+                    composerDropActive = Boolean(active);
+                    conversationDropActive = Boolean(active);
+
+                    if (conversationPane && conversationDropzoneHint) {
+                        conversationDropzoneHint.classList.toggle('hidden', !conversationDropActive);
+                        conversationPane.classList.toggle('ring-4', conversationDropActive);
+                        conversationPane.classList.toggle('ring-sky-200', conversationDropActive);
+                        conversationPane.classList.toggle('bg-sky-50/50', conversationDropActive);
+                    }
+
+                    if (composerShell && composerDropzoneHint) {
+                        composerDropzoneHint.classList.toggle('hidden', !composerDropActive);
+                        composerShell.classList.toggle('border-sky-300', composerDropActive);
+                        composerShell.classList.toggle('bg-sky-50/70', composerDropActive);
+                        composerShell.classList.toggle('ring-2', composerDropActive);
+                        composerShell.classList.toggle('ring-sky-200', composerDropActive);
+                        composerShell.classList.toggle('shadow-lg', composerDropActive);
+                        composerShell.classList.toggle('shadow-sm', !composerDropActive);
+                        composerShell.classList.toggle('scale-[1.005]', composerDropActive);
+                    }
+                };
+
+                const isFileDragEvent = (event) => Array.from(event.dataTransfer?.types || []).includes('Files');
+
+                const handlePageDragEnter = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                };
+
+                const handlePageDragOver = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'copy';
+                };
+
+                const handlePageDragLeave = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+                };
+
+                const handlePageDrop = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                };
+
+                const handleComposerDragEnter = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    composerDropDepth += 1;
+                    setComposerDropActive(true);
+                };
+
+                const handleComposerDragOver = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'copy';
+
+                    if (!composerDropActive) {
+                        setComposerDropActive(true);
+                    }
+                };
+
+                const handleComposerDragLeave = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+
+                    composerDropDepth = Math.max(0, composerDropDepth - 1);
+
+                    if (composerDropDepth === 0) {
+                        setComposerDropActive(false);
+                    }
+                };
+
+                const handleComposerDrop = (event) => {
+                    if (!isFileDragEvent(event)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    composerDropDepth = 0;
+                    setComposerDropActive(false);
+
+                    const droppedFiles = Array.from(event.dataTransfer?.files || []);
+
+                    if (droppedFiles.length > 0) {
+                        appendAttachments(droppedFiles.map((file) => buildPastedAttachmentFile(file)).filter(Boolean));
+                    }
+
+                    input.focus();
                 };
 
                 const handleComposerPaste = (event) => {
@@ -2626,14 +2771,8 @@
                         return;
                     }
 
-                    const images = pastedFiles.filter((file) => String(file.type || '').startsWith('image/'));
-
-                    if (!images.length) {
-                        return;
-                    }
-
                     event.preventDefault();
-                    appendAttachments(images.map((file) => buildPastedImageFile(file)).filter(Boolean));
+                    appendAttachments(pastedFiles.map((file) => buildPastedAttachmentFile(file)).filter(Boolean));
                 };
 
                 const showChatError = (message) => {
@@ -3056,6 +3195,14 @@
                     event.target.value = '';
                 });
 
+                document.addEventListener('dragenter', handlePageDragEnter);
+                document.addEventListener('dragover', handlePageDragOver);
+                document.addEventListener('dragleave', handlePageDragLeave);
+                document.addEventListener('drop', handlePageDrop);
+                conversationPane.addEventListener('dragenter', handleComposerDragEnter);
+                conversationPane.addEventListener('dragover', handleComposerDragOver);
+                conversationPane.addEventListener('dragleave', handleComposerDragLeave);
+                conversationPane.addEventListener('drop', handleComposerDrop);
                 input.addEventListener('paste', handleComposerPaste);
                 input.addEventListener('input', () => {
                     if (!String(input.value || '').includes('@')) {
