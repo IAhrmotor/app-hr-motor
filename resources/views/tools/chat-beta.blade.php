@@ -605,7 +605,7 @@
                                     <div class="flex max-w-[78%] flex-col {{ $isSystem ? 'items-center' : ($isMine ? 'items-end' : 'items-start') }}">
                                         @if ($isSystem)
                                             <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
-                                                {{ $message->body }}
+                                                {!! $message->rendered_body_html ?? e($message->body) !!}
                                             </div>
                                             <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] justify-center text-slate-400">
                                                 <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>

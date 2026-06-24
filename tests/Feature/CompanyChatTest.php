@@ -316,6 +316,37 @@ class CompanyChatTest extends TestCase
         });
     }
 
+    public function test_chat_messages_render_links_as_clickable_blue_anchors(): void
+    {
+        $sender = User::factory()->create([
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Emisor Enlaces',
+        ]);
+        $recipient = User::factory()->create([
+            'extra_role' => User::ROLE_HUMAN_RESOURCES,
+            'name' => 'Receptor Enlaces',
+        ]);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Mira https://example.com para más detalles.',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $this->actingAs($recipient)
+            ->getJson(route('chat.beta.messages.index', $conversation))
+            ->assertOk()
+            ->assertJsonPath('messages.0.rendered_body_html', 'Mira <a href="https://example.com" target="_blank" rel="noopener noreferrer" class="font-medium text-sky-600 underline decoration-sky-400/70 underline-offset-2 transition hover:text-sky-700">https://example.com</a> para más detalles.');
+    }
+
     public function test_admin_group_member_changes_write_system_messages_in_the_group_chat(): void
     {
         $admin = User::factory()->create([
