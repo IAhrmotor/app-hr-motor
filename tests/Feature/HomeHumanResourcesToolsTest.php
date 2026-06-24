@@ -65,4 +65,22 @@ class HomeHumanResourcesToolsTest extends TestCase
         $response->assertSee('CMS Motorflash');
         $response->assertDontSee('Enreach normal');
     }
+
+    public function test_call_center_extra_role_sees_its_other_resources_section(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_CALL_CENTER,
+            'email' => 'callcenter@example.com',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('home'))
+            ->assertOk();
+
+        $response
+            ->assertSee('Otros recursos')
+            ->assertSee('Coches de cortesía')
+            ->assertSee('Citas garantías HR');
+    }
 }

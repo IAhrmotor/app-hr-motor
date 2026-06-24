@@ -18,7 +18,7 @@
         $canAccessRankings = app_can_access_rankings(auth()->user());
         $canAccessVideos = app_can_access_videos(auth()->user());
         $authUser = auth()->user();
-        $isCallCenterHome = $visibleRole === \App\Models\User::ROLE_CALL_CENTER;
+        $isCallCenterHome = app_user_has_any_role($authUser, [\App\Models\User::ROLE_CALL_CENTER]);
         $canAccessItSupport = $authUser
             && (
                 $authUser->role !== \App\Models\User::ROLE_ADMIN
