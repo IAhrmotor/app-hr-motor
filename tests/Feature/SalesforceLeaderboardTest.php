@@ -920,6 +920,11 @@ class SalesforceLeaderboardTest extends TestCase
             'salesforce_user_id' => 'SF-KEEP-001',
             'ranking_position' => 1,
         ]);
+
+        $this->assertDatabaseHas('purchase_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-KEEP-001',
+            'ranking_position' => 1,
+        ]);
     }
 
     public function test_sync_keeps_all_commercials_in_ranking_even_when_salesforce_returns_no_rows(): void
