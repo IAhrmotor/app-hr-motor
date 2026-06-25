@@ -93,7 +93,8 @@ class ProfileNavigationTest extends TestCase
     public function test_homepage_shows_top_10_leaderboard_section_when_data_exists(): void
     {
         $user = User::factory()->create([
-            'name' => 'Usuario Menu',
+            'name' => 'Comercial Viewer',
+            'extra_role' => User::ROLE_COMMERCIAL,
         ]);
 
         $commercial = User::factory()->create([
@@ -117,7 +118,9 @@ class ProfileNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('Top 10 comerciales del mes')
             ->assertSee('Comercial Uno')
-            ->assertSee('12');
+            ->assertSee('12')
+            ->assertSee(route('users.show', $commercial), false)
+            ->assertSee('group-hover:text-brand-primary', false);
     }
 
     public function test_user_can_update_linkedin_url_and_avatar_from_profile(): void
