@@ -263,6 +263,55 @@ class CompanyChatTest extends TestCase
             ->assertSee('Emisor Grupo', false);
     }
 
+    public function test_group_messages_show_the_sender_name_again_when_the_same_user_writes_in_a_new_minute(): void
+    {
+        Carbon::setTestNow(now()->setTime(13, 0, 0));
+
+        $sender = User::factory()->create(['name' => 'Antonio Morales']);
+        $viewer = User::factory()->create(['name' => 'Lector Grupo']);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($viewer);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo conversación',
+        ]);
+        $group->participants()->sync([$sender->id, $viewer->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Mensaje del primer minuto',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        Carbon::setTestNow(now()->addMinutes(2));
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Mensaje del minuto siguiente',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $response = $this->actingAs($viewer)->get(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $response
+            ->assertOk()
+            ->assertSee('Antonio Morales', false)
+            ->assertSee('Mensaje del primer minuto', false)
+            ->assertSee('Mensaje del minuto siguiente', false);
+
+        $this->assertMatchesRegularExpression(
+            '/Antonio Morales.*?Mensaje del primer minuto.*?Antonio Morales.*?Mensaje del minuto siguiente/s',
+            $response->getContent()
+        );
+
+        Carbon::setTestNow();
+    }
+
     public function test_group_messages_show_the_sender_name_again_when_someone_speaks_after_another_user(): void
     {
         Carbon::setTestNow(now()->setTime(12, 30, 0));

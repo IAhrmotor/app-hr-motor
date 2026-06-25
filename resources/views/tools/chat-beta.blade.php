@@ -619,6 +619,7 @@
                                         && (
                                             $loop->first
                                             || $previousMessage?->sender_id !== $message->sender_id
+                                            || $previousTimeLabel !== $currentTimeLabel
                                         );
                                 @endphp
                                 @if ($showDateSeparator)
@@ -1809,7 +1810,11 @@
                         && !isSystem
                         && !isMine
                         && !isDeleted
-                        && (index === 0 || Number(previousMessage?.sender_id || 0) !== Number(message.sender_id || 0));
+                        && (
+                            index === 0
+                            || Number(previousMessage?.sender_id || 0) !== Number(message.sender_id || 0)
+                            || previousTimeLabel !== currentTimeLabel
+                        );
                     const senderNameHtml = showSenderName
                         ? `<p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(String(message.sender_name || 'Usuario'))}</p>`
                         : '';
