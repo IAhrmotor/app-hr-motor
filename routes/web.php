@@ -69,7 +69,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
     Route::get('/leaderboard/coches', [LeaderboardController::class, 'vehicles'])->name('leaderboard.vehicles');
-    Route::get('/delegaciones', [DealershipController::class, 'index'])->name('dealerships.index');
+    Route::get('/admin/delegaciones', [DealershipController::class, 'index'])
+        ->middleware('role:admin,gestor')
+        ->name('dealerships.index');
+    Route::get('/delegaciones', function () {
+        return redirect()->route('dealerships.index');
+    })->middleware('role:admin,gestor');
     Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])
         ->whereNumber('dealership')
         ->name('dealerships.show');
