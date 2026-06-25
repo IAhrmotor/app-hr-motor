@@ -20,7 +20,7 @@
                         'name' => 'Nombre',
                         'email' => 'Correo',
                         'role' => 'Rol',
-                        'dealership' => 'Delegacion',
+                        'dealership' => 'Delegación',
                         'is_active' => 'Estado',
                     ] as $column => $label)
                         <th class="px-6 py-4 text-left">
