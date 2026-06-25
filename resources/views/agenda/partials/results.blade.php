@@ -17,7 +17,7 @@
 
         @if ($results->hasPages())
             <p class="text-xs font-medium uppercase tracking-[0.12em] text-brand-secondary/40">
-                Navega entre paginas sin recargar
+                Navega entre páginas sin recargar
             </p>
         @endif
     </div>
