@@ -1218,14 +1218,18 @@
                 };
 
                 const buildRealtimeWsUrl = () => {
-                    if (!realtimeConfig.enabled || !realtimeConfig.app_key || !realtimeConfig.host) {
+                    if (!realtimeConfig.enabled || !realtimeConfig.app_key) {
                         return null;
                     }
 
-                    const scheme = String(realtimeConfig.scheme || 'https').toLowerCase() === 'https' ? 'wss' : 'ws';
-                    const host = String(realtimeConfig.host || '').trim();
-                    const port = String(realtimeConfig.port || '').trim();
-                    const path = String(realtimeConfig.path || '').trim().replace(/\/$/, '');
+                    const currentLocation = window.location;
+                    const schemeSource = String(realtimeConfig.public_scheme || currentLocation.protocol || 'https:').toLowerCase();
+                    const scheme = schemeSource === 'https:' || schemeSource === 'https' ? 'wss' : 'ws';
+                    const host = String(realtimeConfig.public_host || currentLocation.hostname || '').trim();
+                    const publicPort = String(realtimeConfig.public_port || '').trim();
+                    const currentPort = String(currentLocation.port || '').trim();
+                    const port = publicPort !== '' ? publicPort : currentPort;
+                    const path = String(realtimeConfig.public_path || realtimeConfig.path || '').trim().replace(/\/$/, '');
                     const basePath = path !== '' ? path : '';
 
                     return `${scheme}://${host}${port !== '' ? `:${port}` : ''}${basePath}/app/${encodeURIComponent(String(realtimeConfig.app_key))}?protocol=7&client=js&version=1.0.0&flash=false`;

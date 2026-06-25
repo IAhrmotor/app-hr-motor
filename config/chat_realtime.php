@@ -19,5 +19,9 @@ return [
     'port' => env('CHAT_REALTIME_PORT', env('PUSHER_PORT', env('REVERB_PORT', '443'))),
     'scheme' => env('CHAT_REALTIME_SCHEME', env('PUSHER_SCHEME', env('REVERB_SCHEME', 'https'))),
     'path' => env('CHAT_REALTIME_PATH', env('PUSHER_PATH', '')),
+    'public_host' => env('CHAT_REALTIME_PUBLIC_HOST', ''),
+    'public_port' => env('CHAT_REALTIME_PUBLIC_PORT', ''),
+    'public_scheme' => env('CHAT_REALTIME_PUBLIC_SCHEME', ''),
+    'public_path' => env('CHAT_REALTIME_PUBLIC_PATH', ''),
     'channel_prefix' => env('CHAT_REALTIME_CHANNEL_PREFIX', 'private-'),
 ];
