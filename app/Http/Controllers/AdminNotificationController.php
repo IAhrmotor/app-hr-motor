@@ -13,40 +13,54 @@ use Illuminate\Validation\Rule;
 
 class AdminNotificationController extends Controller
 {
+    private const TARGET_ALL_USERS = '__all_users__';
+
     public function create(Request $request)
     {
         $authUser = $request->user();
-        $availableRoles = User::notificationTargetRolesFor($authUser);
+        $availableTargets = $this->availableTargetsFor($authUser);
 
-        return view('admin.notifications.create', compact('availableRoles'));
+        return view('admin.notifications.create', compact('availableTargets'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $authUser = $request->user();
-        $availableRoles = User::notificationTargetRolesFor($authUser);
+        $availableTargets = $this->availableTargetsFor($authUser);
+        $availableTargetValues = array_column($availableTargets, 'value');
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:120'],
             'description' => ['required', 'string', 'max:2000'],
             'link_url' => ['nullable', 'url', 'max:2048'],
             'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['string', Rule::in($availableRoles)],
+            'roles.*' => ['string', Rule::in($availableTargetValues)],
         ]);
 
-        $recipientQuery = User::query()
-            ->where('is_active', true)
-            ->where(function ($query) use ($validated): void {
-                $query->whereIn('role', $validated['roles'])
-                    ->orWhereIn('extra_role', $validated['roles']);
+        $selectedTargets = array_values(array_intersect($validated['roles'], $availableTargetValues));
+        $sendToAllUsers = in_array(self::TARGET_ALL_USERS, $selectedTargets, true);
+
+        if ($sendToAllUsers) {
+            $selectedTargets = [self::TARGET_ALL_USERS];
+        }
+
+        $recipientQuery = User::query()->where('is_active', true);
+
+        if (! $sendToAllUsers) {
+            $recipientQuery->where(function ($query) use ($selectedTargets): void {
+                $query->whereIn('role', $selectedTargets)
+                    ->orWhereIn('extra_role', $selectedTargets);
             });
+        }
 
         $recipients = $recipientQuery->get();
 
         if ($recipients->isEmpty()) {
             return back()
                 ->withInput()
-                ->with('error', 'No hay usuarios activos con los roles seleccionados.');
+                ->with('error', $sendToAllUsers
+                    ? 'No hay usuarios activos para recibir la notificación.'
+                    : 'No hay usuarios activos con los roles seleccionados.');
         }
 
         Notification::send(
@@ -67,7 +81,7 @@ class AdminNotificationController extends Controller
                 'title' => $validated['title'],
                 'description' => $validated['description'],
                 'link_url' => $validated['link_url'] ?? null,
-                'target_roles' => array_values($validated['roles']),
+                'target_roles' => $selectedTargets,
                 'recipient_count' => $recipients->count(),
                 'created_at' => now(),
             ]);
@@ -76,5 +90,34 @@ class AdminNotificationController extends Controller
         return redirect()
             ->route('admin.notifications.create')
             ->with('success', 'Notificación enviada correctamente a ' . $recipients->count() . ' usuario(s).');
+    }
+
+    private function availableTargetsFor(User $authUser): array
+    {
+        $roleLabels = User::roleLabels();
+        $availableRoles = User::notificationTargetRolesFor($authUser);
+
+        $targets = [[
+            'value' => self::TARGET_ALL_USERS,
+            'label' => 'Todos los usuarios',
+            'description' => 'Se enviará a todos los usuarios activos del portal.',
+            'highlighted' => true,
+        ]];
+
+        foreach ($availableRoles as $role) {
+            $targets[] = [
+                'value' => $role,
+                'label' => $roleLabels[$role] ?? $role,
+                'description' => match ($role) {
+                    User::ROLE_ADMIN => 'Usuarios con permisos totales del portal.',
+                    User::ROLE_MANAGER => 'Gestores con acceso al área de administración.',
+                    User::ROLE_STORE_MANAGER => 'Jefes de tienda.',
+                    default => 'Usuarios con ese rol adicional.',
+                },
+                'highlighted' => false,
+            ];
+        }
+
+        return $targets;
     }
 }
