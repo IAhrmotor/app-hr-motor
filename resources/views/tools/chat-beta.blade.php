@@ -609,6 +609,14 @@
                                     $messageAttachments = collect($message->attachments ?? []);
                                     $isDeleted = $message->deleted_at !== null;
                                     $isEdited = $message->edited_at !== null && ! $isDeleted;
+                                    $showSenderName = $selectedConversationIsGroup
+                                        && ! $isDeleted
+                                        && ! $isSystem
+                                        && ! $isMine
+                                        && (
+                                            $loop->first
+                                            || $previousMessage?->sender_id !== $message->sender_id
+                                        );
                                 @endphp
                                 @if ($showDateSeparator)
                                     <div class="my-5 flex justify-center" data-chat-date-separator>
@@ -628,7 +636,7 @@
                                             </div>
                                         @else
                                             <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }} {{ (! $isDeleted && ! $isMine && (bool) ($message->mentions_auth_user ?? false)) ? 'ring-2 ring-sky-300 bg-sky-50/80 shadow-md' : '' }}">
-                                                @if ($selectedConversationIsGroup && ! $isDeleted && ! $isSystem)
+                                                @if ($showSenderName)
                                                     <p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                                                         {{ $message->sender?->name ?? 'Usuario' }}
                                                     </p>
@@ -1796,7 +1804,7 @@
                         && !isSystem
                         && !isMine
                         && !isDeleted
-                        && (index === 0 || previousDateKey !== currentDateKey || previousTimeLabel !== currentTimeLabel);
+                        && (index === 0 || Number(previousMessage?.sender_id || 0) !== Number(message.sender_id || 0));
                     const senderNameHtml = showSenderName
                         ? `<p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(String(message.sender_name || 'Usuario'))}</p>`
                         : '';

@@ -263,6 +263,60 @@ class CompanyChatTest extends TestCase
             ->assertSee('Emisor Grupo', false);
     }
 
+    public function test_group_messages_show_the_sender_name_again_when_someone_speaks_after_another_user(): void
+    {
+        Carbon::setTestNow(now()->setTime(12, 30, 0));
+
+        $senderOne = User::factory()->create(['name' => 'Antonio Morales']);
+        $senderTwo = User::factory()->create(['name' => 'Marta Gómez']);
+        $viewer = User::factory()->create(['name' => 'Lector Grupo']);
+
+        $this->acceptChatPolicy($senderOne);
+        $this->acceptChatPolicy($senderTwo);
+        $this->acceptChatPolicy($viewer);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo conversación',
+        ]);
+        $group->participants()->sync([$senderOne->id, $senderTwo->id, $viewer->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        $this->actingAs($senderOne)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Primero yo',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $this->actingAs($senderTwo)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Luego yo',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $this->actingAs($senderOne)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'Vuelvo a hablar',
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $response = $this->actingAs($viewer)->get(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $response
+            ->assertOk()
+            ->assertSee('Antonio Morales', false)
+            ->assertSee('Marta Gómez', false);
+
+        $this->assertMatchesRegularExpression(
+            '/Antonio Morales.*?Primero yo.*?Marta Gómez.*?Luego yo.*?Antonio Morales.*?Vuelvo a hablar/s',
+            $response->getContent()
+        );
+
+        Carbon::setTestNow();
+    }
+
     public function test_group_mentions_are_stored_and_prioritised_for_the_mentioned_user(): void
     {
         $sender = User::factory()->create(['name' => 'Emisor Menciones']);
