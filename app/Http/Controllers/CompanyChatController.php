@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\CompanyChatConversationRead;
+use App\Events\CompanyChatMessageCreated;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatFavoriteContact;
@@ -192,7 +194,23 @@ class CompanyChatController extends Controller
             );
             $this->hydrateMessageMentions($selectedConversation->messages, $authUser);
 
-            $this->markConversationAsRead($selectedConversation, $authUser);
+            $readMessageIds = $this->markConversationAsRead($selectedConversation, $authUser);
+            if ($readMessageIds !== []) {
+                $targetUserIds = $selectedConversation->participantsFor($authUser)
+                    ->pluck('id')
+                    ->map(static fn ($value): int => (int) $value)
+                    ->reject(static fn (int $userId): bool => $userId === $authUser->id)
+                    ->values()
+                    ->all();
+
+                broadcast(new CompanyChatConversationRead(
+                    $selectedConversation->id,
+                    $authUser->id,
+                    $readMessageIds,
+                    now()->toIso8601String(),
+                    $targetUserIds
+                ))->toOthers();
+            }
             $this->markConversationNotificationsAsRead($selectedConversation, $authUser);
             $selectedConversation->refresh();
             $selectedConversation->load([
@@ -382,6 +400,17 @@ class CompanyChatController extends Controller
         $this->hydrateMessageMentions(collect([$message]), $request->user());
 
         $this->notifyConversationParticipants($conversation, $message, $request->user());
+        $targetUserIds = $conversation->participantsFor($request->user())
+            ->pluck('id')
+            ->map(static fn ($value): int => (int) $value)
+            ->reject(static fn (int $userId): bool => $userId === $request->user()->id)
+            ->values()
+            ->all();
+        broadcast(new CompanyChatMessageCreated(
+            $conversation->id,
+            $this->messagePayload($message, $request->user(), null, true),
+            $targetUserIds
+        ))->toOthers();
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -531,8 +560,25 @@ class CompanyChatController extends Controller
         $authUser = $request->user();
         $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
 
-        $this->markConversationAsRead($conversation, $authUser);
+        $readMessageIds = $this->markConversationAsRead($conversation, $authUser);
         $this->markConversationNotificationsAsRead($conversation, $authUser);
+
+        if ($readMessageIds !== []) {
+            $targetUserIds = $conversation->participantsFor($authUser)
+                ->pluck('id')
+                ->map(static fn ($value): int => (int) $value)
+                ->reject(static fn (int $userId): bool => $userId === $authUser->id)
+                ->values()
+                ->all();
+
+            broadcast(new CompanyChatConversationRead(
+                $conversation->id,
+                $authUser->id,
+                $readMessageIds,
+                now()->toIso8601String(),
+                $targetUserIds
+            ))->toOthers();
+        }
 
         $messages = $conversation->messages()
             ->withTrashed()
@@ -733,21 +779,38 @@ class CompanyChatController extends Controller
         abort_unless($this->hasAcceptedChatPolicy($request->user()), 403);
     }
 
-    private function markConversationAsRead(CompanyChatConversation $conversation, User $user): void
+    /**
+     * @return array<int, int>
+     */
+    private function markConversationAsRead(CompanyChatConversation $conversation, User $user): array
     {
         if ($conversation->isGroupConversation()) {
-            $this->markGroupConversationAsRead($conversation, $user);
+            return $this->markGroupConversationAsRead($conversation, $user);
+        }
 
-            return;
+        $messageIds = $conversation->messages()
+            ->where('sender_id', '!=', $user->id)
+            ->whereNull('read_at')
+            ->pluck('id')
+            ->map(static fn ($value): int => (int) $value)
+            ->values()
+            ->all();
+
+        if ($messageIds === []) {
+            return [];
         }
 
         $conversation->messages()
-            ->where('sender_id', '!=', $user->id)
-            ->whereNull('read_at')
+            ->whereKey($messageIds)
             ->update(['read_at' => now()]);
+
+        return $messageIds;
     }
 
-    private function markGroupConversationAsRead(CompanyChatConversation $conversation, User $user): void
+    /**
+     * @return array<int, int>
+     */
+    private function markGroupConversationAsRead(CompanyChatConversation $conversation, User $user): array
     {
         $messages = $conversation->messages()
             ->with('sender')
@@ -758,12 +821,15 @@ class CompanyChatController extends Controller
             ->get();
 
         if ($messages->isEmpty()) {
-            return;
+            return [];
         }
 
         $now = now();
+        $messageIds = [];
 
         foreach ($messages as $message) {
+            $messageIds[] = (int) $message->id;
+
             CompanyChatMessageRead::query()->updateOrCreate(
                 [
                     'company_chat_message_id' => $message->id,
@@ -776,6 +842,8 @@ class CompanyChatController extends Controller
 
             $this->refreshGroupMessageReadState($conversation, $message);
         }
+
+        return $messageIds;
     }
 
     private function refreshGroupMessageReadState(CompanyChatConversation $conversation, CompanyChatMessage $message): void
