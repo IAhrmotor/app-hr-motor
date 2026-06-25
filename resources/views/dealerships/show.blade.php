@@ -89,9 +89,6 @@
                         </a>
                     @endif
 
-                    <a href="{{ route('dealerships.index') }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">
-                        Volver a delegaciones
-                    </a>
                 </div>
             </div>
 
