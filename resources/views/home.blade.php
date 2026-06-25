@@ -519,7 +519,7 @@
                 <div class="mt-6 grid gap-4 lg:grid-cols-3">
                     @foreach ($homeLeaderboardEntries->take(3) as $entry)
                         @php
-                            $canOpenProfile = $entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true);
+                            $canOpenProfile = $entry->user && auth()->check();
                             $movement = $homeLeaderboardMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                             $medalStyles = match ($entry->ranking_position) {
                                 1 => [
@@ -606,7 +606,7 @@
                     <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         @foreach ($homeLeaderboardEntries->slice(3) as $entry)
                         @php
-                                $canOpenProfile = $entry->user && auth()->check() && in_array($visibleRole, ['admin', 'gestor'], true);
+                                $canOpenProfile = $entry->user && auth()->check();
                                 $movement = $homeLeaderboardMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                                 $rankStyles = match ($entry->ranking_position) {
                                     4 => 'border-brand-primary/20 bg-brand-primary/[0.03]',
