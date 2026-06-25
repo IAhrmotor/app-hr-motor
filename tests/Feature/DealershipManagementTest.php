@@ -295,6 +295,37 @@ class DealershipManagementTest extends TestCase
             ->assertSee('Top 2 en compras');
     }
 
+    public function test_regular_users_can_open_the_dealership_detail_page(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+        ]);
+
+        $dealership = Dealership::factory()->create([
+            'name' => 'Alicante',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dealerships.show', $dealership))
+            ->assertOk()
+            ->assertSee('Alicante');
+    }
+
+    public function test_regular_users_cannot_open_the_dealership_list_page(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dealerships.index'))
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->get('/delegaciones')
+            ->assertForbidden();
+    }
+
     public function test_admin_cannot_delete_dealership_with_users_assigned(): void
     {
         $admin = User::factory()->create([

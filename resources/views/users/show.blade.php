@@ -4,6 +4,7 @@
     @php
         $isOwnProfile = auth()->id() === $user->id;
         $visibleRole = app_visible_role(auth()->user());
+        $canOpenRankings = app_can_access_rankings(auth()->user());
         $salesRankingPosition = $rankingPositions['sales']['position'] ?? null;
         $salesTotal = $rankingPositions['sales']['total'] ?? 0;
         $purchaseRankingPosition = $rankingPositions['purchases']['position'] ?? null;
@@ -204,31 +205,61 @@
                     </div>
 
                     <div class="mt-5 grid gap-4 md:grid-cols-2">
-                        <a href="{{ route('leaderboard.sales') }}" class="block rounded-3xl transition hover:-translate-y-1 hover:shadow-md">
-                            <div class="rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5">
-                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700/80">Ranking ventas</p>
-                                <p class="mt-3 text-3xl font-bold text-amber-800">
-                                    {{ $salesRankingPosition ? 'Top ' . $salesRankingPosition : 'Sin posición' }}
-                                </p>
-                                <p class="mt-2 text-sm font-semibold text-amber-800/85">
-                                    {{ number_format((float) $salesTotal, 0, ',', '.') }} ventas este mes
-                                </p>
-                                <p class="mt-1 text-sm text-amber-800/75">Según el ranking mensual de ventas.</p>
+                        @if ($canOpenRankings)
+                            <a href="{{ route('leaderboard.sales') }}" class="block rounded-3xl transition hover:-translate-y-1 hover:shadow-md">
+                                <div class="rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700/80">Ranking ventas</p>
+                                    <p class="mt-3 text-3xl font-bold text-amber-800">
+                                        {{ $salesRankingPosition ? 'Top ' . $salesRankingPosition : 'Sin posición' }}
+                                    </p>
+                                    <p class="mt-2 text-sm font-semibold text-amber-800/85">
+                                        {{ number_format((float) $salesTotal, 0, ',', '.') }} ventas este mes
+                                    </p>
+                                    <p class="mt-1 text-sm text-amber-800/75">Según el ranking mensual de ventas.</p>
+                                </div>
+                            </a>
+                        @else
+                            <div class="block rounded-3xl">
+                                <div class="rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700/80">Ranking ventas</p>
+                                    <p class="mt-3 text-3xl font-bold text-amber-800">
+                                        {{ $salesRankingPosition ? 'Top ' . $salesRankingPosition : 'Sin posición' }}
+                                    </p>
+                                    <p class="mt-2 text-sm font-semibold text-amber-800/85">
+                                        {{ number_format((float) $salesTotal, 0, ',', '.') }} ventas este mes
+                                    </p>
+                                    <p class="mt-1 text-sm text-amber-800/75">Según el ranking mensual de ventas.</p>
+                                </div>
                             </div>
-                        </a>
+                        @endif
 
-                        <a href="{{ route('leaderboard.purchases') }}" class="block rounded-3xl transition hover:-translate-y-1 hover:shadow-md">
-                            <div class="rounded-3xl border border-sky-200/70 bg-sky-50/80 p-5">
-                                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700/80">Ranking compras</p>
-                                <p class="mt-3 text-3xl font-bold text-sky-800">
-                                    {{ $purchaseRankingPosition ? 'Top ' . $purchaseRankingPosition : 'Sin posición' }}
-                                </p>
-                                <p class="mt-2 text-sm font-semibold text-sky-800/85">
-                                    {{ number_format((float) $purchaseTotal, 0, ',', '.') }} compras este mes
-                                </p>
-                                <p class="mt-1 text-sm text-sky-800/75">Según el ranking mensual de compras.</p>
+                        @if ($canOpenRankings)
+                            <a href="{{ route('leaderboard.purchases') }}" class="block rounded-3xl transition hover:-translate-y-1 hover:shadow-md">
+                                <div class="rounded-3xl border border-sky-200/70 bg-sky-50/80 p-5">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700/80">Ranking compras</p>
+                                    <p class="mt-3 text-3xl font-bold text-sky-800">
+                                        {{ $purchaseRankingPosition ? 'Top ' . $purchaseRankingPosition : 'Sin posición' }}
+                                    </p>
+                                    <p class="mt-2 text-sm font-semibold text-sky-800/85">
+                                        {{ number_format((float) $purchaseTotal, 0, ',', '.') }} compras este mes
+                                    </p>
+                                    <p class="mt-1 text-sm text-sky-800/75">Según el ranking mensual de compras.</p>
+                                </div>
+                            </a>
+                        @else
+                            <div class="block rounded-3xl">
+                                <div class="rounded-3xl border border-sky-200/70 bg-sky-50/80 p-5">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700/80">Ranking compras</p>
+                                    <p class="mt-3 text-3xl font-bold text-sky-800">
+                                        {{ $purchaseRankingPosition ? 'Top ' . $purchaseRankingPosition : 'Sin posición' }}
+                                    </p>
+                                    <p class="mt-2 text-sm font-semibold text-sky-800/85">
+                                        {{ number_format((float) $purchaseTotal, 0, ',', '.') }} compras este mes
+                                    </p>
+                                    <p class="mt-1 text-sm text-sky-800/75">Según el ranking mensual de compras.</p>
+                                </div>
                             </div>
-                        </a>
+                        @endif
                     </div>
                 </section>
             @endif

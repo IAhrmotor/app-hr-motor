@@ -157,6 +157,92 @@ class UserProfileViewTest extends TestCase
             ->assertSee('Ranking compras');
     }
 
+    public function test_allowed_rankings_viewer_can_open_the_ranking_cards_from_a_profile(): void
+    {
+        $viewer = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'name' => 'Comercial Viewer',
+        ]);
+
+        $commercial = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'name' => 'Laura Comercial',
+            'salesforce_user_id' => 'SF-COM-001',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 3,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-COM-001',
+            'seller_name' => 'Laura Comercial',
+            'total_sales' => 7,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 2,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-COM-001',
+            'seller_name' => 'Laura Comercial',
+            'total_purchases' => 5,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($viewer)->get(route('users.show', $commercial));
+
+        $response
+            ->assertOk()
+            ->assertSee('Top 3')
+            ->assertSee('Top 2')
+            ->assertSee('href="' . route('leaderboard.sales') . '"', false)
+            ->assertSee('href="' . route('leaderboard.purchases') . '"', false);
+    }
+
+    public function test_non_allowed_rankings_viewer_sees_the_cards_without_links(): void
+    {
+        $viewer = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_HUMAN_RESOURCES,
+            'name' => 'RRHH Viewer',
+        ]);
+
+        $commercial = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'name' => 'Laura Comercial',
+            'salesforce_user_id' => 'SF-COM-002',
+        ]);
+
+        SalesLeaderboardEntry::query()->create([
+            'ranking_position' => 4,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-COM-002',
+            'seller_name' => 'Laura Comercial',
+            'total_sales' => 6,
+            'synced_at' => now(),
+        ]);
+
+        PurchaseLeaderboardEntry::query()->create([
+            'ranking_position' => 1,
+            'user_id' => $commercial->id,
+            'salesforce_user_id' => 'SF-COM-002',
+            'seller_name' => 'Laura Comercial',
+            'total_purchases' => 8,
+            'synced_at' => now(),
+        ]);
+
+        $response = $this->actingAs($viewer)->get(route('users.show', $commercial));
+
+        $response
+            ->assertOk()
+            ->assertSee('Top 4')
+            ->assertSee('Top 1')
+            ->assertDontSee('href="' . route('leaderboard.sales') . '"', false)
+            ->assertDontSee('href="' . route('leaderboard.purchases') . '"', false);
+    }
+
     public function test_store_manager_profile_uses_the_new_role_label_and_shows_rankings(): void
     {
         $admin = User::factory()->create([
