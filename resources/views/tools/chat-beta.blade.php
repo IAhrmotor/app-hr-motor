@@ -424,32 +424,35 @@
                         </button>
 
                         <div class="group flex min-w-0 items-center gap-3">
-                            <button
-                                type="button"
-                                class="group/avatar relative {{ $selectedConversationGroupAvatarUrl ? 'cursor-pointer' : 'hidden' }} inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
-                                aria-label="Ampliar imagen del grupo {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
-                                data-chat-group-header-avatar-button
-                                data-chat-group-header-avatar-src="{{ $selectedConversationGroupAvatarUrl }}"
-                                data-chat-group-header-avatar-alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
-                                data-chat-group-header-avatar-title="{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
-                                @click.stop="openImage({ src: $el.dataset.chatGroupHeaderAvatarSrc, alt: $el.dataset.chatGroupHeaderAvatarAlt, title: $el.dataset.chatGroupHeaderAvatarTitle })"
-                            >
-                                <img
-                                    src="{{ $selectedConversationGroupAvatarUrl }}"
-                                    alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
-                                    class="block h-full w-full min-h-full min-w-full shrink-0 cursor-pointer rounded-2xl object-cover object-center transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
-                                    data-chat-group-header-avatar
+                            <div class="{{ $selectedConversationGroupAvatarUrl ? '' : 'hidden' }}" data-chat-group-header-avatar-shell>
+                                <button
+                                    type="button"
+                                    class="group/avatar relative inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 overflow-hidden rounded-2xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                    aria-label="Ampliar imagen del grupo {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                    data-chat-group-header-avatar-button
+                                    data-chat-group-header-avatar-src="{{ $selectedConversationGroupAvatarUrl }}"
+                                    data-chat-group-header-avatar-alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                    data-chat-group-header-avatar-title="{{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                    @click.stop="openImage({ src: $el.dataset.chatGroupHeaderAvatarSrc, alt: $el.dataset.chatGroupHeaderAvatarAlt, title: $el.dataset.chatGroupHeaderAvatarTitle })"
                                 >
-                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/avatar:bg-brand-secondary/35 group-hover/avatar:opacity-100">
-                                    Ver
-                                </span>
-                            </button>
-                            <div class="flex h-11 w-11 shrink-0 {{ $selectedConversationGroupAvatarUrl ? 'hidden' : '' }} items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary/15" data-chat-group-header-icon>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
+                                    <img
+                                        src="{{ $selectedConversationGroupAvatarUrl }}"
+                                        alt="Avatar de {{ $selectedConversationGroup?->name ?? 'Grupo de chat' }}"
+                                        class="block h-full w-full min-h-full min-w-full shrink-0 rounded-2xl object-cover object-center transition duration-300 group-hover/avatar:scale-105 group-hover/avatar:brightness-75"
+                                        data-chat-group-header-avatar
+                                    >
+                                    <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-brand-secondary/0 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/avatar:bg-brand-secondary/35 group-hover/avatar:opacity-100">
+                                        Ver
+                                    </span>
+                                </button>
                             </div>
-
+                            <div class="{{ $selectedConversationGroupAvatarUrl ? 'hidden' : '' }}" data-chat-group-header-icon-shell>
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary/15" data-chat-group-header-icon>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M5 21C5 17.134 8.13401 14 12 14C15.866 14 19 17.134 19 21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </div>
+                            </div>
                             <button
                                 type="button"
                                 class="min-w-0 cursor-pointer text-left transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
@@ -1067,6 +1070,8 @@
                 const headerGroupName = document.querySelector('[data-chat-group-header-name]');
                 const headerGroupParticipants = document.querySelector('[data-chat-group-header-participants]');
                 const headerGroupButton = document.querySelector('[data-chat-group-header-button]');
+                const headerGroupAvatarShell = document.querySelector('[data-chat-group-header-avatar-shell]');
+                const headerGroupIconShell = document.querySelector('[data-chat-group-header-icon-shell]');
                 const headerGroupAvatar = document.querySelector('[data-chat-group-header-avatar]');
                 const headerGroupAvatarButton = document.querySelector('[data-chat-group-header-avatar-button]');
                 const headerGroupIcon = document.querySelector('[data-chat-group-header-icon]');
@@ -2327,9 +2332,12 @@
 
                         const hasGroupAvatar = Boolean(payload.conversation_system_group_type === '{{ \App\Models\CompanyChatGroup::SYSTEM_GROUP_TYPE_DEALERSHIP }}' && payload.conversation_avatar_url);
 
-                        if (headerGroupAvatarButton && headerGroupAvatar && headerGroupIcon) {
-                            headerGroupAvatarButton.classList.toggle('hidden', !hasGroupAvatar);
-                            headerGroupIcon.classList.toggle('hidden', hasGroupAvatar);
+                        if (headerGroupAvatarShell && headerGroupIconShell) {
+                            headerGroupAvatarShell.classList.toggle('hidden', !hasGroupAvatar);
+                            headerGroupIconShell.classList.toggle('hidden', hasGroupAvatar);
+                        }
+
+                        if (headerGroupAvatarButton && headerGroupAvatar) {
                             headerGroupAvatar.src = hasGroupAvatar
                                 ? payload.conversation_avatar_url
                                 : '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
@@ -2363,16 +2371,6 @@
                     if (headerAvatar && !payload.conversation_is_group && payload.conversation_avatar_url) {
                         headerAvatar.src = payload.conversation_avatar_url;
                         headerAvatar.alt = `Avatar de ${payload.conversation_name || payload.partner_name || 'Usuario'}`;
-                    }
-
-                    if (headerGroupAvatar && headerGroupIcon) {
-                        const hasGroupAvatar = Boolean(payload.conversation_is_group && payload.conversation_avatar_url);
-                        headerGroupAvatar.src = hasGroupAvatar
-                            ? payload.conversation_avatar_url
-                            : '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
-                        headerGroupAvatar.alt = `Avatar de ${payload.conversation_name || 'Grupo de chat'}`;
-                        headerGroupAvatar.classList.toggle('hidden', !hasGroupAvatar);
-                        headerGroupIcon.classList.toggle('hidden', hasGroupAvatar);
                     }
 
                     if (headerProfileLink) {
