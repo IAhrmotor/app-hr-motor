@@ -174,7 +174,9 @@ class AdminNotificationLogController extends Controller
 
     private function formatRoles(array $roles): string
     {
-        $labels = User::roleLabels();
+        $labels = array_merge([
+            '__all_users__' => 'Todos los usuarios',
+        ], User::roleLabels());
 
         return collect($roles)
             ->map(fn ($role) => $labels[$role] ?? $role)

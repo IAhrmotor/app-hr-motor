@@ -118,7 +118,9 @@
                 <tbody class="divide-y divide-brand-secondary/10 bg-white">
                     @forelse ($logs as $log)
                         @php
-                            $roleLabels = \App\Models\User::roleLabels();
+                            $roleLabels = array_merge([
+                                '__all_users__' => 'Todos los usuarios',
+                            ], \App\Models\User::roleLabels());
                         @endphp
                         <tr class="align-top">
                             <td class="px-6 py-5 text-sm text-brand-secondary">
