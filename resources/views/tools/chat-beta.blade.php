@@ -2651,6 +2651,21 @@
                     });
                 };
 
+                const insertComposerText = (text) => {
+                    const nextText = String(text || '');
+
+                    if (!nextText) {
+                        return;
+                    }
+
+                    const start = Number.isInteger(input.selectionStart) ? input.selectionStart : input.value.length;
+                    const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : input.value.length;
+
+                    input.setRangeText(nextText, start, end, 'end');
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.focus();
+                };
+
                 const setComposerDropActive = (active) => {
                     composerDropActive = Boolean(active);
                     conversationDropActive = Boolean(active);
@@ -2766,13 +2781,21 @@
                         .filter((item) => item.kind === 'file')
                         .map((item) => item.getAsFile())
                         .filter((file) => Boolean(file));
+                    const pastedText = String(event.clipboardData?.getData('text/plain') || '').replace(/\r\n/g, '\n');
 
-                    if (!pastedFiles.length) {
+                    if (!pastedFiles.length && !pastedText) {
                         return;
                     }
 
                     event.preventDefault();
-                    appendAttachments(pastedFiles.map((file) => buildPastedAttachmentFile(file)).filter(Boolean));
+
+                    if (pastedFiles.length > 0) {
+                        appendAttachments(pastedFiles.map((file) => buildPastedAttachmentFile(file)).filter(Boolean));
+                    }
+
+                    if (pastedText) {
+                        insertComposerText(pastedText);
+                    }
                 };
 
                 const showChatError = (message) => {

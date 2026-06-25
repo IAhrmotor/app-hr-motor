@@ -2,8 +2,8 @@
 
 @section('content')
     @php
-        $roleLabels = \App\Models\User::roleLabels();
         $selectedRoles = old('roles', []);
+        $allUsersTargetValue = '__all_users__';
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
@@ -79,24 +79,29 @@
                     </div>
 
                     <div class="mt-5 grid gap-4 md:grid-cols-2">
-                        @foreach ($availableRoles as $role)
-                            <label class="group flex cursor-pointer items-start gap-4 rounded-2xl border border-white/70 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                                <input type="checkbox" name="roles[]" value="{{ $role }}" @checked(in_array($role, $selectedRoles, true))
-                                    class="mt-1 h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary">
+                        @foreach ($availableTargets as $target)
+                            @php
+                                $isAllUsersTarget = $target['value'] === $allUsersTargetValue;
+                                $isSelected = in_array($target['value'], $selectedRoles, true);
+                            @endphp
+                            <label
+                                class="group flex cursor-pointer items-start gap-4 rounded-2xl border px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $isAllUsersTarget ? 'border-amber-300/70 bg-gradient-to-br from-amber-50 to-white ring-1 ring-amber-200/60' : 'border-white/70 bg-white' }}"
+                                data-notification-target-card="{{ $target['value'] }}"
+                            >
+                                <input
+                                    type="checkbox"
+                                    name="roles[]"
+                                    value="{{ $target['value'] }}"
+                                    @checked($isSelected)
+                                    class="mt-1 h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                    data-notification-target-input="{{ $target['value'] }}"
+                                >
                                 <span class="flex-1">
-                                    <span class="block text-sm font-semibold text-brand-secondary">
-                                        {{ $roleLabels[$role] ?? $role }}
+                                    <span class="flex items-center gap-2 text-sm font-semibold {{ $isAllUsersTarget ? 'text-amber-950' : 'text-brand-secondary' }}">
+                                        {{ $target['label'] }}
                                     </span>
-                                    <span class="mt-1 block text-sm text-brand-secondary/65">
-                                        @if ($role === \App\Models\User::ROLE_ADMIN)
-                                            Usuarios con permisos totales del portal.
-                                        @elseif ($role === \App\Models\User::ROLE_MANAGER)
-                                            Gestores con acceso al área de administración.
-                                        @elseif ($role === \App\Models\User::ROLE_STORE_MANAGER)
-                                            Jefes de tienda.
-                                        @else
-                                            Usuarios con ese rol adicional.
-                                        @endif
+                                    <span class="mt-1 block text-sm {{ $isAllUsersTarget ? 'text-amber-900/70' : 'text-brand-secondary/65' }}">
+                                        {{ $target['description'] }}
                                     </span>
                                 </span>
                             </label>
@@ -145,6 +150,7 @@
     <script>
         (() => {
             const overlay = document.getElementById('leaderboard-sync-loader');
+            const allUsersTargetValue = '__all_users__';
 
             document.querySelectorAll('[data-sync-loader-form]').forEach((form) => {
                 let submitted = false;
@@ -184,6 +190,30 @@
                     }
 
                     window.setTimeout(() => form.submit(), 80);
+                });
+            });
+
+            document.querySelectorAll('[data-notification-target-input]').forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    const checkedValue = checkbox.value;
+                    const allUsersCheckbox = document.querySelector(`[data-notification-target-input="${allUsersTargetValue}"]`);
+
+                    if (!allUsersCheckbox) {
+                        return;
+                    }
+
+                    if (checkedValue === allUsersTargetValue && checkbox.checked) {
+                        document.querySelectorAll('[data-notification-target-input]').forEach((otherCheckbox) => {
+                            if (otherCheckbox !== checkbox) {
+                                otherCheckbox.checked = false;
+                            }
+                        });
+                        return;
+                    }
+
+                    if (checkedValue !== allUsersTargetValue && checkbox.checked) {
+                        allUsersCheckbox.checked = false;
+                    }
                 });
             });
         })();
