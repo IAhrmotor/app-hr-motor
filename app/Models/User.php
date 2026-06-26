@@ -187,7 +187,7 @@ class User extends Authenticatable
         });
 
         static::updated(function (self $user): void {
-            if ($user->wasChanged('is_active')) {
+            if ($user->wasChanged(['is_active', 'disabled_at'])) {
                 app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, false);
                 return;
             }

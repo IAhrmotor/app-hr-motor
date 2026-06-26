@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\UserActivityLog;
 use App\Notifications\UserOnboardingNotification;
 use App\Notifications\UserWelcomeNotification;
+use App\Services\CompanyChatDefaultGroupSyncService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -281,6 +282,7 @@ class UserController extends Controller
                 'remember_token' => Str::random(60),
             ])->save();
 
+            app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, false);
             $this->invalidateUserSessions($user);
 
             $this->storeActivityLog(
@@ -320,6 +322,7 @@ class UserController extends Controller
                 'remember_token' => Str::random(60),
             ])->save();
 
+            app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, false);
             $this->invalidateUserSessions($user);
 
             $this->storeActivityLog(
