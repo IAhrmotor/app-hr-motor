@@ -9,7 +9,7 @@
         <section class="rounded-3xl border border-brand-secondary/10 bg-white p-6 shadow-sm" data-users-root>
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-brand-secondary">Gestion de usuarios</h1>
+                    <h1 class="text-2xl font-bold tracking-tight text-brand-secondary">Gestión de usuarios</h1>
                     <p class="mt-2 text-sm text-brand-secondary/70">Listado de usuarios registrados en la plataforma.</p>
                 </div>
 

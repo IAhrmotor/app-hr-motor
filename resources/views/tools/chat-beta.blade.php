@@ -25,6 +25,7 @@
     @endphp
     <script>
         window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
+        window.chatCurrentUserId = @js($authUser->id);
         window.chatInitialConversationParticipants = @js($selectedConversationIsGroup && $selectedConversationGroup ? $selectedConversationGroup->participants->map(function ($participant) {
             return [
                 'id' => $participant->id,
@@ -52,6 +53,7 @@
                 ];
             })->values()->all(),
         ] : null);
+        window.chatRealtimeConfig = @js(config('chat_realtime'));
     </script>
 
     @php
@@ -517,7 +519,16 @@
                     </div>
                     </div>
 
-                    <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                    <div class="flex items-center gap-1">
+                        <span
+                            class="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-slate-300 transition-colors duration-300 cursor-help"
+                            title="Tiempo real desactivado"
+                            aria-label="Tiempo real desactivado"
+                            role="status"
+                            data-chat-realtime-indicator
+                        ></span>
+
+                        <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button
                             type="button"
                             data-chat-contact-menu-button
@@ -1078,6 +1089,7 @@
                 const headerGroupIcon = document.querySelector('[data-chat-group-header-icon]');
                 const headerPrivateName = document.querySelector('[data-chat-private-header-name]');
                 const headerPrivateRole = document.querySelector('[data-chat-private-header-role]');
+                const realtimeIndicator = document.querySelector('[data-chat-realtime-indicator]');
                 const headerAvatar = document.querySelector('[data-chat-private-header-avatar]');
                 const headerProfileLink = document.querySelector('[data-chat-private-header-profile-link]');
                 const headerFavoriteStar = document.querySelector('[data-chat-favorite-star]');
@@ -1107,6 +1119,7 @@
                 let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
                 let currentConversationParticipants = Array.isArray(window.chatInitialConversationParticipants) ? window.chatInitialConversationParticipants : [];
                 const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
+                const realtimeConfig = window.chatRealtimeConfig || {};
                 let isSubmitting = false;
                 let pollingLocked = false;
                 let attachmentSnapshot = [];
@@ -1139,6 +1152,17 @@
                 const messageActionWindowMinutes = 2;
                 const messageActionWindowMs = messageActionWindowMinutes * 60 * 1000;
                 const messageActionWindowMessage = 'Solo puedes editar o eliminar un mensaje durante los 2 minutos posteriores a su envío.';
+                let realtimeSocket = null;
+                let realtimeSocketId = '';
+                let realtimeConversationChannel = '';
+                let realtimeUserChannel = '';
+                let realtimeReconnectTimer = null;
+                let realtimeReconnectAttempt = 0;
+                let realtimeSyncTimer = null;
+                let realtimeSidebarTimer = null;
+                let realtimeHandshakeTimer = null;
+                let realtimeSuppressed = false;
+                const realtimeCurrentUserId = Number(window.chatCurrentUserId || 0);
                 currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
                     $nextMessage = $selectedConversationMessages->get($index + 1);
                     $currentTimeLabel = $message->created_at?->translatedFormat('H:i');
@@ -1191,6 +1215,383 @@
                     'image/webp': 'webp',
                     'image/gif': 'gif',
                     'image/svg+xml': 'svg',
+                };
+
+                const buildRealtimeWsUrl = () => {
+                    if (!realtimeConfig.enabled || !realtimeConfig.app_key) {
+                        return null;
+                    }
+
+                    const currentLocation = window.location;
+                    const schemeSource = String(realtimeConfig.public_scheme || currentLocation.protocol || 'https:').toLowerCase();
+                    const scheme = schemeSource === 'https:' || schemeSource === 'https' ? 'wss' : 'ws';
+                    const host = String(realtimeConfig.public_host || currentLocation.hostname || '').trim();
+                    const publicPort = String(realtimeConfig.public_port || '').trim();
+                    const currentPort = String(currentLocation.port || '').trim();
+                    const port = publicPort !== '' ? publicPort : currentPort;
+                    const path = String(realtimeConfig.public_path || realtimeConfig.path || '').trim().replace(/\/$/, '');
+                    const basePath = path !== '' ? path : '';
+
+                    return `${scheme}://${host}${port !== '' ? `:${port}` : ''}${basePath}/app/${encodeURIComponent(String(realtimeConfig.app_key))}?protocol=7&client=js&version=1.0.0&flash=false`;
+                };
+
+                const buildRealtimeChannelName = (conversationId) => {
+                    const prefix = String(realtimeConfig.channel_prefix || 'private-');
+                    return `${prefix}chat.conversations.${conversationId}`;
+                };
+
+                const buildRealtimeUserChannelName = (userId) => {
+                    const prefix = String(realtimeConfig.channel_prefix || 'private-');
+                    return `${prefix}chat.users.${userId}`;
+                };
+
+                const getRealtimeHeaders = () => {
+                    if (!realtimeSocketId) {
+                        return {};
+                    }
+
+                    return {
+                        'X-Socket-ID': realtimeSocketId,
+                    };
+                };
+
+                const updateChatRealtimeIndicator = (status) => {
+                    const resolvedStatus = ['active', 'fallback', 'disabled'].includes(status) ? status : 'disabled';
+
+                    if (!realtimeIndicator) {
+                        return;
+                    }
+
+                    realtimeIndicator.dataset.status = resolvedStatus;
+                    realtimeIndicator.classList.remove('bg-emerald-500', 'bg-amber-500', 'bg-slate-300');
+
+                    if (resolvedStatus === 'active') {
+                        realtimeIndicator.classList.add('bg-emerald-500');
+                        realtimeIndicator.title = 'Tiempo real activo';
+                        realtimeIndicator.setAttribute('aria-label', 'Tiempo real activo');
+                        return;
+                    }
+
+                    if (resolvedStatus === 'fallback') {
+                        realtimeIndicator.classList.add('bg-amber-500');
+                        realtimeIndicator.title = 'Tiempo real en espera';
+                        realtimeIndicator.setAttribute('aria-label', 'Tiempo real en espera');
+                        return;
+                    }
+
+                    realtimeIndicator.classList.add('bg-slate-300');
+                    realtimeIndicator.title = 'Tiempo real desactivado';
+                    realtimeIndicator.setAttribute('aria-label', 'Tiempo real desactivado');
+                };
+
+                const queueRealtimeMessagesSync = () => {
+                    if (!hasComposer || typeof syncMessages !== 'function') {
+                        return;
+                    }
+
+                    if (realtimeSyncTimer) {
+                        window.clearTimeout(realtimeSyncTimer);
+                    }
+
+                    realtimeSyncTimer = window.setTimeout(() => {
+                        realtimeSyncTimer = null;
+                        void syncMessages();
+                    }, 75);
+                };
+
+                const queueRealtimeSidebarRefresh = () => {
+                    if (typeof refreshSidebar !== 'function') {
+                        return;
+                    }
+
+                    if (realtimeSidebarTimer) {
+                        window.clearTimeout(realtimeSidebarTimer);
+                    }
+
+                    realtimeSidebarTimer = window.setTimeout(() => {
+                        realtimeSidebarTimer = null;
+                        void refreshSidebar();
+                    }, 75);
+                };
+
+                const handleRealtimeChatEvent = (payload) => {
+                    const conversationId = Number(payload?.conversation_id || 0);
+                    const activeConversationId = Number(wrapper?.dataset.conversationId || sidebarSelectedConversationId || 0);
+
+                    if (!conversationId) {
+                        return;
+                    }
+
+                    if (conversationId === activeConversationId) {
+                        queueRealtimeMessagesSync();
+                    }
+
+                    queueRealtimeSidebarRefresh();
+                };
+
+                const subscribeRealtimeConversation = async (conversationId) => {
+                    if (!realtimeSocket || realtimeSocket.readyState !== WebSocket.OPEN || !conversationId) {
+                        return;
+                    }
+
+                    const channelName = buildRealtimeChannelName(conversationId);
+
+                    if (realtimeConversationChannel === channelName) {
+                        return;
+                    }
+
+                    if (realtimeConversationChannel) {
+                        realtimeSocket.send(JSON.stringify({
+                            event: 'pusher:unsubscribe',
+                            data: {
+                                channel: realtimeConversationChannel,
+                            },
+                        }));
+                    }
+
+                    const authResponse = await fetch(String(realtimeConfig.auth_endpoint || '/broadcasting/auth'), {
+                        method: 'POST',
+                        headers: {
+                            ...getRealtimeHeaders(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': csrfToken,
+                            Accept: 'application/json',
+                        },
+                        body: new URLSearchParams({
+                            socket_id: realtimeSocketId,
+                            channel_name: channelName,
+                        }),
+                    });
+
+                    if (!authResponse.ok) {
+                        return;
+                    }
+
+                    const authPayload = await authResponse.json().catch(() => ({}));
+                    const channelData = {
+                        channel: channelName,
+                        auth: authPayload.auth,
+                    };
+
+                    if (authPayload.channel_data) {
+                        channelData.channel_data = authPayload.channel_data;
+                    }
+
+                    realtimeConversationChannel = channelName;
+                    realtimeSocket.send(JSON.stringify({
+                        event: 'pusher:subscribe',
+                        data: channelData,
+                    }));
+                };
+
+                const subscribeRealtimeUserChannel = async () => {
+                    if (!realtimeSocket || realtimeSocket.readyState !== WebSocket.OPEN || !realtimeCurrentUserId) {
+                        return;
+                    }
+
+                    const channelName = buildRealtimeUserChannelName(realtimeCurrentUserId);
+
+                    if (realtimeUserChannel === channelName) {
+                        return;
+                    }
+
+                    const authResponse = await fetch(String(realtimeConfig.auth_endpoint || '/broadcasting/auth'), {
+                        method: 'POST',
+                        headers: {
+                            ...getRealtimeHeaders(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': csrfToken,
+                            Accept: 'application/json',
+                        },
+                        body: new URLSearchParams({
+                            socket_id: realtimeSocketId,
+                            channel_name: channelName,
+                        }),
+                    });
+
+                    if (!authResponse.ok) {
+                        return;
+                    }
+
+                    const authPayload = await authResponse.json().catch(() => ({}));
+                    realtimeUserChannel = channelName;
+                    realtimeSocket.send(JSON.stringify({
+                        event: 'pusher:subscribe',
+                        data: {
+                            channel: channelName,
+                            auth: authPayload.auth,
+                        },
+                    }));
+                };
+
+                const disconnectChatRealtime = () => {
+                    if (realtimeReconnectTimer) {
+                        window.clearTimeout(realtimeReconnectTimer);
+                        realtimeReconnectTimer = null;
+                    }
+
+                    if (realtimeHandshakeTimer) {
+                        window.clearTimeout(realtimeHandshakeTimer);
+                        realtimeHandshakeTimer = null;
+                    }
+
+                    if (realtimeSocket) {
+                        try {
+                            realtimeSocket.close();
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    }
+
+                    realtimeSocket = null;
+                    realtimeSocketId = '';
+                    realtimeConversationChannel = '';
+                    realtimeUserChannel = '';
+
+                    updateChatRealtimeIndicator(realtimeConfig.enabled && !realtimeSuppressed && typeof WebSocket !== 'undefined' ? 'fallback' : 'disabled');
+                };
+
+                const suppressChatRealtime = () => {
+                    realtimeSuppressed = true;
+                    disconnectChatRealtime();
+                    updateChatRealtimeIndicator('disabled');
+                };
+
+                const connectChatRealtime = () => {
+                    if (!hasComposer || !realtimeConfig.enabled || realtimeSuppressed || typeof WebSocket === 'undefined') {
+                        updateChatRealtimeIndicator('disabled');
+                        return;
+                    }
+
+                    const wsUrl = buildRealtimeWsUrl();
+
+                    if (!wsUrl) {
+                        updateChatRealtimeIndicator('disabled');
+                        return;
+                    }
+
+                    if (realtimeSocket && (realtimeSocket.readyState === WebSocket.OPEN || realtimeSocket.readyState === WebSocket.CONNECTING)) {
+                        updateChatRealtimeIndicator('fallback');
+                        return;
+                    }
+
+                    disconnectChatRealtime();
+                    updateChatRealtimeIndicator('fallback');
+
+                    const socket = new WebSocket(wsUrl);
+                    realtimeSocket = socket;
+
+                    if (realtimeHandshakeTimer) {
+                        window.clearTimeout(realtimeHandshakeTimer);
+                    }
+
+                    realtimeHandshakeTimer = window.setTimeout(() => {
+                        if (realtimeSocket === socket && !realtimeSocketId) {
+                            suppressChatRealtime();
+                        }
+                    }, 8000);
+
+                    socket.addEventListener('message', async (event) => {
+                        let payload;
+
+                        try {
+                            payload = JSON.parse(event.data);
+                        } catch (error) {
+                            return;
+                        }
+
+                        if (payload.event === 'pusher:connection_established') {
+                            let connectionData = payload.data;
+
+                            if (typeof connectionData === 'string') {
+                                try {
+                                    connectionData = JSON.parse(connectionData);
+                                } catch (error) {
+                                    connectionData = {};
+                                }
+                            }
+
+                            if (realtimeHandshakeTimer) {
+                                window.clearTimeout(realtimeHandshakeTimer);
+                                realtimeHandshakeTimer = null;
+                            }
+
+                            realtimeSocketId = String(connectionData?.socket_id || '');
+                            realtimeReconnectAttempt = 0;
+                            updateChatRealtimeIndicator('active');
+
+                            await subscribeRealtimeUserChannel();
+
+                            const activeConversationId = Number(wrapper?.dataset.conversationId || sidebarSelectedConversationId || 0);
+                            if (activeConversationId) {
+                                await subscribeRealtimeConversation(activeConversationId);
+                            }
+
+                            return;
+                        }
+
+                        if (payload.event === 'pusher:ping') {
+                            socket.send(JSON.stringify({
+                                event: 'pusher:pong',
+                                data: {},
+                            }));
+                            return;
+                        }
+
+                        const eventData = typeof payload.data === 'string'
+                            ? (() => {
+                                try {
+                                    return JSON.parse(payload.data);
+                                } catch (error) {
+                                    return payload.data;
+                                }
+                            })()
+                            : payload.data;
+
+                        if (payload.event === 'chat.message.created' || payload.event === 'chat.conversation.read') {
+                            handleRealtimeChatEvent(eventData);
+                        }
+                    });
+
+                    socket.addEventListener('close', () => {
+                        if (realtimeHandshakeTimer) {
+                            window.clearTimeout(realtimeHandshakeTimer);
+                            realtimeHandshakeTimer = null;
+                        }
+
+                        realtimeSocket = null;
+                        realtimeSocketId = '';
+                        realtimeConversationChannel = '';
+                        realtimeUserChannel = '';
+
+                        if (!realtimeConfig.enabled || realtimeSuppressed) {
+                            updateChatRealtimeIndicator('disabled');
+                            return;
+                        }
+
+                        updateChatRealtimeIndicator('fallback');
+
+                        const delay = Math.min(15000, 1000 * (realtimeReconnectAttempt + 1));
+                        realtimeReconnectAttempt += 1;
+
+                        if (realtimeReconnectTimer) {
+                            window.clearTimeout(realtimeReconnectTimer);
+                        }
+
+                        realtimeReconnectTimer = window.setTimeout(() => {
+                            realtimeReconnectTimer = null;
+                            connectChatRealtime();
+                        }, delay);
+                    });
+
+                    socket.addEventListener('error', () => {
+                        updateChatRealtimeIndicator('fallback');
+                        try {
+                            socket.close();
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    });
                 };
 
                 const setSidebarCollapsed = (collapsed) => {
@@ -2415,6 +2816,7 @@
                     try {
                         const response = await fetch(url, {
                             headers: {
+                                ...getRealtimeHeaders(),
                                 'X-Requested-With': 'XMLHttpRequest',
                                 Accept: 'application/json',
                             },
@@ -2442,6 +2844,7 @@
                         updateHeader(payload);
                         setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
                         renderMessages(messages);
+                        void subscribeRealtimeConversation(activeConversationId);
                         refreshSidebar();
 
                         if (pushState) {
@@ -2517,6 +2920,7 @@
                     try {
                         const response = await fetch(summaryUrl, {
                             headers: {
+                                ...getRealtimeHeaders(),
                                 'X-Requested-With': 'XMLHttpRequest',
                                 Accept: 'application/json',
                             },
@@ -2597,6 +3001,7 @@
                     try {
                         const response = await fetch(pollUrl, {
                             headers: {
+                                ...getRealtimeHeaders(),
                                 'X-Requested-With': 'XMLHttpRequest',
                                 Accept: 'application/json',
                             },
@@ -2991,6 +3396,7 @@
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
+                                ...getRealtimeHeaders(),
                                 'X-Requested-With': 'XMLHttpRequest',
                                 Accept: 'application/json',
                             },
@@ -3459,7 +3865,9 @@
 
                 setInterval(refreshSidebar, 5000);
                 refreshSidebar();
+                updateChatRealtimeIndicator(hasComposer && realtimeConfig.enabled && typeof WebSocket !== 'undefined' && !realtimeSuppressed ? 'fallback' : 'disabled');
                 if (hasComposer) {
+                    connectChatRealtime();
                     syncMessages();
                 }
             });
