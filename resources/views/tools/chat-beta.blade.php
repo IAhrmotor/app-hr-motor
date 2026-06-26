@@ -1231,8 +1231,9 @@
                     const port = publicPort !== '' ? publicPort : currentPort;
                     const path = String(realtimeConfig.public_path || realtimeConfig.path || '').trim().replace(/\/$/, '');
                     const basePath = path !== '' ? path : '';
+                    const shouldOmitPort = (scheme === 'wss' && port === '443') || (scheme === 'ws' && port === '80');
 
-                    return `${scheme}://${host}${port !== '' ? `:${port}` : ''}${basePath}/app/${encodeURIComponent(String(realtimeConfig.app_key))}?protocol=7&client=js&version=1.0.0&flash=false`;
+                    return `${scheme}://${host}${port !== '' && !shouldOmitPort ? `:${port}` : ''}${basePath}/app/${encodeURIComponent(String(realtimeConfig.app_key))}?protocol=7&client=js&version=1.0.0&flash=false`;
                 };
 
                 const buildRealtimeChannelName = (conversationId) => {
