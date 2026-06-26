@@ -46,18 +46,9 @@ class CompanyChatGroupSystemMessageService
     private function buildMessageBody(CompanyChatGroup $group, User $participant, bool $isAdded, ?User $actor = null): string
     {
         $participantName = $participant->name ?: 'Usuario';
-        $groupName = $group->name ?: 'grupo';
-
-        if ($actor) {
-            $actorName = $actor->name ?: 'Alguien';
-
-            return $isAdded
-                ? "{$actorName} añadió a {$participantName} al grupo {$groupName}."
-                : "{$participantName} salió del grupo {$groupName}.";
-        }
 
         return $isAdded
-            ? "{$participantName} se añadió al grupo {$groupName}."
-            : "{$participantName} salió del grupo {$groupName}.";
+            ? "{$participantName} se ha unido al grupo."
+            : "{$participantName} salió del grupo.";
     }
 }
