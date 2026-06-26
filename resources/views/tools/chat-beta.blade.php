@@ -641,16 +641,16 @@
                                     </div>
                                 @endif
                                 <div class="flex {{ $isSystem ? 'justify-center' : ($isMine ? 'justify-end' : 'justify-start') }} {{ $topMarginClass }}" data-message-id="{{ $message->id }}" data-chat-message-owner="{{ $isMine ? '1' : '0' }}">
-                                    <div class="flex max-w-[78%] flex-col {{ $isSystem ? 'items-center' : ($isMine ? 'items-end' : 'items-start') }}">
+                                    <div class="flex w-fit max-w-[78%] min-w-0 flex-col {{ $isSystem ? 'items-center' : ($isMine ? 'items-end' : 'items-start') }}">
                                         @if ($isSystem)
-                                            <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
+                                            <div class="max-w-full break-words [overflow-wrap:anywhere] rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
                                                 {!! $message->rendered_body_html ?? e($message->body) !!}
                                             </div>
                                             <div class="{{ $showTime ? 'mt-1' : 'mt-0.5' }} flex items-center gap-1 text-[11px] justify-center text-slate-400">
                                                 <span data-message-time @if (! $showTime) class="hidden" @endif>{{ $currentTimeLabel }}</span>
                                             </div>
                                         @else
-                                            <div class="group relative min-w-[5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }} {{ (! $isDeleted && ! $isMine && (bool) ($message->mentions_auth_user ?? false)) ? 'ring-2 ring-sky-300 bg-sky-50/80 shadow-md' : '' }}">
+                                            <div class="group relative min-w-[5rem] max-w-full overflow-x-hidden rounded-[1.1rem] px-3 py-2 shadow-sm transition {{ $isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : ($isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary') }} {{ (! $isDeleted && ! $isMine && (bool) ($message->mentions_auth_user ?? false)) ? 'ring-2 ring-sky-300 bg-sky-50/80 shadow-md' : '' }}">
                                                 @if ($showSenderName)
                                                     <p class="mb-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                                                         {{ $message->sender?->name ?? 'Usuario' }}
@@ -667,7 +667,7 @@
                                                     </button>
                                                 @endif
 
-                                                <div data-chat-message-content>
+                                                <div class="min-w-0 max-w-full overflow-x-hidden" data-chat-message-content>
                                                     @if ($isDeleted)
                                                         <div class="flex items-center gap-2 text-sm font-medium text-slate-500">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -676,7 +676,7 @@
                                                             <span>Este mensaje ha sido eliminado.</span>
                                                         </div>
                                                     @elseif (filled($message->body))
-                                                        <p class="whitespace-pre-line text-[15px] leading-[1.45]">{!! $message->rendered_body_html ?? e($message->body) !!}</p>
+                                                        <p class="whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.45]">{!! $message->rendered_body_html ?? e($message->body) !!}</p>
                                                     @endif
 
                                                     @if (! $isDeleted && $messageAttachments->isNotEmpty())
@@ -2227,16 +2227,16 @@
 
                     return `
                         <div class="flex ${isSystem ? 'justify-center' : (isMine ? 'justify-end' : 'justify-start')} ${topMarginClass}" data-message-id="${message.id}" data-chat-message-owner="${isMine ? '1' : '0'}">
-                            <div class="flex max-w-[78%] flex-col ${isSystem ? 'items-center' : (isMine ? 'items-end' : 'items-start')}">
+                            <div class="flex w-fit max-w-[78%] min-w-0 flex-col ${isSystem ? 'items-center' : (isMine ? 'items-end' : 'items-start')}">
                                 ${isSystem ? `
-                                    <div class="rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
+                                    <div class="max-w-full break-words [overflow-wrap:anywhere] rounded-full bg-slate-100 px-4 py-2 text-center text-[12px] leading-5 text-slate-500 shadow-sm ring-1 ring-slate-200" data-chat-message-content>
                                         ${escapeHtml(body)}
                                     </div>
                                     <div class="${showTime ? 'mt-1' : 'mt-0.5'} flex items-center gap-1 justify-center text-[11px] text-slate-400">
                                         <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                     </div>
                                 ` : `
-                                <div class="group relative min-w-[5.5rem] rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}${mentionHighlightClass}">
+                                <div class="group relative min-w-[5.5rem] max-w-full overflow-x-hidden rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}${mentionHighlightClass}">
                                     ${senderNameHtml}
                                     ${isEditing ? `
                                         <textarea rows="1" class="min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10" data-chat-edit-input>${escapeHtml(editableBody)}</textarea>
@@ -2252,7 +2252,7 @@
                                             <span>Este mensaje ha sido eliminado.</span>
                                         </div>
                                     ` : `
-                                        ${body !== '' ? `<p class="whitespace-pre-line text-[15px] leading-[1.45]">${renderedBodyHtml || escapeHtml(body)}</p>` : ''}
+                                        ${body !== '' ? `<p class="whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.45]">${renderedBodyHtml || escapeHtml(body)}</p>` : ''}
                                         ${attachmentsHtml !== '' ? `<div class="${body !== '' ? 'mt-2' : ''} space-y-2">${attachmentsHtml}</div>` : ''}
                                         ${isMine && !isDeleted ? `<button type="button" class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100" aria-label="Abrir opciones del mensaje" data-chat-message-trigger>
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

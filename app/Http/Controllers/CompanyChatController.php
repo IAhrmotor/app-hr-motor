@@ -1191,7 +1191,7 @@ class CompanyChatController extends Controller
 
                 $href = str_starts_with($url, 'www.') ? 'https://' . $url : $url;
 
-                return '<a href="' . e($href) . '" target="_blank" rel="noopener noreferrer" class="font-medium text-sky-600 underline decoration-sky-400/70 underline-offset-2 transition hover:text-sky-700">' . e($url) . '</a>' . e($trailing);
+                return '<a href="' . e($href) . '" target="_blank" rel="noopener noreferrer" class="break-words [overflow-wrap:anywhere] font-medium text-sky-600 underline decoration-sky-400/70 underline-offset-2 transition hover:text-sky-700">' . e($url) . '</a>' . e($trailing);
             },
             $html
         );
