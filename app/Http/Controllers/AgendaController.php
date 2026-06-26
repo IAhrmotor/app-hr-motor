@@ -83,6 +83,8 @@ class AgendaController extends Controller
     protected function buildEntries(): Collection
     {
         $users = User::query()
+            ->where('is_active', true)
+            ->whereNull('disabled_at')
             ->select([
                 'id',
                 'name',
@@ -139,9 +141,15 @@ class AgendaController extends Controller
     protected function buildAgendaStats(): array
     {
         return [
-            'users_total' => User::query()->count(),
+            'users_total' => User::query()
+                ->where('is_active', true)
+                ->whereNull('disabled_at')
+                ->count(),
             'contacts' => Contact::query()->count(),
-            'total' => User::query()->count() + Contact::query()->count(),
+            'total' => User::query()
+                ->where('is_active', true)
+                ->whereNull('disabled_at')
+                ->count() + Contact::query()->count(),
         ];
     }
 }
