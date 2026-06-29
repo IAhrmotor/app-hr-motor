@@ -12,7 +12,14 @@
     $persistedQuery = request()->except([$searchParam, $pageParam, 'ajax', 'section']);
     $entityLabelPlural = $entityLabelPlural ?? 'comerciales';
     $searchPlaceholder = $searchPlaceholder ?? 'Buscar comercial, email o delegacion';
-    $aggregateByDealership = $aggregateByDealership ?? false;
+    $aggregateType = $aggregateType ?? (($aggregateByDealership ?? false) ? 'dealership' : 'user');
+    $isAggregatedLeaderboard = in_array($aggregateType, ['dealership', 'zone'], true);
+    $aggregateEntityLabel = $aggregateType === 'zone' ? 'Zona' : 'Delegación';
+    $aggregateSecondaryLabel = $aggregateType === 'zone' ? 'Delegaciones' : 'Equipo';
+    $aggregateSearchEmptyLabel = $aggregateType === 'zone' ? 'Prueba con otra zona.' : 'Prueba con otra delegación.';
+    $aggregateRankingLabel = $aggregateType === 'zone' ? 'Ranking por zona' : 'Ranking por delegación';
+    $aggregateCountSingular = $aggregateType === 'zone' ? 'delegación' : 'comercial';
+    $aggregateCountPlural = $aggregateType === 'zone' ? 'delegaciones' : 'comerciales';
     $dealershipImageClasses = 'h-16 w-16 rounded-2xl object-cover ring-2';
     $dealershipFallbackClasses = 'flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-secondary text-lg font-semibold text-white ring-2';
     $dealershipRowImageClasses = 'h-11 w-11 rounded-xl object-cover ring-1 ring-brand-secondary/10';
@@ -29,7 +36,7 @@
     data-leaderboard-root
     data-leaderboard-search-param="{{ $searchParam }}"
     data-leaderboard-page-param="{{ $pageParam }}"
-    data-leaderboard-section="{{ $aggregateByDealership ? 'dealership' : 'leaderboard' }}"
+    data-leaderboard-section="{{ $aggregateType === 'user' ? 'leaderboard' : $aggregateType }}"
 >
     @if ($hasLeaderboardData)
         <form method="GET" action="{{ route($routeName) }}"
@@ -111,7 +118,7 @@
             @if ($hasLeaderboardData && $search !== '')
                 <p class="text-lg font-semibold text-brand-secondary">No hay resultados para tu busqueda</p>
                 <p class="mt-2 text-sm">
-                    {{ $aggregateByDealership ? 'Prueba con otra delegación.' : 'Prueba con otro nombre, email o delegación.' }}
+                    {{ $isAggregatedLeaderboard ? $aggregateSearchEmptyLabel : 'Prueba con otro nombre, email o delegación.' }}
                 </p>
             @else
                 <p class="text-lg font-semibold text-brand-secondary">{{ $emptyTitle }}</p>
@@ -125,7 +132,7 @@
                     @php
                         $movement = $topEntryMovements[$entry->id] ?? ['direction' => 'same', 'amount' => 0, 'label' => 'Se mantiene igual que ayer'];
                         $topEntryHref = null;
-                        if ($aggregateByDealership && $entry->dealership_id) {
+                        if ($aggregateType === 'dealership' && $entry->dealership_id) {
                             $topEntryHref = route('dealerships.show', $entry->dealership_id);
                         } elseif ($entry->user && auth()->check()) {
                             $topEntryHref = route('users.show', $entry->user);
@@ -187,7 +194,7 @@
                             @endif
                         </div>
                         <div class="justify-self-end self-start sm:hidden">
-                            @if ($aggregateByDealership)
+                            @if ($isAggregatedLeaderboard)
                                 @if ($entry->dealership_image_url)
                                     <img src="{{ $entry->dealership_image_url }}"
                                         alt="Imagen de {{ $entry->dealership_name }}"
@@ -205,10 +212,10 @@
                         </div>
 
                         <div class="min-w-0 self-end sm:hidden">
-                            @if ($aggregateByDealership)
+                            @if ($isAggregatedLeaderboard)
                                 <p class="line-clamp-2 text-lg font-semibold leading-tight text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->dealership_name }}</p>
                                 <p class="truncate text-sm text-brand-secondary/60">
-                                    {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                    {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}
                                 </p>
                             @else
                                 <div class="flex flex-wrap items-center gap-2">
@@ -233,7 +240,7 @@
                         </div>
 
                         <div class="hidden grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24 sm:grid">
-                            @if ($aggregateByDealership)
+                            @if ($isAggregatedLeaderboard)
                                 @if ($entry->dealership_image_url)
                                     <img src="{{ $entry->dealership_image_url }}"
                                         alt="Imagen de {{ $entry->dealership_name }}"
@@ -246,7 +253,7 @@
                                 <div class="min-w-0 max-w-full">
                                     <p class="text-xl font-semibold leading-tight break-words text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->dealership_name }}</p>
                                     <p class="text-sm text-brand-secondary/60">
-                                        {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                        {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}
                                     </p>
                                 </div>
                             @elseif ($entry->user && auth()->check())
@@ -299,8 +306,8 @@
             <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
                 <div class="hidden grid-cols-[220px_minmax(0,1.2fr)_minmax(0,1fr)_100px] gap-6 md:grid">
                     <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">Puesto</div>
-                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $aggregateByDealership ? 'Delegación' : 'Comercial' }}</div>
-                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $aggregateByDealership ? 'Equipo' : 'Delegación' }}</div>
+                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $isAggregatedLeaderboard ? $aggregateEntityLabel : 'Comercial' }}</div>
+                    <div class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $isAggregatedLeaderboard ? $aggregateSecondaryLabel : 'Delegación' }}</div>
                     <div class="text-right text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $metricLabel }}</div>
                 </div>
                 <div class="md:hidden text-xs font-semibold uppercase tracking-[0.24em] text-brand-secondary/55">{{ $title }}</div>
@@ -358,9 +365,9 @@
                             </div>
 
                             <div>
-                                @if ($aggregateByDealership)
+                                @if ($isAggregatedLeaderboard)
                                     @php
-                                        $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
+                                        $dealershipHref = $aggregateType === 'dealership' && $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
                                     @endphp
                                     @if ($dealershipHref)
                                         <a href="{{ $dealershipHref }}" class="flex items-center gap-3 rounded-2xl transition hover:opacity-90">
@@ -375,7 +382,7 @@
                                             @endif
                                             <div>
                                                 <p class="text-sm font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
-                                                <p class="text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                                <p class="text-xs text-brand-secondary/55">{{ $aggregateRankingLabel }}</p>
                                             </div>
                                         </a>
                                     @else
@@ -391,7 +398,7 @@
                                             @endif
                                             <div>
                                                 <p class="text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
-                                                <p class="text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                                <p class="text-xs text-brand-secondary/55">{{ $aggregateRankingLabel }}</p>
                                             </div>
                                         </div>
                                     @endif
@@ -430,8 +437,8 @@
                             </div>
 
                             <div class="truncate text-sm text-brand-secondary/70">
-                                @if ($aggregateByDealership)
-                                    {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}
+                                @if ($isAggregatedLeaderboard)
+                                    {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}
                                 @else
                                     {{ $entry->user?->dealership ?: 'Sin delegación asignada' }}
                                 @endif
@@ -475,9 +482,9 @@
                             </div>
 
                             <div class="flex items-center gap-3">
-                                @if ($aggregateByDealership)
+                                @if ($isAggregatedLeaderboard)
                                     @php
-                                        $dealershipHref = $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
+                                        $dealershipHref = $aggregateType === 'dealership' && $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
                                     @endphp
                                     @if ($dealershipHref)
                                         <a href="{{ $dealershipHref }}" class="flex min-w-0 items-center gap-3 rounded-2xl transition hover:opacity-90">
@@ -492,8 +499,8 @@
                                             @endif
                                             <div class="min-w-0">
                                                 <p class="truncate text-sm font-semibold text-brand-secondary hover:text-brand-primary">{{ $entry->dealership_name }}</p>
-                                                <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}</p>
-                                                <p class="truncate text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                                <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}</p>
+                                                <p class="truncate text-xs text-brand-secondary/55">{{ $aggregateRankingLabel }}</p>
                                             </div>
                                         </a>
                                     @else
@@ -508,8 +515,8 @@
                                         @endif
                                         <div class="min-w-0">
                                             <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
-                                            <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? 'comercial' : 'comerciales' }}</p>
-                                            <p class="truncate text-xs text-brand-secondary/55">Ranking por delegación</p>
+                                            <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}</p>
+                                            <p class="truncate text-xs text-brand-secondary/55">{{ $aggregateRankingLabel }}</p>
                                         </div>
                                     @endif
                                 @else

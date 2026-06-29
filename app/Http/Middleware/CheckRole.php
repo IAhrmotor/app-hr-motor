@@ -20,10 +20,21 @@ class CheckRole
 
         $routeName = $request->route()?->getName();
 
-        if ($routeName && $this->isAdminLogRoute($routeName) && app_real_role($user) !== User::ROLE_ADMIN) {
-            abort(403);
+        if ($routeName && $this->isAdminLogRoute($routeName)) {
+            if ($this->isZoneLogRoute($routeName) && app_user_has_admin_permission($user, 'zones.manage')) {
+                return $this->authorizeRoleRequest($request, $next, $user, $roles, $routeName);
+            }
+
+            if (app_real_role($user) !== User::ROLE_ADMIN) {
+                abort(403);
+            }
         }
 
+        return $this->authorizeRoleRequest($request, $next, $user, $roles, $routeName);
+    }
+
+    private function authorizeRoleRequest(Request $request, Closure $next, User $user, array $roles, ?string $routeName): Response
+    {
         $currentRoles = app_effective_roles($user);
 
         if (array_intersect($currentRoles, $roles) === []) {
@@ -62,6 +73,7 @@ class CheckRole
         return Str::startsWith($routeName, [
             'users.',
             'dealerships.',
+            'admin.zones.',
             'admin.contacts.',
             'admin.forum-tags.',
             'admin.magazine.',
@@ -81,6 +93,7 @@ class CheckRole
             'admin.content-logs.',
             'admin.bulletin-logs.',
             'admin.dealership-logs.',
+            'admin.zone-logs.',
             'admin.notification-logs.',
             'admin.policy-acceptance-logs.',
             'admin.chat-retention-logs.',
@@ -88,5 +101,10 @@ class CheckRole
             'admin.chat-group-logs.',
             'admin.permission-logs.',
         ]);
+    }
+
+    private function isZoneLogRoute(string $routeName): bool
+    {
+        return Str::startsWith($routeName, ['admin.zone-logs.']);
     }
 }

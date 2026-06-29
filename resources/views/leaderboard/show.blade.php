@@ -39,6 +39,26 @@
                             </a>
                         @endif
 
+                        @if ($zoneLeaderboard)
+                            <a href="#ranking-zonas"
+                                class="inline-flex w-full items-center gap-3 rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-left text-sm text-brand-secondary transition hover:-translate-y-0.5 hover:border-brand-primary/20 hover:bg-brand-primary/[0.03] sm:w-fit sm:max-w-[210px]">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 6.75h15m-15 5.25h10.5m-10.5 5.25h6" />
+                                    </svg>
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">
+                                        Ir a
+                                    </span>
+                                    <span class="mt-0.5 block font-semibold text-brand-secondary">
+                                        Ranking por zonas
+                                    </span>
+                                </span>
+                            </a>
+                        @endif
+
                         <div class="rounded-2xl border border-brand-secondary/10 bg-slate-50 px-4 py-3 text-sm text-brand-secondary/80">
                             <p class="font-semibold">Estado</p>
                             <p class="mt-1">
@@ -142,7 +162,7 @@
                     'emptyDescription' => $emptyDescription,
                     'entityLabelPlural' => $entityLabelPlural,
                     'searchPlaceholder' => $searchPlaceholder,
-                    'aggregateByDealership' => false,
+                    'aggregateType' => 'user',
                 ])
 
                 @if ($dealershipLeaderboard)
@@ -158,7 +178,25 @@
                             'emptyDescription' => $emptyDescription,
                             'entityLabelPlural' => 'delegaciones',
                             'searchPlaceholder' => 'Buscar delegacion',
-                            'aggregateByDealership' => true,
+                            'aggregateType' => 'dealership',
+                        ])
+                    </div>
+                @endif
+
+                @if ($zoneLeaderboard)
+                    <div id="ranking-zonas" class="scroll-mt-28">
+                        @include('leaderboard.partials.section', [
+                            'leaderboard' => $zoneLeaderboard,
+                            'eyebrow' => $eyebrow,
+                            'title' => $zoneTitle,
+                            'description' => $zoneDescription,
+                            'metricLabel' => $metricLabel,
+                            'metricField' => $metricField,
+                            'emptyTitle' => $zoneEmptyTitle,
+                            'emptyDescription' => $emptyDescription,
+                            'entityLabelPlural' => 'zonas',
+                            'searchPlaceholder' => 'Buscar zona',
+                            'aggregateType' => 'zone',
                         ])
                     </div>
                 @endif
