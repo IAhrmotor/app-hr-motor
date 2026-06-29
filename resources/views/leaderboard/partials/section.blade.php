@@ -204,6 +204,7 @@
                                         {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($entry->dealership_name, 0, 2)) }}
                                     </div>
                                 @endif
+                            @elseif ($aggregateType === 'zone')
                             @else
                                 <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                     alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
@@ -252,6 +253,13 @@
                                 @endif
                                 <div class="min-w-0 max-w-full">
                                     <p class="text-xl font-semibold leading-tight break-words text-brand-secondary {{ $topEntryHref ? 'transition group-hover:text-brand-primary' : '' }}">{{ $entry->dealership_name }}</p>
+                                    <p class="text-sm text-brand-secondary/60">
+                                        {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}
+                                    </p>
+                                </div>
+                            @elseif ($aggregateType === 'zone')
+                                <div class="min-w-0 max-w-full">
+                                    <p class="text-xl font-semibold leading-tight break-words text-brand-secondary">{{ $entry->dealership_name }}</p>
                                     <p class="text-sm text-brand-secondary/60">
                                         {{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}
                                     </p>
