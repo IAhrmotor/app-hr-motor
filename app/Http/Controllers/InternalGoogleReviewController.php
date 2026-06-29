@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InternalGoogleReviewCountRequest;
-use App\Models\Dealership;
 use App\Models\GoogleBusinessProfileReview;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -16,12 +15,11 @@ class InternalGoogleReviewController extends Controller
         $location = $validated['location'];
         $month = $validated['month'];
 
-        $dealership = Dealership::query()
-            ->where('google_business_profile_location_title', $location)
-            ->orWhere('name', $location)
-            ->first();
+        $locationQuery = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
+            ->where('location_title', $location);
 
-        if (! $dealership) {
+        if (! (clone $locationQuery)->exists()) {
             return response()->json([
                 'message' => 'Location not found',
             ], 404);
@@ -30,13 +28,9 @@ class InternalGoogleReviewController extends Controller
         $monthStart = Carbon::createFromFormat('m-y', $month)->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
 
-        $reviewsQuery = GoogleBusinessProfileReview::query()
+        $reviewsQuery = (clone $locationQuery)
             ->whereBetween('review_created_at', [$monthStart, $monthEnd])
-            ->where(function ($query) use ($dealership, $location): void {
-                $query
-                    ->where('dealership_id', $dealership->id)
-                    ->orWhere('location_title', $location);
-            });
+            ->orderBy('id');
 
         $reviewsCount = (clone $reviewsQuery)->count();
         $averageRating = $reviewsCount > 0
