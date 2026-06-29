@@ -169,4 +169,32 @@ class InternalGoogleReviewCountTest extends TestCase
                 'average_rating' => 4.5,
             ]);
     }
+
+    public function test_endpoint_works_for_unlinked_locations_that_only_exist_in_reviews_like_badajoz(): void
+    {
+        config()->set('internal.google_reviews.user', 'usuario-interno');
+        config()->set('internal.google_reviews.password', 'clave-segura');
+
+        GoogleBusinessProfileReview::query()->create([
+            'location_title' => 'HR Motor || Badajoz',
+            'location_name' => 'accounts/123/locations/badajoz',
+            'review_name' => 'accounts/123/locations/badajoz/reviews/1',
+            'reviewer_name' => 'Cliente Badajoz',
+            'rating' => 5,
+            'comment' => 'Muy bien',
+            'review_created_at' => '2026-05-12 10:00:00',
+            'review_updated_at' => '2026-05-12 10:00:00',
+            'synced_at' => now(),
+            'raw_payload' => ['comment' => 'Muy bien'],
+        ]);
+
+        $this->getJson('/api/internal/google-reviews/count?month=05-26&location=HR%20Motor%20%7C%7C%20Badajoz', $this->basicAuthHeader('usuario-interno', 'clave-segura'))
+            ->assertOk()
+            ->assertJson([
+                'month' => '05-26',
+                'location' => 'HR Motor || Badajoz',
+                'reviews_count' => 1,
+                'average_rating' => 5.0,
+            ]);
+    }
 }
