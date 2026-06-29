@@ -197,4 +197,65 @@ class InternalGoogleReviewCountTest extends TestCase
                 'average_rating' => 5.0,
             ]);
     }
+
+    public function test_reviews_endpoint_returns_the_monthly_review_list_for_a_location(): void
+    {
+        config()->set('internal.google_reviews.user', 'usuario-interno');
+        config()->set('internal.google_reviews.password', 'clave-segura');
+
+        GoogleBusinessProfileReview::query()->create([
+            'location_title' => 'HR Motor || Zaragoza',
+            'location_name' => 'accounts/123/locations/zaragoza',
+            'review_name' => 'accounts/123/locations/zaragoza/reviews/1',
+            'reviewer_name' => 'Ana',
+            'rating' => 4,
+            'comment' => 'Bien',
+            'review_created_at' => '2026-05-10 10:00:00',
+            'review_updated_at' => '2026-05-10 10:00:00',
+            'synced_at' => now(),
+            'raw_payload' => ['comment' => 'Bien'],
+        ]);
+
+        GoogleBusinessProfileReview::query()->create([
+            'location_title' => 'HR Motor || Zaragoza',
+            'location_name' => 'accounts/123/locations/zaragoza',
+            'review_name' => 'accounts/123/locations/zaragoza/reviews/2',
+            'reviewer_name' => 'Luis',
+            'rating' => 5,
+            'comment' => 'Genial',
+            'reply_comment' => 'Gracias',
+            'review_created_at' => '2026-05-11 10:00:00',
+            'review_updated_at' => '2026-05-11 10:00:00',
+            'reply_updated_at' => '2026-05-12 10:00:00',
+            'synced_at' => now(),
+            'raw_payload' => ['comment' => 'Genial'],
+        ]);
+
+        GoogleBusinessProfileReview::query()->create([
+            'location_title' => 'HR Motor || Zaragoza',
+            'location_name' => 'accounts/123/locations/zaragoza',
+            'review_name' => 'accounts/123/locations/zaragoza/reviews/3',
+            'reviewer_name' => 'Marta',
+            'rating' => 1,
+            'comment' => 'Muy mal',
+            'review_created_at' => '2026-06-01 10:00:00',
+            'review_updated_at' => '2026-06-01 10:00:00',
+            'synced_at' => now(),
+            'raw_payload' => ['comment' => 'Muy mal'],
+        ]);
+
+        $this->getJson('/api/internal/google-reviews/reviews?month=05-26&location=HR%20Motor%20%7C%7C%20Zaragoza', $this->basicAuthHeader('usuario-interno', 'clave-segura'))
+            ->assertOk()
+            ->assertJson([
+                'month' => '05-26',
+                'location' => 'HR Motor || Zaragoza',
+                'reviews_count' => 2,
+                'average_rating' => 4.5,
+            ])
+            ->assertJsonPath('reviews.0.reviewer_name', 'Ana')
+            ->assertJsonPath('reviews.0.rating', 4)
+            ->assertJsonPath('reviews.1.reviewer_name', 'Luis')
+            ->assertJsonPath('reviews.1.reply_comment', 'Gracias')
+            ->assertJsonMissingPath('reviews.2');
+    }
 }
