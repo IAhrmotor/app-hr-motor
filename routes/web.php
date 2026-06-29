@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminDealershipLogController;
+use App\Http\Controllers\AdminZoneLogController;
 use App\Http\Controllers\AdminContentLogController;
 use App\Http\Controllers\AdminConversationAccessController;
 use App\Http\Controllers\AdminConversationAccessLogController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\GoogleBusinessProfileAuthController;
 use App\Http\Controllers\RoleViewerController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ForumThreadController;
 use App\Http\Controllers\ForumTagController;
@@ -69,12 +71,33 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
     Route::get('/leaderboard/coches', [LeaderboardController::class, 'vehicles'])->name('leaderboard.vehicles');
-    Route::get('/admin/delegaciones', [DealershipController::class, 'index'])
-        ->middleware('role:admin,gestor')
-        ->name('dealerships.index');
-    Route::get('/delegaciones', function () {
-        return redirect()->route('dealerships.index');
-    })->middleware('role:admin,gestor');
+        Route::get('/admin/delegaciones', [DealershipController::class, 'index'])
+            ->middleware('role:admin,gestor')
+            ->name('dealerships.index');
+        Route::get('/admin/zonas', [ZoneController::class, 'index'])
+            ->middleware('role:admin,gestor')
+            ->name('admin.zones.index');
+        Route::get('/admin/zonas/crear', [ZoneController::class, 'create'])
+            ->middleware('role:admin,gestor')
+            ->name('admin.zones.create');
+        Route::post('/admin/zonas', [ZoneController::class, 'store'])
+            ->middleware('role:admin,gestor')
+            ->name('admin.zones.store');
+        Route::get('/admin/zonas/{zone}/editar', [ZoneController::class, 'edit'])
+            ->whereNumber('zone')
+            ->middleware('role:admin,gestor')
+            ->name('admin.zones.edit');
+        Route::put('/admin/zonas/{zone}', [ZoneController::class, 'update'])
+            ->whereNumber('zone')
+            ->middleware('role:admin,gestor')
+            ->name('admin.zones.update');
+        Route::delete('/admin/zonas/{zone}', [ZoneController::class, 'destroy'])
+            ->whereNumber('zone')
+            ->middleware('role:admin,gestor')
+            ->name('admin.zones.destroy');
+        Route::get('/delegaciones', function () {
+            return redirect()->route('dealerships.index');
+        })->middleware('role:admin,gestor');
     Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])
         ->whereNumber('dealership')
         ->name('dealerships.show');
@@ -1709,6 +1732,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');
         Route::get('/admin/logs/delegaciones', [AdminDealershipLogController::class, 'index'])->name('admin.dealership-logs.index');
         Route::get('/admin/logs/delegaciones/descargar', [AdminDealershipLogController::class, 'export'])->name('admin.dealership-logs.export');
+        Route::get('/admin/logs/zonas', [AdminZoneLogController::class, 'index'])->name('admin.zone-logs.index');
+        Route::get('/admin/logs/zonas/descargar', [AdminZoneLogController::class, 'export'])->name('admin.zone-logs.export');
         Route::get('/admin/contactos', [ContactController::class, 'index'])->name('admin.contacts.index');
         Route::get('/admin/contactos/crear', [ContactController::class, 'create'])->name('admin.contacts.create');
         Route::post('/admin/contactos', [ContactController::class, 'store'])->name('admin.contacts.store');
