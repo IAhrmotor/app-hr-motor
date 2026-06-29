@@ -24,6 +24,16 @@ return [
                 User::ROLE_MANAGER,
             ],
         ],
+        'zones.manage' => [
+            'label' => 'Gestión de zonas',
+            'description' => 'Agrupa delegaciones en zonas y controla su reparto.',
+            'route' => 'admin.zones.index',
+            'icon' => 'zones',
+            'default_roles' => [
+                User::ROLE_ADMIN,
+                User::ROLE_MANAGER,
+            ],
+        ],
         'contacts.manage' => [
             'label' => 'Gestión de contactos',
             'description' => 'Mantén los contactos externos que aparecen en la agenda.',

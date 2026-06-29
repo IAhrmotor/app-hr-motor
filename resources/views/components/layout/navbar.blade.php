@@ -186,6 +186,7 @@
                             $isBulletinLogsActive = request()->routeIs('admin.bulletin-logs.*');
                             $isUsersActive = request()->routeIs('users.*');
                             $isDealershipsActive = request()->routeIs('dealerships.*');
+                            $isZonesActive = request()->routeIs('admin.zones.*');
                             $isMagazineActive = request()->routeIs('admin.magazine.*');
                             $isBulletinActive = request()->routeIs('admin.tablon.*');
                             $isContactsActive = request()->routeIs('admin.contacts.*');
@@ -193,11 +194,12 @@
                             $isPermissionLogsActive = request()->routeIs('admin.permission-logs.*');
                             $isConversationAccessActive = request()->routeIs('admin.conversation-access.*');
                             $isChatGroupsActive = request()->routeIs('admin.chat-groups.*');
+                            $isZoneLogsActive = request()->routeIs('admin.zone-logs.*');
                             $isChatRetentionActive = request()->routeIs('admin.chat-retention-holds.*');
                             $isNotificationsActive = request()->routeIs('admin.notifications.*');
                         @endphp
                         <a href="{{ route('admin.index') }}"
-                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? $navItemActiveClass : $navItemInactiveClass }}">
+                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isZonesActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isZoneLogsActive || $isChatRetentionActive || $isNotificationsActive ? $navItemActiveClass : $navItemInactiveClass }}">
                             Admin
                         </a>
                     @endif
@@ -831,6 +833,7 @@
                         $isBulletinLogsActive = request()->routeIs('admin.bulletin-logs.*');
                         $isUsersActive = request()->routeIs('users.*');
                         $isDealershipsActive = request()->routeIs('dealerships.*');
+                        $isZonesActive = request()->routeIs('admin.zones.*');
                         $isMagazineActive = request()->routeIs('admin.magazine.*');
                         $isBulletinActive = request()->routeIs('admin.tablon.*');
                         $isContactsActive = request()->routeIs('admin.contacts.*');
@@ -838,11 +841,12 @@
                         $isPermissionLogsActive = request()->routeIs('admin.permission-logs.*');
                         $isConversationAccessActive = request()->routeIs('admin.conversation-access.*');
                         $isChatGroupsActive = request()->routeIs('admin.chat-groups.*');
+                        $isZoneLogsActive = request()->routeIs('admin.zone-logs.*');
                         $isChatRetentionActive = request()->routeIs('admin.chat-retention-holds.*');
                         $isNotificationsActive = request()->routeIs('admin.notifications.*');
                     @endphp
                     <a href="{{ route('admin.index') }}" @click="open = false"
-                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isZonesActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isZoneLogsActive || $isChatRetentionActive || $isNotificationsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                             Admin
                         </a>
                 @endif
@@ -865,4 +869,3 @@
         </div>
     </div>
 </nav>
-

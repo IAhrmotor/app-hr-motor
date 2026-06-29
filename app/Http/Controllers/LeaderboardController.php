@@ -10,6 +10,7 @@ use App\Models\SalesLeaderboardDailySnapshot;
 use App\Models\SalesLeaderboardEntry;
 use App\Models\VehicleLeaderboardDailySnapshot;
 use App\Models\VehicleLeaderboardEntry;
+use App\Models\Zone;
 use App\Services\LeaderboardTrendService;
 use App\Services\SalesforceLeaderboardService;
 use Illuminate\Database\Eloquent\Model;
@@ -61,6 +62,10 @@ class LeaderboardController extends Controller
                 'dealership_title' => 'Ranking por delegaciones',
                 'dealership_description' => 'Comparativa de ventas acumuladas por delegacion para fomentar la competicion entre equipos.',
                 'dealership_empty_title' => 'Aun no hay datos de delegaciones',
+                'show_zone_leaderboard' => true,
+                'zone_title' => 'Ranking por zonas',
+                'zone_description' => 'Comparativa de ventas acumuladas por zona a partir de las delegaciones asignadas en cada una.',
+                'zone_empty_title' => 'Aun no hay datos de zonas',
             ],
             leaderboardTablesReady: $leaderboardTablesReady
         );
@@ -98,6 +103,10 @@ class LeaderboardController extends Controller
                 'dealership_title' => 'Ranking por delegaciones',
                 'dealership_description' => 'Comparativa de compras acumuladas por delegacion para fomentar la competicion entre equipos.',
                 'dealership_empty_title' => 'Aun no hay datos de delegaciones',
+                'show_zone_leaderboard' => true,
+                'zone_title' => 'Ranking por zonas',
+                'zone_description' => 'Comparativa de compras acumuladas por zona a partir de las delegaciones asignadas en cada una.',
+                'zone_empty_title' => 'Aun no hay datos de zonas',
             ],
             leaderboardTablesReady: $leaderboardTablesReady
         );
@@ -166,6 +175,9 @@ class LeaderboardController extends Controller
         $dealershipLeaderboard = ($config['show_dealership_leaderboard'] ?? false)
             ? $this->buildDealershipLeaderboardViewData($request, $trendService, $config)
             : null;
+        $zoneLeaderboard = ($config['show_zone_leaderboard'] ?? false)
+            ? $this->buildZoneLeaderboardViewData($request, $trendService, $config)
+            : null;
         $salesforceConfigReady = filled(config('services.salesforce.client_id'))
             && filled(config('services.salesforce.client_secret'))
             && filled(config('services.salesforce.redirect_uri'));
@@ -180,22 +192,50 @@ class LeaderboardController extends Controller
 
         if ($request->boolean('ajax')) {
             $section = $request->query('section', 'leaderboard');
-            $isDealershipSection = $section === 'dealership' && $dealershipLeaderboard !== null;
-            $sectionLeaderboard = $isDealershipSection ? $dealershipLeaderboard : $leaderboard;
+            $aggregateType = 'user';
+            $sectionLeaderboard = $leaderboard;
+
+            if ($section === 'dealership' && $dealershipLeaderboard !== null) {
+                $aggregateType = 'dealership';
+                $sectionLeaderboard = $dealershipLeaderboard;
+            } elseif ($section === 'zone' && $zoneLeaderboard !== null) {
+                $aggregateType = 'zone';
+                $sectionLeaderboard = $zoneLeaderboard;
+            }
 
             return response()->json([
                 'html' => view('leaderboard.partials.section', [
                     'leaderboard' => $sectionLeaderboard,
                     'eyebrow' => $config['eyebrow'],
-                    'title' => $isDealershipSection ? ($config['dealership_title'] ?? 'Ranking por delegaciones') : $config['title'],
-                    'description' => $isDealershipSection ? ($config['dealership_description'] ?? '') : $config['description'],
+                    'title' => match ($aggregateType) {
+                        'dealership' => $config['dealership_title'] ?? 'Ranking por delegaciones',
+                        'zone' => $config['zone_title'] ?? 'Ranking por zonas',
+                        default => $config['title'],
+                    },
+                    'description' => match ($aggregateType) {
+                        'dealership' => $config['dealership_description'] ?? '',
+                        'zone' => $config['zone_description'] ?? '',
+                        default => $config['description'],
+                    },
                     'metricLabel' => $config['metric_label'],
                     'metricField' => $config['metric_field'],
-                    'emptyTitle' => $isDealershipSection ? ($config['dealership_empty_title'] ?? 'Aun no hay datos de delegaciones') : $config['empty_title'],
+                    'emptyTitle' => match ($aggregateType) {
+                        'dealership' => $config['dealership_empty_title'] ?? 'Aun no hay datos de delegaciones',
+                        'zone' => $config['zone_empty_title'] ?? 'Aun no hay datos de zonas',
+                        default => $config['empty_title'],
+                    },
                     'emptyDescription' => $emptyDescription,
-                    'entityLabelPlural' => $isDealershipSection ? 'delegaciones' : ($config['entity_label_plural'] ?? 'comerciales'),
-                    'searchPlaceholder' => $isDealershipSection ? 'Buscar delegacion' : ($config['search_placeholder'] ?? 'Buscar comercial, email o delegacion'),
-                    'aggregateByDealership' => $isDealershipSection,
+                    'entityLabelPlural' => match ($aggregateType) {
+                        'dealership' => 'delegaciones',
+                        'zone' => 'zonas',
+                        default => $config['entity_label_plural'] ?? 'comerciales',
+                    },
+                    'searchPlaceholder' => match ($aggregateType) {
+                        'dealership' => 'Buscar delegacion',
+                        'zone' => 'Buscar zona',
+                        default => $config['search_placeholder'] ?? 'Buscar comercial, email o delegacion',
+                    },
+                    'aggregateType' => $aggregateType,
                     'searchParam' => $sectionLeaderboard['searchParam'],
                     'pageParam' => $sectionLeaderboard['pageParam'],
                 ])->render(),
@@ -218,6 +258,10 @@ class LeaderboardController extends Controller
             'dealershipTitle' => $config['dealership_title'] ?? 'Ranking por delegaciones',
             'dealershipDescription' => $config['dealership_description'] ?? '',
             'dealershipEmptyTitle' => $config['dealership_empty_title'] ?? 'Aun no hay datos de delegaciones',
+            'zoneLeaderboard' => $zoneLeaderboard,
+            'zoneTitle' => $config['zone_title'] ?? 'Ranking por zonas',
+            'zoneDescription' => $config['zone_description'] ?? '',
+            'zoneEmptyTitle' => $config['zone_empty_title'] ?? 'Aun no hay datos de zonas',
             'entityLabelPlural' => $config['entity_label_plural'] ?? 'comerciales',
             'searchPlaceholder' => $config['search_placeholder'] ?? 'Buscar comercial, email o delegacion',
         ]);
@@ -363,6 +407,74 @@ class LeaderboardController extends Controller
             'hasLeaderboardData' => $hasLeaderboardData,
             'searchParam' => 'dealership_search',
             'pageParam' => 'dealership_page',
+            'routeName' => $config['route_name'],
+        ];
+    }
+
+    private function buildZoneLeaderboardViewData(Request $request, LeaderboardTrendService $trendService, array $config): array
+    {
+        $search = trim((string) $request->query('zone_search', ''));
+        $entries = new LengthAwarePaginator(
+            [],
+            0,
+            10,
+            1,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'zone_page',
+            ]
+        );
+        $entryItems = new Collection();
+        $topEntries = new Collection();
+        $hasLeaderboardData = false;
+        $zones = new Collection();
+
+        if (Schema::hasTable($config['entry_table'])) {
+            $allEntries = $config['entry_model']::query()
+                ->with(['user.assignedDealership.zone'])
+                ->when($this->excludedLeaderboardUserIds() !== [], function ($query) {
+                    $query->whereNotIn('salesforce_user_id', $this->excludedLeaderboardUserIds());
+                })
+                ->orderBy('ranking_position')
+                ->get();
+
+            $zones = Schema::hasTable('zones')
+                ? Zone::query()->select(['id', 'name'])->orderBy('name')->get()
+                : new Collection();
+
+            $aggregatedEntries = $this->aggregateEntriesByZone(
+                $allEntries,
+                $config['metric_field'],
+                $search,
+                $config['entry_model'],
+                $zones
+            );
+            $topEntries = $aggregatedEntries->take(3)->values();
+            $entries = $this->paginateCollection($aggregatedEntries, 'zone_page');
+            $entryItems = collect($entries->items());
+            $hasLeaderboardData = $allEntries->isNotEmpty() || $zones->isNotEmpty();
+        }
+
+        return [
+            'entries' => $entries,
+            'entryItems' => $entryItems,
+            'topEntries' => $topEntries,
+            'entryMovements' => $trendService->buildZoneMovementMap(
+                $entryItems,
+                $config['snapshot_model'],
+                $config['snapshot_table'],
+                $config['metric_field']
+            ),
+            'topEntryMovements' => $trendService->buildZoneMovementMap(
+                $topEntries,
+                $config['snapshot_model'],
+                $config['snapshot_table'],
+                $config['metric_field']
+            ),
+            'search' => $search,
+            'hasLeaderboardData' => $hasLeaderboardData,
+            'searchParam' => 'zone_search',
+            'pageParam' => 'zone_page',
             'routeName' => $config['route_name'],
         ];
     }
@@ -658,6 +770,115 @@ class LeaderboardController extends Controller
             ->values();
     }
 
+    private function aggregateEntriesByZone(
+        Collection $entries,
+        string $metricField,
+        string $search,
+        string $entryModelClass,
+        Collection $zones = new Collection()
+    ): Collection
+    {
+        $aggregatedEntries = $entries
+            ->groupBy(fn (Model $entry): string => $this->resolveZoneGroupKey($entry))
+            ->map(function (Collection $zoneEntries) use ($metricField) {
+                $representative = $zoneEntries->first();
+                $zone = $representative->user?->assignedDealership?->zone;
+                $zoneName = $this->resolveZoneName($representative);
+                $totalMetric = (float) $zoneEntries->sum($metricField);
+                $dealershipCount = $zoneEntries
+                    ->map(fn (Model $entry): string => $this->resolveDealershipIdentifier($entry))
+                    ->unique()
+                    ->count();
+
+                $entry = new ($representative::class)();
+                $entry->forceFill([
+                    'id' => 'zone:' . ($zone?->getKey() ?? Str::slug($zoneName, '-')),
+                    'ranking_position' => 0,
+                    'seller_name' => $zoneName,
+                    'salesforce_user_id' => null,
+                    $metricField => $totalMetric,
+                    'zone_id' => $zone?->getKey(),
+                    'zone_name' => $zoneName,
+                    'dealership_name' => $zoneName,
+                    'dealership_image_url' => null,
+                    'commercial_count' => $dealershipCount,
+                ]);
+
+                return $entry;
+            })
+            ->values();
+
+        if ($zones->isNotEmpty()) {
+            $existingZoneIds = $aggregatedEntries
+                ->pluck('zone_id')
+                ->filter()
+                ->map(fn ($zoneId) => (string) $zoneId)
+                ->all();
+            $existingZoneNames = $aggregatedEntries
+                ->pluck('zone_name')
+                ->filter()
+                ->map(fn ($zoneName) => Str::lower(trim((string) $zoneName)))
+                ->all();
+
+            $missingEntries = $zones
+                ->reject(function (Zone $zone) use ($existingZoneIds, $existingZoneNames): bool {
+                    return in_array((string) $zone->id, $existingZoneIds, true)
+                        || in_array(Str::lower($zone->name), $existingZoneNames, true);
+                })
+                ->map(function (Zone $zone) use ($entryModelClass, $metricField): Model {
+                    $entry = new $entryModelClass();
+                    $entry->forceFill([
+                        'id' => 'zone:' . $zone->id,
+                        'ranking_position' => 0,
+                        'user_id' => null,
+                        'salesforce_user_id' => null,
+                        'seller_name' => $zone->name,
+                        $metricField => 0,
+                        'zone_id' => $zone->id,
+                        'zone_name' => $zone->name,
+                        'dealership_name' => $zone->name,
+                        'dealership_image_url' => null,
+                        'commercial_count' => 0,
+                        'synced_at' => now(),
+                    ]);
+
+                    return $entry;
+                });
+
+            $aggregatedEntries = $aggregatedEntries->concat($missingEntries)->values();
+        }
+
+        $aggregatedEntries = $aggregatedEntries
+            ->sort(function (Model $left, Model $right) use ($metricField) {
+                $metricComparison = (float) $right->getAttribute($metricField) <=> (float) $left->getAttribute($metricField);
+
+                if ($metricComparison !== 0) {
+                    return $metricComparison;
+                }
+
+                return strcmp(
+                    (string) $left->getAttribute('zone_name'),
+                    (string) $right->getAttribute('zone_name')
+                );
+            })
+            ->values()
+            ->map(function (Model $entry, int $index) {
+                $entry->setAttribute('ranking_position', $index + 1);
+
+                return $entry;
+            });
+
+        if ($search === '') {
+            return $aggregatedEntries;
+        }
+
+        $needle = Str::lower($search);
+
+        return $aggregatedEntries
+            ->filter(fn (Model $entry): bool => str_contains(Str::lower((string) $entry->getAttribute('zone_name')), $needle))
+            ->values();
+    }
+
     private function paginateCollection(Collection $entries, string $pageParam): LengthAwarePaginator
     {
         $currentPage = LengthAwarePaginator::resolveCurrentPage($pageParam);
@@ -691,5 +912,34 @@ class LeaderboardController extends Controller
         }
 
         return 'name:' . $this->resolveDealershipName($entry);
+    }
+
+    private function resolveZoneName(Model $entry): string
+    {
+        $zone = trim((string) ($entry->user?->assignedDealership?->zone?->name ?? ''));
+
+        return $zone !== '' ? $zone : 'Sin zona asignada';
+    }
+
+    private function resolveZoneGroupKey(Model $entry): string
+    {
+        $zoneId = $entry->user?->assignedDealership?->zone?->getKey();
+
+        if ($zoneId !== null) {
+            return 'id:' . $zoneId;
+        }
+
+        return 'name:' . $this->resolveZoneName($entry);
+    }
+
+    private function resolveDealershipIdentifier(Model $entry): string
+    {
+        $dealershipId = $entry->user?->assignedDealership?->getKey();
+
+        if ($dealershipId !== null) {
+            return 'id:' . $dealershipId;
+        }
+
+        return 'name:' . Str::lower($this->resolveDealershipName($entry));
     }
 }

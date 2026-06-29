@@ -354,6 +354,8 @@ if (! function_exists('app_admin_permission_key_for_route')) {
         return match (true) {
             Str::startsWith($routeName, ['users.']) => 'users.manage',
             Str::startsWith($routeName, ['dealerships.']) => 'dealerships.manage',
+            Str::startsWith($routeName, ['admin.zones.']) => 'zones.manage',
+            Str::startsWith($routeName, ['admin.zone-logs.']) => 'zones.manage',
             Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
             Str::startsWith($routeName, ['admin.forum-tags.']) => 'forum-tags.manage',
             Str::startsWith($routeName, ['admin.magazine.']) => 'magazine.manage',
@@ -436,6 +438,13 @@ if (! function_exists('app_admin_visible_sections')) {
                     'icon' => 'dealership-log',
                 ],
                 [
+                    'label' => 'Zonas',
+                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de zonas.',
+                    'route' => 'admin.zone-logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'zones-log',
+                ],
+                [
                     'label' => 'Contenidos',
                     'description' => 'Consulta el historial de la revista mensual, los tags del foro y los contactos en un único lugar.',
                     'route' => 'admin.content-logs.index',
@@ -485,6 +494,16 @@ if (! function_exists('app_admin_visible_sections')) {
                     'icon' => 'permissions-log',
                 ],
             ]);
+        }
+
+        if (app_user_has_admin_permission($user, 'zones.manage') && ! $isAdminViewerMode) {
+            $sections[] = [
+                'label' => 'Logs de zonas',
+                'description' => 'Consulta el historial de altas, ediciones y eliminaciones de zonas.',
+                'route' => 'admin.zone-logs.index',
+                'kind' => 'logs',
+                'icon' => 'zones-log',
+            ];
         }
 
         return $sections;
@@ -617,8 +636,4 @@ if (! function_exists('app_it_support_url_for')) {
         return config('portal.links.it_support');
     }
 }
-
-
-
-
 

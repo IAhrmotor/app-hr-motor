@@ -8,4 +8,6 @@ Route::middleware('internal.basic_auth')
     ->group(function (): void {
         Route::get('/count', [InternalGoogleReviewController::class, 'count'])
             ->name('internal.google-reviews.count');
+        Route::get('/reviews', [InternalGoogleReviewController::class, 'reviews'])
+            ->name('internal.google-reviews.reviews');
     });

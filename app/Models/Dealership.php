@@ -6,6 +6,7 @@ use App\Services\CompanyChatDefaultGroupSyncService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Dealership extends Model
@@ -21,6 +22,7 @@ class Dealership extends Model
         'reviews_url',
         'google_business_profile_location_name',
         'google_business_profile_location_title',
+        'zone_id',
     ];
 
     protected static function booted(): void
@@ -33,6 +35,11 @@ class Dealership extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
     }
 
     public function googleBusinessProfileReviews(): HasMany
