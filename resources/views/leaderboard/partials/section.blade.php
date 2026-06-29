@@ -194,7 +194,7 @@
                             @endif
                         </div>
                         <div class="justify-self-end self-start sm:hidden">
-                            @if ($isAggregatedLeaderboard)
+                            @if ($aggregateType === 'dealership')
                                 @if ($entry->dealership_image_url)
                                     <img src="{{ $entry->dealership_image_url }}"
                                         alt="Imagen de {{ $entry->dealership_name }}"
@@ -240,7 +240,7 @@
                         </div>
 
                         <div class="hidden grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-start gap-4 pr-24 sm:grid">
-                            @if ($isAggregatedLeaderboard)
+                            @if ($aggregateType === 'dealership')
                                 @if ($entry->dealership_image_url)
                                     <img src="{{ $entry->dealership_image_url }}"
                                         alt="Imagen de {{ $entry->dealership_name }}"
@@ -365,7 +365,7 @@
                             </div>
 
                             <div>
-                                @if ($isAggregatedLeaderboard)
+                                @if ($aggregateType === 'dealership')
                                     @php
                                         $dealershipHref = $aggregateType === 'dealership' && $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
                                     @endphp
@@ -402,6 +402,11 @@
                                             </div>
                                         </div>
                                     @endif
+                                @elseif ($aggregateType === 'zone')
+                                    <div>
+                                        <p class="text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                        <p class="text-xs text-brand-secondary/55">{{ $aggregateRankingLabel }}</p>
+                                    </div>
                                 @else
                                     <div class="flex items-center gap-3">
                                         <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
@@ -482,7 +487,7 @@
                             </div>
 
                             <div class="flex items-center gap-3">
-                                @if ($isAggregatedLeaderboard)
+                                @if ($aggregateType === 'dealership')
                                     @php
                                         $dealershipHref = $aggregateType === 'dealership' && $entry->dealership_id ? route('dealerships.show', $entry->dealership_id) : null;
                                     @endphp
@@ -519,6 +524,12 @@
                                             <p class="truncate text-xs text-brand-secondary/55">{{ $aggregateRankingLabel }}</p>
                                         </div>
                                     @endif
+                                @elseif ($aggregateType === 'zone')
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-brand-secondary">{{ $entry->dealership_name }}</p>
+                                        <p class="truncate text-xs text-brand-secondary/55">{{ $entry->commercial_count }} {{ (int) $entry->commercial_count === 1 ? $aggregateCountSingular : $aggregateCountPlural }}</p>
+                                        <p class="truncate text-xs text-brand-secondary/55">{{ $aggregateRankingLabel }}</p>
+                                    </div>
                                 @else
                                     <img src="{{ $entry->user?->avatar_url ?? asset(\App\Models\User::DEFAULT_AVATAR_PATH) }}"
                                         alt="Avatar de {{ $entry->user?->name ?? $entry->seller_name }}"
