@@ -412,6 +412,52 @@ class GoogleBusinessProfileReviewService
     }
 
     /**
+     * @return array{
+     *     dealership_id:int,
+     *     dealership_name:string,
+     *     location_name:string,
+     *     location_title:?string,
+     *     location_resource_name:string,
+     *     reviews:array<int, array<string, mixed>>
+     * }
+     */
+    public function fetchLatestReviewsForDealership(Dealership $dealership, int $limit = 10): array
+    {
+        $this->ensureRequiredTablesExist();
+
+        $limit = max(1, $limit);
+        $connection = $this->getConnection();
+
+        if (! $connection) {
+            throw new RuntimeException('No hay ninguna conexion de Google Business Profile configurada.');
+        }
+
+        $account = $this->resolveAccount($connection);
+        [$locationName, $locationTitle] = $this->resolveLocationForDealership($connection, $account, $dealership);
+        $locationResourceName = $this->buildLocationResourceName($account['name'], $locationName);
+        $reviews = $this->fetchReviews($connection, $locationResourceName, $limit);
+
+        return [
+            'dealership_id' => (int) $dealership->id,
+            'dealership_name' => (string) $dealership->name,
+            'location_name' => (string) $locationName,
+            'location_title' => $locationTitle,
+            'location_resource_name' => $locationResourceName,
+            'reviews' => array_map(function (array $review): array {
+                return [
+                    'review_name' => $review['name'] ?? null,
+                    'reviewer_name' => data_get($review, 'reviewer.displayName') ?? data_get($review, 'reviewer.name'),
+                    'rating' => $this->ratingToInteger(data_get($review, 'starRating') ?? data_get($review, 'rating')),
+                    'comment' => $this->sanitizeReviewComment(data_get($review, 'comment')),
+                    'reply_comment' => data_get($review, 'reviewReply.comment'),
+                    'review_created_at' => $this->parseTimestamp(data_get($review, 'createTime'))?->toDateTimeString(),
+                    'review_updated_at' => $this->parseTimestamp(data_get($review, 'updateTime'))?->toDateTimeString(),
+                ];
+            }, $reviews),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function resolveAccount(GoogleBusinessProfileConnection $connection): array
@@ -529,16 +575,21 @@ class GoogleBusinessProfileReviewService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function fetchReviews(GoogleBusinessProfileConnection $connection, string $locationResourceName): array
+    private function fetchReviews(GoogleBusinessProfileConnection $connection, string $locationResourceName, ?int $limit = null): array
     {
+        if ($limit !== null && $limit <= 0) {
+            return [];
+        }
+
         $reviews = [];
         $nextPageToken = null;
         $endpoint = sprintf('https://mybusiness.googleapis.com/v4/%s/reviews', $locationResourceName);
+        $remaining = $limit;
 
         do {
-            $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($locationResourceName, $nextPageToken) {
+            $response = $this->requestWithAutoRefresh($connection, function (string $accessToken) use ($locationResourceName, $nextPageToken, $remaining) {
                 $query = [
-                    'pageSize' => 50,
+                    'pageSize' => $remaining !== null ? min(50, max(1, $remaining)) : 50,
                     'orderBy' => 'updateTime desc',
                 ];
 
@@ -566,9 +617,20 @@ class GoogleBusinessProfileReviewService
 
                 throw $exception;
             }
-            $reviews = [...$reviews, ...($payload['reviews'] ?? [])];
+            $pageReviews = $payload['reviews'] ?? [];
+
+            if ($remaining !== null) {
+                $pageReviews = array_slice($pageReviews, 0, $remaining);
+            }
+
+            $reviews = [...$reviews, ...$pageReviews];
+
+            if ($remaining !== null) {
+                $remaining -= count($pageReviews);
+            }
+
             $nextPageToken = $payload['nextPageToken'] ?? null;
-        } while ($nextPageToken);
+        } while ($nextPageToken && ($remaining === null || $remaining > 0));
 
         return $reviews;
     }
