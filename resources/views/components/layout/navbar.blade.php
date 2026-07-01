@@ -18,6 +18,10 @@
                 return null;
             }
 
+            if (($item['route'] ?? null) === 'tickets.index' && ! app_can_see_tickets_navigation($authUser)) {
+                return null;
+            }
+
             if (($item['label'] ?? null) === 'Empresa') {
                 $item['children'] = collect($item['children'] ?? [])
                     ->filter(function (array $child) use ($authUser): bool {
@@ -111,7 +115,9 @@
                             ? request()->routeIs('agenda.index', 'agenda.contacts.*')
                             : ($item['route'] === 'reviews.index'
                                 ? request()->routeIs('reviews.*')
-                                : request()->routeIs($item['route']));
+                                : ($item['route'] === 'tickets.index'
+                                    ? request()->routeIs('tickets.*')
+                                    : request()->routeIs($item['route'])));
                     @endphp
                     <a href="{{ route($item['route']) }}"
                         class="{{ $navItemClass }} {{ $isItemActive ? $navItemActiveClass : $navItemInactiveClass }}">
@@ -495,7 +501,9 @@
                                 return;
                             }
 
-                            if ((notification.type || '') !== 'chat.message.received') {
+                            const notificationType = String(notification.type || '');
+
+                            if (!notificationType.startsWith('chat.message.received') && !notificationType.startsWith('it-ticket.')) {
                                 return;
                             }
 
@@ -815,7 +823,9 @@
                             ? request()->routeIs('agenda.index', 'agenda.contacts.*')
                             : ($item['route'] === 'reviews.index'
                                 ? request()->routeIs('reviews.*')
-                                : request()->routeIs($item['route']));
+                                : ($item['route'] === 'tickets.index'
+                                    ? request()->routeIs('tickets.*')
+                                    : request()->routeIs($item['route'])));
                     @endphp
                     <a href="{{ route($item['route']) }}" @click="open = false"
                         class="block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isItemActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">

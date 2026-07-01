@@ -102,6 +102,53 @@ class NavigationVisibilityTest extends TestCase
         $this->assertStringNotContainsString(route('tools.informes'), $footerHtml);
     }
 
+    public function test_all_users_see_the_it_support_interior_link_in_the_footer(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'email' => 'it-support-link@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        $footerHtml = view('components.layout.footer')->render();
+
+        $this->assertStringContainsString(route('it-tickets.index'), $footerHtml);
+    }
+
+    public function test_it_extra_role_users_see_tickets_in_the_navbar_and_footer(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'email' => 'it-tickets@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+        $footerHtml = view('components.layout.footer')->render();
+
+        $this->assertStringContainsString(route('tickets.index'), $navbarHtml);
+        $this->assertStringContainsString(route('tickets.index'), $footerHtml);
+    }
+
+    public function test_regular_users_do_not_see_tickets_in_the_navbar_or_footer(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'email' => 'regular-tickets@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+        $footerHtml = view('components.layout.footer')->render();
+
+        $this->assertStringNotContainsString(route('tickets.index'), $navbarHtml);
+        $this->assertStringNotContainsString(route('tickets.index'), $footerHtml);
+    }
+
     public function test_human_resources_extra_role_sees_curriculums_in_the_navbar_and_footer(): void
     {
         $user = User::factory()->create([

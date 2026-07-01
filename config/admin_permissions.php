@@ -54,6 +54,25 @@ return [
                 User::ROLE_MANAGER,
             ],
         ],
+        'ticket-tools.manage' => [
+            'label' => 'GestiÃ³n de herramientas de tickets',
+            'description' => 'Crea, edita y elimina las herramientas que se muestran al abrir una incidencia.',
+            'route' => 'admin.ticket-tools.index',
+            'icon' => 'ticket-tools',
+            'default_roles' => [
+                User::ROLE_ADMIN,
+                User::ROLE_MANAGER,
+            ],
+        ],
+        'tickets-it.manage' => [
+            'label' => 'Gestionar tickets IT',
+            'description' => 'Permite ver todos los tickets, asignarlos y gestionar el equipo de informática.',
+            'route' => 'tickets.index',
+            'icon' => 'ticket-tools',
+            'default_roles' => [
+                User::ROLE_ADMIN,
+            ],
+        ],
         'magazine.manage' => [
             'label' => 'Gestión de la revista mensual',
             'description' => 'Publica la edición mensual y actualiza la portada visible.',

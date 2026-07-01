@@ -22,6 +22,10 @@
                 return false;
             }
 
+            if (($item['route'] ?? null) === 'tickets.index' && ! app_can_see_tickets_navigation($authUser)) {
+                return false;
+            }
+
             if (in_array($item['route'] ?? null, ['leaderboard.sales', 'leaderboard.purchases', 'leaderboard.vehicles'], true) && ! app_can_access_rankings()) {
                 return false;
             }
@@ -112,7 +116,7 @@
 
                     <ul class="mt-4 space-y-3 text-sm text-white/75">
                         <li>
-                            <a href="{{ app_it_support_url_for() }}" target="_blank" rel="noopener noreferrer" class="transition hover:text-white">
+                            <a href="{{ app_it_support_url_for() }}" class="transition hover:text-white">
                                 Asistencia IT
                             </a>
                         </li>
