@@ -198,6 +198,41 @@ if (! function_exists('app_can_access_curriculums')) {
     }
 }
 
+if (! function_exists('app_can_access_tickets')) {
+    function app_can_access_tickets(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return app_user_has_any_role($user, [User::ROLE_INFORMATION_TECHNOLOGY])
+            || app_user_has_admin_permission($user, 'tickets-it.manage');
+    }
+}
+
+if (! function_exists('app_can_see_tickets_navigation')) {
+    function app_can_see_tickets_navigation(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->extra_role !== User::ROLE_INFORMATION_TECHNOLOGY) {
+            return false;
+        }
+
+        if (! app_role_viewer_active($user)) {
+            return true;
+        }
+
+        return app_visible_role($user) === User::ROLE_INFORMATION_TECHNOLOGY;
+    }
+}
+
 if (! function_exists('app_admin_permission_definitions')) {
     function app_admin_permission_definitions(): array
     {
@@ -358,6 +393,8 @@ if (! function_exists('app_admin_permission_key_for_route')) {
             Str::startsWith($routeName, ['admin.zone-logs.']) => 'zones.manage',
             Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
             Str::startsWith($routeName, ['admin.forum-tags.']) => 'forum-tags.manage',
+            Str::startsWith($routeName, ['admin.ticket-tools.']) => 'ticket-tools.manage',
+            Str::startsWith($routeName, ['tickets.']) => 'tickets-it.manage',
             Str::startsWith($routeName, ['admin.magazine.']) => 'magazine.manage',
             Str::startsWith($routeName, ['admin.tablon.']) => 'bulletin.manage',
             Str::startsWith($routeName, ['admin.notifications.']) => 'notifications.manage',
@@ -450,6 +487,13 @@ if (! function_exists('app_admin_visible_sections')) {
                     'route' => 'admin.content-logs.index',
                     'kind' => 'logs',
                     'icon' => 'content-log',
+                ],
+                [
+                    'label' => 'Herramientas de tickets',
+                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de herramientas de tickets.',
+                    'route' => 'admin.ticket-tool-logs.index',
+                    'kind' => 'logs',
+                    'icon' => 'ticket-tools-log',
                 ],
                 [
                     'label' => 'Tablón',
@@ -627,13 +671,6 @@ if (! function_exists('app_salesforce_url_for')) {
 if (! function_exists('app_it_support_url_for')) {
     function app_it_support_url_for(?User $user = null): string
     {
-        $visibleRole = app_visible_role($user);
-
-        if (in_array($visibleRole, [User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER], true)) {
-            return 'https://hrmotor.lightning.force.com/lightning/o/Tareas_Departamento_Informatico__c/list?filterName=__Recent';
-        }
-
-        return config('portal.links.it_support');
+        return route('it-tickets.index');
     }
 }
-

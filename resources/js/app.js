@@ -28,6 +28,91 @@ window.bodyScrollLock = {
         this.update();
     },
 };
+window.itTicketToolSelector = (options, initialSelected = '', initialLabel = '') => ({
+    open: false,
+    selected: initialSelected,
+    query: initialLabel,
+    options,
+
+    get filteredOptions() {
+        const search = this.query.trim().toLowerCase();
+
+        if (search === '') {
+            return Object.entries(this.options);
+        }
+
+        return Object.entries(this.options).filter(([, option]) => {
+            return option.label.toLowerCase().includes(search);
+        });
+    },
+
+    select(toolKey) {
+        this.selected = toolKey;
+        this.query = this.options[toolKey]?.label ?? '';
+        this.open = false;
+    },
+
+    clearSelection() {
+        this.selected = '';
+    },
+
+    syncQuery() {
+        const trimmed = this.query.trim();
+        const exactMatch = Object.entries(this.options).find(([, option]) => option.label.toLowerCase() === trimmed.toLowerCase());
+
+        if (exactMatch) {
+            this.selected = exactMatch[0];
+            this.query = exactMatch[1].label;
+            return;
+        }
+
+        if (this.selected && this.options[this.selected]) {
+            this.query = this.options[this.selected].label;
+            return;
+        }
+
+        this.query = '';
+    },
+});
+window.itTicketCreateForm = () => ({
+    confirmedWithoutScreenshots: false,
+    showConfirmDialog: false,
+    handleSubmit(event) {
+        if (this.confirmedWithoutScreenshots) {
+            return;
+        }
+
+        const form = this.$refs.form;
+
+        if (!form?.checkValidity?.()) {
+            form?.reportValidity?.();
+            event.preventDefault();
+            return;
+        }
+
+        const screenshotInput = this.$refs.screenshots;
+        const hasScreenshots = Boolean(screenshotInput?.files?.length);
+
+        if (hasScreenshots) {
+            return;
+        }
+
+        event.preventDefault();
+        this.showConfirmDialog = true;
+    },
+    confirmWithoutScreenshots() {
+        this.confirmedWithoutScreenshots = true;
+        this.showConfirmDialog = false;
+
+        this.$nextTick(() => {
+            this.$refs.form?.requestSubmit?.();
+        });
+    },
+    cancelWithoutScreenshots() {
+        this.showConfirmDialog = false;
+        this.$refs.screenshots?.focus?.();
+    },
+});
 window.imageLightbox = () => ({
     isImageOpen: false,
     imageUrl: '',

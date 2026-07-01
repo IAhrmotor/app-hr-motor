@@ -19,6 +19,7 @@ use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AdminNotificationLogController;
 use App\Http\Controllers\AdminMonthlyMagazineController;
 use App\Http\Controllers\AdminLogController;
+use App\Http\Controllers\AdminTicketToolLogController;
 use App\Http\Controllers\GoogleBusinessProfileAuthController;
 use App\Http\Controllers\RoleViewerController;
 use App\Http\Controllers\LeaderboardController;
@@ -27,10 +28,13 @@ use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ForumThreadController;
 use App\Http\Controllers\ForumTagController;
+use App\Http\Controllers\TicketToolController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyChatController;
 use App\Http\Controllers\CurriculumsController;
 use App\Http\Controllers\FeedbackReportController;
+use App\Http\Controllers\ItTicketController;
+use App\Http\Controllers\TicketsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TablonController;
 use App\Http\Controllers\SalesforceAuthController;
@@ -163,6 +167,19 @@ Route::middleware('auth')->group(function () {
     Route::post('/visor-roles', [RoleViewerController::class, 'store'])->name('role-viewer.store');
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
     Route::post('/feedback', [FeedbackReportController::class, 'store'])->name('feedback.store');
+    Route::get('/tickets', [TicketsController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/{itTicket}', [TicketsController::class, 'show'])
+        ->whereNumber('itTicket')
+        ->name('tickets.show');
+    Route::post('/tickets/{itTicket}/assign', [TicketsController::class, 'assign'])
+        ->whereNumber('itTicket')
+        ->name('tickets.assign');
+    Route::post('/tickets/{itTicket}/mensajes', [TicketsController::class, 'reply'])
+        ->whereNumber('itTicket')
+        ->name('tickets.messages.store');
+    Route::get('/incidencias-it', [ItTicketController::class, 'index'])->name('it-tickets.index');
+    Route::get('/incidencias-it/crear', [ItTicketController::class, 'create'])->name('it-tickets.create');
+    Route::post('/incidencias-it', [ItTicketController::class, 'store'])->name('it-tickets.store');
 
     Route::get('/integraciones/google-business-profile/conectar', [GoogleBusinessProfileAuthController::class, 'redirect'])
         ->name('google-business-profile.connect');
@@ -1678,6 +1695,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/foro/tags/{forumTag}/editar', [ForumTagController::class, 'edit'])->name('admin.forum-tags.edit');
         Route::put('/foro/tags/{forumTag}', [ForumTagController::class, 'update'])->name('admin.forum-tags.update');
         Route::delete('/foro/tags/{forumTag}', [ForumTagController::class, 'destroy'])->name('admin.forum-tags.destroy');
+        Route::get('/admin/herramientas-tickets', [TicketToolController::class, 'index'])->name('admin.ticket-tools.index');
+        Route::get('/admin/herramientas-tickets/crear', [TicketToolController::class, 'create'])->name('admin.ticket-tools.create');
+        Route::post('/admin/herramientas-tickets', [TicketToolController::class, 'store'])->name('admin.ticket-tools.store');
+        Route::get('/admin/herramientas-tickets/{ticketTool}/editar', [TicketToolController::class, 'edit'])
+            ->whereNumber('ticketTool')
+            ->name('admin.ticket-tools.edit');
+        Route::put('/admin/herramientas-tickets/{ticketTool}', [TicketToolController::class, 'update'])
+            ->whereNumber('ticketTool')
+            ->name('admin.ticket-tools.update');
+        Route::delete('/admin/herramientas-tickets/{ticketTool}', [TicketToolController::class, 'destroy'])
+            ->whereNumber('ticketTool')
+            ->name('admin.ticket-tools.destroy');
+        Route::get('/admin/logs/herramientas-tickets', [AdminTicketToolLogController::class, 'index'])->name('admin.ticket-tool-logs.index');
+        Route::get('/admin/logs/herramientas-tickets/descargar', [AdminTicketToolLogController::class, 'export'])->name('admin.ticket-tool-logs.export');
         Route::get('/admin/logs/contenidos', [AdminContentLogController::class, 'index'])->name('admin.content-logs.index');
         Route::get('/admin/logs/contenidos/descargar', [AdminContentLogController::class, 'export'])->name('admin.content-logs.export');
         Route::redirect('/admin/logs/tags', '/admin/logs/contenidos?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
