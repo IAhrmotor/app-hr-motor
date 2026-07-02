@@ -352,22 +352,39 @@
                                         <div class="mt-1.5 inline-block w-fit max-w-full whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.25]">{{ $ticket->description }}</div>
 
                                         @if ($openingAttachments->isNotEmpty())
-                                            <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                            <div class="mt-3 space-y-2">
                                                 @foreach ($openingAttachments as $screenshot)
                                                     @php
                                                         $screenshotPath = data_get($screenshot, 'path');
                                                         $screenshotName = data_get($screenshot, 'name', basename((string) $screenshotPath));
+                                                        $screenshotUrl = $screenshotPath ? \Illuminate\Support\Facades\Storage::disk('public')->url($screenshotPath) : '';
+                                                        $screenshotExtension = strtolower((string) pathinfo((string) $screenshotPath, PATHINFO_EXTENSION));
+                                                        $isImageScreenshot = in_array($screenshotExtension, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true);
                                                     @endphp
-                                                    @if ($screenshotPath)
+                                                    @if ($screenshotPath && $isImageScreenshot)
                                                         <button
                                                             type="button"
-                                                            @click="openImage({ src: @js(\Illuminate\Support\Facades\Storage::disk('public')->url($screenshotPath)), alt: @js($screenshotName), title: @js($screenshotName) })"
-                                                            class="group relative cursor-zoom-in overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                                            @click="openImage({ src: @js($screenshotUrl), alt: @js($screenshotName), title: @js($screenshotName) })"
+                                                            class="group/image relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                                                             aria-label="Ver imagen {{ $screenshotName }}"
                                                         >
-                                                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($screenshotPath) }}" alt="{{ $screenshotName }}" class="h-32 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
-                                                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/30 group-hover:opacity-100">Ver</span>
+                                                            <img src="{{ $screenshotUrl }}" alt="{{ $screenshotName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover/image:scale-105 group-hover/image:brightness-75">
+                                                            <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/image:bg-brand-secondary/30 group-hover/image:opacity-100">
+                                                                Ver
+                                                            </span>
                                                         </button>
+                                                    @elseif ($screenshotPath)
+                                                        <a href="{{ $screenshotUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                                                            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
+                                                                </svg>
+                                                            </span>
+                                                            <span class="min-w-0 flex-1">
+                                                                <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $screenshotName }}</span>
+                                                            </span>
+                                                        </a>
                                                     @endif
                                                 @endforeach
                                             </div>
@@ -437,22 +454,40 @@
                                             @endif
 
                                             @if ($messageAttachments->isNotEmpty())
-                                                <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                                <div class="mt-3 space-y-2">
                                                     @foreach ($messageAttachments as $attachment)
                                                         @php
                                                             $attachmentPath = data_get($attachment, 'path');
                                                             $attachmentName = data_get($attachment, 'name', basename((string) $attachmentPath));
+                                                            $attachmentUrl = $attachmentPath ? \Illuminate\Support\Facades\Storage::disk('public')->url($attachmentPath) : '';
+                                                            $attachmentExtension = strtolower((string) pathinfo((string) $attachmentPath, PATHINFO_EXTENSION));
+                                                            $isImageAttachment = in_array($attachmentExtension, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true);
                                                         @endphp
-                                                        @if ($attachmentPath)
+
+                                                        @if ($attachmentPath && $isImageAttachment)
                                                             <button
                                                                 type="button"
-                                                                @click="openImage({ src: @js(\Illuminate\Support\Facades\Storage::disk('public')->url($attachmentPath)), alt: @js($attachmentName), title: @js($attachmentName) })"
-                                                                class="group relative cursor-zoom-in overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+                                                                @click="openImage({ src: @js($attachmentUrl), alt: @js($attachmentName), title: @js($attachmentName) })"
+                                                                class="group/image relative block cursor-pointer overflow-hidden rounded-[1rem] border border-black/5 bg-white/50 text-left transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                                                                 aria-label="Ver imagen {{ $attachmentName }}"
                                                             >
-                                                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($attachmentPath) }}" alt="{{ $attachmentName }}" class="h-32 w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75">
-                                                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover:bg-brand-secondary/30 group-hover:opacity-100">Ver</span>
+                                                                <img src="{{ $attachmentUrl }}" alt="{{ $attachmentName }}" class="max-h-72 w-full object-cover transition duration-300 group-hover/image:scale-105 group-hover/image:brightness-75">
+                                                                <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-brand-secondary/0 text-xs font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition duration-300 group-hover/image:bg-brand-secondary/30 group-hover/image:opacity-100">
+                                                                    Ver
+                                                                </span>
                                                             </button>
+                                                        @elseif ($attachmentPath)
+                                                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                                                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5" />
+                                                                    </svg>
+                                                                </span>
+                                                                <span class="min-w-0 flex-1">
+                                                                    <span class="block truncate text-sm font-semibold text-brand-secondary">{{ $attachmentName }}</span>
+                                                                </span>
+                                                            </a>
                                                         @endif
                                                     @endforeach
                                                 </div>
@@ -514,7 +549,7 @@
                                 Este ticket está cerrado y ya no admite nuevas respuestas.
                             </div>
                         @elseif ($canReplyToTicket)
-                            <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data" class="mt-6" x-data="{ closeAndSend: false }" x-ref="ticketReplyForm">
+                            <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data" class="mt-6" x-data="{ closeAndSend: false }" x-ref="ticketReplyForm" data-ticket-reply-form>
                                 @csrf
 
                                 <div class="relative">
@@ -533,6 +568,7 @@
                                             class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
                                             aria-label="Adjuntar archivo"
                                             title="Adjuntar archivo"
+                                            data-ticket-attachments-button
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.5 12.5 21a6.364 6.364 0 1 1-9-9L12 3.5a4.243 4.243 0 1 1 6 6L8.5 19a2.121 2.121 0 1 1-3-3L14 7.5" />
@@ -554,6 +590,7 @@
                                             name="attachments[]"
                                             multiple
                                             accept=".jpg,.jpeg,.png,.webp"
+                                            data-ticket-attachments-input
                                             class="sr-only"
                                         >
 
@@ -581,6 +618,9 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <div class="mt-2 hidden px-1 text-xs text-slate-500" data-ticket-attachments-preview></div>
+                                <div class="mt-2 hidden px-1" data-ticket-attachments-chips></div>
 
                                 <input type="hidden" name="close_ticket" :value="closeAndSend ? '1' : '0'">
 
@@ -794,4 +834,164 @@
             </div>
         </div>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const scrollStorageKey = `ticket-page-scroll:{{ $ticket->id }}`;
+            const restoreStoredScroll = () => {
+                const storedPosition = Number(sessionStorage.getItem(scrollStorageKey));
+
+                if (!Number.isFinite(storedPosition) || storedPosition < 0) {
+                    return;
+                }
+
+                requestAnimationFrame(() => {
+                    window.scrollTo({ top: storedPosition, behavior: 'auto' });
+                    sessionStorage.removeItem(scrollStorageKey);
+                });
+            };
+
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+
+            restoreStoredScroll();
+
+            const form = document.querySelector('[data-ticket-reply-form]');
+            const attachmentsInput = form?.querySelector('[data-ticket-attachments-input]');
+            const attachmentsButton = form?.querySelector('[data-ticket-attachments-button]');
+            const attachmentsPreview = form?.querySelector('[data-ticket-attachments-preview]');
+            const attachmentsChips = form?.querySelector('[data-ticket-attachments-chips]');
+
+            if (!form || !attachmentsInput || !attachmentsButton || !attachmentsPreview || !attachmentsChips) {
+                return;
+            }
+
+            let attachmentSnapshot = [];
+            let attachmentObjectUrls = [];
+            const maxAttachmentCount = 4;
+
+            const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;',
+            }[character]));
+
+            const syncAttachmentInputFiles = () => {
+                const dataTransfer = new DataTransfer();
+
+                attachmentSnapshot.forEach((file) => dataTransfer.items.add(file));
+                attachmentsInput.files = dataTransfer.files;
+            };
+
+            const renderAttachmentsPreview = () => {
+                attachmentObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+                attachmentObjectUrls = [];
+
+                if (!attachmentSnapshot.length) {
+                    attachmentsPreview.classList.add('hidden');
+                    attachmentsPreview.innerHTML = '';
+                    attachmentsChips.classList.add('hidden');
+                    attachmentsChips.innerHTML = '';
+                    return;
+                }
+
+                const previewText = attachmentSnapshot.map((file) => `${file.name} (${Math.ceil(file.size / 1024)} KB)`).join(' · ');
+                attachmentsPreview.textContent = `${attachmentSnapshot.length} imagen${attachmentSnapshot.length === 1 ? '' : 'es'} seleccionada${attachmentSnapshot.length === 1 ? '' : 's'}: ${previewText}`;
+                attachmentsPreview.classList.remove('hidden');
+
+                attachmentsChips.innerHTML = attachmentSnapshot.map((file, index) => {
+                    const objectUrl = URL.createObjectURL(file);
+                    attachmentObjectUrls.push(objectUrl);
+
+                    return `
+                        <span class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-brand-secondary shadow-sm">
+                            <span class="inline-flex h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+                                <img src="${objectUrl}" alt="${escapeHtml(file.name)}" class="h-full w-full object-cover">
+                            </span>
+                            <span class="max-w-[11rem] truncate">${escapeHtml(file.name)}</span>
+                            <button type="button" class="cursor-pointer text-slate-400 transition hover:text-rose-500" data-ticket-remove-attachment-index="${index}" aria-label="Quitar ${escapeHtml(file.name)}">
+                                ×
+                            </button>
+                        </span>
+                    `;
+                }).join('');
+
+                attachmentsChips.classList.remove('hidden');
+            };
+
+            const appendAttachments = (files) => {
+                const incomingFiles = Array.from(files || []).filter((file) => String(file?.type || '').startsWith('image/'));
+
+                if (!incomingFiles.length) {
+                    return;
+                }
+
+                const currentKeys = new Set(attachmentSnapshot.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+                const accepted = [];
+
+                incomingFiles.forEach((file) => {
+                    if ((attachmentSnapshot.length + accepted.length) >= maxAttachmentCount) {
+                        return;
+                    }
+
+                    const key = `${file.name}:${file.size}:${file.lastModified}`;
+
+                    if (currentKeys.has(key)) {
+                        return;
+                    }
+
+                    currentKeys.add(key);
+                    accepted.push(file);
+                });
+
+                if (!accepted.length) {
+                    return;
+                }
+
+                attachmentSnapshot = [...attachmentSnapshot, ...accepted];
+                syncAttachmentInputFiles();
+                renderAttachmentsPreview();
+            };
+
+            const removeAttachmentAtIndex = (index) => {
+                attachmentSnapshot = attachmentSnapshot.filter((_, currentIndex) => currentIndex !== index);
+                syncAttachmentInputFiles();
+                renderAttachmentsPreview();
+            };
+
+            form.addEventListener('submit', () => {
+                sessionStorage.setItem(scrollStorageKey, String(window.scrollY || window.pageYOffset || 0));
+            });
+
+            attachmentsButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                attachmentsInput.value = '';
+                attachmentsInput.click();
+            });
+
+            attachmentsInput.addEventListener('change', (event) => {
+                appendAttachments(event.target.files);
+                event.target.value = '';
+            });
+
+            attachmentsChips.addEventListener('click', (event) => {
+                const removeButton = event.target.closest('[data-ticket-remove-attachment-index]');
+
+                if (!removeButton) {
+                    return;
+                }
+
+                const index = Number(removeButton.dataset.ticketRemoveAttachmentIndex);
+
+                if (Number.isNaN(index)) {
+                    return;
+                }
+
+                removeAttachmentAtIndex(index);
+            });
+        });
+    </script>
 @endsection
