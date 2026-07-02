@@ -94,10 +94,12 @@ class ItTicketController extends Controller
             ->where('user_id', $userId)
             ->orderByRaw(
                 "CASE status
-                    WHEN 'new' THEN 0
-                    WHEN 'in_progress' THEN 1
-                    WHEN 'pending_user' THEN 2
-                    WHEN 'closed' THEN 3
+                    WHEN 'reopen_requested' THEN 0
+                    WHEN 'new' THEN 1
+                    WHEN 'in_progress' THEN 2
+                    WHEN 'pending_user' THEN 3
+                    WHEN 'closed' THEN 4
+                    WHEN 'clausurado' THEN 5
                     ELSE 99
                 END"
             )
@@ -123,9 +125,17 @@ class ItTicketController extends Controller
                 'label' => 'Pendiente usuario',
                 'badge' => 'bg-violet-50 text-violet-700 ring-violet-200',
             ],
+            'reopen_requested' => [
+                'label' => 'Reapertura',
+                'badge' => 'bg-rose-50 text-rose-700 ring-rose-200',
+            ],
             'closed' => [
                 'label' => 'Cerrado',
                 'badge' => 'bg-slate-100 text-slate-700 ring-slate-200',
+            ],
+            'clausurado' => [
+                'label' => 'Clausurado',
+                'badge' => 'bg-slate-900 text-white ring-slate-900',
             ],
         ];
     }

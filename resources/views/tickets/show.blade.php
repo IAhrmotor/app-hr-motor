@@ -6,11 +6,13 @@
         $statusMeta = $ticketStatuses[$ticket->status] ?? ['label' => $ticket->status, 'badge' => 'bg-slate-100 text-slate-700 ring-slate-200'];
         $messages = $ticket->messages ?? collect();
         $conversationMessagesCount = $messages->count() + 1;
-        $activityLogs = $ticket->activityLogs ?? collect();
+        $activityLogs = ($ticket->activityLogs ?? collect())->reject(fn ($activity) => $activity->event === 'priority_changed');
         $isVisibleItRole = app_visible_role(auth()->user()) === \App\Models\User::ROLE_INFORMATION_TECHNOLOGY;
         $currentToolKey = filled($ticket->ticket_tool_id) ? (string) $ticket->ticket_tool_id : '';
         $currentToolLabel = $ticket->ticketTool?->name ?? $ticket->tool ?? '';
         $isClosed = $ticket->status === 'closed';
+        $isReopenRequested = $ticket->status === 'reopen_requested';
+        $isPermanentlyClosed = $ticket->status === 'clausurado';
         $ticketOpeningAttachments = collect($ticket->screenshots ?? []);
     @endphp
 
@@ -164,6 +166,151 @@
                 </div>
             </section>
 
+            @if ($isReopenRequested)
+                <section class="rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6" x-data="{ closeReasonOpen: false }">
+                    @if ($canManageTickets)
+                        <div class="flex flex-col gap-4 border-b border-brand-secondary/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-600">Reapertura pendiente</p>
+                                <p class="mt-1 text-sm text-brand-secondary/65">Solo el equipo de IT con permiso puede decidir si se reabre o se clausura definitivamente.</p>
+                            </div>
+
+                            <span class="inline-flex rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700 ring-1 ring-rose-200">
+                                Reapertura
+                            </span>
+                        </div>
+
+                        <form method="POST" action="{{ route('tickets.reopen', $ticket) }}" class="mt-5 space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-4">
+                            @csrf
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div class="space-y-2">
+                                    <label for="reopen-priority" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/50">
+                                        Prioridad
+                                    </label>
+                                    <select
+                                        id="reopen-priority"
+                                        name="priority"
+                                        class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                                    >
+                                        @foreach ($ticketPriorities as $priorityKey => $priorityMetaOption)
+                                            <option value="{{ $priorityKey }}" @selected($ticket->priority === $priorityKey)>
+                                                {{ $priorityMetaOption['label'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="reopen-assignee" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/50">
+                                        Selecciona responsable
+                                    </label>
+                                    <select
+                                        id="reopen-assignee"
+                                        name="assigned_to_user_id"
+                                        class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15"
+                                    >
+                                        <option value="">Selecciona responsable</option>
+                                        @foreach ($assignableUsers as $user)
+                                            <option value="{{ $user['id'] }}" @selected($ticket->assigned_to_user_id === $user['id'])>
+                                                {{ $user['name'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button
+                                    type="submit"
+                                    class="inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                                >
+                                    Reabrir
+                                </button>
+
+                                <button
+                                    type="button"
+                                    @click="closeReasonOpen = true"
+                                    class="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                >
+                                    Clausurar
+                                </button>
+                            </div>
+                        </form>
+
+                        <div
+                            x-cloak
+                            x-show="closeReasonOpen"
+                            x-transition.opacity
+                            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm"
+                            @click.self="closeReasonOpen = false"
+                        >
+                            <div class="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
+                                <div class="flex items-start justify-between gap-4 border-b border-brand-secondary/10 pb-4">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Clausurar definitivamente</p>
+                                        <h3 class="mt-1 text-xl font-bold tracking-tight text-brand-secondary">Escribe el motivo</h3>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        @click="closeReasonOpen = false"
+                                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                                        aria-label="Cerrar modal"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <form method="POST" action="{{ route('tickets.permanently-close', $ticket) }}" class="mt-5 space-y-4">
+                                    @csrf
+                                    <div>
+                                        <label for="permanent-close-reason" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/50">
+                                            Motivo de clausura definitiva
+                                        </label>
+                                        <textarea
+                                            id="permanent-close-reason"
+                                            name="reason"
+                                            rows="5"
+                                            required
+                                            placeholder="Explica por qué este ticket se clausura definitivamente..."
+                                            class="mt-2 w-full rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15"
+                                        >{{ old('reason') }}</textarea>
+                                    </div>
+
+                                    <div class="flex flex-wrap justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            @click="closeReasonOpen = false"
+                                            class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-brand-secondary transition hover:bg-slate-50"
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                        >
+                                            Clausurar definitivamente
+                                        </button>
+                                    </div>
+
+                                    @error('reason')
+                                        <p class="text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </form>
+                            </div>
+                        </div>
+                    @else
+                        <div class="rounded-[1.75rem] border border-amber-200 bg-amber-50/70 px-5 py-4 text-sm text-brand-secondary/75">
+                            Tu solicitud de reapertura ya ha sido enviada y está pendiente de revisión por IT.
+                        </div>
+                    @endif
+                </section>
+            @endif
+
             <section class="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
                 <div class="space-y-6">
                     <article class="flex max-h-[calc(100vh-14rem)] flex-col overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm">
@@ -238,28 +385,55 @@
                                     $messageAttachments = collect($message->attachments ?? []);
                                     $isTicketOwnerMessage = $message->user_id === $ticket->user_id;
                                     $isMineMessage = (int) $message->user_id === (int) auth()->id();
+                                    $messageBodyText = (string) ($message->body ?? '');
+                                    $isSystemClosureMessage = filled($messageBodyText) && str_starts_with($messageBodyText, 'Ticket clausurado definitivamente');
+                                    $isSystemReopenMessage = filled($messageBodyText) && $messageBodyText === 'Ticket reabierto';
+                                    $isSystemMessage = $isSystemClosureMessage || $isSystemReopenMessage;
                                     $messageAlignClass = $isMineMessage ? 'justify-end' : 'justify-start';
                                     $messageStackClass = $isMineMessage ? 'items-end' : 'items-start';
-                                    $messageToneClass = $isMineMessage
+                                    $messageToneClass = $isSystemMessage
+                                        ? 'border border-dashed border-slate-300 bg-slate-50 text-slate-700 shadow-sm'
+                                        : ($isMineMessage
                                         ? 'bg-[#d9fdd3] text-slate-800 shadow-sm'
-                                        : 'border border-slate-200 bg-white text-brand-secondary shadow-sm';
-                                    $messageMetaClass = $isMineMessage ? 'justify-end text-slate-500' : 'justify-start text-slate-400';
+                                        : 'border border-slate-200 bg-white text-brand-secondary shadow-sm');
+                                    $messageMetaClass = $isSystemMessage
+                                        ? 'justify-center text-slate-400'
+                                        : ($isMineMessage ? 'justify-end text-slate-500' : 'justify-start text-slate-400');
                                 @endphp
 
-                                <div class="flex {{ $messageAlignClass }}">
-                                    <div class="flex w-fit max-w-[82%] min-w-0 flex-col {{ $messageStackClass }}">
-                                        <div class="relative inline-flex w-fit max-w-full flex-col items-start overflow-x-hidden rounded-[1.1rem] px-4 pt-2.5 pb-3 {{ $messageToneClass }}">
-                                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                                <span class="text-[11px] font-semibold uppercase tracking-[0.16em] {{ $isMineMessage ? 'text-slate-700' : 'text-brand-secondary' }}">
-                                                    {{ $message->author?->name ?? 'Usuario' }}
+                                <div class="flex {{ $isSystemMessage ? 'justify-center' : $messageAlignClass }}">
+                                    <div class="flex w-fit max-w-[82%] min-w-0 flex-col {{ $isSystemMessage ? 'items-center' : $messageStackClass }}">
+                                        <div class="relative inline-flex w-fit max-w-full flex-col {{ $isSystemMessage ? 'items-center text-center' : 'items-start' }} overflow-x-hidden rounded-[1.1rem] px-4 pt-2.5 pb-3 {{ $messageToneClass }}">
+                                            @if ($isSystemMessage)
+                                                <span class="inline-flex rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+                                                    Sistema
                                                 </span>
-                                                <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] {{ $isTicketOwnerMessage ? 'bg-brand-primary/10 text-brand-primary' : 'bg-amber-100 text-amber-700' }}">
-                                                    {{ $isTicketOwnerMessage ? 'Solicitante' : 'IT' }}
-                                                </span>
-                                            </div>
+                                                @if ($isSystemClosureMessage)
+                                                    @php
+                                                        $messageLines = preg_split("/\r\n|\r|\n/", $messageBodyText) ?: [];
+                                                        $messageHeadline = trim((string) ($messageLines[0] ?? ''));
+                                                        $messageReason = trim((string) (preg_replace('/^Motivo:\s*/u', 'Motivo: ', (string) ($messageLines[1] ?? ''))));
+                                                    @endphp
+                                                    <div class="mt-2 text-[15px] font-semibold leading-[1.3] text-slate-800">{{ $messageHeadline }}</div>
+                                                    @if ($messageReason !== '')
+                                                        <div class="mt-1 whitespace-pre-line break-words [overflow-wrap:anywhere] text-[14px] leading-[1.35] text-slate-600">{{ $messageReason }}</div>
+                                                    @endif
+                                                @else
+                                                    <div class="mt-2 text-[15px] font-semibold leading-[1.3] text-slate-800">Ticket reabierto</div>
+                                                @endif
+                                            @else
+                                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                    <span class="text-[11px] font-semibold uppercase tracking-[0.16em] {{ $isMineMessage ? 'text-slate-700' : 'text-brand-secondary' }}">
+                                                        {{ $message->author?->name ?? 'Usuario' }}
+                                                    </span>
+                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] {{ $isTicketOwnerMessage ? 'bg-brand-primary/10 text-brand-primary' : 'bg-amber-100 text-amber-700' }}">
+                                                        {{ $isTicketOwnerMessage ? 'Solicitante' : 'IT' }}
+                                                    </span>
+                                                </div>
 
-                                            @if (filled($message->body))
-                                                <div class="mt-1.5 inline-block w-fit max-w-full whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.25]">{{ $message->body }}</div>
+                                                @if (filled($message->body))
+                                                    <div class="mt-1.5 inline-block w-fit max-w-full whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.25]">{{ $message->body }}</div>
+                                                @endif
                                             @endif
 
                                             @if ($messageAttachments->isNotEmpty())
@@ -293,12 +467,54 @@
                             @endforeach
                         </div>
 
-                        @if ($isClosed)
+                        @if ($isPermanentlyClosed)
+                            <div class="mt-6 rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 text-sm text-brand-secondary/70">
+                                Este ticket ha sido clausurado definitivamente y ya no admite nuevas respuestas ni reaperturas.
+                            </div>
+                        @elseif ($isClosed && (int) auth()->id() === (int) $ticket->user_id)
+                            <form method="POST" action="{{ route('tickets.reopen.request', $ticket) }}" class="mt-6 space-y-4 rounded-[1.75rem] border border-amber-200 bg-amber-50/60 px-5 py-5">
+                                @csrf
+
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">Solicitar reapertura</p>
+                                        <p class="mt-1 text-sm text-brand-secondary/70">Escribe por qué quieres reabrir este ticket y lo revisará el equipo de IT.</p>
+                                    </div>
+                                    <span class="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700 ring-1 ring-amber-200">
+                                        Cerrado
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <label for="reopen-request-body" class="sr-only">Motivo de reapertura</label>
+                                    <textarea
+                                        id="reopen-request-body"
+                                        name="body"
+                                        rows="4"
+                                        placeholder="Cuéntanos qué sigue fallando o qué ha cambiado para pedir la reapertura..."
+                                        class="w-full rounded-[1.35rem] border border-slate-200 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15"
+                                    >{{ old('body') }}</textarea>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button
+                                        type="submit"
+                                        class="inline-flex h-11 items-center justify-center rounded-2xl bg-amber-500 px-5 text-sm font-semibold text-white transition hover:bg-amber-400"
+                                    >
+                                        Solicitar reapertura
+                                    </button>
+                                </div>
+
+                                @error('body')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </form>
+                        @elseif ($isClosed)
                             <div class="mt-6 rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 text-sm text-brand-secondary/70">
                                 Este ticket está cerrado y ya no admite nuevas respuestas.
                             </div>
                         @elseif ($canReplyToTicket)
-                            <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data" class="mt-6">
+                            <form method="POST" action="{{ route('tickets.messages.store', $ticket) }}" enctype="multipart/form-data" class="mt-6" x-data="{ closeAndSend: false }" x-ref="ticketReplyForm">
                                 @csrf
 
                                 <div class="relative">
@@ -324,6 +540,8 @@
                                         </label>
 
                                         <textarea
+                                            x-ref="ticketReplyBody"
+                                            @keydown.enter.prevent="if ($event.shiftKey) { return; } $refs.ticketReplyForm.requestSubmit()"
                                             name="body"
                                             rows="1"
                                             placeholder="Escribe tu mensaje..."
@@ -339,17 +557,32 @@
                                             class="sr-only"
                                         >
 
-                                        <button
-                                            type="submit"
-                                            class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-90 md:px-5 md:text-sm"
-                                        >
-                                            <span class="hidden md:inline">Enviar</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                <path d="M10.3009 13.6949L20.102 3.89742M10.5795 14.1355L12.8019 18.5804C13.339 19.6545 13.6075 20.1916 13.9458 20.3356C14.2394 20.4606 14.575 20.4379 14.8492 20.2747C15.1651 20.0866 15.3591 19.5183 15.7472 18.3818L19.9463 6.08434C20.2845 5.09409 20.4535 4.59896 20.3378 4.27142C20.2371 3.98648 20.013 3.76234 19.7281 3.66167C19.4005 3.54595 18.9054 3.71502 17.9151 4.05315L5.61763 8.2523C4.48114 8.64037 3.91289 8.83441 3.72478 9.15032C3.56153 9.42447 3.53891 9.76007 3.66389 10.0536C3.80791 10.3919 4.34498 10.6605 5.41912 11.1975L9.86397 13.42C10.041 13.5085 10.1295 13.5527 10.2061 13.6118C10.2742 13.6643 10.3352 13.7253 10.3876 13.7933C10.4468 13.87 10.491 13.9585 10.5795 14.1355Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
-                                        </button>
+                                        <div class="flex shrink-0 items-center gap-2">
+                                            <button
+                                                type="submit"
+                                                @click="closeAndSend = true"
+                                                name="close_ticket"
+                                                value="1"
+                                                class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-brand-secondary/15 bg-white px-4 text-sm font-semibold text-brand-secondary transition hover:border-brand-primary/25 hover:bg-brand-primary/5 hover:text-brand-primary md:px-5 md:text-sm"
+                                            >
+                                                <span class="hidden md:inline">Enviar y cerrar</span>
+                                                <span class="md:hidden">Cerrar</span>
+                                            </button>
+
+                                            <button
+                                                type="submit"
+                                                class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-90 md:px-5 md:text-sm"
+                                            >
+                                                <span class="hidden md:inline">Enviar</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                    <path d="M10.3009 13.6949L20.102 3.89742M10.5795 14.1355L12.8019 18.5804C13.339 19.6545 13.6075 20.1916 13.9458 20.3356C14.2394 20.4606 14.575 20.4379 14.8492 20.2747C15.1651 20.0866 15.3591 19.5183 15.7472 18.3818L19.9463 6.08434C20.2845 5.09409 20.4535 4.59896 20.3378 4.27142C20.2371 3.98648 20.013 3.76234 19.7281 3.66167C19.4005 3.54595 18.9054 3.71502 17.9151 4.05315L5.61763 8.2523C4.48114 8.64037 3.91289 8.83441 3.72478 9.15032C3.56153 9.42447 3.53891 9.76007 3.66389 10.0536C3.80791 10.3919 4.34498 10.6605 5.41912 11.1975L9.86397 13.42C10.041 13.5085 10.1295 13.5527 10.2061 13.6118C10.2742 13.6643 10.3352 13.7253 10.3876 13.7933C10.4468 13.87 10.491 13.9585 10.5795 14.1355Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+
+                                <input type="hidden" name="close_ticket" :value="closeAndSend ? '1' : '0'">
 
                                 @error('body')
                                     <p class="mt-2 px-1 text-sm text-red-600">{{ $message }}</p>
@@ -383,27 +616,31 @@
                     <div
                         x-ref="ticketLog"
                         x-init="$nextTick(() => { if ($refs.ticketLog) { $refs.ticketLog.scrollTop = $refs.ticketLog.scrollHeight; } })"
-                        class="relative mt-5 flex-1 space-y-4 overflow-y-auto pl-4 pr-2 before:absolute before:left-2 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-brand-primary/30 before:via-brand-secondary/10 before:to-transparent"
+                        class="relative mt-5 flex-1 space-y-4 overflow-y-auto pl-4 pr-2"
                     >
                         @forelse ($activityLogs as $activity)
-                            @php
-                                $eventPillClass = match ($activity->event) {
-                                    'created' => 'bg-sky-50 text-sky-700 ring-sky-200',
-                                    'assigned' => 'bg-amber-50 text-amber-700 ring-amber-200',
-                                    'comment_added' => 'bg-violet-50 text-violet-700 ring-violet-200',
-                                    'status_changed' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                                    'priority_changed' => 'bg-orange-50 text-orange-700 ring-orange-200',
-                                    'tool_changed' => 'bg-cyan-50 text-cyan-700 ring-cyan-200',
-                                    'closed' => 'bg-slate-100 text-slate-700 ring-slate-200',
-                                    default => 'bg-slate-100 text-slate-700 ring-slate-200',
-                                };
+                                @php
+                                    $eventPillClass = match ($activity->event) {
+                                        'created' => 'bg-sky-50 text-sky-700 ring-sky-200',
+                                        'assigned' => 'bg-amber-50 text-amber-700 ring-amber-200',
+                                        'comment_added' => 'bg-violet-50 text-violet-700 ring-violet-200',
+                                        'status_changed' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+                                        'tool_changed' => 'bg-cyan-50 text-cyan-700 ring-cyan-200',
+                                        'reopen_requested' => 'bg-rose-50 text-rose-700 ring-rose-200',
+                                        'reopened' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+                                        'permanently_closed' => 'bg-slate-100 text-slate-700 ring-slate-200',
+                                        'closed' => 'bg-slate-100 text-slate-700 ring-slate-200',
+                                        default => 'bg-slate-100 text-slate-700 ring-slate-200',
+                                    };
                                 $eventAccentClass = match ($activity->event) {
                                     'created' => 'bg-sky-500',
                                     'assigned' => 'bg-amber-500',
                                     'comment_added' => 'bg-violet-500',
                                     'status_changed' => 'bg-emerald-500',
-                                    'priority_changed' => 'bg-orange-500',
                                     'tool_changed' => 'bg-cyan-500',
+                                    'reopen_requested' => 'bg-rose-500',
+                                    'reopened' => 'bg-emerald-500',
+                                    'permanently_closed' => 'bg-slate-500',
                                     'closed' => 'bg-slate-500',
                                     default => 'bg-brand-primary',
                                 };
@@ -412,14 +649,55 @@
                                     'assigned' => 'border-amber-200/70 bg-amber-50/60',
                                     'comment_added' => 'border-violet-200/70 bg-violet-50/60',
                                     'status_changed' => 'border-emerald-200/70 bg-emerald-50/60',
-                                    'priority_changed' => 'border-orange-200/70 bg-orange-50/60',
                                     'tool_changed' => 'border-cyan-200/70 bg-cyan-50/60',
+                                    'reopen_requested' => 'border-rose-200/70 bg-rose-50/60',
+                                    'reopened' => 'border-emerald-200/70 bg-emerald-50/60',
+                                    'permanently_closed' => 'border-slate-200 bg-slate-50/70',
                                     'closed' => 'border-slate-200 bg-slate-50/70',
                                     default => 'border-brand-secondary/10 bg-slate-50/80',
                                 };
                             @endphp
                             <article class="relative rounded-[1.25rem] border p-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.03)] {{ $eventCardClass }}">
-                                <span class="absolute left-[-0.125rem] top-5 h-3 w-3 rounded-full border-4 border-white shadow-sm {{ $eventAccentClass }}"></span>
+                                <span class="pointer-events-none absolute left-[1.1875rem] top-[-0.9rem] bottom-[-0.9rem] w-0.5 bg-gradient-to-b from-transparent via-slate-300/90 to-transparent"></span>
+                                <span class="absolute left-[-0.125rem] top-5 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-white shadow-sm {{ $eventAccentClass }}">
+                                    @if ($activity->event === 'created')
+                                        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-5 w-5 shrink-0 text-sky-500">
+                                            <path d="M28 31h-24c-1.657 0-3-1.344-3-3v-14c0-1.657 1.343-3 3-3h24c1.656 0 3 1.343 3 3v14c0 1.656-1.344 3-3 3zM8 18.041c-1.657 0-3 1.567-3 3.5 0 1.934 1.343 3.5 3 3.5s3-1.566 3-3.5c0-1.933-1.344-3.5-3-3.5zM15.78 18.898c-0.115-0.237-0.269-0.422-0.458-0.553-0.19-0.132-0.426-0.221-0.707-0.268-0.2-0.037-0.49-0.055-0.87-0.055h-1.783v6.914h1.008v-2.016h0.842c0.81 0 1.368-0.356 1.679-0.693 0.309-0.338 0.464-1.812 0.464-2.299-0.001-0.282-0.059-0.793-0.175-1.030zM21.024 23.945h-3.058v-2.008h2.956v-0.93h-2.956v-2.055h3.05v-0.93h-3.995v6.914h4.003v-0.991zM26.954 18.023h-0.914v5.31l-3.012-5.31h-1.027v6.914h0.977v-5.061l3.012 5.061h0.965v-6.914zM13.823 21.93h-0.853v-2.977h0.838c0.343 0 0.578 0.017 0.706 0.051 0.197 0.055 0.357 0.166 0.478 0.336s0.182 0.375 0.182 0.613c0 0.33-0.103 1.522-0.309 1.704s-0.553 0.273-1.042 0.273zM8 24.125c-1.104 0-2-1.119-2-2.5s0.896-2.5 2-2.5 2 1.119 2 2.5-0.896 2.5-2 2.5zM25 11l-7.322-5.45c-0.344 0.277-0.775 0.45-1.25 0.45-0.662 0-1.244-0.325-1.607-0.821l-7.821 5.821h-1l8.493-6.518c-0.038-0.155-0.065-0.315-0.065-0.482 0-1.104 0.896-2 2-2 1.105 0 2 0.896 2 2 0 0.359-0.103 0.692-0.269 0.984l7.841 6.016h-1z" fill="currentColor"></path>
+                                        </svg>
+                                    @elseif ($activity->event === 'assigned')
+                                        <svg fill="none" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-8 w-8 shrink-0 text-amber-500">
+                                            <path d="M28.5,68.5v-34H26.9a4.89,4.89,0,0,0-4.8,4.9V74.8a4.89,4.89,0,0,0,4.8,4.9H62.5a4.89,4.89,0,0,0,4.8-4.9V73.4h-34A4.89,4.89,0,0,1,28.5,68.5Z" fill="currentColor"/><path d="M46.4,30.2H64.1a1.58,1.58,0,0,0,1.6-1.6V25.3a4.89,4.89,0,0,0-4.8-4.9H49.6a4.82,4.82,0,0,0-4.8,4.9v3.3A1.64,1.64,0,0,0,46.4,30.2Z" fill="currentColor"/><path d="M73,24.4H71.4a.74.74,0,0,0-.8.8v3.3a6.57,6.57,0,0,1-6.5,6.6H46.4a6.64,6.64,0,0,1-6.5-6.6V25.2a.74.74,0,0,0-.8-.8H37.5a4.82,4.82,0,0,0-4.8,4.9V64.6a4.89,4.89,0,0,0,4.8,4.9H73a4.82,4.82,0,0,0,4.8-4.9V29.4A4.85,4.85,0,0,0,73,24.4ZM60.9,55.5a1.58,1.58,0,0,1-1.6,1.6H43.1a1.58,1.58,0,0,1-1.6-1.6V53.9a1.58,1.58,0,0,1,1.6-1.6H59.3a1.58,1.58,0,0,1,1.6,1.6ZM69,47.3a1.58,1.58,0,0,1-1.6,1.6H43.1a1.58,1.58,0,0,1-1.6-1.6V45.7a1.58,1.58,0,0,1,1.6-1.6H67.4A1.58,1.58,0,0,1,69,45.7Z" fill="currentColor"/>
+                                        </svg>
+                                    @elseif ($activity->event === 'comment_added')
+                                        <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-violet-600">
+                                            <path fill="currentColor" d="M493.332,386.691c11.748-16.658,18.686-36.368,18.668-57.342c0.018-26.135-10.753-50.179-28.138-69.036c-17.411-18.91-41.393-33.001-68.928-40.504L407.7,246.41c22.994,6.247,42.461,17.95,55.86,32.562c13.436,14.665,20.85,31.862,20.868,50.377c-0.018,14.898-4.811,28.882-13.652,41.483c-8.831,12.565-21.792,23.613-37.722,31.772l-11.64,5.96l15.087,33.737c-45.719-7.962-88.134-22.806-109.585-31.162l-0.422-0.161l-0.431-0.135c-28.765-9.02-51.202-26.754-62.627-47.702l-24.179,13.265c15.473,28.11,43.547,49.453,77.679,60.429v0.009c26.531,10.277,82.274,29.824,140.837,36.376l23.945,2.657l-24.753-55.358C471.487,411.362,483.962,400.009,493.332,386.691z"/>
+                                            <path fill="currentColor" d="M359.056,286.789c22.365-25.526,35.918-57.261,35.9-91.564c0.009-22.429-5.78-43.852-16.065-63.068c-15.446-28.855-40.819-52.809-72.214-69.593c-31.404-16.774-68.937-26.432-109.199-26.441c-53.67,0.018-102.513,17.143-138.44,45.53c-17.959,14.207-32.687,31.27-42.973,50.503C5.78,151.374-0.009,172.797,0,195.226c-0.018,28.621,9.433,55.52,25.57,78.415c13.795,19.61,32.472,36.367,54.488,49.48l-33.163,74.16l23.946-2.656c82.688-9.245,161.874-36.968,199.461-51.526C306.04,331.691,336.86,312.152,359.056,286.789z M260.743,317.233l-0.422,0.161c-32.534,12.656-98.366,35.641-168.309,46.536l23.703-53.007l-11.641-5.959c-23.487-12.026-42.73-28.379-55.96-47.191c-13.238-18.838-20.526-40.001-20.544-62.546c0.009-17.699,4.497-34.509,12.808-50.072c12.439-23.298,33.647-43.717,60.887-58.266c27.229-14.558,60.375-23.2,96.212-23.192c47.783-0.018,90.782,15.384,121.342,39.58c15.285,12.098,27.455,26.342,35.757,41.877c8.302,15.563,12.798,32.374,12.807,50.072c-0.017,26.979-10.473,52.082-29.079,73.415c-18.587,21.28-45.396,38.477-77.131,48.457L260.743,317.233z"/>
+                                            <path fill="currentColor" d="M119.583,177.679c-11.838,0-21.441,9.603-21.441,21.45c0,11.838,9.603,21.442,21.441,21.442c11.848,0,21.451-9.603,21.451-21.442C141.034,187.283,131.431,177.679,119.583,177.679z"/>
+                                            <path fill="currentColor" d="M202.298,177.679c-11.838,0-21.442,9.603-21.442,21.45c0,11.838,9.603,21.442,21.442,21.442c11.847,0,21.45-9.603,21.45-21.442C223.748,187.283,214.145,177.679,202.298,177.679z"/>
+                                            <path fill="currentColor" d="M285.012,177.679c-11.838,0-21.442,9.603-21.442,21.45c0,11.838,9.603,21.442,21.442,21.442c11.847,0,21.45-9.603,21.45-21.442C306.462,187.283,296.859,177.679,285.012,177.679z"/>
+                                        </svg>
+                                    @elseif ($activity->event === 'reopen_requested')
+                                        <svg version="1.1" id="Uploaded to svgrepo.com" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="800px" height="800px" viewBox="0 0 32 32" xml:space="preserve" aria-hidden="true" class="block h-6 w-6 shrink-0 text-rose-700">
+                                            <path fill="currentColor" d="M16,2C8.268,2,2,8.268,2,16s6.268,14,14,14s14-6.268,14-14S23.732,2,16,2z M16,26 c-0.552,0-1-0.448-1-1c0-0.552,0.448-1,1-1s1,0.448,1,1C17,25.552,16.552,26,16,26z M17,18.917V21c0,0.552-0.447,1-1,1s-1-0.448-1-1 v-3c0-0.552,0.447-1,1-1c2.206,0,4-1.794,4-4s-1.794-4-4-4s-4,1.794-4,4c0,0.552-0.447,1-1,1s-1-0.448-1-1c0-3.309,2.691-6,6-6 s6,2.691,6,6C22,15.968,19.834,18.439,17,18.917z"/>
+                                        </svg>
+                                    @elseif ($activity->event === 'status_changed')
+                                        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-emerald-700">
+                                            <path fill-rule="evenodd" clip-rule="evenodd" d="M1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12ZM10.25 11C10.25 10.4477 10.6977 10 11.25 10H12.75C13.3023 10 13.75 10.4477 13.75 11V18C13.75 18.5523 13.3023 19 12.75 19H11.25C10.6977 19 10.25 18.5523 10.25 18V11ZM14 7C14 5.89543 13.1046 5 12 5C10.8954 5 10 5.89543 10 7C10 8.10457 10.8954 9 12 9C13.1046 9 14 8.10457 14 7Z" fill="currentColor"/>
+                                        </svg>
+                                    @elseif ($activity->event === 'reopened')
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-emerald-600">
+                                            <path d="M3 3L21 21M17 10V8C17 5.23858 14.7614 3 12 3C11.0283 3 10.1213 3.27719 9.35386 3.75681M7.08383 7.08338C7.02878 7.38053 7 7.6869 7 8V10.0288M19.5614 19.5618C19.273 20.0348 18.8583 20.4201 18.362 20.673C17.7202 21 16.8802 21 15.2 21H8.8C7.11984 21 6.27976 21 5.63803 20.673C5.07354 20.3854 4.6146 19.9265 4.32698 19.362C4 18.7202 4 17.8802 4 16.2V14.8C4 13.1198 4 12.2798 4.32698 11.638C4.6146 11.0735 5.07354 10.6146 5.63803 10.327C5.99429 10.1455 6.41168 10.0647 7 10.0288M19.9998 14.4023C19.9978 12.9831 19.9731 12.227 19.673 11.638C19.3854 11.0735 18.9265 10.6146 18.362 10.327C17.773 10.0269 17.0169 10.0022 15.5977 10.0002M10 10H8.8C8.05259 10 7.47142 10 7 10.0288" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    @elseif ($activity->event === 'permanently_closed')
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-slate-700">
+                                            <path d="M7 10.0288C7.47142 10 8.05259 10 8.8 10H15.2C15.9474 10 16.5286 10 17 10.0288M7 10.0288C6.41168 10.0647 5.99429 10.1455 5.63803 10.327C5.07354 10.6146 4.6146 11.0735 4.32698 11.638C4 12.2798 4 13.1198 4 14.8V16.2C4 17.8802 4 18.7202 4.32698 19.362C4.6146 19.9265 5.07354 20.3854 5.63803 20.673C6.27976 21 7.11984 21 8.8 21H15.2C16.8802 21 17.7202 21 18.362 20.673C18.9265 20.3854 19.3854 19.9265 19.673 19.362C20 18.7202 20 17.8802 20 16.2V14.8C20 13.1198 20 12.2798 19.673 11.638C19.3854 11.0735 18.9265 10.6146 18.362 10.327C18.0057 10.1455 17.5883 10.0647 17 10.0288M7 10.0288V8C7 5.23858 9.23858 3 12 3C14.7614 3 17 5.23858 17 8V10.0288" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    @elseif ($activity->event === 'closed')
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-slate-700">
+                                            <path d="M7 10.0288C7.47142 10 8.05259 10 8.8 10H15.2C15.9474 10 16.5286 10 17 10.0288M7 10.0288C6.41168 10.0647 5.99429 10.1455 5.63803 10.327C5.07354 10.6146 4.6146 11.0735 4.32698 11.638C4 12.2798 4 13.1198 4 14.8V16.2C4 17.8802 4 18.7202 4.32698 19.362C4.6146 19.9265 5.07354 20.3854 5.63803 20.673C6.27976 21 7.11984 21 8.8 21H15.2C16.8802 21 17.7202 21 18.362 20.673C18.9265 20.3854 19.3854 19.9265 19.673 19.362C20 18.7202 20 17.8802 20 16.2V14.8C20 13.1198 20 12.2798 19.673 11.638C19.3854 11.0735 18.9265 10.6146 18.362 10.327C18.0057 10.1455 17.5883 10.0647 17 10.0288M7 10.0288V8C7 5.23858 9.23858 3 12 3C14.7614 3 17 5.23858 17 8V10.0288" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    @endif
+                                </span>
                                 <div class="min-w-0 pl-4">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide {{ $eventPillClass }}">

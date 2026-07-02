@@ -6,6 +6,15 @@
         $statusOrder = array_keys($ticketStatuses);
         $formatPriority = fn (string $priority): array => $ticketPriorities[$priority] ?? ['label' => $priority, 'badge' => 'bg-slate-100 text-slate-700 ring-slate-200'];
         $formatStatus = fn (string $status): array => $ticketStatuses[$status] ?? ['label' => $status, 'badge' => 'bg-slate-100 text-slate-700 ring-slate-200'];
+        $statusDotClass = fn (string $status): string => match ($status) {
+            'new' => 'bg-sky-500',
+            'in_progress' => 'bg-amber-500',
+            'pending_user' => 'bg-violet-500',
+            'reopen_requested' => 'bg-rose-500',
+            'closed' => 'bg-slate-500',
+            'clausurado' => 'bg-black',
+            default => 'bg-slate-400',
+        };
     @endphp
 
     <main class="mx-auto w-full max-w-7xl flex-1 px-6 py-6">
@@ -65,7 +74,7 @@
                                 aria-pressed="false"
                                 class="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-brand-secondary ring-1 ring-brand-secondary/10 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                             >
-                                <span class="h-2.5 w-2.5 rounded-full {{ str_contains($meta['badge'], 'sky') ? 'bg-sky-500' : (str_contains($meta['badge'], 'amber') ? 'bg-amber-500' : (str_contains($meta['badge'], 'violet') ? 'bg-violet-500' : 'bg-emerald-500')) }}"></span>
+                                <span class="h-2.5 w-2.5 rounded-full {{ $statusDotClass($status) }}"></span>
                                 {{ $meta['label'] }}
                             </button>
                         @endforeach
