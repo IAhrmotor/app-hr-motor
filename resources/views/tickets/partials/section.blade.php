@@ -98,7 +98,7 @@
                         $isUnassigned = blank($ticket->assigned_to_user_id);
                     @endphp
                     <tr
-                        class="rounded-2xl text-sm text-brand-secondary shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition hover:bg-slate-50 {{ $isUnassigned ? 'bg-amber-50/90 shadow-[inset_0_0_0_1px_rgba(217,119,6,0.14)] hover:bg-amber-50' : 'bg-slate-50/80' }}"
+                        class="rounded-2xl text-sm text-brand-secondary shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition {{ $isUnassigned ? 'bg-amber-50/90 shadow-[inset_0_0_0_1px_rgba(217,119,6,0.14)] hover:bg-amber-50/90' : 'bg-slate-50/80 hover:bg-slate-50' }}"
                         data-ticket-row
                         data-ticket-number="{{ strtolower($ticket->number) }}"
                         data-ticket-requester="{{ strtolower(trim(($ticket->user?->name ?? '') . ' ' . ($ticket->user?->email ?? ''))) }}"

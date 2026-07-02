@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ItTicket;
 use App\Models\ItTicketMessage;
+use App\Models\TicketActivityLog;
 use App\Models\User;
 use App\Notifications\ItTicketAssignedNotification;
 use App\Notifications\ItTicketMessageNotification;
+use App\Services\TicketActivityLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -58,7 +60,7 @@ class TicketsController extends Controller
 
         abort_unless($canViewTicket, 403);
 
-        $itTicket->load(['user', 'assignedTo', 'ticketTool', 'messages.author']);
+        $itTicket->load(['user', 'assignedTo', 'ticketTool', 'messages.author', 'activityLogs.actor']);
 
         return view('tickets.show', [
             'ticket' => $itTicket,
@@ -90,8 +92,11 @@ class TicketsController extends Controller
             ],
         ]);
 
-        $itTicket->priority = $validated['priority'];
+        $previousPriority = $itTicket->priority;
+        $previousStatus = $itTicket->status;
         $previousAssigneeId = $itTicket->assigned_to_user_id;
+
+        $itTicket->priority = $validated['priority'];
         $itTicket->assigned_to_user_id = (int) $validated['assigned_to_user_id'];
 
         if ($itTicket->status === 'new') {
@@ -100,12 +105,51 @@ class TicketsController extends Controller
 
         $itTicket->save();
 
+        $logger = app(TicketActivityLogger::class);
+
+        if ($previousPriority !== $itTicket->priority) {
+            $logger->record(
+                $request->user(),
+                $itTicket,
+                TicketActivityLog::EVENT_PRIORITY_CHANGED,
+                'Prioridad cambiada a ' . ($this->ticketPriorities()[$itTicket->priority]['label'] ?? $itTicket->priority),
+                [
+                    'previous_priority' => $previousPriority,
+                    'priority' => $itTicket->priority,
+                ]
+            );
+        }
+
         if ($previousAssigneeId !== $itTicket->assigned_to_user_id) {
             $assignedUser = User::query()->whereKey($itTicket->assigned_to_user_id)->first();
+
+            $logger->record(
+                $request->user(),
+                $itTicket,
+                TicketActivityLog::EVENT_ASSIGNED,
+                'Asignado a ' . ($assignedUser?->name ?? 'Sin asignar'),
+                [
+                    'previous_assigned_to_user_id' => $previousAssigneeId,
+                    'assigned_to_user_id' => $itTicket->assigned_to_user_id,
+                ]
+            );
 
             if ($assignedUser) {
                 Notification::send($assignedUser, new ItTicketAssignedNotification($itTicket, $request->user()));
             }
+        }
+
+        if ($previousStatus !== $itTicket->status) {
+            $logger->record(
+                $request->user(),
+                $itTicket,
+                TicketActivityLog::EVENT_STATUS_CHANGED,
+                'Estado cambiado a ' . ($this->ticketStatuses()[$itTicket->status]['label'] ?? $itTicket->status),
+                [
+                    'previous_status' => $previousStatus,
+                    'status' => $itTicket->status,
+                ]
+            );
         }
 
         return back()->with('success', 'El ticket se ha asignado correctamente.');
@@ -216,12 +260,25 @@ class TicketsController extends Controller
 
         DB::transaction(function () use ($request, $itTicket, $body, $attachments, $shouldCloseTicket): void {
             $replyingUserIsOwner = $request->user()->id === $itTicket->user_id;
+            $previousStatus = $itTicket->status;
+            $logger = app(TicketActivityLogger::class);
 
             $itTicket->messages()->create([
                 'user_id' => $request->user()->id,
                 'body' => $body !== '' ? $body : null,
                 'attachments' => ItTicketMessage::normalizeAttachments($attachments),
             ]);
+
+            $logger->record(
+                $request->user(),
+                $itTicket,
+                TicketActivityLog::EVENT_COMMENT_ADDED,
+                'Comentario añadido',
+                [
+                    'body' => $body !== '' ? $body : null,
+                    'attachments_count' => count($attachments),
+                ]
+            );
 
             if ($shouldCloseTicket) {
                 $itTicket->messages()->create([
@@ -233,18 +290,56 @@ class TicketsController extends Controller
                 $itTicket->status = 'closed';
                 $itTicket->save();
 
+                $logger->record(
+                    $request->user(),
+                    $itTicket,
+                    TicketActivityLog::EVENT_CLOSED,
+                    'Estado cambiado a Cerrado',
+                    [
+                        'previous_status' => $previousStatus,
+                        'status' => $itTicket->status,
+                    ]
+                );
+
                 return;
             }
 
             if ($replyingUserIsOwner) {
                 $itTicket->status = 'in_progress';
                 $itTicket->save();
+
+                if ($previousStatus !== $itTicket->status) {
+                    $logger->record(
+                        $request->user(),
+                        $itTicket,
+                        TicketActivityLog::EVENT_STATUS_CHANGED,
+                        'Estado cambiado a ' . ($this->ticketStatuses()[$itTicket->status]['label'] ?? $itTicket->status),
+                        [
+                            'previous_status' => $previousStatus,
+                            'status' => $itTicket->status,
+                        ]
+                    );
+                }
+
                 return;
             }
 
             if ($request->user()->id !== $itTicket->user_id) {
                 $itTicket->status = 'pending_user';
                 $itTicket->save();
+
+                if ($previousStatus !== $itTicket->status) {
+                    $logger->record(
+                        $request->user(),
+                        $itTicket,
+                        TicketActivityLog::EVENT_STATUS_CHANGED,
+                        'Estado cambiado a ' . ($this->ticketStatuses()[$itTicket->status]['label'] ?? $itTicket->status),
+                        [
+                            'previous_status' => $previousStatus,
+                            'status' => $itTicket->status,
+                        ]
+                    );
+                }
             }
         });
 
