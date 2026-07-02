@@ -32,6 +32,10 @@ return [
             'route' => 'curriculums.index',
         ],
         [
+            'label' => 'Tickets',
+            'route' => 'tickets.index',
+        ],
+        [
             'label' => 'Empresa',
             'children' => [
                 [
@@ -84,6 +88,10 @@ return [
             [
                 'label' => 'Agenda',
                 'route' => 'agenda.index',
+            ],
+            [
+                'label' => 'Tickets',
+                'route' => 'tickets.index',
             ],
             [
                 'label' => 'Chat',

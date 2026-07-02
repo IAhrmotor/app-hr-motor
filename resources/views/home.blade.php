@@ -81,7 +81,7 @@
                             </div>
 
                             <div class="{{ $isCallCenterHome ? '' : 'flex flex-1 items-center justify-center' }}">
-                                <a href="{{ $itSupportUrl }}" target="_blank" rel="noopener noreferrer"
+                                <a href="{{ $itSupportUrl }}"
                                     class="group relative flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-brand-primary/15 bg-white shadow-sm ring-1 ring-brand-primary/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
                                     <div class="absolute right-5 top-5 rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary ring-1 ring-brand-primary/10">
                                         Soporte

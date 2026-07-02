@@ -1,0 +1,174 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ItTicket;
+use App\Models\TicketTool;
+use App\Services\TicketActivityLogger;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+class ItTicketController extends Controller
+{
+    public function index(Request $request): View
+    {
+        return view('it-tickets.index', [
+            'heroImageUrl' => asset('images/hero/hero-tickets-it.webp'),
+            'tickets' => $this->ticketsForUser($request->user()->id),
+            'ticketStatuses' => $this->ticketStatuses(),
+            'ticketPriorities' => $this->ticketPriorities(),
+            'ticketTools' => $this->ticketTools(),
+        ]);
+    }
+
+    public function create(Request $request): View
+    {
+        return view('it-tickets.create', [
+            'ticketPriorities' => $this->ticketPriorities(),
+            'ticketTools' => $this->ticketTools(),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $ticketTools = $this->ticketTools();
+        $ticketPriorities = $this->ticketPriorities();
+
+        $validated = $request->validate([
+            'tool' => ['required', Rule::in(array_keys($ticketTools))],
+            'priority' => ['required', Rule::in(array_keys($ticketPriorities))],
+            'title' => ['required', 'string', 'max:120'],
+            'description' => ['required', 'string', 'max:5000'],
+            'screenshots' => ['nullable', 'array', 'max:4'],
+            'screenshots.*' => ['image', 'max:5120'],
+        ]);
+
+        $uploadedScreenshots = collect($request->file('screenshots', []))
+            ->map(function ($file): array {
+                $path = $file->storePublicly('it-tickets/screenshots', 'public');
+
+                return [
+                    'name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $ticket = ItTicket::query()->create([
+            'user_id' => $request->user()->id,
+            'ticket_tool_id' => (int) $validated['tool'],
+            'number' => 'IT-' . strtoupper(Str::random(6)),
+            'tool' => $ticketTools[$validated['tool']]['label'],
+            'priority' => $validated['priority'],
+            'status' => 'new',
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'screenshots' => $uploadedScreenshots,
+        ]);
+
+        app(TicketActivityLogger::class)->record(
+            $request->user(),
+            $ticket,
+            'created',
+            'Ticket creado',
+            [
+                'tool' => $ticket->tool,
+                'priority' => $ticket->priority,
+                'status' => $ticket->status,
+            ]
+        );
+
+        return redirect()
+            ->route('it-tickets.index')
+            ->with('success', 'La incidencia se ha preparado correctamente.');
+    }
+
+    private function ticketsForUser(int $userId)
+    {
+        return ItTicket::query()
+            ->with(['user', 'ticketTool'])
+            ->where('user_id', $userId)
+            ->orderByRaw(
+                "CASE status
+                    WHEN 'new' THEN 0
+                    WHEN 'in_progress' THEN 1
+                    WHEN 'pending_user' THEN 2
+                    WHEN 'closed' THEN 3
+                    ELSE 99
+                END"
+            )
+            ->orderByDesc('updated_at')
+            ->get();
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function ticketStatuses(): array
+    {
+        return [
+            'new' => [
+                'label' => 'Nuevo',
+                'badge' => 'bg-sky-50 text-sky-700 ring-sky-200',
+            ],
+            'in_progress' => [
+                'label' => 'En curso',
+                'badge' => 'bg-amber-50 text-amber-700 ring-amber-200',
+            ],
+            'pending_user' => [
+                'label' => 'Pendiente usuario',
+                'badge' => 'bg-violet-50 text-violet-700 ring-violet-200',
+            ],
+            'closed' => [
+                'label' => 'Cerrado',
+                'badge' => 'bg-slate-100 text-slate-700 ring-slate-200',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function ticketPriorities(): array
+    {
+        return [
+            'low' => [
+                'label' => 'Baja',
+                'badge' => 'bg-slate-100 text-slate-700 ring-slate-200',
+            ],
+            'medium' => [
+                'label' => 'Media',
+                'badge' => 'bg-blue-50 text-blue-700 ring-blue-200',
+            ],
+            'high' => [
+                'label' => 'Alta',
+                'badge' => 'bg-orange-50 text-orange-700 ring-orange-200',
+            ],
+            'urgent' => [
+                'label' => 'Urgente',
+                'badge' => 'bg-rose-50 text-rose-700 ring-rose-200',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function ticketTools(): array
+    {
+        return TicketTool::query()
+            ->ordered()
+            ->get()
+            ->mapWithKeys(fn (TicketTool $tool): array => [
+                (string) $tool->id => [
+                    'label' => $tool->name,
+                    'color' => $tool->color,
+                ],
+            ])
+            ->all();
+    }
+}
