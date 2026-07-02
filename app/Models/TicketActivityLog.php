@@ -14,9 +14,11 @@ class TicketActivityLog extends Model
     public const EVENT_ASSIGNED = 'assigned';
     public const EVENT_COMMENT_ADDED = 'comment_added';
     public const EVENT_STATUS_CHANGED = 'status_changed';
-    public const EVENT_PRIORITY_CHANGED = 'priority_changed';
     public const EVENT_TOOL_CHANGED = 'tool_changed';
     public const EVENT_CLOSED = 'closed';
+    public const EVENT_REOPEN_REQUESTED = 'reopen_requested';
+    public const EVENT_REOPENED = 'reopened';
+    public const EVENT_PERMANENTLY_CLOSED = 'permanently_closed';
 
     protected $fillable = [
         'it_ticket_id',
@@ -52,9 +54,11 @@ class TicketActivityLog extends Model
             self::EVENT_ASSIGNED => 'Asignado',
             self::EVENT_COMMENT_ADDED => 'Comentario añadido',
             self::EVENT_STATUS_CHANGED => 'Estado cambiado',
-            self::EVENT_PRIORITY_CHANGED => 'Prioridad cambiada',
             self::EVENT_TOOL_CHANGED => 'Tipo de incidencia cambiada',
             self::EVENT_CLOSED => 'Cerrado',
+            self::EVENT_REOPEN_REQUESTED => 'Reapertura solicitada',
+            self::EVENT_REOPENED => 'Reabierto',
+            self::EVENT_PERMANENTLY_CLOSED => 'Clausurado',
             default => ucfirst((string) $this->event),
         };
     }
