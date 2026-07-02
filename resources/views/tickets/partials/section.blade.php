@@ -77,9 +77,9 @@
         <table class="min-w-full border-separate border-spacing-y-3">
             <thead>
                 <tr class="text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">
-                    <th class="px-3 py-2">Ticket</th>
+                    <th class="w-[8.5rem] px-3 py-2">Ticket</th>
                     <th class="px-3 py-2">Solicitante</th>
-                    <th class="px-3 py-2">Herramienta</th>
+                    <th class="px-3 py-2">Tipo</th>
                     <th class="px-3 py-2">Prioridad</th>
                     <th class="px-3 py-2">Estado</th>
                     @if ($isManaged)
@@ -106,14 +106,13 @@
                         data-ticket-status="{{ $ticket->status }}"
                         data-ticket-priority="{{ $ticket->priority }}"
                     >
-                        <td class="rounded-l-2xl px-3 py-4 font-semibold">
+                        <td class="w-[8.5rem] rounded-l-2xl px-3 py-4 font-semibold">
                             <a href="{{ route('tickets.show', $ticket) }}" class="transition hover:text-brand-primary">
                                 {{ $ticket->number }}
                             </a>
                         </td>
                         <td class="px-3 py-4">
                             <div class="font-medium">{{ $ticket->user?->name ?? 'Sin nombre' }}</div>
-                            <div class="mt-1 text-xs text-brand-secondary/55">{{ $ticket->user?->email }}</div>
                         </td>
                         <td class="px-3 py-4">
                             <div class="flex items-center gap-2 font-medium">

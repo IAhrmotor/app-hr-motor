@@ -8,6 +8,8 @@
         $conversationMessagesCount = $messages->count() + 1;
         $activityLogs = $ticket->activityLogs ?? collect();
         $isVisibleItRole = app_visible_role(auth()->user()) === \App\Models\User::ROLE_INFORMATION_TECHNOLOGY;
+        $currentToolKey = filled($ticket->ticket_tool_id) ? (string) $ticket->ticket_tool_id : '';
+        $currentToolLabel = $ticket->ticketTool?->name ?? $ticket->tool ?? '';
         $isClosed = $ticket->status === 'closed';
         $ticketOpeningAttachments = collect($ticket->screenshots ?? []);
     @endphp
@@ -20,9 +22,9 @@
         class="mx-auto w-full max-w-7xl flex-1 px-6 py-8 lg:px-8"
     >
         <div class="space-y-6">
-            <section class="overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white shadow-sm">
+            <section class="overflow-visible rounded-[2rem] border border-brand-secondary/10 bg-white shadow-sm">
                 <div
-                    class="relative bg-cover bg-no-repeat px-6 py-8 sm:px-8 sm:py-10"
+                    class="relative overflow-hidden rounded-[2rem] bg-cover bg-no-repeat px-6 py-8 sm:px-8 sm:py-10"
                     style="background-image: url('{{ asset('images/hero/hero-interior-ticket.webp') }}'); background-position: center 68%;"
                 >
                     <div class="absolute inset-0 bg-slate-950/70"></div>
@@ -55,33 +57,97 @@
 
                         <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
                             <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                                <div class="rounded-[1.25rem] bg-white/10 px-4 py-4 text-white backdrop-blur-sm ring-1 ring-white/10">
-                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Herramienta</dt>
-                                    <dd class="mt-2 text-base font-semibold text-white sm:text-lg">
-                                        <span class="inline-flex items-center gap-2">
-                                            <span class="h-2.5 w-2.5 rounded-full" style="background-color: {{ $ticket->ticketTool?->color ?? '#1d4ed8' }}"></span>
-                                            <span>{{ $ticket->ticketTool?->name ?? $ticket->tool }}</span>
-                                        </span>
+                                <div class="relative z-40 rounded-[1.25rem] border border-white/18 bg-slate-950/30 px-4 py-4 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] backdrop-blur-md ring-1 ring-white/10">
+                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Tipo de incidencia</dt>
+                                    <dd class="mt-2 text-lg font-semibold text-white sm:text-xl">
+                                        @if ($canUpdateTicketTool)
+                                            <form
+                                                method="POST"
+                                                action="{{ route('tickets.tool.update', $ticket) }}"
+                                                class="relative z-50"
+                                                x-data="itTicketToolSelector(@js($ticketTools), @js($currentToolKey), @js($currentToolLabel))"
+                                                @click.outside="open = false"
+                                                @keydown.escape.window="open = false"
+                                                x-ref="toolForm"
+                                            >
+                                                @csrf
+                                                <input type="hidden" name="ticket_tool_id" :value="selected">
+
+                                                <div class="relative">
+                                                    <input
+                                                        type="text"
+                                                        x-model="query"
+                                                        @focus="open = true"
+                                                        @click="open = true"
+                                                        @input="open = true; clearSelection()"
+                                                        @blur="syncQuery()"
+                                                        @keydown.enter.prevent="if (filteredOptions.length) { select(filteredOptions[0][0]); $nextTick(() => $refs.toolForm.requestSubmit()); }"
+                                                        placeholder="Selecciona un tipo de incidencia"
+                                                        autocomplete="off"
+                                                        aria-label="Cambiar tipo de incidencia"
+                                                        class="flex w-full items-center justify-between gap-3 rounded-[1rem] border border-white/15 bg-white/15 px-3 py-2 pr-10 text-left text-white placeholder:text-white/55 transition hover:cursor-text hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                                                    >
+
+                                                    <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                        <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                    </svg>
+                                                </div>
+
+                                                <div
+                                                    x-cloak
+                                                    x-show="open"
+                                                    x-transition
+                                                    class="absolute bottom-full left-0 right-0 z-[999] mb-2 overflow-hidden rounded-[1.25rem] border border-white/15 bg-white text-brand-secondary shadow-2xl"
+                                                >
+                                                    <div class="flex max-h-72 flex-col overflow-hidden">
+                                                        <div class="order-1 max-h-[15.5rem] overflow-auto">
+                                                            <template x-for="option in filteredOptions" :key="option[0]">
+                                                                <button
+                                                                    type="button"
+                                                                    @click="select(option[0]); $nextTick(() => $refs.toolForm.requestSubmit())"
+                                                                    class="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm transition last:border-b-0 hover:bg-slate-50"
+                                                                >
+                                                                    <span
+                                                                        class="mt-0.5 inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
+                                                                        :style="`background-color: ${option[1].color || '#1d4ed8'}`"
+                                                                    ></span>
+                                                                    <span class="block font-medium text-brand-secondary" x-text="option[1].label"></span>
+                                                                </button>
+                                                            </template>
+
+                                                            <div x-show="filteredOptions.length === 0" class="px-4 py-3 text-sm text-brand-secondary/60">
+                                                                No hay coincidencias.
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        @else
+                                            <span class="inline-flex items-center gap-2">
+                                                <span class="h-2.5 w-2.5 rounded-full" style="background-color: {{ $ticket->ticketTool?->color ?? '#1d4ed8' }}"></span>
+                                                <span>{{ $ticket->ticketTool?->name ?? $ticket->tool }}</span>
+                                            </span>
+                                        @endif
                                     </dd>
                                 </div>
 
-                                <div class="rounded-[1.25rem] bg-white/10 px-4 py-4 text-white backdrop-blur-sm ring-1 ring-white/10">
-                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Solicitante</dt>
-                                    <dd class="mt-2 text-base font-semibold text-white sm:text-lg">
+                                <div class="rounded-[1.25rem] border border-white/18 bg-slate-950/30 px-4 py-4 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] backdrop-blur-md ring-1 ring-white/10">
+                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Solicitante</dt>
+                                    <dd class="mt-2 text-lg font-semibold text-white sm:text-xl">
                                         {{ $ticket->user?->name ?? 'Sin nombre' }}
                                     </dd>
                                 </div>
 
-                                <div class="rounded-[1.25rem] bg-white/10 px-4 py-4 text-white backdrop-blur-sm ring-1 ring-white/10">
-                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Asignado a</dt>
-                                    <dd class="mt-2 text-base font-semibold text-white sm:text-lg">
+                                <div class="rounded-[1.25rem] border border-white/18 bg-slate-950/30 px-4 py-4 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] backdrop-blur-md ring-1 ring-white/10">
+                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Asignado a</dt>
+                                    <dd class="mt-2 text-lg font-semibold text-white sm:text-xl">
                                         {{ $ticket->assignedTo?->name ?? 'Sin asignar' }}
                                     </dd>
                                 </div>
 
-                                <div class="rounded-[1.25rem] bg-white/10 px-4 py-4 text-white backdrop-blur-sm ring-1 ring-white/10">
-                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Actualizado</dt>
-                                    <dd class="mt-2 text-base font-semibold text-white sm:text-lg">
+                                <div class="rounded-[1.25rem] border border-white/18 bg-slate-950/30 px-4 py-4 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] backdrop-blur-md ring-1 ring-white/10">
+                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Actualizado</dt>
+                                    <dd class="mt-2 text-lg font-semibold text-white sm:text-xl">
                                         {{ $ticket->updated_at?->format('d/m/Y H:i') }}
                                     </dd>
                                 </div>
@@ -108,11 +174,16 @@
                             </span>
                         </div>
 
-                        <div class="mt-5 flex-1 space-y-3 overflow-y-auto pr-2">
+                        <div
+                            x-ref="ticketThread"
+                            x-init="$nextTick(() => { if ($refs.ticketThread) { $refs.ticketThread.scrollTop = $refs.ticketThread.scrollHeight; } })"
+                            class="mt-5 flex-1 space-y-3 overflow-y-auto pr-2"
+                        >
                             @php
                                 $openingAttachments = $ticketOpeningAttachments;
                                 $openingIsMine = (int) ($ticket->user_id ?? 0) === (int) auth()->id();
                                 $openingAlignClass = $openingIsMine ? 'justify-end' : 'justify-start';
+                                $openingStackClass = $openingIsMine ? 'items-end' : 'items-start';
                                 $openingToneClass = $openingIsMine
                                     ? 'bg-[#d9fdd3] text-slate-800 shadow-sm'
                                     : 'border border-slate-200 bg-white text-brand-secondary shadow-sm';
@@ -120,8 +191,8 @@
                             @endphp
 
                             <div class="flex {{ $openingAlignClass }}">
-                                <div class="flex w-fit max-w-[82%] min-w-0 flex-col">
-                                    <div class="group relative min-w-[5.5rem] max-w-full overflow-x-hidden rounded-[1.1rem] px-4 py-3 {{ $openingToneClass }}">
+                                <div class="flex w-fit max-w-[82%] min-w-0 flex-col {{ $openingStackClass }}">
+                                    <div class="relative inline-flex w-fit max-w-full flex-col items-start overflow-x-hidden rounded-[1.1rem] px-4 pt-2.5 pb-3 {{ $openingToneClass }}">
                                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                             <span class="text-[11px] font-semibold uppercase tracking-[0.16em] {{ $openingIsMine ? 'text-slate-700' : 'text-brand-secondary' }}">
                                                 {{ $ticket->user?->name ?? 'Usuario' }}
@@ -131,9 +202,7 @@
                                             </span>
                                         </div>
 
-                                        <p class="mt-2 whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.45]">
-                                            {{ $ticket->description }}
-                                        </p>
+                                        <div class="mt-1.5 inline-block w-fit max-w-full whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.25]">{{ $ticket->description }}</div>
 
                                         @if ($openingAttachments->isNotEmpty())
                                             <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -170,6 +239,7 @@
                                     $isTicketOwnerMessage = $message->user_id === $ticket->user_id;
                                     $isMineMessage = (int) $message->user_id === (int) auth()->id();
                                     $messageAlignClass = $isMineMessage ? 'justify-end' : 'justify-start';
+                                    $messageStackClass = $isMineMessage ? 'items-end' : 'items-start';
                                     $messageToneClass = $isMineMessage
                                         ? 'bg-[#d9fdd3] text-slate-800 shadow-sm'
                                         : 'border border-slate-200 bg-white text-brand-secondary shadow-sm';
@@ -177,8 +247,8 @@
                                 @endphp
 
                                 <div class="flex {{ $messageAlignClass }}">
-                                    <div class="flex w-fit max-w-[82%] min-w-0 flex-col">
-                                        <div class="group relative min-w-[5.5rem] max-w-full overflow-x-hidden rounded-[1.1rem] px-4 py-3 {{ $messageToneClass }}">
+                                    <div class="flex w-fit max-w-[82%] min-w-0 flex-col {{ $messageStackClass }}">
+                                        <div class="relative inline-flex w-fit max-w-full flex-col items-start overflow-x-hidden rounded-[1.1rem] px-4 pt-2.5 pb-3 {{ $messageToneClass }}">
                                             <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                                 <span class="text-[11px] font-semibold uppercase tracking-[0.16em] {{ $isMineMessage ? 'text-slate-700' : 'text-brand-secondary' }}">
                                                     {{ $message->author?->name ?? 'Usuario' }}
@@ -189,9 +259,7 @@
                                             </div>
 
                                             @if (filled($message->body))
-                                                <p class="mt-2 whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.45]">
-                                                    {{ $message->body }}
-                                                </p>
+                                                <div class="mt-1.5 inline-block w-fit max-w-full whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.25]">{{ $message->body }}</div>
                                             @endif
 
                                             @if ($messageAttachments->isNotEmpty())
@@ -312,7 +380,11 @@
                         </span>
                     </div>
 
-                    <div class="relative mt-5 flex-1 space-y-4 overflow-y-auto pl-4 pr-2 before:absolute before:left-2 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-brand-primary/30 before:via-brand-secondary/10 before:to-transparent">
+                    <div
+                        x-ref="ticketLog"
+                        x-init="$nextTick(() => { if ($refs.ticketLog) { $refs.ticketLog.scrollTop = $refs.ticketLog.scrollHeight; } })"
+                        class="relative mt-5 flex-1 space-y-4 overflow-y-auto pl-4 pr-2 before:absolute before:left-2 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-brand-primary/30 before:via-brand-secondary/10 before:to-transparent"
+                    >
                         @forelse ($activityLogs as $activity)
                             @php
                                 $eventPillClass = match ($activity->event) {
@@ -321,6 +393,7 @@
                                     'comment_added' => 'bg-violet-50 text-violet-700 ring-violet-200',
                                     'status_changed' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
                                     'priority_changed' => 'bg-orange-50 text-orange-700 ring-orange-200',
+                                    'tool_changed' => 'bg-cyan-50 text-cyan-700 ring-cyan-200',
                                     'closed' => 'bg-slate-100 text-slate-700 ring-slate-200',
                                     default => 'bg-slate-100 text-slate-700 ring-slate-200',
                                 };
@@ -330,6 +403,7 @@
                                     'comment_added' => 'bg-violet-500',
                                     'status_changed' => 'bg-emerald-500',
                                     'priority_changed' => 'bg-orange-500',
+                                    'tool_changed' => 'bg-cyan-500',
                                     'closed' => 'bg-slate-500',
                                     default => 'bg-brand-primary',
                                 };
@@ -339,6 +413,7 @@
                                     'comment_added' => 'border-violet-200/70 bg-violet-50/60',
                                     'status_changed' => 'border-emerald-200/70 bg-emerald-50/60',
                                     'priority_changed' => 'border-orange-200/70 bg-orange-50/60',
+                                    'tool_changed' => 'border-cyan-200/70 bg-cyan-50/60',
                                     'closed' => 'border-slate-200 bg-slate-50/70',
                                     default => 'border-brand-secondary/10 bg-slate-50/80',
                                 };

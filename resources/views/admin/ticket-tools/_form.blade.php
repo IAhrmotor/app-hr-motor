@@ -19,7 +19,7 @@
         @endif
 
         <div class="rounded-[1.75rem] border border-brand-secondary/10 bg-slate-50/80 p-5">
-            <label for="name" class="mb-2 block text-sm font-semibold text-brand-secondary">Nombre de la herramienta</label>
+            <label for="name" class="mb-2 block text-sm font-semibold text-brand-secondary">Nombre del tipo de incidencia</label>
             <input id="name" type="text" name="name" x-model="name" value="{{ $initialName }}"
                 placeholder="Ej. Salesforce"
                 class="w-full rounded-2xl border border-brand-secondary/15 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
@@ -68,10 +68,10 @@
             <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm"
                 :style="`background-color: ${color}`">
                 <span class="h-2.5 w-2.5 rounded-full bg-white/70"></span>
-                <span x-text="name || 'Nombre de la herramienta'"></span>
+                <span x-text="name || 'Nombre del tipo de incidencia'"></span>
             </span>
             <p class="mt-3 text-sm text-brand-secondary/70">
-                Así se verá la herramienta en el portal de incidencias.
+                Así se verá el tipo de incidencia en el portal.
             </p>
         </div>
     </aside>

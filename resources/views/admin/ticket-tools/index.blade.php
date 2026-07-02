@@ -13,9 +13,9 @@
                             <x-icons.ticket-tools class="h-6 w-6" />
                         </div>
                         <div>
-                            <h1 class="text-3xl font-bold tracking-tight text-brand-secondary md:text-4xl">Herramientas tickets</h1>
+                            <h1 class="text-3xl font-bold tracking-tight text-brand-secondary md:text-4xl">Tipos de incidencia</h1>
                             <p class="mt-1 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                                Gestiona las herramientas disponibles en el portal de incidencias con nombre y color.
+                                Gestiona los tipos de incidencia disponibles en el portal con nombre y color.
                             </p>
                         </div>
                     </div>
@@ -23,7 +23,7 @@
 
                 <a href="{{ route('admin.ticket-tools.create') }}"
                     class="inline-flex items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90">
-                    Crear herramienta
+                    Crear tipo
                 </a>
             </div>
 
@@ -50,7 +50,7 @@
                                     class="inline-flex items-center rounded-xl border border-brand-secondary/15 px-3 py-2 text-xs font-semibold text-brand-secondary transition hover:bg-white">
                                     Editar
                                 </a>
-                                <form method="POST" action="{{ route('admin.ticket-tools.destroy', $tool) }}" onsubmit="return confirm('¿Seguro que quieres eliminar esta herramienta?');">
+                                <form method="POST" action="{{ route('admin.ticket-tools.destroy', $tool) }}" onsubmit="return confirm('¿Seguro que quieres eliminar este tipo de incidencia?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
@@ -64,7 +64,7 @@
                 @empty
                     <div class="md:col-span-2 xl:col-span-3">
                         <div class="rounded-[1.5rem] border border-dashed border-brand-secondary/20 bg-slate-50 px-6 py-12 text-center">
-                            <h2 class="text-xl font-bold tracking-tight text-brand-secondary">Todavía no hay herramientas</h2>
+                            <h2 class="text-xl font-bold tracking-tight text-brand-secondary">Todavía no hay tipos de incidencia</h2>
                             <p class="mt-2 text-sm text-brand-secondary/70">Crea la primera para que aparezca en el formulario de incidencias.</p>
                         </div>
                     </div>

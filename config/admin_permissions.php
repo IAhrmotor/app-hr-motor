@@ -59,6 +59,7 @@ return [
             'description' => 'Crea, edita y elimina las herramientas que se muestran al abrir una incidencia.',
             'route' => 'admin.ticket-tools.index',
             'icon' => 'ticket-tools',
+            'hide_from_admin_panel' => true,
             'default_roles' => [
                 User::ROLE_ADMIN,
                 User::ROLE_MANAGER,
@@ -67,7 +68,7 @@ return [
         'tickets-it.manage' => [
             'label' => 'Gestionar tickets IT',
             'description' => 'Permite ver todos los tickets, asignarlos y gestionar el equipo de informática.',
-            'route' => 'tickets.index',
+            'route' => 'admin.ticket-tools.index',
             'icon' => 'ticket-tools',
             'default_roles' => [
                 User::ROLE_ADMIN,

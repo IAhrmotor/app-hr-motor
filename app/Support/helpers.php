@@ -431,6 +431,10 @@ if (! function_exists('app_admin_visible_sections')) {
             }
 
             if ($isAdminViewerMode || app_user_has_admin_permission($user, $permissionKey)) {
+                if (! empty($definition['hide_from_admin_panel'])) {
+                    continue;
+                }
+
                 $sections[] = [
                     'label' => $definition['label'],
                     'description' => $definition['description'],
