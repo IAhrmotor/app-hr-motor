@@ -174,12 +174,24 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets/{itTicket}/tool', [TicketsController::class, 'updateTool'])
         ->whereNumber('itTicket')
         ->name('tickets.tool.update');
+    Route::post('/tickets/{itTicket}/priority', [TicketsController::class, 'updatePriority'])
+        ->whereNumber('itTicket')
+        ->name('tickets.priority.update');
     Route::post('/tickets/{itTicket}/assign', [TicketsController::class, 'assign'])
         ->whereNumber('itTicket')
         ->name('tickets.assign');
     Route::post('/tickets/{itTicket}/mensajes', [TicketsController::class, 'reply'])
         ->whereNumber('itTicket')
         ->name('tickets.messages.store');
+    Route::post('/tickets/{itTicket}/reapertura', [TicketsController::class, 'requestReopen'])
+        ->whereNumber('itTicket')
+        ->name('tickets.reopen.request');
+    Route::post('/tickets/{itTicket}/reabrir', [TicketsController::class, 'reopen'])
+        ->whereNumber('itTicket')
+        ->name('tickets.reopen');
+    Route::post('/tickets/{itTicket}/clausurar', [TicketsController::class, 'permanentlyClose'])
+        ->whereNumber('itTicket')
+        ->name('tickets.permanently-close');
     Route::get('/incidencias-it', [ItTicketController::class, 'index'])->name('it-tickets.index');
     Route::get('/incidencias-it/crear', [ItTicketController::class, 'create'])->name('it-tickets.create');
     Route::post('/incidencias-it', [ItTicketController::class, 'store'])->name('it-tickets.store');

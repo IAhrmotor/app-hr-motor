@@ -96,9 +96,19 @@
                         $statusMeta = $ticketStatuses[$ticket->status] ?? ['label' => $ticket->status, 'badge' => 'bg-slate-100 text-slate-700 ring-slate-200'];
                         $priorityMeta = $ticketPriorities[$ticket->priority] ?? ['label' => $ticket->priority, 'badge' => 'bg-slate-100 text-slate-700 ring-slate-200'];
                         $isUnassigned = blank($ticket->assigned_to_user_id);
+                        $reopenReason = $ticket->messages?->last()?->body ?? 'El usuario no ha dejado un motivo visible.';
+                        $rowToneClass = match ($ticket->status) {
+                            'reopen_requested' => 'bg-rose-50/90 shadow-[inset_0_0_0_1px_rgba(251,113,133,0.18)] hover:bg-rose-50/90',
+                            'new' => $isUnassigned
+                                ? 'bg-amber-50/90 shadow-[inset_0_0_0_1px_rgba(217,119,6,0.14)] hover:bg-amber-50/90'
+                                : 'bg-slate-50/80 hover:bg-slate-50',
+                            default => $isUnassigned
+                                ? 'bg-amber-50/90 shadow-[inset_0_0_0_1px_rgba(217,119,6,0.14)] hover:bg-amber-50/90'
+                                : 'bg-slate-50/80 hover:bg-slate-50',
+                        };
                     @endphp
                     <tr
-                        class="rounded-2xl text-sm text-brand-secondary shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition {{ $isUnassigned ? 'bg-amber-50/90 shadow-[inset_0_0_0_1px_rgba(217,119,6,0.14)] hover:bg-amber-50/90' : 'bg-slate-50/80 hover:bg-slate-50' }}"
+                        class="rounded-2xl text-sm text-brand-secondary shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)] transition {{ $rowToneClass }}"
                         data-ticket-row
                         data-ticket-number="{{ strtolower($ticket->number) }}"
                         data-ticket-requester="{{ strtolower(trim(($ticket->user?->name ?? '') . ' ' . ($ticket->user?->email ?? ''))) }}"
@@ -125,33 +135,178 @@
                         </td>
                         <td class="px-3 py-4">
                             <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $statusMeta['badge'] }}">{{ $statusMeta['label'] }}</span>
+                            @if ($ticket->status === 'reopen_requested')
+                                <div x-data="{ reasonOpen: false }" class="mt-2">
+                                    <button
+                                        type="button"
+                                        @click="reasonOpen = true"
+                                        class="inline-flex items-center justify-center rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                                    >
+                                        Ver motivo
+                                    </button>
+
+                                    <div
+                                        x-cloak
+                                        x-show="reasonOpen"
+                                        x-transition.opacity
+                                        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm"
+                                        @click.self="reasonOpen = false"
+                                    >
+                                        <div class="w-full max-w-xl rounded-[2rem] bg-white p-6 shadow-2xl">
+                                            <div class="flex items-start justify-between gap-4 border-b border-brand-secondary/10 pb-4">
+                                                <div>
+                                                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-600">Motivo de reapertura</p>
+                                                    <h3 class="mt-1 text-xl font-bold tracking-tight text-brand-secondary">Lo que pidió el usuario</h3>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    @click="reasonOpen = false"
+                                                    class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                                                    aria-label="Cerrar motivo"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+
+                                            <div class="mt-5 whitespace-pre-line break-words rounded-[1.35rem] border border-rose-100 bg-rose-50/60 px-4 py-4 text-sm leading-6 text-brand-secondary">
+                                                {{ $reopenReason }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                         </td>
                         @if ($isManaged)
                             <td class="px-3 py-4">
                                 <div class="text-sm font-medium">{{ $ticket->assignedTo?->name ?? 'Sin asignar' }}</div>
                             </td>
                             <td class="rounded-r-2xl px-3 py-4">
-                                <form method="POST" action="{{ route('tickets.assign', $ticket) }}" class="flex flex-col gap-2">
-                                    @csrf
-                                    <select name="priority" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
-                                        @foreach ($ticketPriorities as $priorityKey => $priorityMetaOption)
-                                            <option value="{{ $priorityKey }}" @selected($ticket->priority === $priorityKey)>
-                                                Prioridad: {{ $priorityMetaOption['label'] }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <select name="assigned_to_user_id" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
-                                        <option value="">Selecciona responsable</option>
-                                        @foreach ($assignableUsers as $user)
-                                            <option value="{{ $user['id'] }}" @selected($ticket->assigned_to_user_id === $user['id'])>
-                                                {{ $user['name'] }} - {{ $user['email'] }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-brand-secondary px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-primary">
-                                        Asignar
-                                    </button>
-                                </form>
+                                @if ($ticket->status === 'reopen_requested')
+                                    <div x-data="{ closeReasonOpen: false }" class="flex flex-col gap-3">
+                                        <form method="POST" action="{{ route('tickets.reopen', $ticket) }}" class="flex flex-col gap-2">
+                                            @csrf
+                                            <select name="priority" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
+                                                @foreach ($ticketPriorities as $priorityKey => $priorityMetaOption)
+                                                    <option value="{{ $priorityKey }}" @selected($ticket->priority === $priorityKey)>
+                                                        Prioridad: {{ $priorityMetaOption['label'] }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <select name="assigned_to_user_id" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
+                                                <option value="">Selecciona responsable</option>
+                                                @foreach ($assignableUsers as $user)
+                                                    <option value="{{ $user['id'] }}" @selected($ticket->assigned_to_user_id === $user['id'])>
+                                                        {{ $user['name'] }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <div class="flex items-center gap-2">
+                                                <button type="submit" class="inline-flex flex-1 items-center justify-center rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500">
+                                                    Reabrir
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    @click="closeReasonOpen = true"
+                                                    class="inline-flex flex-1 items-center justify-center rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                                >
+                                                    Clausurar
+                                                </button>
+                                            </div>
+                                        </form>
+
+                                        <div
+                                            x-cloak
+                                            x-show="closeReasonOpen"
+                                            x-transition.opacity
+                                            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm"
+                                            @click.self="closeReasonOpen = false"
+                                        >
+                                            <div class="w-full max-w-xl rounded-[2rem] bg-white p-6 shadow-2xl">
+                                                <div class="flex items-start justify-between gap-4 border-b border-brand-secondary/10 pb-4">
+                                                    <div>
+                                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Clausurar definitivamente</p>
+                                                        <h3 class="mt-1 text-xl font-bold tracking-tight text-brand-secondary">Escribe el motivo</h3>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        @click="closeReasonOpen = false"
+                                                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                                                        aria-label="Cerrar modal"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+
+                                                <form method="POST" action="{{ route('tickets.permanently-close', $ticket) }}" class="mt-5 space-y-4">
+                                                    @csrf
+                                                    <div>
+                                                        <label for="ticket-close-reason-{{ $ticket->id }}" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/50">
+                                                            Motivo de clausura definitiva
+                                                        </label>
+                                                        <textarea
+                                                            id="ticket-close-reason-{{ $ticket->id }}"
+                                                            name="reason"
+                                                            rows="5"
+                                                            required
+                                                            placeholder="Explica por qué este ticket se clausura definitivamente..."
+                                                            class="mt-2 w-full rounded-[1.1rem] border border-slate-200 bg-white px-4 py-3 text-sm text-brand-secondary outline-none transition placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15"
+                                                        >{{ old('reason') }}</textarea>
+                                                    </div>
+
+                                                    <div class="flex flex-wrap justify-end gap-3">
+                                                        <button
+                                                            type="button"
+                                                            @click="closeReasonOpen = false"
+                                                            class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-brand-secondary transition hover:bg-slate-50"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+
+                                                        <button
+                                                            type="submit"
+                                                            class="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                                        >
+                                                            Clausurar definitivamente
+                                                        </button>
+                                                    </div>
+
+                                                    @error('reason')
+                                                        <p class="text-sm text-red-600">{{ $message }}</p>
+                                                    @enderror
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @else
+                                    <form method="POST" action="{{ route('tickets.assign', $ticket) }}" class="flex flex-col gap-2">
+                                        @csrf
+                                        <select name="priority" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
+                                            @foreach ($ticketPriorities as $priorityKey => $priorityMetaOption)
+                                                <option value="{{ $priorityKey }}" @selected($ticket->priority === $priorityKey)>
+                                                    Prioridad: {{ $priorityMetaOption['label'] }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <select name="assigned_to_user_id" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
+                                            <option value="">Selecciona responsable</option>
+                                            @foreach ($assignableUsers as $user)
+                                                <option value="{{ $user['id'] }}" @selected($ticket->assigned_to_user_id === $user['id'])>
+                                                    {{ $user['name'] }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-brand-secondary px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-primary">
+                                            Asignar
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         @else
                             <td class="rounded-r-2xl px-3 py-4">

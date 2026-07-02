@@ -33,14 +33,14 @@ class ItTicket extends Model
     {
         return Attribute::make(
             get: function (?string $value, array $attributes): string {
-                if (empty($attributes['assigned_to_user_id'])) {
+                if (empty($attributes['assigned_to_user_id']) && in_array($value, [null, '', 'new'], true)) {
                     return 'new';
                 }
 
                 return $value === 'resolved' ? 'closed' : ($value ?? 'new');
             },
             set: function (?string $value, array $attributes): string {
-                if (empty($attributes['assigned_to_user_id'])) {
+                if (empty($attributes['assigned_to_user_id']) && in_array($value, [null, '', 'new'], true)) {
                     return 'new';
                 }
 
