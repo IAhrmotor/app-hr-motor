@@ -43,7 +43,7 @@
                                 Antes de enviar
                             </p>
                             <ul class="mt-4 space-y-3 text-sm leading-6 text-white/80">
-                                <li>1. Elige la herramienta correcta para que llegue al equipo adecuado.</li>
+                                <li>1. Elige el tipo de incidencia correcto para que llegue al equipo adecuado.</li>
                                 <li>2. Marca la prioridad real del problema.</li>
                                 <li>3. Añade capturas si ayudan a entender el fallo.</li>
                             </ul>

@@ -16,7 +16,7 @@
         @keydown.escape.window="open = false"
     >
         <label for="tool-search" class="text-sm font-semibold text-brand-secondary">
-            Herramienta
+            Tipo de incidencia
         </label>
 
         <input type="hidden" name="tool" :value="selected">
@@ -30,7 +30,7 @@
                 @input="open = true; clearSelection()"
                 @blur="syncQuery()"
                 @keydown.enter.prevent="if (filteredOptions.length) { select(filteredOptions[0][0]); }"
-                placeholder="Busca y selecciona una herramienta"
+                placeholder="Busca y selecciona un tipo de incidencia"
                 autocomplete="off"
                 class="w-full rounded-2xl border border-brand-secondary/15 bg-white px-4 py-3 pr-10 text-sm outline-none transition placeholder:text-brand-secondary/35 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             >
@@ -39,7 +39,7 @@
                 type="button"
                 @click="open = !open"
                 class="absolute inset-y-0 right-0 flex items-center px-4 text-brand-secondary/45 transition hover:text-brand-secondary"
-                aria-label="Abrir selector de herramientas"
+                aria-label="Abrir selector de tipos de incidencia"
             >
                 <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                     <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />

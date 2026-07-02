@@ -15,6 +15,7 @@ class TicketActivityLog extends Model
     public const EVENT_COMMENT_ADDED = 'comment_added';
     public const EVENT_STATUS_CHANGED = 'status_changed';
     public const EVENT_PRIORITY_CHANGED = 'priority_changed';
+    public const EVENT_TOOL_CHANGED = 'tool_changed';
     public const EVENT_CLOSED = 'closed';
 
     protected $fillable = [
@@ -52,6 +53,7 @@ class TicketActivityLog extends Model
             self::EVENT_COMMENT_ADDED => 'Comentario añadido',
             self::EVENT_STATUS_CHANGED => 'Estado cambiado',
             self::EVENT_PRIORITY_CHANGED => 'Prioridad cambiada',
+            self::EVENT_TOOL_CHANGED => 'Tipo de incidencia cambiada',
             self::EVENT_CLOSED => 'Cerrado',
             default => ucfirst((string) $this->event),
         };
