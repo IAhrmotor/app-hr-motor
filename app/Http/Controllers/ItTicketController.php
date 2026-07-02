@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ItTicket;
 use App\Models\TicketTool;
+use App\Services\TicketActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -57,7 +58,7 @@ class ItTicketController extends Controller
             ->values()
             ->all();
 
-        ItTicket::query()->create([
+        $ticket = ItTicket::query()->create([
             'user_id' => $request->user()->id,
             'ticket_tool_id' => (int) $validated['tool'],
             'number' => 'IT-' . strtoupper(Str::random(6)),
@@ -68,6 +69,18 @@ class ItTicketController extends Controller
             'description' => $validated['description'],
             'screenshots' => $uploadedScreenshots,
         ]);
+
+        app(TicketActivityLogger::class)->record(
+            $request->user(),
+            $ticket,
+            'created',
+            'Ticket creado',
+            [
+                'tool' => $ticket->tool,
+                'priority' => $ticket->priority,
+                'status' => $ticket->status,
+            ]
+        );
 
         return redirect()
             ->route('it-tickets.index')

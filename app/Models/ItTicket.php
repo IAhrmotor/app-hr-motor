@@ -32,8 +32,20 @@ class ItTicket extends Model
     protected function status(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value): ?string => $value === 'resolved' ? 'closed' : $value,
-            set: fn (?string $value): ?string => $value === 'resolved' ? 'closed' : $value,
+            get: function (?string $value, array $attributes): string {
+                if (empty($attributes['assigned_to_user_id'])) {
+                    return 'new';
+                }
+
+                return $value === 'resolved' ? 'closed' : ($value ?? 'new');
+            },
+            set: function (?string $value, array $attributes): string {
+                if (empty($attributes['assigned_to_user_id'])) {
+                    return 'new';
+                }
+
+                return $value === 'resolved' ? 'closed' : ($value ?? 'new');
+            },
         );
     }
 
@@ -55,5 +67,10 @@ class ItTicket extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(ItTicketMessage::class, 'it_ticket_id')->orderBy('created_at');
+    }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(TicketActivityLog::class, 'it_ticket_id')->orderBy('created_at')->orderBy('id');
     }
 }
