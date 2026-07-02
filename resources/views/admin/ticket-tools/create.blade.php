@@ -7,9 +7,9 @@
                 <span class="inline-flex rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary">
                     Incidencias
                 </span>
-                <h1 class="mt-3 text-3xl font-bold tracking-tight text-brand-secondary md:text-4xl">Crear herramienta</h1>
+                <h1 class="mt-3 text-3xl font-bold tracking-tight text-brand-secondary md:text-4xl">Crear tipo de incidencia</h1>
                 <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                    Define el nombre y el color de la nueva herramienta que verán los usuarios al abrir una incidencia.
+                    Define el nombre y el color del nuevo tipo de incidencia que verán los usuarios al abrir una incidencia.
                 </p>
             </div>
 
@@ -17,7 +17,7 @@
                 @include('admin.ticket-tools._form', [
                     'action' => route('admin.ticket-tools.store'),
                     'method' => 'POST',
-                    'submitLabel' => 'Crear herramienta',
+                    'submitLabel' => 'Crear tipo',
                 ])
             </div>
         </section>

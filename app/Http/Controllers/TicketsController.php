@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ItTicket;
 use App\Models\ItTicketMessage;
 use App\Models\TicketActivityLog;
+use App\Models\TicketTool;
 use App\Models\User;
 use App\Notifications\ItTicketAssignedNotification;
 use App\Notifications\ItTicketMessageNotification;
@@ -66,13 +67,56 @@ class TicketsController extends Controller
             'ticket' => $itTicket,
             'ticketStatuses' => $this->ticketStatuses(),
             'ticketPriorities' => $this->ticketPriorities(),
+            'ticketTools' => $this->ticketTools(),
             'canManageTickets' => $canManageTickets,
+            'canUpdateTicketTool' => $this->canUpdateTicketTool($request->user(), $itTicket, $canManageTickets),
             'canCloseTicket' => $this->canCloseTicket($request->user(), $itTicket, $canManageTickets),
             'canReplyToTicket' => $this->canReplyToTicket($request->user(), $itTicket, $canManageTickets),
             'backUrl' => ($canManageTickets || $itTicket->assigned_to_user_id === $request->user()->id)
                 ? route('tickets.index')
                 : route('it-tickets.index'),
         ]);
+    }
+
+    public function updateTool(Request $request, ItTicket $itTicket): RedirectResponse
+    {
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        abort_unless($this->canUpdateTicketTool($request->user(), $itTicket, $canManageTickets), 403);
+
+        $validated = $request->validate([
+            'ticket_tool_id' => [
+                'required',
+                'integer',
+                Rule::exists('ticket_tools', 'id'),
+            ],
+        ]);
+
+        $tool = TicketTool::query()->findOrFail((int) $validated['ticket_tool_id']);
+        $previousToolId = $itTicket->ticket_tool_id;
+        $previousToolName = $itTicket->ticketTool?->name ?? $itTicket->tool;
+
+        if ((int) $previousToolId === (int) $tool->id) {
+            return back()->with('success', 'El tipo de incidencia ya estaba actualizado.');
+        }
+
+        $itTicket->ticket_tool_id = $tool->id;
+        $itTicket->tool = $tool->name;
+        $itTicket->save();
+
+        app(TicketActivityLogger::class)->record(
+            $request->user(),
+            $itTicket,
+            TicketActivityLog::EVENT_TOOL_CHANGED,
+            'Tipo de incidencia cambiado a ' . $tool->name,
+            [
+                'previous_ticket_tool_id' => $previousToolId,
+                'ticket_tool_id' => $tool->id,
+                'previous_tool' => $previousToolName,
+                'tool' => $tool->name,
+            ]
+        );
+
+        return back()->with('success', 'El tipo de incidencia del ticket se ha actualizado correctamente.');
     }
 
     public function assign(Request $request, ItTicket $itTicket): RedirectResponse
@@ -214,6 +258,15 @@ class TicketsController extends Controller
                 ->paginate(10, ['*'], $pageName)
                 ->withQueryString(),
         ];
+    }
+
+    private function canUpdateTicketTool(?User $user, ItTicket $ticket, bool $canManageTickets): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $canManageTickets || (int) $ticket->assigned_to_user_id === (int) $user->id;
     }
 
     public function reply(Request $request, ItTicket $itTicket): RedirectResponse
@@ -428,6 +481,23 @@ class TicketsController extends Controller
                 'badge' => 'bg-rose-50 text-rose-700 ring-rose-200',
             ],
         ];
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function ticketTools(): array
+    {
+        return TicketTool::query()
+            ->ordered()
+            ->get()
+            ->mapWithKeys(fn (TicketTool $tool): array => [
+                (string) $tool->id => [
+                    'label' => $tool->name,
+                    'color' => $tool->color,
+                ],
+            ])
+            ->all();
     }
 
     /**

@@ -76,8 +76,8 @@
                     <table class="min-w-full border-separate border-spacing-y-3">
                         <thead>
                             <tr class="text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">
-                                <th class="px-3 py-2">Ticket</th>
-                                <th class="px-3 py-2">Herramienta</th>
+                                <th class="w-[8.5rem] px-3 py-2">Ticket</th>
+                                <th class="px-3 py-2">Tipo</th>
                                 <th class="px-3 py-2">Título</th>
                                 <th class="px-3 py-2">Prioridad</th>
                                 <th class="px-3 py-2">Estado</th>
@@ -91,7 +91,7 @@
                                     $priorityMeta = $formatPriority($ticket->priority);
                                 @endphp
                                 <tr data-ticket-row data-ticket-status="{{ $ticket->status }}" class="rounded-2xl bg-slate-50/80 text-sm text-brand-secondary shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06)]">
-                                    <td class="rounded-l-2xl px-3 py-4 font-semibold">
+                                    <td class="w-[8.5rem] rounded-l-2xl px-3 py-4 font-semibold">
                                         <a href="{{ route('tickets.show', $ticket) }}" class="transition hover:text-brand-primary">
                                             {{ $ticket->number }}
                                         </a>

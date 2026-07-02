@@ -171,6 +171,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/tickets/{itTicket}', [TicketsController::class, 'show'])
         ->whereNumber('itTicket')
         ->name('tickets.show');
+    Route::post('/tickets/{itTicket}/tool', [TicketsController::class, 'updateTool'])
+        ->whereNumber('itTicket')
+        ->name('tickets.tool.update');
     Route::post('/tickets/{itTicket}/assign', [TicketsController::class, 'assign'])
         ->whereNumber('itTicket')
         ->name('tickets.assign');
