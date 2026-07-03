@@ -133,6 +133,23 @@ class NavigationVisibilityTest extends TestCase
         $this->assertStringContainsString(route('tickets.index'), $footerHtml);
     }
 
+    public function test_admin_without_ticket_permission_does_not_see_tickets_in_the_navbar_or_footer(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email' => 'admin-no-ticket-permission@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+        $footerHtml = view('components.layout.footer')->render();
+
+        $this->assertStringNotContainsString(route('tickets.index'), $navbarHtml);
+        $this->assertStringNotContainsString(route('tickets.index'), $footerHtml);
+        $this->get(route('tickets.index'))->assertForbidden();
+    }
+
     public function test_regular_users_do_not_see_tickets_in_the_navbar_or_footer(): void
     {
         $user = User::factory()->create([

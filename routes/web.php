@@ -180,6 +180,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets/{itTicket}/assign', [TicketsController::class, 'assign'])
         ->whereNumber('itTicket')
         ->name('tickets.assign');
+    Route::delete('/tickets/{itTicket}', [TicketsController::class, 'destroy'])
+        ->whereNumber('itTicket')
+        ->name('tickets.destroy');
     Route::post('/tickets/{itTicket}/mensajes', [TicketsController::class, 'reply'])
         ->whereNumber('itTicket')
         ->name('tickets.messages.store');

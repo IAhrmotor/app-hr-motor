@@ -207,29 +207,24 @@ if (! function_exists('app_can_access_tickets')) {
             return false;
         }
 
-        return app_user_has_any_role($user, [User::ROLE_INFORMATION_TECHNOLOGY])
-            || app_user_has_admin_permission($user, 'tickets-it.manage');
+        if (app_user_has_any_role($user, [User::ROLE_INFORMATION_TECHNOLOGY])) {
+            return true;
+        }
+
+        $permissionKey = 'ticket-tools.manage';
+
+        return $user->adminPermissionGrants()->where('permission_key', $permissionKey)->exists()
+            || (filled($user->extra_role) && AdminPermissionGrant::query()
+                ->where('permission_key', $permissionKey)
+                ->where('group_role', $user->extra_role)
+                ->exists());
     }
 }
 
 if (! function_exists('app_can_see_tickets_navigation')) {
     function app_can_see_tickets_navigation(?User $user = null): bool
     {
-        $user ??= auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        if ($user->extra_role !== User::ROLE_INFORMATION_TECHNOLOGY) {
-            return false;
-        }
-
-        if (! app_role_viewer_active($user)) {
-            return true;
-        }
-
-        return app_visible_role($user) === User::ROLE_INFORMATION_TECHNOLOGY;
+        return app_can_access_tickets($user);
     }
 }
 
@@ -273,10 +268,6 @@ if (! function_exists('app_user_has_admin_permission')) {
             return false;
         }
 
-        if ($user->role === User::ROLE_ADMIN) {
-            return true;
-        }
-
         if (! in_array($permissionKey, app_admin_permission_keys(), true)) {
             return false;
         }
@@ -305,10 +296,6 @@ if (! function_exists('app_role_has_admin_permission')) {
     {
         if (! is_string($role) || $role === '') {
             return false;
-        }
-
-        if ($role === User::ROLE_ADMIN) {
-            return true;
         }
 
         if (! in_array($permissionKey, app_admin_permission_keys(), true)) {
@@ -394,7 +381,7 @@ if (! function_exists('app_admin_permission_key_for_route')) {
             Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
             Str::startsWith($routeName, ['admin.forum-tags.']) => 'forum-tags.manage',
             Str::startsWith($routeName, ['admin.ticket-tools.']) => 'ticket-tools.manage',
-            Str::startsWith($routeName, ['tickets.']) => 'tickets-it.manage',
+            Str::startsWith($routeName, ['tickets.']) => 'ticket-tools.manage',
             Str::startsWith($routeName, ['admin.magazine.']) => 'magazine.manage',
             Str::startsWith($routeName, ['admin.tablon.']) => 'bulletin.manage',
             Str::startsWith($routeName, ['admin.notifications.']) => 'notifications.manage',
