@@ -98,7 +98,7 @@ class TicketsInteriorTest extends TestCase
         ]);
 
         AdminPermissionGrant::query()->create([
-            'permission_key' => 'tickets-it.manage',
+            'permission_key' => 'ticket-tools.manage',
             'user_id' => $manager->id,
             'group_id' => null,
             'group_role' => null,
@@ -171,6 +171,86 @@ class TicketsInteriorTest extends TestCase
             'status' => 'in_progress',
             'priority' => 'high',
         ]);
+    }
+
+    public function test_user_with_manage_permission_can_delete_tickets_and_cleanup_files(): void
+    {
+        Storage::fake('public');
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor IT',
+            'email' => 'gestor.it@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'ticket-tools.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $requester = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'name' => 'Solicitante',
+            'email' => 'solicitante@example.com',
+        ]);
+
+        $ticketScreenshotPath = 'it-tickets/screenshots/ticket-shot.png';
+        Storage::disk('public')->put($ticketScreenshotPath, 'ticket screenshot');
+
+        $ticket = ItTicket::query()->create([
+            'user_id' => $requester->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-333333',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'new',
+            'title' => 'Ticket a eliminar',
+            'description' => 'Este ticket se debe borrar.',
+            'screenshots' => [
+                [
+                    'name' => 'ticket-shot.png',
+                    'path' => $ticketScreenshotPath,
+                ],
+            ],
+        ]);
+
+        $messageAttachment = UploadedFile::fake()->image('mensaje.png', 120, 120);
+
+        $this->actingAs($manager)
+            ->post(route('tickets.messages.store', $ticket), [
+                'body' => 'Mensaje con adjunto',
+                'attachments' => [$messageAttachment],
+            ])
+            ->assertRedirect();
+
+        $message = $ticket->fresh(['messages'])->messages->firstOrFail();
+        $messageAttachmentPath = (string) data_get($message->attachments[0] ?? [], 'path', '');
+
+        $this->assertNotSame('', $messageAttachmentPath);
+        Storage::disk('public')->assertExists($ticketScreenshotPath);
+        Storage::disk('public')->assertExists($messageAttachmentPath);
+
+        $this->actingAs($manager)
+            ->delete(route('tickets.destroy', $ticket))
+            ->assertRedirect(route('tickets.index'));
+
+        $this->assertDatabaseMissing('it_tickets', [
+            'id' => $ticket->id,
+        ]);
+        $this->assertDatabaseMissing('it_ticket_messages', [
+            'it_ticket_id' => $ticket->id,
+        ]);
+        Storage::disk('public')->assertMissing($ticketScreenshotPath);
+        Storage::disk('public')->assertMissing($messageAttachmentPath);
     }
 
     public function test_regular_user_cannot_open_the_tickets_interior(): void
@@ -462,7 +542,7 @@ class TicketsInteriorTest extends TestCase
         ]);
 
         AdminPermissionGrant::query()->create([
-            'permission_key' => 'tickets-it.manage',
+            'permission_key' => 'ticket-tools.manage',
             'user_id' => $manager->id,
             'group_id' => null,
             'group_role' => null,

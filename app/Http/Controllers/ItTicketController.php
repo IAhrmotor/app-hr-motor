@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ItTicketCreatedMail;
 use App\Models\ItTicket;
 use App\Models\TicketTool;
 use App\Services\TicketActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class ItTicketController extends Controller
 {
@@ -81,6 +84,22 @@ class ItTicketController extends Controller
                 'status' => $ticket->status,
             ]
         );
+
+        try {
+            $priorityLabel = $ticketPriorities[$validated['priority']]['label'] ?? $validated['priority'];
+
+            Mail::to('informatica@hrmotor.com')
+                ->cc('carlos.torres@hrmotor.es')
+                ->send(new ItTicketCreatedMail(
+                    reporterName: $request->user()->name,
+                    priorityLabel: $priorityLabel,
+                    ticketNumber: $ticket->number,
+                    ticketTitle: $ticket->title,
+                    ticketTool: $ticket->tool,
+                ));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return redirect()
             ->route('it-tickets.index')

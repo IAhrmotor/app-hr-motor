@@ -9,20 +9,14 @@ return [
             'description' => 'Altas, edición de perfiles y seguimiento del equipo.',
             'route' => 'users.index',
             'icon' => 'users',
-            'default_roles' => [
-                User::ROLE_ADMIN,
-                User::ROLE_MANAGER,
-            ],
+            'default_roles' => [],
         ],
         'dealerships.manage' => [
             'label' => 'Gestión de delegaciones',
             'description' => 'Consulta, crea y organiza las delegaciones disponibles.',
             'route' => 'dealerships.index',
             'icon' => 'dealership',
-            'default_roles' => [
-                User::ROLE_ADMIN,
-                User::ROLE_MANAGER,
-            ],
+            'default_roles' => [],
         ],
         'zones.manage' => [
             'label' => 'Gestión de zonas',
@@ -60,10 +54,7 @@ return [
             'route' => 'admin.ticket-tools.index',
             'icon' => 'ticket-tools',
             'hide_from_admin_panel' => true,
-            'default_roles' => [
-                User::ROLE_ADMIN,
-                User::ROLE_MANAGER,
-            ],
+            'default_roles' => [],
         ],
         'tickets-it.manage' => [
             'label' => 'Gestionar tickets IT',

@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ItTicketCreatedMail;
 use App\Models\ItTicket;
 use App\Models\TicketTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -51,7 +53,7 @@ class ItTicketsTest extends TestCase
             ->get(route('it-tickets.create'))
             ->assertOk()
             ->assertSee('Crear incidencia', false)
-            ->assertSee('Herramienta', false)
+            ->assertSee('Tipo de incidencia', false)
             ->assertSee('Prioridad', false)
             ->assertSee($tool->name, false);
     }
@@ -91,5 +93,43 @@ class ItTicketsTest extends TestCase
         $this->assertSame('new', $ticket->status);
         $this->assertCount(1, $ticket->screenshots ?? []);
         Storage::disk('public')->assertExists($ticket->screenshots[0]['path']);
+    }
+
+    public function test_user_can_create_a_ticket_and_notify_it_department_by_email(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'name' => 'Juan Pérez',
+            'email' => 'juan.perez@example.com',
+        ]);
+        $tool = TicketTool::query()->create([
+            'name' => 'Salesforce',
+            'color' => '#1d4ed8',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post(route('it-tickets.store'), [
+                'tool' => (string) $tool->id,
+                'priority' => 'high',
+                'title' => 'Problema de acceso',
+                'description' => 'No me deja entrar.',
+                'screenshots' => [],
+            ]);
+
+        $response->assertRedirect(route('it-tickets.index'));
+
+        $ticket = ItTicket::query()->latest('id')->firstOrFail();
+
+        Mail::assertSent(ItTicketCreatedMail::class, function (ItTicketCreatedMail $mail) use ($user, $ticket): bool {
+            $this->assertSame($user->name, $mail->reporterName);
+            $this->assertSame('Alta', $mail->priorityLabel);
+            $this->assertSame('Problema de acceso', $mail->ticketTitle);
+            $this->assertTrue($mail->envelope()->hasSubject('Juan Pérez ha habierto un ticket Alta con número ' . $ticket->number . '.'));
+
+            return $mail->hasTo('informatica@hrmotor.com')
+                && $mail->hasCc('carlos.torres@hrmotor.es');
+        });
     }
 }
