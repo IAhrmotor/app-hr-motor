@@ -7,6 +7,7 @@ use App\Models\ItTicketMessage;
 use App\Models\TicketActivityLog;
 use App\Models\TicketTool;
 use App\Models\User;
+use App\Mail\ItTicketAssignedMail;
 use App\Notifications\ItTicketAssignedNotification;
 use App\Notifications\ItTicketMessageNotification;
 use App\Services\TicketActivityLogger;
@@ -17,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -169,6 +171,15 @@ class TicketsController extends Controller
 
             if ($assignedUser) {
                 Notification::send($assignedUser, new ItTicketAssignedNotification($itTicket, $request->user()));
+
+                Mail::to($assignedUser->email)->send(new ItTicketAssignedMail(
+                    assigneeName: $assignedUser->name,
+                    actorName: $request->user()->name,
+                    ticketNumber: $itTicket->number,
+                    ticketTitle: $itTicket->title,
+                    priorityLabel: $this->ticketPriorities()[$itTicket->priority]['label'] ?? $itTicket->priority,
+                    ticketTool: $itTicket->ticketTool?->name ?? $itTicket->tool,
+                ));
             }
         }
 
@@ -571,6 +582,15 @@ class TicketsController extends Controller
 
                 if ($assignedUser) {
                     Notification::send($assignedUser, new ItTicketAssignedNotification($itTicket, $request->user()));
+
+                    Mail::to($assignedUser->email)->send(new ItTicketAssignedMail(
+                        assigneeName: $assignedUser->name,
+                        actorName: $request->user()->name,
+                        ticketNumber: $itTicket->number,
+                        ticketTitle: $itTicket->title,
+                        priorityLabel: $this->ticketPriorities()[$itTicket->priority]['label'] ?? $itTicket->priority,
+                        ticketTool: $itTicket->ticketTool?->name ?? $itTicket->tool,
+                    ));
                 }
             }
 

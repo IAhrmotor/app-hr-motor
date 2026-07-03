@@ -6,10 +6,12 @@ use App\Models\AdminPermissionGrant;
 use App\Models\ItTicket;
 use App\Models\TicketTool;
 use App\Models\User;
+use App\Mail\ItTicketAssignedMail;
 use App\Notifications\ItTicketAssignedNotification;
 use App\Notifications\ItTicketMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -84,6 +86,7 @@ class TicketsInteriorTest extends TestCase
     public function test_user_with_manage_permission_sees_all_tickets_and_assigns_them(): void
     {
         Notification::fake();
+        Mail::fake();
 
         $tool = TicketTool::query()->create([
             'name' => 'Web HR Motor',
@@ -164,6 +167,18 @@ class TicketsInteriorTest extends TestCase
                     && $channels === ['database'];
             }
         );
+
+        Mail::assertSent(ItTicketAssignedMail::class, function (ItTicketAssignedMail $mail) use ($assignableUser, $manager, $otherTicket): bool {
+            $this->assertTrue($mail->envelope()->hasSubject('Te han asignado el ticket ' . $otherTicket->number . ' (Alta - Web HR Motor)'));
+
+            return $mail->hasTo($assignableUser->email)
+                && $mail->assigneeName === $assignableUser->name
+                && $mail->actorName === $manager->name
+                && $mail->ticketNumber === $otherTicket->number
+                && $mail->ticketTitle === $otherTicket->title
+                && $mail->priorityLabel === 'Alta'
+                && $mail->ticketTool === 'Web HR Motor';
+        });
 
         $this->assertDatabaseHas('it_tickets', [
             'id' => $otherTicket->id,
