@@ -88,8 +88,8 @@ class ItTicketController extends Controller
         try {
             $priorityLabel = $ticketPriorities[$validated['priority']]['label'] ?? $validated['priority'];
 
-            Mail::to('informatica@hrmotor.com')
-                ->cc('carlos.torres@hrmotor.es')
+            Mail::to('carlos.torres@hrmotor.es')
+                ->cc('javier.arruabarrena@hrmotor.com')
                 ->send(new ItTicketCreatedMail(
                     reporterName: $request->user()->name,
                     priorityLabel: $priorityLabel,
