@@ -211,7 +211,7 @@ if (! function_exists('app_can_access_tickets')) {
             return true;
         }
 
-        $permissionKey = 'ticket-tools.manage';
+        $permissionKey = 'tickets-it.manage';
 
         return $user->adminPermissionGrants()->where('permission_key', $permissionKey)->exists()
             || (filled($user->extra_role) && AdminPermissionGrant::query()
@@ -381,7 +381,7 @@ if (! function_exists('app_admin_permission_key_for_route')) {
             Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
             Str::startsWith($routeName, ['admin.forum-tags.']) => 'forum-tags.manage',
             Str::startsWith($routeName, ['admin.ticket-tools.']) => 'ticket-tools.manage',
-            Str::startsWith($routeName, ['tickets.']) => 'ticket-tools.manage',
+            Str::startsWith($routeName, ['tickets.']) => 'tickets-it.manage',
             Str::startsWith($routeName, ['admin.magazine.']) => 'magazine.manage',
             Str::startsWith($routeName, ['admin.tablon.']) => 'bulletin.manage',
             Str::startsWith($routeName, ['admin.notifications.']) => 'notifications.manage',

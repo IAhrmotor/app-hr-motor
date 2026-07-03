@@ -98,7 +98,7 @@ class TicketsInteriorTest extends TestCase
         ]);
 
         AdminPermissionGrant::query()->create([
-            'permission_key' => 'ticket-tools.manage',
+            'permission_key' => 'tickets-it.manage',
             'user_id' => $manager->id,
             'group_id' => null,
             'group_role' => null,
@@ -190,7 +190,7 @@ class TicketsInteriorTest extends TestCase
         ]);
 
         AdminPermissionGrant::query()->create([
-            'permission_key' => 'ticket-tools.manage',
+            'permission_key' => 'tickets-it.manage',
             'user_id' => $manager->id,
             'group_id' => null,
             'group_role' => null,
@@ -542,7 +542,7 @@ class TicketsInteriorTest extends TestCase
         ]);
 
         AdminPermissionGrant::query()->create([
-            'permission_key' => 'ticket-tools.manage',
+            'permission_key' => 'tickets-it.manage',
             'user_id' => $manager->id,
             'group_id' => null,
             'group_role' => null,
