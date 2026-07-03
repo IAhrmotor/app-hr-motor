@@ -18,6 +18,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -28,7 +29,7 @@ class TicketsController extends Controller
     {
         abort_unless(app_can_access_tickets($request->user()), 403);
 
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
         $ticketStatuses = $this->ticketStatuses();
         $ticketPriorities = $this->ticketPriorities();
         $managedSection = $canManageTickets ? $this->buildTicketSectionData($request, 'managed', true) : null;
@@ -54,7 +55,7 @@ class TicketsController extends Controller
 
     public function show(Request $request, ItTicket $itTicket): View
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
         $canViewTicket = $canManageTickets
             || $itTicket->user_id === $request->user()->id
             || $itTicket->assigned_to_user_id === $request->user()->id;
@@ -82,7 +83,7 @@ class TicketsController extends Controller
 
     public function updateTool(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
         abort_unless($this->canUpdateTicketTool($request->user(), $itTicket, $canManageTickets), 403);
 
         $validated = $request->validate([
@@ -123,7 +124,7 @@ class TicketsController extends Controller
 
     public function assign(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
+        abort_unless(app_user_has_admin_permission($request->user(), 'ticket-tools.manage'), 403);
 
         $validated = $request->validate([
             'priority' => ['required', Rule::in(array_keys($this->ticketPriorities()))],
@@ -187,9 +188,30 @@ class TicketsController extends Controller
         return back()->with('success', 'El ticket se ha asignado correctamente.');
     }
 
+    public function destroy(Request $request, ItTicket $itTicket): RedirectResponse
+    {
+        abort_unless(app_user_has_admin_permission($request->user(), 'ticket-tools.manage'), 403);
+
+        DB::transaction(function () use ($itTicket): void {
+            $itTicket->loadMissing('messages');
+
+            foreach ($itTicket->messages as $message) {
+                $message->delete();
+            }
+
+            $this->deleteTicketScreenshots($itTicket);
+            $itTicket->activityLogs()->delete();
+            $itTicket->delete();
+        });
+
+        return redirect()
+            ->route('tickets.index')
+            ->with('success', 'La incidencia se ha eliminado correctamente.');
+    }
+
     public function updatePriority(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
+        abort_unless(app_user_has_admin_permission($request->user(), 'ticket-tools.manage'), 403);
 
         $validated = $request->validate([
             'priority' => ['required', Rule::in(array_keys($this->ticketPriorities()))],
@@ -271,9 +293,31 @@ class TicketsController extends Controller
         return $canManageTickets || (int) $ticket->assigned_to_user_id === (int) $user->id;
     }
 
+    private function deleteTicketScreenshots(ItTicket $ticket): void
+    {
+        foreach ($ticket->screenshots ?? [] as $screenshot) {
+            $path = (string) data_get($screenshot, 'path', '');
+
+            if ($path === '') {
+                continue;
+            }
+
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+                continue;
+            }
+
+            $absolutePath = public_path('storage/' . ltrim($path, '/'));
+
+            if (File::exists($absolutePath)) {
+                File::delete($absolutePath);
+            }
+        }
+    }
+
     public function reply(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
         abort_unless($this->canReplyToTicket($request->user(), $itTicket, $canManageTickets), 403);
 
         $validated = $request->validate([
@@ -477,7 +521,7 @@ class TicketsController extends Controller
 
     public function reopen(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
         abort_unless($canManageTickets && $itTicket->status === 'reopen_requested', 403);
 
         $validated = $request->validate([
@@ -565,7 +609,7 @@ class TicketsController extends Controller
 
     public function permanentlyClose(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
         abort_unless($canManageTickets && $itTicket->status === 'reopen_requested', 403);
 
         $validated = $request->validate([

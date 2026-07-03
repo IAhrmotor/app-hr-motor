@@ -185,7 +185,7 @@
                             </td>
                             <td class="rounded-r-2xl px-3 py-4">
                                 @if ($ticket->status === 'reopen_requested')
-                                    <div x-data="{ closeReasonOpen: false }" class="flex flex-col gap-3">
+                                    <div x-data="{ closeReasonOpen: false, deleteOpen: false }" class="flex flex-col gap-3">
                                         <form method="POST" action="{{ route('tickets.reopen', $ticket) }}" class="flex flex-col gap-2">
                                             @csrf
                                             <select name="priority" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
@@ -283,6 +283,79 @@
                                                 </form>
                                             </div>
                                         </div>
+
+                                        <form method="POST" action="{{ route('tickets.destroy', $ticket) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button
+                                                type="button"
+                                                @click="deleteOpen = true"
+                                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800"
+                                                aria-label="Eliminar incidencia"
+                                                title="Eliminar incidencia"
+                                            >
+                                                <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="h-4.5 w-4.5 shrink-0 text-current">
+                                                    <path d="M4 6H20L18.4199 20.2209C18.3074 21.2337 17.4512 22 16.4321 22H7.56786C6.54876 22 5.69264 21.2337 5.5801 20.2209L4 6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M7.34491 3.14716C7.67506 2.44685 8.37973 2 9.15396 2H14.846C15.6203 2 16.3249 2.44685 16.6551 3.14716L18 6H6L7.34491 3.14716Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M2 6H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M10 11V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M14 11V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                Eliminar incidencia
+                                            </button>
+                                        </form>
+
+                                        <div
+                                            x-cloak
+                                            x-show="deleteOpen"
+                                            x-transition.opacity
+                                            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm"
+                                            @click.self="deleteOpen = false"
+                                        >
+                                            <div class="w-full max-w-xl rounded-[2rem] bg-white p-6 shadow-2xl">
+                                                <div class="flex items-start justify-between gap-4 border-b border-brand-secondary/10 pb-4">
+                                                    <div>
+                                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-600">Eliminar incidencia</p>
+                                                        <h3 class="mt-1 text-xl font-bold tracking-tight text-brand-secondary">¿Seguro que quieres eliminarla?</h3>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        @click="deleteOpen = false"
+                                                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                                                        aria-label="Cerrar modal"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+
+                                                <p class="mt-5 text-sm leading-6 text-brand-secondary/70">
+                                                    Esta acción eliminará la incidencia, sus mensajes y sus archivos adjuntos de forma permanente.
+                                                </p>
+
+                                                <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="mt-6 flex flex-wrap justify-end gap-3">
+                                                    @csrf
+                                                    @method('DELETE')
+
+                                                    <button
+                                                        type="button"
+                                                        @click="deleteOpen = false"
+                                                        class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-brand-secondary transition hover:bg-slate-50"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+
+                                                    <button
+                                                        type="submit"
+                                                        class="inline-flex h-11 items-center justify-center rounded-2xl bg-rose-600 px-5 text-sm font-semibold text-white transition hover:bg-rose-500"
+                                                    >
+                                                        Eliminar incidencia
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 @else
                                     <form method="POST" action="{{ route('tickets.assign', $ticket) }}" class="flex flex-col gap-2">
@@ -306,6 +379,81 @@
                                             Asignar
                                         </button>
                                     </form>
+
+                                    <div x-data="{ deleteOpen: false }" class="mt-2" @keydown.escape.window="deleteOpen = false">
+                                    <form method="POST" action="{{ route('tickets.destroy', $ticket) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button
+                                            type="button"
+                                            @click="deleteOpen = true"
+                                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800"
+                                            aria-label="Eliminar incidencia"
+                                            title="Eliminar incidencia"
+                                        >
+                                            <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="h-4.5 w-4.5 shrink-0 text-current">
+                                                <path d="M4 6H20L18.4199 20.2209C18.3074 21.2337 17.4512 22 16.4321 22H7.56786C6.54876 22 5.69264 21.2337 5.5801 20.2209L4 6Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M7.34491 3.14716C7.67506 2.44685 8.37973 2 9.15396 2H14.846C15.6203 2 16.3249 2.44685 16.6551 3.14716L18 6H6L7.34491 3.14716Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M2 6H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M10 11V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M14 11V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                            Eliminar incidencia
+                                        </button>
+                                    </form>
+
+                                        <div
+                                            x-cloak
+                                            x-show="deleteOpen"
+                                            x-transition.opacity
+                                            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm"
+                                            @click.self="deleteOpen = false"
+                                        >
+                                            <div class="w-full max-w-xl rounded-[2rem] bg-white p-6 shadow-2xl">
+                                                <div class="flex items-start justify-between gap-4 border-b border-brand-secondary/10 pb-4">
+                                                    <div>
+                                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-600">Eliminar incidencia</p>
+                                                        <h3 class="mt-1 text-xl font-bold tracking-tight text-brand-secondary">¿Seguro que quieres eliminarla?</h3>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        @click="deleteOpen = false"
+                                                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                                                        aria-label="Cerrar modal"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+
+                                                <p class="mt-5 text-sm leading-6 text-brand-secondary/70">
+                                                    Esta acción eliminará la incidencia, sus mensajes y sus archivos adjuntos de forma permanente.
+                                                </p>
+
+                                                <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="mt-6 flex flex-wrap justify-end gap-3">
+                                                    @csrf
+                                                    @method('DELETE')
+
+                                                    <button
+                                                        type="button"
+                                                        @click="deleteOpen = false"
+                                                        class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-brand-secondary transition hover:bg-slate-50"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+
+                                                    <button
+                                                        type="submit"
+                                                        class="inline-flex h-11 items-center justify-center rounded-2xl bg-rose-600 px-5 text-sm font-semibold text-white transition hover:bg-rose-500"
+                                                    >
+                                                        Eliminar incidencia
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 @endif
                             </td>
                         @else
