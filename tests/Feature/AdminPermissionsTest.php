@@ -46,6 +46,29 @@ class AdminPermissionsTest extends TestCase
             ->assertDontSee(route('admin.ticket-tools.index'), false);
     }
 
+    public function test_user_with_ticket_tool_permission_sees_ticket_tools_in_admin_index(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'email' => 'ticket-tools-enabled@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'ticket-tools.manage',
+            'user_id' => $user->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('admin.index'))
+            ->assertOk()
+            ->assertSee(route('admin.ticket-tools.index'), false)
+            ->assertSee('Tipos de incidencia', false);
+    }
+
     public function test_non_admin_with_a_group_permission_can_open_the_admin_panel_and_the_assigned_tool(): void
     {
         $user = User::factory()->create([
