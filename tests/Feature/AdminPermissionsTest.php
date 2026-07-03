@@ -33,6 +33,19 @@ class AdminPermissionsTest extends TestCase
             ->assertSee('Usuarios concretos');
     }
 
+    public function test_admin_without_ticket_tool_permission_does_not_see_ticket_tools_in_admin_index(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email' => 'admin-no-ticket-tools@example.com',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.index'))
+            ->assertOk()
+            ->assertDontSee(route('admin.ticket-tools.index'), false);
+    }
+
     public function test_non_admin_with_a_group_permission_can_open_the_admin_panel_and_the_assigned_tool(): void
     {
         $user = User::factory()->create([

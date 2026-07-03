@@ -29,7 +29,7 @@ class TicketsController extends Controller
     {
         abort_unless(app_can_access_tickets($request->user()), 403);
 
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
         $ticketStatuses = $this->ticketStatuses();
         $ticketPriorities = $this->ticketPriorities();
         $managedSection = $canManageTickets ? $this->buildTicketSectionData($request, 'managed', true) : null;
@@ -55,7 +55,7 @@ class TicketsController extends Controller
 
     public function show(Request $request, ItTicket $itTicket): View
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
         $canViewTicket = $canManageTickets
             || $itTicket->user_id === $request->user()->id
             || $itTicket->assigned_to_user_id === $request->user()->id;
@@ -83,7 +83,7 @@ class TicketsController extends Controller
 
     public function updateTool(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
         abort_unless($this->canUpdateTicketTool($request->user(), $itTicket, $canManageTickets), 403);
 
         $validated = $request->validate([
@@ -124,7 +124,7 @@ class TicketsController extends Controller
 
     public function assign(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        abort_unless(app_user_has_admin_permission($request->user(), 'ticket-tools.manage'), 403);
+        abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
 
         $validated = $request->validate([
             'priority' => ['required', Rule::in(array_keys($this->ticketPriorities()))],
@@ -190,7 +190,7 @@ class TicketsController extends Controller
 
     public function destroy(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        abort_unless(app_user_has_admin_permission($request->user(), 'ticket-tools.manage'), 403);
+        abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
 
         DB::transaction(function () use ($itTicket): void {
             $itTicket->loadMissing('messages');
@@ -211,7 +211,7 @@ class TicketsController extends Controller
 
     public function updatePriority(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        abort_unless(app_user_has_admin_permission($request->user(), 'ticket-tools.manage'), 403);
+        abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
 
         $validated = $request->validate([
             'priority' => ['required', Rule::in(array_keys($this->ticketPriorities()))],
@@ -317,7 +317,7 @@ class TicketsController extends Controller
 
     public function reply(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
         abort_unless($this->canReplyToTicket($request->user(), $itTicket, $canManageTickets), 403);
 
         $validated = $request->validate([
@@ -521,7 +521,7 @@ class TicketsController extends Controller
 
     public function reopen(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
         abort_unless($canManageTickets && $itTicket->status === 'reopen_requested', 403);
 
         $validated = $request->validate([
@@ -609,7 +609,7 @@ class TicketsController extends Controller
 
     public function permanentlyClose(Request $request, ItTicket $itTicket): RedirectResponse
     {
-        $canManageTickets = app_user_has_admin_permission($request->user(), 'ticket-tools.manage');
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
         abort_unless($canManageTickets && $itTicket->status === 'reopen_requested', 403);
 
         $validated = $request->validate([

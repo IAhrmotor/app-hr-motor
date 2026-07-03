@@ -49,8 +49,8 @@ return [
             ],
         ],
         'ticket-tools.manage' => [
-            'label' => 'GestiÃ³n de herramientas de tickets',
-            'description' => 'Crea, edita y elimina las herramientas que se muestran al abrir una incidencia.',
+            'label' => 'Gestionar tipos de incidencia',
+            'description' => 'Crea, edita y elimina los tipos de incidencia que se muestran al abrir un ticket.',
             'route' => 'admin.ticket-tools.index',
             'icon' => 'ticket-tools',
             'hide_from_admin_panel' => true,
@@ -59,11 +59,10 @@ return [
         'tickets-it.manage' => [
             'label' => 'Gestionar tickets IT',
             'description' => 'Permite ver todos los tickets, asignarlos y gestionar el equipo de informática.',
-            'route' => 'admin.ticket-tools.index',
+            'route' => 'tickets.index',
             'icon' => 'ticket-tools',
-            'default_roles' => [
-                User::ROLE_ADMIN,
-            ],
+            'hide_from_admin_panel' => true,
+            'default_roles' => [],
         ],
         'magazine.manage' => [
             'label' => 'Gestión de la revista mensual',
