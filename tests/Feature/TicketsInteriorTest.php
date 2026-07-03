@@ -170,6 +170,11 @@ class TicketsInteriorTest extends TestCase
 
         Mail::assertSent(ItTicketAssignedMail::class, function (ItTicketAssignedMail $mail) use ($assignableUser, $manager, $otherTicket): bool {
             $this->assertTrue($mail->envelope()->hasSubject('Te han asignado el ticket ' . $otherTicket->number . ' (Alta - Web HR Motor)'));
+            $rendered = $mail->render();
+            $this->assertStringContainsString('Ticket IT asignado', $rendered);
+            $this->assertStringContainsString($otherTicket->title, $rendered);
+            $this->assertStringContainsString('Alta', $rendered);
+            $this->assertStringContainsString('Web HR Motor', $rendered);
 
             return $mail->hasTo($assignableUser->email)
                 && $mail->assigneeName === $assignableUser->name

@@ -128,6 +128,11 @@ class ItTicketsTest extends TestCase
             $this->assertSame('Problema de acceso', $mail->ticketTitle);
             $this->assertTrue($mail->envelope()->hasSubject('Juan Pérez ha abierto un ticket Alta con asunto Problema de acceso.'));
 
+            $rendered = $mail->render();
+            $this->assertStringContainsString('Nueva incidencia IT', $rendered);
+            $this->assertStringContainsString('Problema de acceso', $rendered);
+            $this->assertStringContainsString('Salesforce', $rendered);
+
             return $mail->hasTo('carlos.torres@hrmotor.es')
                 && $mail->hasCc('javier.arruabarrena@hrmotor.com');
         });
