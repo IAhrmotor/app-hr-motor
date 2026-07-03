@@ -53,7 +53,6 @@ return [
             'description' => 'Crea, edita y elimina los tipos de incidencia que se muestran al abrir un ticket.',
             'route' => 'admin.ticket-tools.index',
             'icon' => 'ticket-tools',
-            'hide_from_admin_panel' => true,
             'default_roles' => [],
         ],
         'tickets-it.manage' => [
