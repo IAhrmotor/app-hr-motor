@@ -9,16 +9,17 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class ItTicketCreatedMail extends Mailable
+class ItTicketAssignedMail extends Mailable
 {
     use Queueable;
     use SerializesModels;
 
     public function __construct(
-        public readonly string $reporterName,
-        public readonly string $priorityLabel,
+        public readonly string $assigneeName,
+        public readonly string $actorName,
         public readonly string $ticketNumber,
         public readonly string $ticketTitle,
+        public readonly string $priorityLabel,
         public readonly string $ticketTool,
     ) {
     }
@@ -27,19 +28,25 @@ class ItTicketCreatedMail extends Mailable
     {
         return new Envelope(
             from: new Address('no.reply@hrmotor.com', 'HR Motor'),
-            subject: sprintf('%s ha abierto un ticket %s con asunto %s.', $this->reporterName, $this->priorityLabel, $this->ticketTitle),
+            subject: sprintf(
+                'Te han asignado el ticket %s (%s - %s)',
+                $this->ticketNumber,
+                $this->priorityLabel,
+                $this->ticketTool
+            ),
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            view: 'emails.it-ticket-created',
+            view: 'emails.it-ticket-assigned',
             with: [
-                'reporterName' => $this->reporterName,
-                'priorityLabel' => $this->priorityLabel,
+                'assigneeName' => $this->assigneeName,
+                'actorName' => $this->actorName,
                 'ticketNumber' => $this->ticketNumber,
                 'ticketTitle' => $this->ticketTitle,
+                'priorityLabel' => $this->priorityLabel,
                 'ticketTool' => $this->ticketTool,
             ],
         );
