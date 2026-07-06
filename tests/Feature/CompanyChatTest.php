@@ -118,6 +118,35 @@ class CompanyChatTest extends TestCase
         ]);
     }
 
+    public function test_user_cannot_send_messages_to_a_disabled_private_recipient_and_the_composer_is_disabled(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Usuario desactivado',
+            'is_active' => false,
+            'disabled_at' => now(),
+        ]);
+
+        $this->acceptChatPolicy($sender);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->get(route('chat.beta', ['conversation' => $conversation->id]))
+            ->assertOk()
+            ->assertSee('Este usuario está desactivado. No puedes enviarle mensajes, emojis ni archivos.', false)
+            ->assertSee('data-chat-composer-disabled="1"', false);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => 'No debería enviarse',
+            ])
+            ->assertForbidden();
+    }
+
     public function test_user_can_send_chat_messages_with_attachments_and_without_text(): void
     {
         $sender = User::factory()->create();

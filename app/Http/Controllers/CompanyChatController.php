@@ -343,6 +343,7 @@ class CompanyChatController extends Controller
         $this->ensureChatPolicyAccepted($request);
         abort_unless(app_can_access_chat_beta($request->user()), 403);
         abort_unless($conversation->involves($request->user()), 403);
+        abort_unless($conversation->isGroupConversation() || ! $conversation->otherParticipant($request->user())?->isDisabled(), 403);
 
         $this->guardAgainstBrokenAttachmentUploads($request);
 
