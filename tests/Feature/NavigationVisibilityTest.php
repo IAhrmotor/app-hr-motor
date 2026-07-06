@@ -150,6 +150,31 @@ class NavigationVisibilityTest extends TestCase
         $this->get(route('tickets.index'))->assertForbidden();
     }
 
+    public function test_admin_with_ticket_permission_but_without_it_role_still_cannot_see_tickets(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email' => 'admin-with-ticket-permission@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $user->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+        $footerHtml = view('components.layout.footer')->render();
+
+        $this->assertStringNotContainsString(route('tickets.index'), $navbarHtml);
+        $this->assertStringNotContainsString(route('tickets.index'), $footerHtml);
+        $this->get(route('tickets.index'))->assertForbidden();
+    }
+
     public function test_regular_users_do_not_see_tickets_in_the_navbar_or_footer(): void
     {
         $user = User::factory()->create([

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AdminPermissionGrant;
+use App\Models\Dealership;
 use App\Models\ItTicket;
 use App\Models\TicketTool;
 use App\Models\User;
@@ -146,6 +147,7 @@ class TicketsInteriorTest extends TestCase
             ->assertSee('Todos los tickets', false)
             ->assertSee($otherTicket->number, false)
             ->assertSee($ownTicket->number, false)
+            ->assertSee('Vista previa', false)
             ->assertSee(route('tickets.assign', $otherTicket), false);
 
         $this->actingAs($manager)
@@ -287,6 +289,10 @@ class TicketsInteriorTest extends TestCase
 
     public function test_ticket_creator_can_open_the_ticket_detail_interior(): void
     {
+        $dealership = Dealership::query()->create([
+            'name' => 'Delegación Norte',
+        ]);
+
         $tool = TicketTool::query()->create([
             'name' => 'Web HR Motor',
             'color' => '#1d4ed8',
@@ -296,6 +302,7 @@ class TicketsInteriorTest extends TestCase
             'role' => User::ROLE_COMMERCIAL,
             'name' => 'Creador',
             'email' => 'creador@example.com',
+            'dealership_id' => $dealership->id,
         ]);
 
         $ticket = ItTicket::query()->create([
@@ -314,7 +321,9 @@ class TicketsInteriorTest extends TestCase
             ->get(route('tickets.show', $ticket))
             ->assertOk()
             ->assertSee('El usuario crea la incidencia', false)
-            ->assertSee('Aqui se ve todo lo que ha escrito.', false);
+            ->assertSee('Aqui se ve todo lo que ha escrito.', false)
+            ->assertSee('Delegación', false)
+            ->assertSee('Delegación Norte', false);
     }
 
     public function test_ticket_participants_can_reply_with_images(): void
@@ -656,5 +665,80 @@ class TicketsInteriorTest extends TestCase
 
         $this->assertStringContainsString('IT-000001', $html);
         $this->assertStringNotContainsString('IT-000011', $html);
+    }
+
+    public function test_assigned_tickets_can_be_sorted_by_last_update_while_combining_filters(): void
+    {
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $assignedUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Técnico Orden',
+            'email' => 'tecnico-orden@example.com',
+        ]);
+
+        $creator = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'name' => 'Creador Orden',
+            'email' => 'creador-orden@example.com',
+        ]);
+
+        $olderTicket = ItTicket::query()->create([
+            'user_id' => $creator->id,
+            'assigned_to_user_id' => $assignedUser->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-900001',
+            'tool' => $tool->name,
+            'priority' => 'high',
+            'status' => 'in_progress',
+            'title' => 'Ticket más antiguo',
+            'description' => 'Debe quedar antes en orden ascendente.',
+            'screenshots' => [],
+        ]);
+
+        $newerTicket = ItTicket::query()->create([
+            'user_id' => $creator->id,
+            'assigned_to_user_id' => $assignedUser->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-900002',
+            'tool' => $tool->name,
+            'priority' => 'high',
+            'status' => 'in_progress',
+            'title' => 'Ticket más reciente',
+            'description' => 'Debe quedar después en orden ascendente.',
+            'screenshots' => [],
+        ]);
+
+        $olderTicket->forceFill([
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
+        ])->saveQuietly();
+
+        $newerTicket->forceFill([
+            'created_at' => now()->subHours(6),
+            'updated_at' => now()->subHours(6),
+        ])->saveQuietly();
+
+        $response = $this->actingAs($assignedUser)
+            ->get(route('tickets.index', [
+                'assigned_status' => 'in_progress',
+                'assigned_priority' => 'high',
+                'assigned_sort' => 'updated_asc',
+                'ajax' => 1,
+            ]));
+
+        $response->assertOk();
+
+        $html = (string) $response->json('html');
+        $olderPosition = strpos($html, $olderTicket->number);
+        $newerPosition = strpos($html, $newerTicket->number);
+
+        $this->assertNotFalse($olderPosition);
+        $this->assertNotFalse($newerPosition);
+        $this->assertTrue($olderPosition < $newerPosition);
     }
 }
