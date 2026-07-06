@@ -634,8 +634,26 @@
                                     $previousTimeLabel = $previousMessage?->created_at?->translatedFormat('H:i');
                                     $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
                                     $showDateSeparator = $loop->first || $previousDateKey !== $currentDateKey;
-                                    $showTime = $loop->last || $nextDateKey !== $currentDateKey || $nextTimeLabel !== $currentTimeLabel;
-                                    $topMarginClass = $loop->first ? 'mt-0' : (($previousDateKey === $currentDateKey && $previousTimeLabel === $currentTimeLabel) ? 'mt-0.5' : 'mt-3');
+                                    $showTime = $loop->last
+                                        || $nextDateKey !== $currentDateKey
+                                        || $nextTimeLabel !== $currentTimeLabel
+                                        || $nextMessage?->sender_id !== $message->sender_id;
+                                    $topMarginClass = 'mt-3';
+                                    if ($loop->first) {
+                                        $topMarginClass = 'mt-0';
+                                    } elseif (
+                                        $selectedConversationIsGroup
+                                        && $previousMessage?->sender_id !== null
+                                        && $previousMessage?->sender_id !== $message->sender_id
+                                    ) {
+                                        $topMarginClass = 'mt-4';
+                                    } elseif (
+                                        $previousDateKey === $currentDateKey
+                                        && $previousTimeLabel === $currentTimeLabel
+                                        && $previousMessage?->sender_id === $message->sender_id
+                                    ) {
+                                        $topMarginClass = 'mt-0.5';
+                                    }
                                     $messageAttachments = collect($message->attachments ?? []);
                                     $isDeleted = $message->deleted_at !== null;
                                     $isEdited = $message->edited_at !== null && ! $isDeleted;
@@ -645,7 +663,10 @@
                                         && ! $isMine
                                         && (
                                             $loop->first
-                                            || $senderChanged
+                                            || (
+                                                $previousMessage?->sender_id !== null
+                                                && $previousMessage?->sender_id !== $message->sender_id
+                                            )
                                             || $previousTimeLabel !== $currentTimeLabel
                                         );
                                 @endphp
