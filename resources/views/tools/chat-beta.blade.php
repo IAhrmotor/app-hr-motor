@@ -3168,6 +3168,11 @@
                         hasMoreOlderMessages = Boolean(payload.has_more_older);
                         isLoadingOlderMessages = false;
                         setHistoryLoaderVisible(false);
+                        closeMessageMenu();
+                        closeDeleteConfirmModal();
+                        closeGroupModal();
+                        closeEmojiPicker();
+                        clearChatError();
                         activeMessageMenuId = null;
                         editingMessageId = null;
                         editingMessageDraft = '';
@@ -3179,7 +3184,6 @@
                             Boolean(payload.conversation_is_disabled),
                             payload.conversation_is_disabled ? 'Este usuario está desactivado. No puedes enviarle mensajes, emojis ni archivos.' : ''
                         );
-                        setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
                         applyMessagesPayload(messages, {
                             preserveScroll,
                             replace: !shouldMergeHistory,
