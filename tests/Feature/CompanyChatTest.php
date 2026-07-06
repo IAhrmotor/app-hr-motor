@@ -1153,6 +1153,24 @@ class CompanyChatTest extends TestCase
             ->assertJsonPath('message.show_time', true);
     }
 
+    public function test_chat_view_normalizes_realtime_messages_per_current_user_before_rendering_them(): void
+    {
+        $chatView = File::get(resource_path('views/tools/chat-beta.blade.php'));
+
+        $this->assertStringContainsString('const normalizeIncomingMessage = (message) => {', $chatView);
+        $this->assertStringContainsString('const isMine = !isSystem && senderId > 0 && senderId === realtimeCurrentUserId;', $chatView);
+        $this->assertStringContainsString("'mentions_me' => (bool) (\$message->mentions_auth_user ?? false)", $chatView);
+        $this->assertStringContainsString('mentions_me: !isSystem && !isMine && mentionedUserIds.includes(realtimeCurrentUserId),', $chatView);
+    }
+
+    public function test_chat_view_applies_realtime_message_normalization_for_every_message_payload_path(): void
+    {
+        $chatView = File::get(resource_path('views/tools/chat-beta.blade.php'));
+
+        $this->assertStringContainsString('const applyMessagesPayload = (messages, { preserveScroll = \'none\', replace = true } = {}) => {', $chatView);
+        $this->assertStringContainsString('? messages.map((message) => normalizeIncomingMessage(message))', $chatView);
+    }
+
     public function test_chat_page_shows_policy_modal_until_the_user_accepts_the_current_version(): void
     {
         $user = User::factory()->create();
