@@ -168,6 +168,113 @@ class CompanyChatTest extends TestCase
             ]));
     }
 
+    public function test_chat_messages_endpoint_returns_paginated_blocks_from_the_end_of_the_conversation(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        for ($index = 1; $index <= 35; $index++) {
+            CompanyChatMessage::query()->create([
+                'company_chat_conversation_id' => $conversation->id,
+                'sender_id' => $sender->id,
+                'body' => 'Mensaje ' . $index,
+            ]);
+        }
+
+        $response = $this->actingAs($recipient)->getJson(route('chat.beta.messages.index', $conversation));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('message_count', 24)
+            ->assertJsonPath('has_more_older', true)
+            ->assertJsonPath('messages.0.body', 'Mensaje 12')
+            ->assertJsonPath('messages.23.body', 'Mensaje 35');
+
+        $olderBlockResponse = $this->actingAs($recipient)->getJson(route('chat.beta.messages.index', [
+            'conversation' => $conversation->id,
+            'before_message_id' => 12,
+            'limit' => 20,
+        ]));
+
+        $olderBlockResponse
+            ->assertOk()
+            ->assertJsonPath('message_count', 11)
+            ->assertJsonPath('has_more_older', false)
+            ->assertJsonPath('messages.0.body', 'Mensaje 1')
+            ->assertJsonPath('messages.10.body', 'Mensaje 11');
+
+        $newerBlockResponse = $this->actingAs($recipient)->getJson(route('chat.beta.messages.index', [
+            'conversation' => $conversation->id,
+            'after_message_id' => 30,
+            'limit' => 10,
+        ]));
+
+        $newerBlockResponse
+            ->assertOk()
+            ->assertJsonPath('message_count', 5)
+            ->assertJsonPath('has_more_newer', false)
+            ->assertJsonPath('messages.0.body', 'Mensaje 31')
+            ->assertJsonPath('messages.4.body', 'Mensaje 35');
+    }
+
+    public function test_group_chat_messages_endpoint_returns_paginated_blocks_from_the_end_of_the_conversation(): void
+    {
+        $sender = User::factory()->create();
+        $firstMember = User::factory()->create();
+        $secondMember = User::factory()->create();
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($firstMember);
+        $this->acceptChatPolicy($secondMember);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo paginado',
+        ]);
+        $group->participants()->sync([$sender->id, $firstMember->id, $secondMember->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        for ($index = 1; $index <= 32; $index++) {
+            CompanyChatMessage::query()->create([
+                'company_chat_conversation_id' => $conversation->id,
+                'sender_id' => $sender->id,
+                'body' => 'Mensaje grupo ' . $index,
+            ]);
+        }
+
+        $response = $this->actingAs($firstMember)->getJson(route('chat.beta.messages.index', $conversation));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('message_count', 24)
+            ->assertJsonPath('has_more_older', true)
+            ->assertJsonPath('messages.0.body', 'Mensaje grupo 9')
+            ->assertJsonPath('messages.23.body', 'Mensaje grupo 32');
+
+        $olderBlockResponse = $this->actingAs($firstMember)->getJson(route('chat.beta.messages.index', [
+            'conversation' => $conversation->id,
+            'before_message_id' => 9,
+            'limit' => 10,
+        ]));
+
+        $olderBlockResponse
+            ->assertOk()
+            ->assertJsonPath('message_count', 8)
+            ->assertJsonPath('has_more_older', false)
+            ->assertJsonPath('messages.0.body', 'Mensaje grupo 1')
+            ->assertJsonPath('messages.7.body', 'Mensaje grupo 8');
+    }
+
     public function test_group_messages_only_become_read_when_all_participants_have_opened_them(): void
     {
         $sender = User::factory()->create(['name' => 'Emisor']);
@@ -447,7 +554,7 @@ class CompanyChatTest extends TestCase
         $this->actingAs($recipient)
             ->getJson(route('chat.beta.messages.index', $conversation))
             ->assertOk()
-            ->assertJsonPath('messages.0.rendered_body_html', 'Mira <a href="https://example.com" target="_blank" rel="noopener noreferrer" class="font-medium text-sky-600 underline decoration-sky-400/70 underline-offset-2 transition hover:text-sky-700">https://example.com</a> para más detalles.');
+            ->assertJsonPath('messages.0.rendered_body_html', 'Mira <a href="https://example.com" target="_blank" rel="noopener noreferrer" class="break-words [overflow-wrap:anywhere] font-medium text-sky-600 underline decoration-sky-400/70 underline-offset-2 transition hover:text-sky-700">https://example.com</a> para más detalles.');
     }
 
     public function test_admin_group_member_changes_write_system_messages_in_the_group_chat(): void
@@ -481,7 +588,7 @@ class CompanyChatTest extends TestCase
         $this->assertCount(2, $messages);
         $this->assertTrue($messages->every(fn (CompanyChatMessage $message): bool => (bool) $message->is_system));
         $this->assertTrue($messages->contains(fn (CompanyChatMessage $message): bool => str_contains($message->body, 'salió') && str_contains($message->body, $secondMember->name)));
-        $this->assertTrue($messages->contains(fn (CompanyChatMessage $message): bool => str_contains($message->body, 'añadió') && str_contains($message->body, $replacementMember->name)));
+        $this->assertTrue($messages->contains(fn (CompanyChatMessage $message): bool => str_contains($message->body, 'se ha unido') && str_contains($message->body, $replacementMember->name)));
     }
 
     public function test_chat_attachment_route_serves_files_for_conversation_participants(): void

@@ -30,6 +30,8 @@ class CompanyChatController extends Controller
 {
     private const MAX_ATTACHMENT_TOTAL_BYTES = 31457280;
     private const MAX_ATTACHMENT_FILE_KILOBYTES = 30720;
+    private const CHAT_MESSAGES_PAGE_SIZE = 24;
+    private const CHAT_MESSAGES_SYNC_OVERLAP = 16;
 
     public function index(Request $request): View|RedirectResponse|JsonResponse
     {
@@ -183,17 +185,12 @@ class CompanyChatController extends Controller
                 'userOne',
                 'userTwo',
                 'chatGroup.participants',
-                'messages' => function ($query) {
-                    $query->withTrashed()->with('sender')->orderBy('created_at');
-                },
             ]);
 
             $selectedConversation->chatGroup?->setAttribute(
                 'avatar_url',
                 $this->groupAvatarUrl($selectedConversation->chatGroup)
             );
-            $this->hydrateMessageMentions($selectedConversation->messages, $authUser);
-
             $readMessageIds = $this->markConversationAsRead($selectedConversation, $authUser);
             if ($readMessageIds !== []) {
                 $targetUserIds = $selectedConversation->participantsFor($authUser)
@@ -212,20 +209,17 @@ class CompanyChatController extends Controller
                 ))->toOthers();
             }
             $this->markConversationNotificationsAsRead($selectedConversation, $authUser);
-            $selectedConversation->refresh();
-            $selectedConversation->load([
-                'userOne',
-                'userTwo',
-                'chatGroup.participants',
-                'messages' => function ($query) {
-                    $query->withTrashed()->with('sender')->orderBy('created_at');
-                },
-            ]);
+            [$selectedConversationMessages, $selectedConversationHasMoreOlder] = $this->conversationMessagesPage(
+                $selectedConversation,
+                $authUser,
+                self::CHAT_MESSAGES_PAGE_SIZE
+            );
+            $selectedConversation->setRelation('messages', $selectedConversationMessages);
+            $selectedConversation->setAttribute('messages_has_more_older', $selectedConversationHasMoreOlder);
             $selectedConversation->chatGroup?->setAttribute(
                 'avatar_url',
                 $this->groupAvatarUrl($selectedConversation->chatGroup)
             );
-            $this->hydrateMessageMentions($selectedConversation->messages, $authUser);
         }
 
         $people = User::query()
@@ -559,6 +553,9 @@ class CompanyChatController extends Controller
 
         $authUser = $request->user();
         $favoriteUserIds = $this->favoriteUserIdsFor($authUser);
+        $limit = max(1, min((int) $request->integer('limit', self::CHAT_MESSAGES_PAGE_SIZE), 100));
+        $beforeMessageId = $this->sanitizeMessageCursor($request->query('before_message_id'));
+        $afterMessageId = $this->sanitizeMessageCursor($request->query('after_message_id'));
 
         $readMessageIds = $this->markConversationAsRead($conversation, $authUser);
         $this->markConversationNotificationsAsRead($conversation, $authUser);
@@ -580,16 +577,17 @@ class CompanyChatController extends Controller
             ))->toOthers();
         }
 
-        $messages = $conversation->messages()
-            ->withTrashed()
-            ->with('sender')
-            ->orderBy('created_at')
-            ->get()
-            ->values();
-        $this->hydrateMessageMentions($messages, $authUser);
+        [$messages, $hasMoreOlder, $hasMoreNewer] = $this->conversationMessagesPage(
+            $conversation,
+            $authUser,
+            $limit,
+            $beforeMessageId,
+            $afterMessageId
+        );
 
         $messagesPayload = $messages->map(function (CompanyChatMessage $message, int $index) use ($authUser, $messages): array {
             $nextMessage = $messages->get($index + 1);
+
             return $this->messagePayload($message, $authUser, $nextMessage);
         });
 
@@ -598,7 +596,109 @@ class CompanyChatController extends Controller
             ...$this->conversationPayload($conversation, $authUser, $favoriteUserIds),
             'last_message_at' => $conversation->last_message_at?->toIso8601String(),
             'messages' => $messagesPayload,
+            'has_more_older' => $hasMoreOlder,
+            'has_more_newer' => $hasMoreNewer,
+            'message_count' => $messages->count(),
+            'limit' => $limit,
         ]);
+    }
+
+    /**
+     * @return array{0: Collection<int, CompanyChatMessage>, 1: bool, 2: bool}
+     */
+    private function conversationMessagesPage(
+        CompanyChatConversation $conversation,
+        User $authUser,
+        int $limit = self::CHAT_MESSAGES_PAGE_SIZE,
+        ?int $beforeMessageId = null,
+        ?int $afterMessageId = null,
+    ): array {
+        $query = $conversation->messages()
+            ->withTrashed()
+            ->with('sender');
+
+        $hasMoreOlder = false;
+        $hasMoreNewer = false;
+
+        if ($beforeMessageId !== null) {
+            $cursor = $conversation->messages()
+                ->withTrashed()
+                ->findOrFail($beforeMessageId);
+
+            $messages = $query
+                ->where(function ($cursorQuery) use ($cursor): void {
+                    $cursorQuery->where('created_at', '<', $cursor->created_at)
+                        ->orWhere(function ($tieBreakerQuery) use ($cursor): void {
+                            $tieBreakerQuery->where('created_at', '=', $cursor->created_at)
+                                ->where('id', '<', $cursor->id);
+                        });
+                })
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit($limit + 1)
+                ->get()
+                ->reverse()
+                ->values();
+
+            $hasMoreOlder = $messages->count() > $limit;
+
+            if ($hasMoreOlder) {
+                $messages = $messages->slice(-$limit)->values();
+            }
+        } elseif ($afterMessageId !== null) {
+            $cursor = $conversation->messages()
+                ->withTrashed()
+                ->findOrFail($afterMessageId);
+
+            $messages = $query
+                ->where(function ($cursorQuery) use ($cursor): void {
+                    $cursorQuery->where('created_at', '>', $cursor->created_at)
+                        ->orWhere(function ($tieBreakerQuery) use ($cursor): void {
+                            $tieBreakerQuery->where('created_at', '=', $cursor->created_at)
+                                ->where('id', '>', $cursor->id);
+                        });
+                })
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->limit($limit + 1)
+                ->get()
+                ->values();
+
+            $hasMoreNewer = $messages->count() > $limit;
+
+            if ($hasMoreNewer) {
+                $messages = $messages->slice(0, $limit)->values();
+            }
+        } else {
+            $messages = $query
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit($limit + 1)
+                ->get()
+                ->reverse()
+                ->values();
+
+            $hasMoreOlder = $messages->count() > $limit;
+
+            if ($hasMoreOlder) {
+                $messages = $messages->slice(-$limit)->values();
+            }
+        }
+
+        $this->hydrateMessageMentions($messages, $authUser);
+
+        return [$messages, $hasMoreOlder, $hasMoreNewer];
+    }
+
+    private function sanitizeMessageCursor(mixed $cursor): ?int
+    {
+        if (! is_numeric($cursor)) {
+            return null;
+        }
+
+        $cursor = (int) $cursor;
+
+        return $cursor > 0 ? $cursor : null;
     }
 
     public function summary(Request $request): JsonResponse

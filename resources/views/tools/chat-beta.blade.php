@@ -22,6 +22,8 @@
         $groupUnreadTotal = (int) ($chatGroups->sum(fn ($chatGroup) => (int) ($chatGroup->conversation?->unread_messages_count ?? 0)) ?? 0);
         $chatUnreadBadgeLabel = $chatUnreadTotal > 9 ? '+9' : (string) $chatUnreadTotal;
         $groupUnreadBadgeLabel = $groupUnreadTotal > 9 ? '+9' : (string) $groupUnreadTotal;
+        $chatMessagesPageSize = 24;
+        $chatMessagesSyncOverlap = 16;
     @endphp
     <script>
         window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
@@ -567,7 +569,7 @@
                 </header>
 
                 <div
-                    class="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6"
+                    class="relative flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6"
                     data-chat-messages-wrapper
                     data-chat-messages-url-template="{{ route('chat.beta.messages.index', ['conversation' => '__CONVERSATION_ID__']) }}"
                     data-chat-store-url-template="{{ route('chat.beta.messages.store', ['conversation' => '__CONVERSATION_ID__']) }}"
@@ -575,7 +577,15 @@
                     data-chat-message-destroy-url-template="{{ route('chat.beta.messages.destroy', ['conversation' => '__CONVERSATION_ID__', 'message' => '__MESSAGE_ID__']) }}"
                     data-poll-url="{{ route('chat.beta.messages.index', $selectedConversation) }}"
                     data-conversation-id="{{ $selectedConversation->id }}"
+                    data-chat-messages-page-size="{{ $chatMessagesPageSize }}"
+                    data-chat-messages-sync-overlap="{{ $chatMessagesSyncOverlap }}"
                 >
+                    <div class="pointer-events-none absolute left-1/2 top-3 z-20 hidden -translate-x-1/2" data-chat-history-loader>
+                        <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-xs font-medium text-slate-500 shadow-lg shadow-slate-200/70">
+                            <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-brand-primary"></span>
+                            Cargando historial
+                        </div>
+                    </div>
                     <div class="mx-auto flex min-h-full max-w-5xl flex-col justify-end">
                         <div class="space-y-0" data-chat-messages>
                             @php
@@ -1077,6 +1087,7 @@
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
                 const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
                 const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
+                const historyLoader = document.querySelector('[data-chat-history-loader]');
                 const headerGroupShell = document.querySelector('[data-chat-header-group-shell]');
                 const headerPrivateShell = document.querySelector('[data-chat-header-private-shell]');
                 const headerGroupName = document.querySelector('[data-chat-group-header-name]');
@@ -1118,10 +1129,15 @@
                 const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && composerShell && composerDropzoneHint && conversationPane && conversationDropzoneHint && chatError && emojiButton && emojiPicker && mentionSuggestionsPanel && mentionSuggestionsList);
                 let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
                 let currentConversationParticipants = Array.isArray(window.chatInitialConversationParticipants) ? window.chatInitialConversationParticipants : [];
+                const historyPageSize = Number(wrapper?.dataset.chatMessagesPageSize || 30);
+                const historySyncOverlap = Number(wrapper?.dataset.chatMessagesSyncOverlap || 20);
                 const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
                 const realtimeConfig = window.chatRealtimeConfig || {};
                 let isSubmitting = false;
                 let pollingLocked = false;
+                let isLoadingOlderMessages = false;
+                let hasMoreOlderMessages = Boolean(@js((bool) ($selectedConversation?->messages_has_more_older ?? false)));
+                let pendingOutgoingMessageId = null;
                 let attachmentSnapshot = [];
                 let sidebarTab = 'chats';
                 let searchAbortController = null;
@@ -1134,6 +1150,7 @@
                 let editingMessageId = null;
                 let editingMessageDraft = '';
                 let pendingDeleteMessageId = null;
+                let conversationRevision = 0;
                 let currentGroupModalData = window.chatInitialGroupModalData || null;
                 let composerMentionState = {
                     isOpen: false,
@@ -1202,6 +1219,81 @@
                             attachments_count: Array.isArray(message.attachments) ? message.attachments.length : 0,
                         })),
                     );
+                };
+                const getMessageSortKey = (message) => {
+                    const createdAt = Date.parse(message?.created_at || '');
+                    return {
+                        createdAt: Number.isNaN(createdAt) ? 0 : createdAt,
+                        id: Number(message?.id || 0),
+                    };
+                };
+                const compareMessagesChronologically = (first, second) => {
+                    const firstKey = getMessageSortKey(first);
+                    const secondKey = getMessageSortKey(second);
+
+                    if (firstKey.createdAt !== secondKey.createdAt) {
+                        return firstKey.createdAt - secondKey.createdAt;
+                    }
+
+                    return firstKey.id - secondKey.id;
+                };
+                const sortMessagesChronologically = (messages) => {
+                    return Array.isArray(messages)
+                        ? [...messages].sort(compareMessagesChronologically)
+                        : [];
+                };
+                const mergeMessagesById = (baseMessages, incomingMessages) => {
+                    const mergedMessages = new Map();
+
+                    sortMessagesChronologically(baseMessages).forEach((message) => {
+                        mergedMessages.set(Number(message?.id || 0), { ...message });
+                    });
+
+                    sortMessagesChronologically(incomingMessages).forEach((message) => {
+                        const messageId = Number(message?.id || 0);
+
+                        if (!messageId) {
+                            return;
+                        }
+
+                        const currentMessage = mergedMessages.get(messageId) || {};
+                        mergedMessages.set(messageId, { ...currentMessage, ...message });
+                    });
+
+                    return Array.from(mergedMessages.values()).sort(compareMessagesChronologically);
+                };
+                const buildPendingOutgoingMessage = ({ body, attachments = [], mentionedUserIds = [] }) => {
+                    const now = new Date();
+                    const isoNow = now.toISOString();
+                    return {
+                        id: `pending-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                        body,
+                        rendered_body_html: escapeHtml(body),
+                        attachments,
+                        is_mine: true,
+                        is_system: false,
+                        mentions_me: false,
+                        mentioned_user_ids: Array.isArray(mentionedUserIds) ? mentionedUserIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0) : [],
+                        mentioned_users: [],
+                        read_at: null,
+                        created_at: isoNow,
+                        updated_at: isoNow,
+                        edited_at: null,
+                        deleted_at: null,
+                        created_at_label: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                        show_time: true,
+                        is_pending: true,
+                        pending_attachments: Array.isArray(attachments) ? attachments : [],
+                    };
+                };
+                const getOldestMessageId = () => Number(currentMessages?.[0]?.id || 0);
+                const getLatestMessageId = () => Number(currentMessages?.[currentMessages.length - 1]?.id || 0);
+                const setHistoryLoaderVisible = (visible) => {
+                    if (!historyLoader) {
+                        return;
+                    }
+
+                    historyLoader.classList.toggle('hidden', !visible);
                 };
                 currentMessagesFingerprint = buildMessagesFingerprint(currentMessages);
                 const favoriteUserIds = new Set(@js($favoriteUserIds ?? []));
@@ -1974,12 +2066,22 @@
                     chatError.classList.add('hidden');
                 };
 
-                const buildConversationMessagesUrl = (conversationId) => {
+                const buildConversationMessagesUrl = (conversationId, params = {}) => {
                     if (!messagesUrlTemplate) {
                         return '';
                     }
 
-                    return messagesUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(String(conversationId)));
+                    const url = new URL(messagesUrlTemplate.replace('__CONVERSATION_ID__', encodeURIComponent(String(conversationId))), window.location.origin);
+
+                    Object.entries(params || {}).forEach(([key, value]) => {
+                        if (value === null || value === undefined || value === '') {
+                            return;
+                        }
+
+                        url.searchParams.set(key, String(value));
+                    });
+
+                    return `${url.pathname}${url.search}`;
                 };
 
                 const buildConversationStoreUrl = (conversationId) => {
@@ -2202,10 +2304,20 @@
                     const showTime = Boolean(index === messages.length - 1 || nextDateKey !== currentDateKey || nextTimeLabel !== currentTimeLabel);
                     const topMarginClass = index === 0 ? 'mt-0' : ((previousDateKey === currentDateKey && previousTimeLabel === currentTimeLabel) ? 'mt-0.5' : 'mt-3');
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
+                    const pendingAttachments = Array.isArray(message.pending_attachments) ? message.pending_attachments : [];
                     const body = message.body || '';
                     const attachmentsHtml = messageAttachments.map((attachment) => renderAttachmentMarkup(attachment)).join('');
+                    const pendingAttachmentsHtml = pendingAttachments.length > 0
+                        ? pendingAttachments.map((attachment) => `
+                            <div class="rounded-[1rem] border border-dashed border-amber-200 bg-amber-50/70 px-3 py-2">
+                                <p class="truncate text-sm font-medium text-amber-900">${escapeHtml(String(attachment.original_name || 'archivo'))}</p>
+                                ${attachment.size_label ? `<p class="mt-0.5 text-xs text-amber-700">${escapeHtml(String(attachment.size_label))}</p>` : ''}
+                            </div>
+                        `).join('')
+                        : '';
                     const isDeleted = Boolean(message.deleted_at);
                     const isEdited = Boolean(message.edited_at && !isDeleted);
+                    const isPending = Boolean(message.is_pending);
                     const isEditing = isMine && Number(editingMessageId || 0) === Number(message.id);
                     const editableBody = editingMessageDraft !== '' ? editingMessageDraft : body;
                     const showSenderName = currentConversationIsGroup
@@ -2236,7 +2348,7 @@
                                         <span data-message-time ${showTime ? '' : 'class="hidden"'}>${escapeHtml(currentTimeLabel)}</span>
                                     </div>
                                 ` : `
-                                <div class="group relative min-w-[5.5rem] max-w-full overflow-x-hidden rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}${mentionHighlightClass}">
+                                <div class="group relative min-w-[5.5rem] max-w-full overflow-x-hidden rounded-[1.1rem] px-3 py-2 shadow-sm transition ${isDeleted ? 'border border-dashed border-slate-300 bg-slate-100 text-slate-500' : (isMine ? 'bg-[#d9fdd3] pb-4 pr-8 text-slate-800 hover:shadow-md' : 'border border-slate-200 bg-white text-brand-secondary')}${mentionHighlightClass}${isPending ? ' ring-1 ring-amber-200' : ''}">
                                     ${senderNameHtml}
                                     ${isEditing ? `
                                         <textarea rows="1" class="min-w-[8rem] max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-[1rem] border border-brand-primary/20 bg-white px-3 py-2 text-[15px] text-brand-secondary outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10" data-chat-edit-input>${escapeHtml(editableBody)}</textarea>
@@ -2254,12 +2366,22 @@
                                     ` : `
                                         ${body !== '' ? `<p class="whitespace-pre-line break-words [overflow-wrap:anywhere] text-[15px] leading-[1.45]">${renderedBodyHtml || escapeHtml(body)}</p>` : ''}
                                         ${attachmentsHtml !== '' ? `<div class="${body !== '' ? 'mt-2' : ''} space-y-2">${attachmentsHtml}</div>` : ''}
+                                        ${pendingAttachmentsHtml !== '' ? `<div class="${body !== '' || attachmentsHtml !== '' ? 'mt-2' : ''} space-y-2">${pendingAttachmentsHtml}</div>` : ''}
+                                        ${isPending ? `
+                                            <div class="mt-1 flex items-center gap-1.5 text-[11px] text-amber-700">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0 animate-pulse" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M12 8v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"></circle>
+                                                </svg>
+                                                <span>Enviando...</span>
+                                            </div>
+                                        ` : ''}
                                         ${isMine && !isDeleted ? `<button type="button" class="absolute bottom-1 left-2 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/75 text-slate-500 opacity-0 shadow-sm transition hover:bg-white hover:text-brand-secondary group-hover:opacity-100" aria-label="Abrir opciones del mensaje" data-chat-message-trigger>
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                                 <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
                                             </svg>
                                         </button>` : ''}
-                                        ${isMine && !isDeleted ? `<span class="absolute bottom-1.5 right-3 inline-flex items-center ${message.read_at ? 'text-sky-500' : 'text-slate-400'}" data-message-checks>
+                                        ${isMine && !isDeleted && !isPending ? `<span class="absolute bottom-1.5 right-3 inline-flex items-center ${message.read_at ? 'text-sky-500' : 'text-slate-400'}" data-message-checks>
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none">
                                                 <line x1="13.22" y1="16.5" x2="21" y2="7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                                                 <polyline points="3 11.88 7 16.5 14.78 7.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none" />
@@ -2332,6 +2454,85 @@
                     }
 
                     autoScroll();
+                };
+
+                const applyMessagesPayload = (messages, { preserveScroll = 'none', replace = true } = {}) => {
+                    const safeIncomingMessages = Array.isArray(messages) ? messages : [];
+                    const nextMessages = replace
+                        ? sortMessagesChronologically(safeIncomingMessages)
+                        : mergeMessagesById(currentMessages, safeIncomingMessages);
+
+                    renderMessages(nextMessages, { preserveScroll });
+                };
+
+                const loadOlderMessages = async () => {
+                    if (!wrapper || !hasComposer || !hasMoreOlderMessages || isLoadingOlderMessages) {
+                        return;
+                    }
+
+                    const conversationId = Number(wrapper.dataset.conversationId || sidebarSelectedConversationId || 0);
+                    const requestRevision = conversationRevision;
+                    const oldestMessageId = getOldestMessageId();
+
+                    if (!conversationId || !oldestMessageId) {
+                        hasMoreOlderMessages = false;
+                        return;
+                    }
+
+                    isLoadingOlderMessages = true;
+                    setHistoryLoaderVisible(true);
+
+                    try {
+                        const response = await fetch(buildConversationMessagesUrl(conversationId, {
+                            before_message_id: oldestMessageId,
+                            limit: historyPageSize,
+                        }), {
+                            headers: {
+                                ...getRealtimeHeaders(),
+                                'X-Requested-With': 'XMLHttpRequest',
+                                Accept: 'application/json',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        if (requestRevision !== conversationRevision || Number(wrapper.dataset.conversationId || 0) !== conversationId) {
+                            return;
+                        }
+
+                        const payload = await response.json();
+                        const olderMessages = Array.isArray(payload.messages) ? payload.messages : [];
+
+                        if (olderMessages.length === 0) {
+                            hasMoreOlderMessages = Boolean(payload.has_more_older);
+                            return;
+                        }
+
+                        hasMoreOlderMessages = Boolean(payload.has_more_older);
+                        applyMessagesPayload([...olderMessages, ...currentMessages], {
+                            preserveScroll: 'delta',
+                            replace: true,
+                        });
+                    } catch (error) {
+                        console.error(error);
+                    } finally {
+                        isLoadingOlderMessages = false;
+                        setHistoryLoaderVisible(false);
+                    }
+                };
+
+                const handleMessagesScroll = () => {
+                    if (!wrapper || !hasComposer || isLoadingOlderMessages || !hasMoreOlderMessages) {
+                        return;
+                    }
+
+                    if (wrapper.scrollTop > 80) {
+                        return;
+                    }
+
+                    void loadOlderMessages();
                 };
 
                 const cancelInlineEdit = () => {
@@ -2408,13 +2609,17 @@
 
                         const payload = await response.json().catch(() => ({}));
 
+                        if (requestRevision !== conversationRevision) {
+                            return;
+                        }
+
                         if (!response.ok) {
                             showChatError(payload?.message || 'No se pudo editar el mensaje.');
                             return;
                         }
 
                         cancelInlineEdit();
-                        await loadConversation(conversationId, { pushState: false });
+                        await loadConversation(conversationId, { pushState: false, preserveHistory: true });
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
@@ -2523,7 +2728,7 @@
                             return;
                         }
 
-                        await loadConversation(conversationId, { pushState: false });
+                        await loadConversation(conversationId, { pushState: false, preserveHistory: true });
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
@@ -2807,11 +3012,13 @@
                     });
                 }
 
-                const loadConversation = async (conversationId, { pushState = true } = {}) => {
+                const loadConversation = async (conversationId, { pushState = true, preserveHistory = false } = {}) => {
                     if (!conversationId) {
                         return;
                     }
 
+                    conversationRevision += 1;
+                    const requestRevision = conversationRevision;
                     const url = buildConversationMessagesUrl(conversationId);
 
                     try {
@@ -2827,15 +3034,26 @@
                             return;
                         }
 
+                        if (requestRevision !== conversationRevision) {
+                            return;
+                        }
+
                         const payload = await response.json();
                         const messages = Array.isArray(payload.messages) ? payload.messages : [];
                         const activeConversationId = Number(payload.conversation_id || conversationId);
+                        const shouldMergeHistory = preserveHistory && Number(wrapper?.dataset.conversationId || 0) === activeConversationId;
+                        const preserveScroll = shouldMergeHistory && (wrapper.scrollTop < (wrapper.scrollHeight - wrapper.clientHeight - 120))
+                            ? 'exact'
+                            : 'none';
 
                         sidebarSelectedConversationId = activeConversationId;
                         pollUrl = buildConversationMessagesUrl(activeConversationId);
                         wrapper.dataset.pollUrl = pollUrl;
                         wrapper.dataset.conversationId = String(activeConversationId);
                         currentConversationIsGroup = Boolean(payload.conversation_is_group);
+                        hasMoreOlderMessages = Boolean(payload.has_more_older);
+                        isLoadingOlderMessages = false;
+                        setHistoryLoaderVisible(false);
                         activeMessageMenuId = null;
                         editingMessageId = null;
                         editingMessageDraft = '';
@@ -2844,7 +3062,10 @@
 
                         updateHeader(payload);
                         setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
-                        renderMessages(messages);
+                        applyMessagesPayload(messages, {
+                            preserveScroll,
+                            replace: !shouldMergeHistory,
+                        });
                         void subscribeRealtimeConversation(activeConversationId);
                         refreshSidebar();
 
@@ -3000,7 +3221,13 @@
                     }
 
                     try {
-                        const response = await fetch(pollUrl, {
+                        const requestRevision = conversationRevision;
+                        const latestId = getLatestMessageId();
+                        const syncFromId = Math.max(0, latestId - historySyncOverlap);
+                        const response = await fetch(buildConversationMessagesUrl(sidebarSelectedConversationId || Number(wrapper?.dataset.conversationId || 0), {
+                            after_message_id: syncFromId,
+                            limit: Math.min(Math.max(historyPageSize, historySyncOverlap + 10), 100),
+                        }), {
                             headers: {
                                 ...getRealtimeHeaders(),
                                 'X-Requested-With': 'XMLHttpRequest',
@@ -3012,15 +3239,20 @@
                             return;
                         }
 
+                        if (requestRevision !== conversationRevision) {
+                            return;
+                        }
+
                         const payload = await response.json();
                         const messages = Array.isArray(payload.messages) ? payload.messages : [];
-                        const nextLatest = Number(messages[messages.length - 1]?.id ?? 0);
-                        const nextFingerprint = buildMessagesFingerprint(messages);
+                        const nextMessages = mergeMessagesById(currentMessages, messages);
+                        const nextLatest = Number(nextMessages[nextMessages.length - 1]?.id ?? 0);
+                        const nextFingerprint = buildMessagesFingerprint(nextMessages);
 
                         if (nextFingerprint !== currentMessagesFingerprint) {
-                            const isNewTailMessage = nextLatest > latestMessageId;
+                            const isNewTailMessage = nextLatest > latestId;
                             const isNearBottom = (wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight) < 120;
-                            renderMessages(messages, {
+                            renderMessages(nextMessages, {
                                 preserveScroll: isNewTailMessage && isNearBottom ? 'none' : 'exact',
                             });
                         } else {
@@ -3378,11 +3610,21 @@
                         return;
                     }
 
+                    const pendingMessage = buildPendingOutgoingMessage({
+                        body,
+                        attachments: attachmentSnapshot.map((file) => ({
+                            original_name: file.name,
+                            size_label: `${Math.ceil(Number(file.size || 0) / 1024)} KB`,
+                        })),
+                        mentionedUserIds: composerMentionIds,
+                    });
+                    const requestRevision = conversationRevision;
+                    const pendingMessageId = pendingMessage.id;
                     const url = buildConversationStoreUrl(conversationId);
                     const formData = new FormData();
                     formData.append('_token', csrfToken);
                     formData.append('conversation_id', String(conversationId));
-                    formData.append('body', input.value);
+                    formData.append('body', body);
                     composerMentionIds.forEach((mentionedUserId) => {
                         formData.append('mentioned_user_ids[]', String(mentionedUserId));
                     });
@@ -3392,6 +3634,11 @@
                     });
 
                     isSubmitting = true;
+                    pendingOutgoingMessageId = pendingMessageId;
+                    applyMessagesPayload([...currentMessages, pendingMessage], {
+                        preserveScroll: 'none',
+                        replace: true,
+                    });
 
                     try {
                         const response = await fetch(url, {
@@ -3407,6 +3654,14 @@
                         const payload = await response.json().catch(() => ({}));
 
                         if (!response.ok) {
+                            if (requestRevision === conversationRevision) {
+                                pendingOutgoingMessageId = null;
+                                applyMessagesPayload(currentMessages.filter((message) => String(message.id) !== String(pendingMessageId)), {
+                                    preserveScroll: 'none',
+                                    replace: true,
+                                });
+                            }
+
                             if (response.status === 413) {
                                 showChatError('El conjunto de archivos adjuntos supera el peso máximo permitido de 30 MB.');
                                 return;
@@ -3421,6 +3676,30 @@
                             return;
                         }
 
+                        pendingOutgoingMessageId = null;
+                        const serverMessage = payload.message ? {
+                            ...payload.message,
+                            is_pending: false,
+                        } : null;
+
+                        if (serverMessage) {
+                            applyMessagesPayload(
+                                mergeMessagesById(
+                                    currentMessages.filter((message) => String(message.id) !== String(pendingMessageId)),
+                                    [serverMessage]
+                                ),
+                                {
+                                    preserveScroll: 'none',
+                                    replace: true,
+                                }
+                            );
+                        } else {
+                            applyMessagesPayload(currentMessages.filter((message) => String(message.id) !== String(pendingMessageId)), {
+                                preserveScroll: 'none',
+                                replace: true,
+                            });
+                        }
+
                         input.value = '';
                         attachmentSnapshot = [];
                         composerMentionIds = [];
@@ -3430,15 +3709,16 @@
                         clearComposerMentions();
                         focusComposer();
 
-                        if (payload.conversation_id) {
-                            await loadConversation(payload.conversation_id, { pushState: false });
-                        } else {
-                            await loadConversation(conversationId, { pushState: false });
-                        }
-
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
+                        if (requestRevision === conversationRevision) {
+                            pendingOutgoingMessageId = null;
+                            applyMessagesPayload(currentMessages.filter((message) => String(message.id) !== String(pendingMessageId)), {
+                                preserveScroll: 'none',
+                                replace: true,
+                            });
+                        }
                         showChatError('No se pudo enviar el mensaje.');
                     } finally {
                         isSubmitting = false;
@@ -3510,6 +3790,10 @@
                 });
 
                 if (hasComposer) {
+                wrapper.addEventListener('scroll', () => {
+                    handleMessagesScroll();
+                }, { passive: true });
+
                 messagesContainer.addEventListener('click', (event) => {
                     const trigger = event.target.closest('[data-chat-message-trigger]');
                     if (trigger) {
