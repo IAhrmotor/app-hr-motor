@@ -13,6 +13,7 @@
         $selectedParticipantChatRoleLabel = $selectedParticipant?->chat_role_label ?? '';
         $selectedParticipantDealershipName = $selectedParticipant?->resolved_dealership_name ?: 'Sin delegación';
         $selectedParticipantIsDisabled = $selectedParticipant?->isDisabled() ?? false;
+        $composerDisabled = $selectedParticipantIsDisabled && ! $selectedConversationIsGroup;
         $selectedParticipantAvatarUrl = $selectedParticipant?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png');
         $selectedParticipantName = $selectedParticipant?->name ?? 'Usuario';
         $selectedParticipantProfileUrl = $selectedParticipant ? route('users.show', $selectedParticipant) : '#';
@@ -73,6 +74,7 @@
             data-chat-root
             data-chat-summary-url="{{ route('chat.beta.summary') }}"
             data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}"
+            data-chat-composer-disabled="{{ $composerDisabled ? '1' : '0' }}"
         >
         <div class="fixed inset-0 top-[calc(5rem+1px)] z-40 hidden bg-slate-950/20 md:hidden" data-chat-mobile-sidebar-backdrop onclick="window.chatToggleMobileSidebar?.(false)"></div>
         <aside class="fixed left-0 top-[calc(5rem+1px)] z-50 flex h-[calc(100dvh-5rem-1px)] w-[21rem] max-w-[85vw] -translate-x-full overflow-hidden border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.04)] will-change-transform transform-gpu transition-[width,min-width,max-width,transform] duration-300 ease-in-out md:static md:z-auto md:h-full md:max-w-[21rem] md:translate-x-0" data-chat-sidebar>
@@ -798,6 +800,12 @@
                         <input type="hidden" name="conversation_id" value="{{ $selectedConversation->id }}">
                         <input type="file" name="attachments[]" multiple class="hidden" data-chat-attachments-input accept="image/*,.svg,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar">
 
+                        @if ($composerDisabled)
+                            <div class="mb-3 rounded-[1.2rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                Este usuario está desactivado. No puedes enviarle mensajes, emojis ni archivos.
+                            </div>
+                        @endif
+
                         <div class="absolute bottom-full right-16 mb-3 hidden w-72 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-xl" data-chat-emoji-picker>
                             <div class="grid grid-cols-8 gap-1">
                                 @foreach ([
@@ -844,7 +852,7 @@
                             <div class="max-h-72 overflow-y-auto p-2" data-chat-mention-suggestions-list></div>
                         </div>
 
-                        <div class="relative flex items-end gap-3 rounded-[1.75rem] border border-slate-200 bg-white px-4 py-3 shadow-sm transition" data-chat-composer-shell>
+                        <div class="relative flex items-end gap-3 rounded-[1.75rem] border border-slate-200 bg-white px-4 py-3 shadow-sm transition {{ $composerDisabled ? 'cursor-not-allowed bg-slate-50 opacity-70' : '' }}" data-chat-composer-shell>
                             <div class="pointer-events-none absolute inset-0 z-10 hidden rounded-[1.75rem] border-2 border-dashed border-sky-400/80 bg-sky-50/85 px-4 py-3 shadow-lg ring-1 ring-sky-200/60 backdrop-blur-[1px]" data-chat-dropzone-hint aria-hidden="true">
                                 <div class="flex h-full items-center justify-center">
                                     <div class="rounded-full bg-white/90 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700 shadow-sm ring-1 ring-sky-200">
@@ -854,8 +862,9 @@
                             </div>
 
                             <button type="button"
-                                class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary"
+                                class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                                 aria-label="Adjuntar archivo"
+                                @disabled($composerDisabled)
                                 data-chat-attachments-button>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.5 12.5 21a6.364 6.364 0 1 1-9-9L12 3.5a4.243 4.243 0 1 1 6 6L8.5 19a2.121 2.121 0 1 1-3-3L14 7.5" />
@@ -866,13 +875,15 @@
                                 name="body"
                                 rows="1"
                                 placeholder="Escribir mensaje..."
-                                class="max-h-40 flex-1 resize-none border-0 bg-transparent px-0 py-2 text-[16px] text-brand-secondary outline-none placeholder:text-slate-400 focus:ring-0 md:text-[15px]"
+                                class="max-h-40 flex-1 resize-none border-0 bg-transparent px-0 py-2 text-[16px] text-brand-secondary outline-none placeholder:text-slate-400 focus:ring-0 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-400 md:text-[15px]"
+                                @disabled($composerDisabled)
                                 data-chat-input
                             >{{ old('body') }}</textarea>
 
                             <button type="button"
-                                class="hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary md:inline-flex"
+                                class="hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400 md:inline-flex"
                                 aria-label="Emoticonos"
+                                @disabled($composerDisabled)
                                 data-chat-emoji-button>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                     <circle cx="12" cy="12" r="9" />
@@ -882,7 +893,8 @@
                             </button>
 
                             <button type="button"
-                                class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-90 md:px-5 md:text-sm"
+                                class="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:hover:opacity-100 md:px-5 md:text-sm"
+                                @disabled($composerDisabled)
                                 data-chat-submit-button>
                                 <span class="hidden md:inline">Enviar</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1087,6 +1099,7 @@
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
                 const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
                 const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
+                const composerDisabled = root?.dataset.chatComposerDisabled === '1';
                 const historyLoader = document.querySelector('[data-chat-history-loader]');
                 const headerGroupShell = document.querySelector('[data-chat-header-group-shell]');
                 const headerPrivateShell = document.querySelector('[data-chat-header-private-shell]');
@@ -1127,6 +1140,7 @@
                 }
 
                 const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && composerShell && composerDropzoneHint && conversationPane && conversationDropzoneHint && chatError && emojiButton && emojiPicker && mentionSuggestionsPanel && mentionSuggestionsList);
+                const canCompose = hasComposer && !composerDisabled;
                 let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
                 let currentConversationParticipants = Array.isArray(window.chatInitialConversationParticipants) ? window.chatInitialConversationParticipants : [];
                 const historyPageSize = Number(wrapper?.dataset.chatMessagesPageSize || 30);
@@ -3586,6 +3600,10 @@
                 };
 
                 const sendMessage = async () => {
+                    if (composerDisabled) {
+                        return;
+                    }
+
                     if (isSubmitting) {
                         return;
                     }
@@ -3909,95 +3927,97 @@
                     }
                 });
 
-                attachmentsButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    attachmentsInput.value = '';
-                    attachmentsInput.click();
-                });
-
-                attachmentsInput.addEventListener('change', (event) => {
-                    appendAttachments(event.target.files);
-                    event.target.value = '';
-                });
-
-                document.addEventListener('dragenter', handlePageDragEnter);
-                document.addEventListener('dragover', handlePageDragOver);
-                document.addEventListener('dragleave', handlePageDragLeave);
-                document.addEventListener('drop', handlePageDrop);
-                conversationPane.addEventListener('dragenter', handleComposerDragEnter);
-                conversationPane.addEventListener('dragover', handleComposerDragOver);
-                conversationPane.addEventListener('dragleave', handleComposerDragLeave);
-                conversationPane.addEventListener('drop', handleComposerDrop);
-                input.addEventListener('paste', handleComposerPaste);
-                input.addEventListener('input', () => {
-                    if (!String(input.value || '').includes('@')) {
-                        composerMentionIds = [];
-                    }
-
-                    updateComposerMentionSuggestions();
-                });
-                input.addEventListener('keyup', updateComposerMentionSuggestions);
-                input.addEventListener('click', updateComposerMentionSuggestions);
-                input.addEventListener('focus', updateComposerMentionSuggestions);
-
-                attachmentsChips.addEventListener('click', (event) => {
-                    const removeButton = event.target.closest('[data-chat-remove-attachment-index]');
-
-                    if (!removeButton) {
-                        return;
-                    }
-
-                    const index = Number(removeButton.dataset.chatRemoveAttachmentIndex);
-
-                    if (Number.isNaN(index)) {
-                        return;
-                    }
-
-                    removeAttachmentAtIndex(index);
-                });
-
-                emojiButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleEmojiPicker();
-                });
-
-                emojiPicker.addEventListener('click', (event) => {
-                    const emojiButton = event.target.closest('[data-chat-emoji-option]');
-
-                    if (!emojiButton) {
-                        return;
-                    }
-
-                    insertEmoji(emojiButton.dataset.emoji || emojiButton.textContent || '');
-                });
-
-                mentionSuggestionsList.addEventListener('click', (event) => {
-                    const option = event.target.closest('[data-chat-mention-option]');
-
-                    if (!option) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                    insertComposerMention({
-                        id: Number(option.dataset.mentionUserId || 0),
-                        name: option.dataset.mentionUserName || '',
+                if (canCompose) {
+                    attachmentsButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        attachmentsInput.value = '';
+                        attachmentsInput.click();
                     });
-                });
 
-                document.addEventListener('click', (event) => {
-                    if (emojiPicker.contains(event.target) || emojiButton.contains(event.target)) {
-                        return;
-                    }
+                    attachmentsInput.addEventListener('change', (event) => {
+                        appendAttachments(event.target.files);
+                        event.target.value = '';
+                    });
 
-                    if (mentionSuggestionsPanel.contains(event.target) || input.contains(event.target)) {
-                        return;
-                    }
+                    document.addEventListener('dragenter', handlePageDragEnter);
+                    document.addEventListener('dragover', handlePageDragOver);
+                    document.addEventListener('dragleave', handlePageDragLeave);
+                    document.addEventListener('drop', handlePageDrop);
+                    conversationPane.addEventListener('dragenter', handleComposerDragEnter);
+                    conversationPane.addEventListener('dragover', handleComposerDragOver);
+                    conversationPane.addEventListener('dragleave', handleComposerDragLeave);
+                    conversationPane.addEventListener('drop', handleComposerDrop);
+                    input.addEventListener('paste', handleComposerPaste);
+                    input.addEventListener('input', () => {
+                        if (!String(input.value || '').includes('@')) {
+                            composerMentionIds = [];
+                        }
 
-                    closeEmojiPicker();
-                    clearComposerMentions();
-                });
+                        updateComposerMentionSuggestions();
+                    });
+                    input.addEventListener('keyup', updateComposerMentionSuggestions);
+                    input.addEventListener('click', updateComposerMentionSuggestions);
+                    input.addEventListener('focus', updateComposerMentionSuggestions);
+
+                    attachmentsChips.addEventListener('click', (event) => {
+                        const removeButton = event.target.closest('[data-chat-remove-attachment-index]');
+
+                        if (!removeButton) {
+                            return;
+                        }
+
+                        const index = Number(removeButton.dataset.chatRemoveAttachmentIndex);
+
+                        if (Number.isNaN(index)) {
+                            return;
+                        }
+
+                        removeAttachmentAtIndex(index);
+                    });
+
+                    emojiButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        toggleEmojiPicker();
+                    });
+
+                    emojiPicker.addEventListener('click', (event) => {
+                        const emojiButton = event.target.closest('[data-chat-emoji-option]');
+
+                        if (!emojiButton) {
+                            return;
+                        }
+
+                        insertEmoji(emojiButton.dataset.emoji || emojiButton.textContent || '');
+                    });
+
+                    mentionSuggestionsList.addEventListener('click', (event) => {
+                        const option = event.target.closest('[data-chat-mention-option]');
+
+                        if (!option) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        insertComposerMention({
+                            id: Number(option.dataset.mentionUserId || 0),
+                            name: option.dataset.mentionUserName || '',
+                        });
+                    });
+
+                    document.addEventListener('click', (event) => {
+                        if (emojiPicker.contains(event.target) || emojiButton.contains(event.target)) {
+                            return;
+                        }
+
+                        if (mentionSuggestionsPanel.contains(event.target) || input.contains(event.target)) {
+                            return;
+                        }
+
+                        closeEmojiPicker();
+                        clearComposerMentions();
+                    });
+                }
 
                 }
 
@@ -4016,7 +4036,7 @@
                     });
                 }
 
-                if (hasComposer) {
+                if (canCompose) {
                     const submitButton = form.querySelector('[data-chat-submit-button]');
                     let submitButtonPointerActive = false;
                     let submitButtonPointerHandled = false;
