@@ -638,9 +638,14 @@
                                         || $nextDateKey !== $currentDateKey
                                         || $nextTimeLabel !== $currentTimeLabel
                                         || $nextMessage?->sender_id !== $message->sender_id;
+                                    $senderChanged = $selectedConversationIsGroup
+                                        && $previousMessage?->sender_id !== null
+                                        && $previousMessage?->sender_id !== $message->sender_id;
                                     $topMarginClass = 'mt-3';
                                     if ($loop->first) {
                                         $topMarginClass = 'mt-0';
+                                    } elseif ($senderChanged) {
+                                        $topMarginClass = 'mt-4';
                                     } elseif (
                                         $previousDateKey === $currentDateKey
                                         && $previousTimeLabel === $currentTimeLabel
@@ -657,7 +662,7 @@
                                         && ! $isMine
                                         && (
                                             $loop->first
-                                            || $previousMessage?->sender_id !== $message->sender_id
+                                            || $senderChanged
                                             || $previousTimeLabel !== $currentTimeLabel
                                         );
                                 @endphp
@@ -2402,15 +2407,20 @@
                         || nextTimeLabel !== currentTimeLabel
                         || Number(nextMessage?.sender_id || 0) !== Number(message.sender_id || 0)
                     );
+                    const senderChanged = currentConversationIsGroup
+                        && index > 0
+                        && Number(previousMessage?.sender_id || 0) !== Number(message.sender_id || 0);
                     const topMarginClass = index === 0
                         ? 'mt-0'
-                        : (
-                            previousDateKey === currentDateKey
-                            && previousTimeLabel === currentTimeLabel
-                            && Number(previousMessage?.sender_id || 0) === Number(message.sender_id || 0)
-                        )
-                            ? 'mt-0.5'
-                            : 'mt-3';
+                        : senderChanged
+                            ? 'mt-4'
+                            : (
+                                previousDateKey === currentDateKey
+                                && previousTimeLabel === currentTimeLabel
+                                && Number(previousMessage?.sender_id || 0) === Number(message.sender_id || 0)
+                            )
+                                ? 'mt-0.5'
+                                : 'mt-3';
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
                     const pendingAttachments = Array.isArray(message.pending_attachments) ? message.pending_attachments : [];
                     const body = message.body || '';
@@ -2434,7 +2444,7 @@
                         && !isDeleted
                         && (
                             index === 0
-                            || Number(previousMessage?.sender_id || 0) !== Number(message.sender_id || 0)
+                            || senderChanged
                             || previousTimeLabel !== currentTimeLabel
                         );
                     const senderNameHtml = showSenderName
