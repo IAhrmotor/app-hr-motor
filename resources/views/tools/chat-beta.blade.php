@@ -1470,7 +1470,7 @@
                     }, 75);
                 };
 
-                const handleRealtimeChatEvent = (eventName, payload) => {
+                const handleRealtimeChatEvent = (payload) => {
                     const conversationId = Number(payload?.conversation_id || 0);
                     const activeConversationId = Number(wrapper?.dataset.conversationId || sidebarSelectedConversationId || 0);
 
@@ -1479,14 +1479,6 @@
                     }
 
                     if (conversationId === activeConversationId) {
-                        if (eventName === 'chat.message.created' && payload?.message) {
-                            const isNearBottom = (wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight) < 120;
-                            applyMessagesPayload([payload.message], {
-                                preserveScroll: isNearBottom ? 'none' : 'exact',
-                                replace: false,
-                            });
-                        }
-
                         queueRealtimeMessagesSync();
                     }
 
@@ -1713,7 +1705,7 @@
                             : payload.data;
 
                         if (payload.event === 'chat.message.created' || payload.event === 'chat.conversation.read') {
-                            handleRealtimeChatEvent(payload.event, eventData);
+                            handleRealtimeChatEvent(eventData);
                         }
                     });
 
