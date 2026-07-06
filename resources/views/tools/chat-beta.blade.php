@@ -1205,11 +1205,9 @@
                 const historySyncOverlap = Number(wrapper?.dataset.chatMessagesSyncOverlap || 20);
                 const csrfToken = form?.querySelector('input[name="_token"]')?.value ?? '';
                 const realtimeConfig = window.chatRealtimeConfig || {};
-                let isSubmitting = false;
                 let pollingLocked = false;
                 let isLoadingOlderMessages = false;
                 let hasMoreOlderMessages = Boolean(@js((bool) ($selectedConversation?->messages_has_more_older ?? false)));
-                let pendingOutgoingMessageId = null;
                 let attachmentSnapshot = [];
                 let sidebarTab = 'chats';
                 let searchAbortController = null;
@@ -3679,10 +3677,6 @@
                         return;
                     }
 
-                    if (isSubmitting) {
-                        return;
-                    }
-
                     clearChatError();
 
                     const body = input.value.trim();
@@ -3711,6 +3705,9 @@
                         })),
                         mentionedUserIds: composerMentionIds,
                     });
+                    const draftBody = input.value;
+                    const draftAttachments = [...attachmentSnapshot];
+                    const draftMentionIds = [...composerMentionIds];
                     const requestRevision = conversationRevision;
                     const pendingMessageId = pendingMessage.id;
                     const url = buildConversationStoreUrl(conversationId);
@@ -3718,16 +3715,23 @@
                     formData.append('_token', csrfToken);
                     formData.append('conversation_id', String(conversationId));
                     formData.append('body', body);
-                    composerMentionIds.forEach((mentionedUserId) => {
+                    draftMentionIds.forEach((mentionedUserId) => {
                         formData.append('mentioned_user_ids[]', String(mentionedUserId));
                     });
 
-                    attachmentSnapshot.forEach((file) => {
+                    draftAttachments.forEach((file) => {
                         formData.append('attachments[]', file, file.name);
                     });
 
-                    isSubmitting = true;
-                    pendingOutgoingMessageId = pendingMessageId;
+                    input.value = '';
+                    attachmentSnapshot = [];
+                    composerMentionIds = [];
+                    syncAttachmentInputFiles();
+                    renderAttachmentsPreview();
+                    closeEmojiPicker();
+                    clearComposerMentions();
+                    focusComposer();
+
                     applyMessagesPayload([...currentMessages, pendingMessage], {
                         preserveScroll: 'none',
                         replace: true,
@@ -3748,11 +3752,18 @@
 
                         if (!response.ok) {
                             if (requestRevision === conversationRevision) {
-                                pendingOutgoingMessageId = null;
                                 applyMessagesPayload(currentMessages.filter((message) => String(message.id) !== String(pendingMessageId)), {
                                     preserveScroll: 'none',
                                     replace: true,
                                 });
+                            }
+
+                            if (input.value === '' && attachmentSnapshot.length === 0 && composerMentionIds.length === 0) {
+                                input.value = draftBody;
+                                attachmentSnapshot = draftAttachments;
+                                composerMentionIds = draftMentionIds;
+                                syncAttachmentInputFiles();
+                                renderAttachmentsPreview();
                             }
 
                             if (response.status === 413) {
@@ -3769,7 +3780,6 @@
                             return;
                         }
 
-                        pendingOutgoingMessageId = null;
                         const serverMessage = payload.message ? {
                             ...payload.message,
                             is_pending: false,
@@ -3793,28 +3803,24 @@
                             });
                         }
 
-                        input.value = '';
-                        attachmentSnapshot = [];
-                        composerMentionIds = [];
-                        syncAttachmentInputFiles();
-                        renderAttachmentsPreview();
-                        closeEmojiPicker();
-                        clearComposerMentions();
-                        focusComposer();
-
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
                         if (requestRevision === conversationRevision) {
-                            pendingOutgoingMessageId = null;
                             applyMessagesPayload(currentMessages.filter((message) => String(message.id) !== String(pendingMessageId)), {
                                 preserveScroll: 'none',
                                 replace: true,
                             });
                         }
+                        if (input.value === '' && attachmentSnapshot.length === 0 && composerMentionIds.length === 0) {
+                            input.value = draftBody;
+                            attachmentSnapshot = draftAttachments;
+                            composerMentionIds = draftMentionIds;
+                            syncAttachmentInputFiles();
+                            renderAttachmentsPreview();
+                        }
                         showChatError('No se pudo enviar el mensaje.');
                     } finally {
-                        isSubmitting = false;
                         window.requestAnimationFrame(() => {
                             focusComposer();
                         });
