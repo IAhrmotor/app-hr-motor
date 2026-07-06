@@ -46,11 +46,7 @@ class CompanyChatController extends Controller
             ->withCount('participants')
             ->with(['participants' => function ($query): void {
                 $query->orderBy('name');
-            }, 'conversation' => function ($query): void {
-                $query->with(['messages' => function ($messageQuery): void {
-                    $messageQuery->with('reads');
-                }]);
-            }])
+            }, 'conversation'])
             ->get();
         $chatGroups = $this->sortChatGroupsForSidebar($chatGroups);
 
@@ -733,11 +729,7 @@ class CompanyChatController extends Controller
             ->withCount('participants')
             ->with(['participants' => function ($query): void {
                 $query->orderBy('name');
-            }, 'conversation' => function ($query): void {
-                $query->with(['messages' => function ($messageQuery): void {
-                    $messageQuery->with('reads');
-                }]);
-            }])
+            }, 'conversation'])
             ->get();
         $chatGroups = $this->sortChatGroupsForSidebar($chatGroups);
 
