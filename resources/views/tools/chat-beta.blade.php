@@ -645,7 +645,7 @@
                                         && ! $isMine
                                         && (
                                             $loop->first
-                                            || $previousMessage?->sender_id !== $message->sender_id
+                                            || $senderChanged
                                             || $previousTimeLabel !== $currentTimeLabel
                                         );
                                 @endphp
@@ -2377,7 +2377,7 @@
                         && !isDeleted
                         && (
                             index === 0
-                            || Number(previousMessage?.sender_id || 0) !== Number(message.sender_id || 0)
+                            || senderChanged
                             || previousTimeLabel !== currentTimeLabel
                         );
                     const senderNameHtml = showSenderName
