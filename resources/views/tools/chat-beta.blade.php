@@ -1268,28 +1268,6 @@
                         'show_time' => $nextDateKey !== $currentDateKey || $nextTimeLabel !== $currentTimeLabel || $nextMessage?->sender_id !== $message->sender_id,
                     ];
                 })->values());
-                const normalizeIncomingMessage = (message) => {
-                    if (!message || typeof message !== 'object') {
-                        return message;
-                    }
-
-                    const mentionedUserIds = Array.isArray(message.mentioned_user_ids)
-                        ? message.mentioned_user_ids
-                            .map((value) => Number(value))
-                            .filter((value) => Number.isInteger(value) && value > 0)
-                        : [];
-                    const senderId = Number(message.sender_id || 0);
-                    const isSystem = Boolean(message.is_system);
-                    const isMine = !isSystem && senderId > 0 && senderId === realtimeCurrentUserId;
-
-                    return {
-                        ...message,
-                        sender_id: senderId || null,
-                        mentioned_user_ids: mentionedUserIds,
-                        is_mine: isMine,
-                        mentions_me: !isSystem && !isMine && mentionedUserIds.includes(realtimeCurrentUserId),
-                    };
-                };
                 const buildMessagesFingerprint = (messages) => {
                     return JSON.stringify(
                         (Array.isArray(messages) ? messages : []).map((message) => ({
@@ -2565,9 +2543,7 @@
                 };
 
                 const applyMessagesPayload = (messages, { preserveScroll = 'none', replace = true } = {}) => {
-                    const safeIncomingMessages = Array.isArray(messages)
-                        ? messages.map((message) => normalizeIncomingMessage(message))
-                        : [];
+                    const safeIncomingMessages = Array.isArray(messages) ? messages : [];
                     const nextMessages = replace
                         ? sortMessagesChronologically(safeIncomingMessages)
                         : mergeMessagesById(currentMessages, safeIncomingMessages);
