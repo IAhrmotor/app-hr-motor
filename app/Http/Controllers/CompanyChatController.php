@@ -553,9 +553,12 @@ class CompanyChatController extends Controller
         $limit = max(1, min((int) $request->integer('limit', self::CHAT_MESSAGES_PAGE_SIZE), 100));
         $beforeMessageId = $this->sanitizeMessageCursor($request->query('before_message_id'));
         $afterMessageId = $this->sanitizeMessageCursor($request->query('after_message_id'));
+        $markAsRead = $request->boolean('mark_read', true);
 
-        $readMessageIds = $this->markConversationAsRead($conversation, $authUser);
-        $this->markConversationNotificationsAsRead($conversation, $authUser);
+        $readMessageIds = $markAsRead ? $this->markConversationAsRead($conversation, $authUser) : [];
+        if ($markAsRead) {
+            $this->markConversationNotificationsAsRead($conversation, $authUser);
+        }
 
         if ($readMessageIds !== []) {
             $targetUserIds = $conversation->participantsFor($authUser)
@@ -1330,7 +1333,10 @@ class CompanyChatController extends Controller
             'edited_at' => $message->edited_at?->toIso8601String(),
             'deleted_at' => $message->deleted_at?->toIso8601String(),
             'created_at_label' => $currentLabel,
-            'show_time' => $forceShowTime || $nextDateKey !== $currentDateKey || $nextLabel !== $currentLabel,
+            'show_time' => $forceShowTime
+                || $nextDateKey !== $currentDateKey
+                || $nextLabel !== $currentLabel
+                || ($nextMessage !== null && $nextMessage->sender_id !== $message->sender_id),
             'read_at' => $message->read_at?->toIso8601String(),
             'attachments' => $this->formatAttachmentsForPayload($message),
         ];
