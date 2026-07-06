@@ -638,13 +638,14 @@
                                         || $nextDateKey !== $currentDateKey
                                         || $nextTimeLabel !== $currentTimeLabel
                                         || $nextMessage?->sender_id !== $message->sender_id;
-                                    $senderChanged = $selectedConversationIsGroup
-                                        && $previousMessage?->sender_id !== null
-                                        && $previousMessage?->sender_id !== $message->sender_id;
                                     $topMarginClass = 'mt-3';
                                     if ($loop->first) {
                                         $topMarginClass = 'mt-0';
-                                    } elseif ($senderChanged) {
+                                    } elseif (
+                                        $selectedConversationIsGroup
+                                        && $previousMessage?->sender_id !== null
+                                        && $previousMessage?->sender_id !== $message->sender_id
+                                    ) {
                                         $topMarginClass = 'mt-4';
                                     } elseif (
                                         $previousDateKey === $currentDateKey
@@ -662,7 +663,10 @@
                                         && ! $isMine
                                         && (
                                             $loop->first
-                                            || $senderChanged
+                                            || (
+                                                $previousMessage?->sender_id !== null
+                                                && $previousMessage?->sender_id !== $message->sender_id
+                                            )
                                             || $previousTimeLabel !== $currentTimeLabel
                                         );
                                 @endphp
