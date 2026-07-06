@@ -1121,6 +1121,38 @@ class CompanyChatTest extends TestCase
         }
     }
 
+    public function test_group_message_store_json_returns_realtime_payload_needed_to_render_the_message_immediately(): void
+    {
+        $sender = User::factory()->create(['name' => 'Emisor Realtime']);
+        $viewer = User::factory()->create(['name' => 'Lector Realtime']);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($viewer);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo realtime',
+        ]);
+        $group->participants()->sync([$sender->id, $viewer->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        $response = $this->actingAs($sender)->postJson(route('chat.beta.messages.store', $conversation), [
+            'body' => 'Mensaje realtime grupo',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('conversation_id', $conversation->id)
+            ->assertJsonPath('message.body', 'Mensaje realtime grupo')
+            ->assertJsonPath('message.sender_id', $sender->id)
+            ->assertJsonPath('message.sender_name', 'Emisor Realtime')
+            ->assertJsonPath('message.is_mine', true)
+            ->assertJsonPath('message.is_system', false)
+            ->assertJsonPath('message.show_time', true);
+    }
+
     public function test_chat_page_shows_policy_modal_until_the_user_accepts_the_current_version(): void
     {
         $user = User::factory()->create();
