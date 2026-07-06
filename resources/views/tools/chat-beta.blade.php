@@ -4247,6 +4247,10 @@
                     }
                 });
 
+                window.addEventListener('focus', () => {
+                    void syncMessages();
+                });
+
                 setInterval(refreshSidebar, 5000);
                 refreshSidebar();
                 updateChatRealtimeIndicator(hasComposer && realtimeConfig.enabled && typeof WebSocket !== 'undefined' && !realtimeSuppressed ? 'fallback' : 'disabled');
