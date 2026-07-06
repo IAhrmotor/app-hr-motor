@@ -502,6 +502,30 @@ class CompanyChatTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_chat_composer_clears_the_input_before_sending_the_request_to_allow_consecutive_submissions(): void
+    {
+        $sender = User::factory()->create(['name' => 'Emisor Rapido']);
+        $recipient = User::factory()->create(['name' => 'Receptor Rapido']);
+
+        $this->acceptChatPolicy($sender);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $response = $this->actingAs($sender)->get(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $response->assertOk();
+        $content = $response->getContent();
+
+        $this->assertStringNotContainsString('if (isSubmitting)', $content);
+        $this->assertMatchesRegularExpression(
+            '/input\.value = \'\';\s*attachmentSnapshot = \[\];\s*composerMentionIds = \[\];[\s\S]*?const response = await fetch\(url,/s',
+            $content
+        );
+    }
+
     public function test_group_mentions_are_stored_and_prioritised_for_the_mentioned_user(): void
     {
         $sender = User::factory()->create(['name' => 'Emisor Menciones']);
