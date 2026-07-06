@@ -135,8 +135,20 @@
 
                                 <div class="rounded-[1.25rem] border border-white/18 bg-slate-950/30 px-4 py-4 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] backdrop-blur-md ring-1 ring-white/10">
                                     <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Solicitante</dt>
-                                    <dd class="mt-2 text-lg font-semibold text-white sm:text-xl">
-                                        {{ $ticket->user?->name ?? 'Sin nombre' }}
+                                    <dd class="mt-2 space-y-1">
+                                        <div class="text-lg font-semibold text-white sm:text-xl">
+                                            {{ $ticket->user?->name ?? 'Sin nombre' }}
+                                        </div>
+
+                                        <div class="text-xs font-medium uppercase tracking-[0.14em] text-white/55">
+                                            @if ($ticket->user?->assignedDealership)
+                                                <a href="{{ route('dealerships.show', $ticket->user->assignedDealership) }}" class="transition hover:text-white/85">
+                                                    {{ $ticket->user?->resolved_dealership_name ?? 'Sin delegación' }}
+                                                </a>
+                                            @else
+                                                {{ $ticket->user?->resolved_dealership_name ?? 'Sin delegación' }}
+                                            @endif
+                                        </div>
                                     </dd>
                                 </div>
 
@@ -313,7 +325,7 @@
 
             <section class="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
                 <div class="space-y-6">
-                    <article class="flex max-h-[calc(100vh-14rem)] flex-col overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm">
+                    <article class="flex max-h-[calc(100vh-7rem)] xl:max-h-[calc(100vh-10rem)] flex-col overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm">
                         <div class="flex items-center justify-between gap-3 border-b border-brand-secondary/10 pb-4">
                             <h2 class="text-xl font-bold tracking-tight text-brand-secondary">Hilo de conversación</h2>
                             <span class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary/40">
@@ -577,7 +589,7 @@
 
                                         <textarea
                                             x-ref="ticketReplyBody"
-                                            @keydown.enter.prevent="if ($event.shiftKey) { return; } $refs.ticketReplyForm.requestSubmit()"
+                                            @keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.ticketReplyForm.requestSubmit(); }"
                                             name="body"
                                             rows="1"
                                             placeholder="Escribe tu mensaje..."
@@ -642,7 +654,7 @@
                     </article>
                 </div>
 
-                <aside class="flex max-h-[calc(100vh-14rem)] flex-col overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm lg:sticky lg:top-6">
+                <aside class="flex max-h-[calc(100vh-7rem)] xl:max-h-[calc(100vh-10rem)] flex-col overflow-hidden rounded-[2rem] border border-brand-secondary/10 bg-white p-6 shadow-sm lg:sticky lg:top-6">
                     <div class="flex items-center justify-between gap-3 border-b border-brand-secondary/10 pb-4">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">Actualizaciones</p>
@@ -723,6 +735,10 @@
                                     @elseif ($activity->event === 'status_changed')
                                         <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-emerald-700">
                                             <path fill-rule="evenodd" clip-rule="evenodd" d="M1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12ZM10.25 11C10.25 10.4477 10.6977 10 11.25 10H12.75C13.3023 10 13.75 10.4477 13.75 11V18C13.75 18.5523 13.3023 19 12.75 19H11.25C10.6977 19 10.25 18.5523 10.25 18V11ZM14 7C14 5.89543 13.1046 5 12 5C10.8954 5 10 5.89543 10 7C10 8.10457 10.8954 9 12 9C13.1046 9 14 8.10457 14 7Z" fill="currentColor"/>
+                                        </svg>
+                                    @elseif ($activity->event === 'tool_changed')
+                                        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-cyan-700">
+                                            <path fill-rule="evenodd" clip-rule="evenodd" d="M8.70711 4.70711C9.09763 4.31658 9.09763 3.68342 8.70711 3.29289C8.31658 2.90237 7.68342 2.90237 7.29289 3.29289L3.29289 7.29289C2.90237 7.68342 2.90237 8.31658 3.29289 8.70711L7.29289 12.7071C7.68342 13.0976 8.31658 13.0976 8.70711 12.7071C9.09763 12.3166 9.09763 11.6834 8.70711 11.2929L6.41421 9H16C16.5523 9 17 8.55228 17 8C17 7.44772 16.5523 7 16 7H6.41421L8.70711 4.70711ZM20.7071 15.2929L16.7071 11.2929C16.3166 10.9024 15.6834 10.9024 15.2929 11.2929C14.9024 11.6834 14.9024 12.3166 15.2929 12.7071L17.5858 15H8C7.44772 15 7 15.4477 7 16C7 16.5523 7.44772 17 8 17H17.5858L15.2929 19.2929C14.9024 19.6834 14.9024 20.3166 15.2929 20.7071C15.6834 21.0976 16.3166 21.0976 16.7071 20.7071L20.7071 16.7071C21.0976 16.3166 21.0976 15.6834 20.7071 15.2929Z" fill="currentColor"/>
                                         </svg>
                                     @elseif ($activity->event === 'reopened')
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="block h-6 w-6 shrink-0 text-emerald-600">
@@ -974,7 +990,6 @@
 
             attachmentsInput.addEventListener('change', (event) => {
                 appendAttachments(event.target.files);
-                event.target.value = '';
             });
 
             attachmentsChips.addEventListener('click', (event) => {

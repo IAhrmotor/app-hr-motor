@@ -63,7 +63,7 @@
                 const searchInput = sectionRoot.querySelector('[data-ticket-search-input]');
                 const search = normalize(searchInput?.value);
 
-                ['search', 'status', 'status[]', 'priority', 'priority[]', 'page', 'ajax'].forEach((suffix) => {
+                ['search', 'status', 'status[]', 'priority', 'priority[]', 'sort', 'page', 'ajax'].forEach((suffix) => {
                     requestUrl.searchParams.delete(`${prefix}${suffix}`);
                 });
 
@@ -80,6 +80,13 @@
 
                 if (selectedPriorities.length > 0) {
                     requestUrl.searchParams.set(`${prefix}priority`, selectedPriorities.join(','));
+                }
+
+                const sortSelect = sectionRoot.querySelector('[data-ticket-sort-select]');
+                const sortValue = normalize(sortSelect?.value);
+
+                if (sortValue !== '') {
+                    requestUrl.searchParams.set(`${prefix}sort`, sortSelect.value);
                 }
 
                 if (Number(page) > 1) {
@@ -188,6 +195,21 @@
                 }
 
                 queueSectionLoad(sectionKey);
+            });
+
+            document.addEventListener('change', (event) => {
+                const sortSelect = event.target.closest('[data-ticket-sort-select]');
+
+                if (sortSelect && root.contains(sortSelect)) {
+                    const sectionRoot = sortSelect.closest('[data-ticket-section]');
+                    const sectionKey = sectionRoot?.dataset.ticketSection;
+
+                    if (!sectionKey) {
+                        return;
+                    }
+
+                    loadResults({ sectionKey, page: 1 });
+                }
             });
 
             document.addEventListener('click', (event) => {
