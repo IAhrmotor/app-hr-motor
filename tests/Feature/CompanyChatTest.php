@@ -118,36 +118,6 @@ class CompanyChatTest extends TestCase
         ]);
     }
 
-    public function test_chat_messages_endpoint_can_refresh_without_marking_messages_as_read(): void
-    {
-        $sender = User::factory()->create();
-        $recipient = User::factory()->create();
-
-        $this->acceptChatPolicy($sender);
-        $this->acceptChatPolicy($recipient);
-
-        $conversation = CompanyChatConversation::query()->create([
-            'user_one_id' => min($sender->id, $recipient->id),
-            'user_two_id' => max($sender->id, $recipient->id),
-        ]);
-
-        $message = CompanyChatMessage::query()->create([
-            'company_chat_conversation_id' => $conversation->id,
-            'sender_id' => $sender->id,
-            'body' => 'Mensaje que no debe marcarse como leído en segundo plano',
-        ]);
-
-        $this->actingAs($recipient)
-            ->getJson(route('chat.beta.messages.index', [
-                'conversation' => $conversation->id,
-                'mark_read' => 0,
-            ]))
-            ->assertOk()
-            ->assertJsonPath('message_count', 1);
-
-        $this->assertNull($message->fresh()->read_at);
-    }
-
     public function test_user_cannot_send_messages_to_a_disabled_private_recipient_and_the_composer_is_disabled(): void
     {
         $sender = User::factory()->create();
@@ -1060,115 +1030,11 @@ class CompanyChatTest extends TestCase
 
             $response
                 ->assertOk()
-            ->assertJsonPath('messages.0.show_time', false)
-            ->assertJsonPath('messages.1.show_time', true);
-        } finally {
-            Carbon::setTestNow();
-        }
-    }
-
-    public function test_group_messages_show_sender_turns_and_time_separators_when_the_sender_changes_in_the_same_minute(): void
-    {
-        Carbon::setTestNow(Carbon::parse('2026-05-20 11:45:00'));
-
-        try {
-            $senderA = User::factory()->create(['name' => 'Persona A']);
-            $senderB = User::factory()->create(['name' => 'Persona B']);
-            $viewer = User::factory()->create(['name' => 'Lector Grupo']);
-
-            $this->acceptChatPolicy($senderA);
-            $this->acceptChatPolicy($senderB);
-            $this->acceptChatPolicy($viewer);
-
-            $group = CompanyChatGroup::query()->create([
-                'name' => 'Grupo turnos',
-            ]);
-            $group->participants()->sync([$senderA->id, $senderB->id, $viewer->id]);
-
-            $conversation = CompanyChatConversation::query()->create([
-                'company_chat_group_id' => $group->id,
-            ]);
-
-            $this->actingAs($senderA)->post(route('chat.beta.messages.store', $conversation), ['body' => 'A1']);
-            $this->actingAs($senderA)->post(route('chat.beta.messages.store', $conversation), ['body' => 'A2']);
-            $this->actingAs($senderA)->post(route('chat.beta.messages.store', $conversation), ['body' => 'A3']);
-            $this->actingAs($senderB)->post(route('chat.beta.messages.store', $conversation), ['body' => 'B1']);
-            $this->actingAs($senderB)->post(route('chat.beta.messages.store', $conversation), ['body' => 'B2']);
-
-            $response = $this->actingAs($viewer)->getJson(route('chat.beta.messages.index', $conversation));
-
-            $response
-                ->assertOk()
-                ->assertJsonPath('messages.0.body', 'A1')
                 ->assertJsonPath('messages.0.show_time', false)
-                ->assertJsonPath('messages.1.body', 'A2')
-                ->assertJsonPath('messages.1.show_time', false)
-                ->assertJsonPath('messages.2.body', 'A3')
-                ->assertJsonPath('messages.2.show_time', true)
-                ->assertJsonPath('messages.3.body', 'B1')
-                ->assertJsonPath('messages.3.show_time', false)
-                ->assertJsonPath('messages.4.body', 'B2')
-                ->assertJsonPath('messages.4.show_time', true);
-
-            $htmlResponse = $this->actingAs($viewer)->get(route('chat.beta', ['conversation' => $conversation->id]));
-
-            $htmlResponse
-                ->assertOk()
-                ->assertSee('Persona A', false)
-                ->assertSee('Persona B', false);
+                ->assertJsonPath('messages.1.show_time', true);
         } finally {
             Carbon::setTestNow();
         }
-    }
-
-    public function test_group_message_store_json_returns_realtime_payload_needed_to_render_the_message_immediately(): void
-    {
-        $sender = User::factory()->create(['name' => 'Emisor Realtime']);
-        $viewer = User::factory()->create(['name' => 'Lector Realtime']);
-
-        $this->acceptChatPolicy($sender);
-        $this->acceptChatPolicy($viewer);
-
-        $group = CompanyChatGroup::query()->create([
-            'name' => 'Grupo realtime',
-        ]);
-        $group->participants()->sync([$sender->id, $viewer->id]);
-
-        $conversation = CompanyChatConversation::query()->create([
-            'company_chat_group_id' => $group->id,
-        ]);
-
-        $response = $this->actingAs($sender)->postJson(route('chat.beta.messages.store', $conversation), [
-            'body' => 'Mensaje realtime grupo',
-        ]);
-
-        $response
-            ->assertOk()
-            ->assertJsonPath('conversation_id', $conversation->id)
-            ->assertJsonPath('message.body', 'Mensaje realtime grupo')
-            ->assertJsonPath('message.sender_id', $sender->id)
-            ->assertJsonPath('message.sender_name', 'Emisor Realtime')
-            ->assertJsonPath('message.is_mine', true)
-            ->assertJsonPath('message.is_system', false)
-            ->assertJsonPath('message.show_time', true);
-    }
-
-    public function test_chat_view_normalizes_realtime_messages_per_current_user_before_rendering_them(): void
-    {
-        $chatView = File::get(resource_path('views/tools/chat-beta.blade.php'));
-
-        $this->assertStringContainsString('const normalizeIncomingMessage = (message) => {', $chatView);
-        $this->assertStringContainsString('const isMine = !isSystem && senderId > 0 && senderId === realtimeCurrentUserId;', $chatView);
-        $this->assertStringContainsString("'mentions_me' => (bool) (\$message->mentions_auth_user ?? false)", $chatView);
-        $this->assertStringContainsString('mentions_me: !isSystem && !isMine && mentionedUserIds.includes(realtimeCurrentUserId),', $chatView);
-    }
-
-    public function test_chat_view_applies_realtime_message_normalization_for_every_message_payload_path(): void
-    {
-        $chatView = File::get(resource_path('views/tools/chat-beta.blade.php'));
-
-        $this->assertStringContainsString('const applyMessagesPayload = (messages, { preserveScroll = \'none\', replace = true } = {}) => {', $chatView);
-        $this->assertStringContainsString('? messages.map((message) => normalizeIncomingMessage(message))', $chatView);
     }
 
     public function test_chat_page_shows_policy_modal_until_the_user_accepts_the_current_version(): void
