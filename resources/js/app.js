@@ -115,6 +115,8 @@ window.itTicketCreateForm = () => ({
 });
 window.imageLightbox = () => ({
     isImageOpen: false,
+    galleryItems: [],
+    imageIndex: 0,
     imageUrl: '',
     imageAlt: '',
     imageTitle: '',
@@ -197,15 +199,57 @@ window.imageLightbox = () => ({
         this.translateY = (this.translateY * factor) + (offsetY * (1 - factor));
         this.imageScale = clampedScale;
     },
-    openImage(payload = {}) {
-        this.imageUrl = payload.src ?? '';
-        this.imageAlt = payload.alt ?? '';
-        this.imageTitle = payload.title ?? '';
+    syncImageFromGallery() {
+        const currentImage = this.galleryItems[this.imageIndex] ?? null;
+
+        this.imageUrl = currentImage?.src ?? '';
+        this.imageAlt = currentImage?.alt ?? '';
+        this.imageTitle = currentImage?.title ?? '';
+    },
+    openGallery(images = [], index = 0) {
+        const normalizedImages = Array.isArray(images)
+            ? images.map((image) => ({
+                src: String(image?.src ?? '').trim(),
+                alt: String(image?.alt ?? '').trim(),
+                title: String(image?.title ?? image?.alt ?? '').trim(),
+            })).filter((image) => image.src !== '')
+            : [];
+
+        if (!normalizedImages.length) {
+            return;
+        }
+
+        this.galleryItems = normalizedImages;
+        this.imageIndex = Math.min(Math.max(Number(index) || 0, 0), normalizedImages.length - 1);
         this.resetTransform();
+        this.syncImageFromGallery();
         this.isImageOpen = true;
+    },
+    openImage(payload = {}) {
+        this.openGallery([payload], 0);
+    },
+    nextImage() {
+        if (this.galleryItems.length < 2) {
+            return;
+        }
+
+        this.imageIndex = (this.imageIndex + 1) % this.galleryItems.length;
+        this.resetTransform();
+        this.syncImageFromGallery();
+    },
+    prevImage() {
+        if (this.galleryItems.length < 2) {
+            return;
+        }
+
+        this.imageIndex = (this.imageIndex - 1 + this.galleryItems.length) % this.galleryItems.length;
+        this.resetTransform();
+        this.syncImageFromGallery();
     },
     closeImage() {
         this.isImageOpen = false;
+        this.galleryItems = [];
+        this.imageIndex = 0;
         this.resetTransform();
     },
     async downloadImage() {
@@ -308,10 +352,20 @@ window.imageLightbox = () => ({
                 break;
             case 'ArrowLeft':
                 event.preventDefault();
+                if (this.galleryItems.length > 1 && this.imageScale === 1) {
+                    this.prevImage();
+                    break;
+                }
+
                 this.panBy(48, 0);
                 break;
             case 'ArrowRight':
                 event.preventDefault();
+                if (this.galleryItems.length > 1 && this.imageScale === 1) {
+                    this.nextImage();
+                    break;
+                }
+
                 this.panBy(-48, 0);
                 break;
             case 'ArrowUp':

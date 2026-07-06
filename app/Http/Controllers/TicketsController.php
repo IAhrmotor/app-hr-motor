@@ -64,7 +64,7 @@ class TicketsController extends Controller
 
         abort_unless($canViewTicket, 403);
 
-        $itTicket->load(['user', 'assignedTo', 'ticketTool', 'messages.author', 'activityLogs.actor']);
+        $itTicket->load(['user.assignedDealership', 'assignedTo', 'ticketTool', 'messages.author', 'activityLogs.actor']);
 
         return view('tickets.show', [
             'ticket' => $itTicket,
@@ -248,6 +248,7 @@ class TicketsController extends Controller
         $search = trim((string) $request->input($section . '_search', ''));
         $statuses = $this->normalizeSectionFilters($request->input($section . '_status', []));
         $priorities = $this->normalizeSectionFilters($request->input($section . '_priority', []));
+        $sort = $managed ? 'updated_desc' : $this->normalizeSortOption((string) $request->input($section . '_sort', 'updated_desc'));
         $pageName = $section . '_page';
 
         $query = $this->orderedTicketsQuery()
@@ -284,10 +285,15 @@ class TicketsController extends Controller
             $query->whereIn('priority', $priorities);
         }
 
+        if (! $managed) {
+            $this->applyUpdatedAtSort($query, $sort);
+        }
+
         return [
             'search' => $search,
             'statuses' => $statuses,
             'priorities' => $priorities,
+            'sort' => $sort,
             'pageName' => $pageName,
             'tickets' => $query
                 ->paginate(10, ['*'], $pageName)
@@ -700,6 +706,25 @@ class TicketsController extends Controller
             )
             ->orderByRaw('CASE WHEN assigned_to_user_id IS NULL THEN 0 ELSE 1 END')
             ->orderByDesc('updated_at');
+    }
+
+    private function applyUpdatedAtSort(Builder $query, string $sort): void
+    {
+        if ($sort === 'updated_asc') {
+            $query->reorder()
+                ->orderBy('updated_at')
+                ->orderBy('id');
+            return;
+        }
+
+        $query->reorder()
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id');
+    }
+
+    private function normalizeSortOption(string $sort): string
+    {
+        return in_array($sort, ['updated_asc', 'updated_desc'], true) ? $sort : 'updated_desc';
     }
 
     /**

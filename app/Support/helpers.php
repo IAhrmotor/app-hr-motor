@@ -207,17 +207,7 @@ if (! function_exists('app_can_access_tickets')) {
             return false;
         }
 
-        if (app_user_has_any_role($user, [User::ROLE_INFORMATION_TECHNOLOGY])) {
-            return true;
-        }
-
-        $permissionKey = 'tickets-it.manage';
-
-        return $user->adminPermissionGrants()->where('permission_key', $permissionKey)->exists()
-            || (filled($user->extra_role) && AdminPermissionGrant::query()
-                ->where('permission_key', $permissionKey)
-                ->where('group_role', $user->extra_role)
-                ->exists());
+        return app_user_has_any_role($user, [User::ROLE_INFORMATION_TECHNOLOGY]);
     }
 }
 
