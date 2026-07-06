@@ -1,6 +1,12 @@
 @php
     $authUser = $authUser ?? auth()->user();
     $visibleRole = app_visible_role($authUser);
+    $isAdminViewerMode = $authUser?->role === \App\Models\User::ROLE_ADMIN && app_role_viewer_active($authUser);
+    $canManageUsers = $authUser && (
+        $isAdminViewerMode
+            ? app_role_has_admin_permission($visibleRole, 'users.manage')
+            : app_user_has_admin_permission($authUser, 'users.manage')
+    );
     $persistedQuery = request()->except(['ajax']);
     $sortDirection = function ($column, $sort, $direction) {
         if ($sort !== $column) {
@@ -42,6 +48,10 @@
                             || ($visibleRole === \App\Models\User::ROLE_MANAGER
                                 && $authUser->id !== $user->id
                                 && $user->isCommercialLike());
+                        $canManageUser = $canManageUser || (
+                            $canManageUsers
+                            && $user->isCommercialLike()
+                        );
                         $isDisabled = $user->isDisabled();
                         $isInvitationExpired = $user->isInvitationExpired();
                         $isPendingActivation = $user->isPendingActivation();
