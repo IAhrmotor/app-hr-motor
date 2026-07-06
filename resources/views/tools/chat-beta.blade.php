@@ -2374,7 +2374,14 @@
                     const previousTimeLabel = previousMessage?.created_at_label || '';
                     const nextTimeLabel = nextMessage?.created_at_label || '';
                     const showTime = Boolean(index === messages.length - 1 || nextDateKey !== currentDateKey || nextTimeLabel !== currentTimeLabel);
-                    const topMarginClass = index === 0 ? 'mt-0' : ((previousDateKey === currentDateKey && previousTimeLabel === currentTimeLabel) ? 'mt-0.5' : 'mt-3');
+                    const senderChanged = currentConversationIsGroup
+                        && index > 0
+                        && Number(previousMessage?.sender_id || 0) !== Number(message.sender_id || 0);
+                    const topMarginClass = index === 0
+                        ? 'mt-0'
+                        : senderChanged
+                            ? 'mt-4'
+                            : ((previousDateKey === currentDateKey && previousTimeLabel === currentTimeLabel) ? 'mt-0.5' : 'mt-3');
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
                     const pendingAttachments = Array.isArray(message.pending_attachments) ? message.pending_attachments : [];
                     const body = message.body || '';
