@@ -634,20 +634,8 @@
                                     $previousTimeLabel = $previousMessage?->created_at?->translatedFormat('H:i');
                                     $nextTimeLabel = $nextMessage?->created_at?->translatedFormat('H:i');
                                     $showDateSeparator = $loop->first || $previousDateKey !== $currentDateKey;
-                                    $showTime = $loop->last
-                                        || $nextDateKey !== $currentDateKey
-                                        || $nextTimeLabel !== $currentTimeLabel
-                                        || $nextMessage?->sender_id !== $message->sender_id;
-                                    $topMarginClass = 'mt-3';
-                                    if ($loop->first) {
-                                        $topMarginClass = 'mt-0';
-                                    } elseif (
-                                        $previousDateKey === $currentDateKey
-                                        && $previousTimeLabel === $currentTimeLabel
-                                        && $previousMessage?->sender_id === $message->sender_id
-                                    ) {
-                                        $topMarginClass = 'mt-0.5';
-                                    }
+                                    $showTime = $loop->last || $nextDateKey !== $currentDateKey || $nextTimeLabel !== $currentTimeLabel;
+                                    $topMarginClass = $loop->first ? 'mt-0' : (($previousDateKey === $currentDateKey && $previousTimeLabel === $currentTimeLabel) ? 'mt-0.5' : 'mt-3');
                                     $messageAttachments = collect($message->attachments ?? []);
                                     $isDeleted = $message->deleted_at !== null;
                                     $isEdited = $message->edited_at !== null && ! $isDeleted;
@@ -1265,7 +1253,7 @@
                         'edited_at' => $message->edited_at?->toIso8601String(),
                         'deleted_at' => $message->deleted_at?->toIso8601String(),
                         'created_at_label' => $currentTimeLabel,
-                        'show_time' => $nextDateKey !== $currentDateKey || $nextTimeLabel !== $currentTimeLabel || $nextMessage?->sender_id !== $message->sender_id,
+                        'show_time' => $nextDateKey !== $currentDateKey || $nextTimeLabel !== $currentTimeLabel,
                     ];
                 })->values());
                 const buildMessagesFingerprint = (messages) => {
@@ -2147,8 +2135,6 @@
                     return `${url.pathname}${url.search}`;
                 };
 
-                const shouldMarkConversationAsRead = () => document.visibilityState === 'visible' && !document.hidden && document.hasFocus();
-
                 const buildConversationStoreUrl = (conversationId) => {
                     if (!storeUrlTemplate) {
                         return '';
@@ -2366,21 +2352,8 @@
                     const currentTimeLabel = message.created_at_label || '';
                     const previousTimeLabel = previousMessage?.created_at_label || '';
                     const nextTimeLabel = nextMessage?.created_at_label || '';
-                    const showTime = Boolean(
-                        index === messages.length - 1
-                        || nextDateKey !== currentDateKey
-                        || nextTimeLabel !== currentTimeLabel
-                        || Number(nextMessage?.sender_id || 0) !== Number(message.sender_id || 0)
-                    );
-                    const topMarginClass = index === 0
-                        ? 'mt-0'
-                        : (
-                            previousDateKey === currentDateKey
-                            && previousTimeLabel === currentTimeLabel
-                            && Number(previousMessage?.sender_id || 0) === Number(message.sender_id || 0)
-                        )
-                            ? 'mt-0.5'
-                            : 'mt-3';
+                    const showTime = Boolean(index === messages.length - 1 || nextDateKey !== currentDateKey || nextTimeLabel !== currentTimeLabel);
+                    const topMarginClass = index === 0 ? 'mt-0' : ((previousDateKey === currentDateKey && previousTimeLabel === currentTimeLabel) ? 'mt-0.5' : 'mt-3');
                     const messageAttachments = Array.isArray(message.attachments) ? message.attachments : [];
                     const pendingAttachments = Array.isArray(message.pending_attachments) ? message.pending_attachments : [];
                     const body = message.body || '';
@@ -3099,9 +3072,7 @@
 
                     conversationRevision += 1;
                     const requestRevision = conversationRevision;
-                    const url = buildConversationMessagesUrl(conversationId, {
-                        mark_read: shouldMarkConversationAsRead() ? 1 : 0,
-                    });
+                    const url = buildConversationMessagesUrl(conversationId);
 
                     try {
                         const response = await fetch(url, {
@@ -3313,7 +3284,6 @@
                         const response = await fetch(buildConversationMessagesUrl(sidebarSelectedConversationId || Number(wrapper?.dataset.conversationId || 0), {
                             after_message_id: syncFromId,
                             limit: Math.min(Math.max(historyPageSize, historySyncOverlap + 10), 100),
-                            mark_read: shouldMarkConversationAsRead() ? 1 : 0,
                         }), {
                             headers: {
                                 ...getRealtimeHeaders(),
@@ -4238,12 +4208,6 @@
 
                     if (conversationId) {
                         void window.loadConversation?.(conversationId, { pushState: false });
-                    }
-                });
-
-                document.addEventListener('visibilitychange', () => {
-                    if (document.visibilityState === 'visible') {
-                        void syncMessages();
                     }
                 });
 
