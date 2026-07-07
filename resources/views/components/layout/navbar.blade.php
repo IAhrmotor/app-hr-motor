@@ -67,11 +67,11 @@
     $visibleRoleLabel = app_visible_role_label($authUser);
     $roleViewerActive = app_role_viewer_active($authUser);
     $roleViewerOptions = app_role_viewer_options($authUser);
-    $forumUnreadNotifications = $authUser
-        ? $authUser->unreadNotifications()
-            ->latest()
-            ->get()
-            ->groupBy(function ($notification): string {
+    $forumUnreadNotificationItems = $authUser
+        ? $authUser->unreadNotifications()->latest()->get()
+        : collect();
+    $forumUnreadNotifications = $forumUnreadNotificationItems
+        ->groupBy(function ($notification): string {
                 if ($notification->type === \App\Notifications\CompanyChatMessageNotification::class) {
                     $groupKey = data_get($notification->data, 'chat_group_key');
                     $conversationId = data_get($notification->data, 'conversation_id');
@@ -89,8 +89,8 @@
             })
             ->sortByDesc(fn ($notification) => $notification->created_at?->timestamp ?? 0)
             ->take(8)
-        : collect();
-    $forumUnreadNotificationCount = $forumUnreadNotifications->count();
+        ;
+    $forumUnreadNotificationCount = $forumUnreadNotificationItems->count();
 @endphp
 @php
     $navItemClass = 'inline-flex h-10 items-center whitespace-nowrap px-2 text-sm font-medium leading-none transition';
@@ -286,7 +286,7 @@
                 @endif
 
                 <div class="relative shrink-0" @click.outside="notificationsOpen = false" data-notification-summary-url="{{ route('notifications.summary') }}">
-                    <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false"
+                    <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false; if (notificationsOpen) { window.refreshNotifications?.(); }"
                         class="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
                         aria-label="Ver notificaciones" :aria-expanded="notificationsOpen.toString()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -401,6 +401,9 @@
                         const originalTitleBase = originalTitle.replace(/^\(\+?\d+\)\s*/u, '');
                         const faviconLink = document.querySelector('link[rel="icon"]');
                         const originalFaviconHref = faviconLink?.getAttribute('href') || @js(asset('favicon.ico'));
+                        const notificationRealtimeConfig = @js(config('chat_realtime'));
+                        const notificationCurrentUserId = @js((int) ($authUser?->id ?? 0));
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
                         if (!root) {
                             return;
@@ -412,6 +415,14 @@
                         const knownNotificationIds = new Set(Array.from(list?.querySelectorAll('[data-notification-id]') ?? []).map((element) => String(element.dataset.notificationId || '')));
                         const knownBrowserNotificationIds = new Set();
                         let browserNotificationsSeeded = false;
+                        let notificationSocket = null;
+                        let notificationSocketId = '';
+                        let notificationReconnectTimer = null;
+                        let notificationReconnectAttempt = 0;
+                        let notificationHandshakeTimer = null;
+                        let notificationChannel = '';
+                        let notificationDisconnecting = false;
+                        const initialUnreadCount = @js((int) $forumUnreadNotificationCount);
                         const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
                         const defaultNotificationIconUrl = @js(asset('images/users/hrmotor-default-user-avatar.png'));
 
@@ -478,6 +489,255 @@
                             } catch (error) {
                                 console.error(error);
                             }
+                        };
+
+                        const updateNotificationBadge = (count) => {
+                            const nextCount = Math.max(0, Number(count) || 0);
+
+                            if (!badge) {
+                                return;
+                            }
+
+                            if (nextCount > 0) {
+                                badge.textContent = nextCount > 9 ? '+9' : String(nextCount);
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.textContent = '';
+                                badge.classList.add('hidden');
+                            }
+
+                            setPageTitleWithUnreadCount(nextCount);
+                            void renderFaviconWithBadge(nextCount);
+                        };
+
+                        const buildNotificationWsUrl = () => {
+                            if (!notificationRealtimeConfig.enabled || !notificationRealtimeConfig.app_key) {
+                                return null;
+                            }
+
+                            const currentLocation = window.location;
+                            const schemeSource = String(notificationRealtimeConfig.public_scheme || currentLocation.protocol || 'https:').toLowerCase();
+                            const scheme = schemeSource === 'https:' || schemeSource === 'https' ? 'wss' : 'ws';
+                            const host = String(notificationRealtimeConfig.public_host || currentLocation.hostname || '').trim();
+                            const publicPort = String(notificationRealtimeConfig.public_port || '').trim();
+                            const currentPort = String(currentLocation.port || '').trim();
+                            const port = publicPort !== '' ? publicPort : currentPort;
+                            const path = String(notificationRealtimeConfig.public_path || notificationRealtimeConfig.path || '').trim().replace(/\/$/, '');
+                            const basePath = path !== '' ? path : '';
+                            const shouldOmitPort = (scheme === 'wss' && port === '443') || (scheme === 'ws' && port === '80');
+
+                            return `${scheme}://${host}${port !== '' && !shouldOmitPort ? `:${port}` : ''}${basePath}/app/${encodeURIComponent(String(notificationRealtimeConfig.app_key))}?protocol=7&client=js&version=1.0.0&flash=false`;
+                        };
+
+                        const buildNotificationChannelName = (userId) => {
+                            const prefix = String(notificationRealtimeConfig.channel_prefix || 'private-');
+                            return `${prefix}notifications.users.${userId}`;
+                        };
+
+                        const getNotificationRealtimeHeaders = () => {
+                            if (!notificationSocketId) {
+                                return {};
+                            }
+
+                            return {
+                                'X-Socket-ID': notificationSocketId,
+                            };
+                        };
+
+                        const disconnectNotificationRealtime = () => {
+                            const hadSocket = Boolean(notificationSocket);
+                            notificationDisconnecting = hadSocket;
+
+                            if (notificationReconnectTimer) {
+                                window.clearTimeout(notificationReconnectTimer);
+                                notificationReconnectTimer = null;
+                            }
+
+                            if (notificationHandshakeTimer) {
+                                window.clearTimeout(notificationHandshakeTimer);
+                                notificationHandshakeTimer = null;
+                            }
+
+                            if (notificationSocket) {
+                                try {
+                                    notificationSocket.close();
+                                } catch (error) {
+                                    console.error(error);
+                                }
+                            }
+
+                            notificationSocket = null;
+                            notificationSocketId = '';
+                            notificationChannel = '';
+
+                            if (!hadSocket) {
+                                notificationDisconnecting = false;
+                            }
+                        };
+
+                        const subscribeNotificationChannel = async () => {
+                            if (!notificationSocket || notificationSocket.readyState !== WebSocket.OPEN || !notificationCurrentUserId) {
+                                return;
+                            }
+
+                            const channelName = buildNotificationChannelName(notificationCurrentUserId);
+
+                            if (notificationChannel === channelName) {
+                                return;
+                            }
+
+                            const authResponse = await fetch(String(notificationRealtimeConfig.auth_endpoint || '/broadcasting/auth'), {
+                                method: 'POST',
+                                headers: {
+                                    ...getNotificationRealtimeHeaders(),
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                    Accept: 'application/json',
+                                },
+                                body: new URLSearchParams({
+                                    socket_id: notificationSocketId,
+                                    channel_name: channelName,
+                                }),
+                            });
+
+                            if (!authResponse.ok) {
+                                return;
+                            }
+
+                            const authPayload = await authResponse.json().catch(() => ({}));
+                            notificationChannel = channelName;
+                            notificationSocket.send(JSON.stringify({
+                                event: 'pusher:subscribe',
+                                data: {
+                                    channel: channelName,
+                                    auth: authPayload.auth,
+                                },
+                            }));
+                        };
+
+                        const connectNotificationRealtime = () => {
+                            if (!notificationCurrentUserId || !notificationRealtimeConfig.enabled || typeof WebSocket === 'undefined') {
+                                return;
+                            }
+
+                            const wsUrl = buildNotificationWsUrl();
+
+                            if (!wsUrl) {
+                                return;
+                            }
+
+                            if (notificationSocket && (notificationSocket.readyState === WebSocket.OPEN || notificationSocket.readyState === WebSocket.CONNECTING)) {
+                                return;
+                            }
+
+                            disconnectNotificationRealtime();
+
+                            const socket = new WebSocket(wsUrl);
+                            notificationSocket = socket;
+
+                            if (notificationHandshakeTimer) {
+                                window.clearTimeout(notificationHandshakeTimer);
+                            }
+
+                            notificationHandshakeTimer = window.setTimeout(() => {
+                                if (notificationSocket === socket && !notificationSocketId) {
+                                    disconnectNotificationRealtime();
+                                }
+                            }, 8000);
+
+                            socket.addEventListener('message', async (event) => {
+                                let payload;
+
+                                try {
+                                    payload = JSON.parse(event.data);
+                                } catch (error) {
+                                    return;
+                                }
+
+                                if (payload.event === 'pusher:connection_established') {
+                                    let connectionData = payload.data;
+
+                                    if (typeof connectionData === 'string') {
+                                        try {
+                                            connectionData = JSON.parse(connectionData);
+                                        } catch (error) {
+                                            connectionData = {};
+                                        }
+                                    }
+
+                                    if (notificationHandshakeTimer) {
+                                        window.clearTimeout(notificationHandshakeTimer);
+                                        notificationHandshakeTimer = null;
+                                    }
+
+                                    notificationSocketId = String(connectionData?.socket_id || '');
+                                    notificationReconnectAttempt = 0;
+                                    await subscribeNotificationChannel();
+                                    return;
+                                }
+
+                                if (payload.event === 'pusher:ping') {
+                                    socket.send(JSON.stringify({
+                                        event: 'pusher:pong',
+                                        data: {},
+                                    }));
+                                    return;
+                                }
+
+                                const eventData = typeof payload.data === 'string'
+                                    ? (() => {
+                                        try {
+                                            return JSON.parse(payload.data);
+                                        } catch (error) {
+                                            return payload.data;
+                                        }
+                                    })()
+                                    : payload.data;
+
+                                if (payload.event === 'notifications.badge.updated') {
+                                    updateNotificationBadge(eventData?.count ?? 0);
+                                }
+                            });
+
+                            socket.addEventListener('close', () => {
+                                if (notificationHandshakeTimer) {
+                                    window.clearTimeout(notificationHandshakeTimer);
+                                    notificationHandshakeTimer = null;
+                                }
+
+                                notificationSocket = null;
+                                notificationSocketId = '';
+                                notificationChannel = '';
+
+                                if (notificationDisconnecting) {
+                                    notificationDisconnecting = false;
+                                    return;
+                                }
+
+                                if (!notificationRealtimeConfig.enabled) {
+                                    return;
+                                }
+
+                                const delay = Math.min(15000, 1000 * (notificationReconnectAttempt + 1));
+                                notificationReconnectAttempt += 1;
+
+                                if (notificationReconnectTimer) {
+                                    window.clearTimeout(notificationReconnectTimer);
+                                }
+
+                                notificationReconnectTimer = window.setTimeout(() => {
+                                    notificationReconnectTimer = null;
+                                    connectNotificationRealtime();
+                                }, delay);
+                            });
+
+                            socket.addEventListener('error', () => {
+                                try {
+                                    socket.close();
+                                } catch (error) {
+                                    console.error(error);
+                                }
+                            });
                         };
 
                         const isChatBrowserNotificationSupported = () => {
@@ -583,7 +843,7 @@
                                 }
 
                                 const payload = await response.json();
-                                const count = Number(payload.count || 0);
+                                const count = Number(payload.unread_count ?? payload.count ?? 0);
                                 const nextNotifications = Array.isArray(payload.notifications) ? payload.notifications : [];
                                 const rawNotifications = Array.isArray(payload.raw_notifications) ? payload.raw_notifications : [];
                                 const nextNotificationIds = new Set(nextNotifications.map((notification) => String(notification.id || '')));
@@ -621,18 +881,7 @@
                                     showBrowserNotification(notification);
                                 });
 
-                                if (badge) {
-                                    if (count > 0) {
-                                        badge.textContent = count > 9 ? '+9' : String(count);
-                                        badge.classList.remove('hidden');
-                                    } else {
-                                        badge.textContent = '';
-                                        badge.classList.add('hidden');
-                                    }
-                                }
-
-                                setPageTitleWithUnreadCount(count);
-                                void renderFaviconWithBadge(count);
+                                updateNotificationBadge(count);
 
                                 if (list) {
                                     if (nextNotifications.length === 0) {
@@ -648,10 +897,13 @@
                             }
                         };
 
+                        window.refreshNotifications = refreshNotifications;
+                        window.updateNotificationBadge = updateNotificationBadge;
+
                         void requestBrowserNotificationPermission();
                         window.addEventListener('pointerdown', requestBrowserNotificationPermission, { once: true });
-                        refreshNotifications();
-                        setInterval(refreshNotifications, 15000);
+                        updateNotificationBadge(initialUnreadCount);
+                        connectNotificationRealtime();
                     });
                 </script>
 

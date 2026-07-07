@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\CompanyChatConversation;
+use App\Models\CompanyChatMessage;
 use App\Models\User;
+use App\Notifications\CompanyChatMessageNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -44,6 +47,35 @@ class NotificationSummaryTest extends TestCase
             ->getJson(route('notifications.summary'))
             ->assertOk()
             ->assertJsonPath('count', 1)
+            ->assertJsonPath('unread_count', 1)
             ->assertJsonPath('notifications.0.title', 'Nuevo aviso');
+    }
+
+    public function test_notification_summary_keeps_total_unread_count_even_when_chat_notifications_are_grouped(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        for ($index = 1; $index <= 5; $index++) {
+            $message = CompanyChatMessage::query()->create([
+                'company_chat_conversation_id' => $conversation->id,
+                'sender_id' => $sender->id,
+                'body' => 'Mensaje ' . $index,
+            ]);
+
+            $recipient->notify(new CompanyChatMessageNotification($conversation, $message, $sender));
+        }
+
+        $this->actingAs($recipient)
+            ->getJson(route('notifications.summary'))
+            ->assertOk()
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('unread_count', 5)
+            ->assertJsonPath('notifications.0.message_count', 5);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ForumThread;
 use App\Notifications\CompanyChatMessageNotification;
+use App\Services\NotificationBadgeBroadcaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,6 +38,8 @@ class NotificationController extends Controller
             $userNotification->markAsRead();
         }
 
+        app(NotificationBadgeBroadcaster::class)->broadcast($request->user());
+
         $threadId = data_get($userNotification->data, 'thread_id');
 
         if ($threadId && ! ForumThread::query()->whereKey($threadId)->exists()) {
@@ -59,11 +62,13 @@ class NotificationController extends Controller
     public function summary(Request $request): JsonResponse
     {
         $authUser = $request->user();
+        $unreadCount = $authUser?->unreadNotifications()->count() ?? 0;
         $notifications = $authUser ? $this->groupUnreadNotifications($authUser) : collect();
         $rawChatNotifications = $authUser ? $this->rawUnreadChatNotifications($authUser) : collect();
 
         return response()->json([
             'count' => $notifications->count(),
+            'unread_count' => $unreadCount,
             'notifications' => $notifications,
             'raw_notifications' => $rawChatNotifications,
         ]);

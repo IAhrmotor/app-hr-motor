@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Services\NotificationBadgeBroadcaster;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -17,5 +20,15 @@ class AppServiceProvider extends ServiceProvider
         if (! app()->environment('local')) {
             URL::forceScheme('https');
         }
+
+        DatabaseNotification::created(function (DatabaseNotification $notification): void {
+            $notifiable = $notification->notifiable;
+
+            if (! $notifiable instanceof User) {
+                return;
+            }
+
+            app(NotificationBadgeBroadcaster::class)->broadcast($notifiable);
+        });
     }
 }
