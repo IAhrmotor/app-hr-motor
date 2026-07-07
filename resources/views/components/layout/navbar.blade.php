@@ -402,6 +402,7 @@
                         let notificationHandshakeTimer = null;
                         let notificationChannel = '';
                         let notificationDisconnecting = false;
+                        let notificationRefreshTimer = null;
                         const initialUnreadCount = @js((int) $forumUnreadNotificationCount);
                         const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
                         const defaultNotificationIconUrl = @js(asset('images/users/hrmotor-default-user-avatar.png'));
@@ -676,6 +677,14 @@
 
                                 if (payload.event === 'notifications.badge.updated') {
                                     updateNotificationBadge(eventData?.count ?? 0);
+                                    if (notificationRefreshTimer) {
+                                        window.clearTimeout(notificationRefreshTimer);
+                                    }
+
+                                    notificationRefreshTimer = window.setTimeout(() => {
+                                        notificationRefreshTimer = null;
+                                        void refreshNotifications();
+                                    }, 75);
                                 }
                             });
 

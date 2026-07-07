@@ -12,8 +12,11 @@ use App\Notifications\CompanyChatMessageNotification;
 use App\Support\ChatPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -128,9 +131,44 @@ class CompanyChatTest extends TestCase
             ->get(route('chat.beta'))
             ->assertOk()
             ->assertSee('let chatRealtimeConnected = false;', false)
-            ->assertSee('if (!chatRealtimeConnected) {', false)
-            ->assertDontSee('setInterval(syncMessages, 3000);', false)
-            ->assertDontSee('setInterval(refreshSidebar, 5000);', false);
+            ->assertSee('const shouldRunChatPolling = () => document.visibilityState === \'visible\' && !chatRealtimeConnected;', false)
+            ->assertSee('if (shouldRunChatPolling()) {', false);
+    }
+
+    public function test_chat_api_polling_routes_are_throttled_to_protect_the_backend(): void
+    {
+        RateLimiter::for('chat-api', function (Request $request): Limit {
+            return Limit::perMinute(1)->by($request->user()?->id ?: $request->ip());
+        });
+
+        $summaryUser = User::factory()->create();
+        $this->acceptChatPolicy($summaryUser);
+
+        $this->actingAs($summaryUser)
+            ->get(route('chat.beta.summary'))
+            ->assertOk();
+
+        $this->actingAs($summaryUser)
+            ->get(route('chat.beta.summary'))
+            ->assertStatus(429);
+
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($recipient)
+            ->getJson(route('chat.beta.messages.index', $conversation))
+            ->assertOk();
+
+        $this->actingAs($recipient)
+            ->getJson(route('chat.beta.messages.index', $conversation))
+            ->assertStatus(429);
     }
 
     public function test_user_cannot_send_messages_to_a_disabled_private_recipient_and_the_composer_is_disabled(): void

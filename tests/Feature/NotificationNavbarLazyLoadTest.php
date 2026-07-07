@@ -28,4 +28,16 @@ class NotificationNavbarLazyLoadTest extends TestCase
         $this->assertStringContainsString('Abre la campana para cargar tus notificaciones', $navbarHtml);
         $this->assertStringContainsString('data-notification-list', $navbarHtml);
     }
+
+    public function test_notification_navbar_refreshes_the_summary_when_the_realtime_counter_updates(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+
+        $this->assertStringContainsString("if (payload.event === 'notifications.badge.updated')", $navbarHtml);
+        $this->assertStringContainsString('void refreshNotifications();', $navbarHtml);
+    }
 }
