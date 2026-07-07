@@ -118,6 +118,21 @@ class CompanyChatTest extends TestCase
         ]);
     }
 
+    public function test_chat_polling_is_disabled_while_the_realtime_connection_is_active(): void
+    {
+        $user = User::factory()->create();
+
+        $this->acceptChatPolicy($user);
+
+        $this->actingAs($user)
+            ->get(route('chat.beta'))
+            ->assertOk()
+            ->assertSee('let chatRealtimeConnected = false;', false)
+            ->assertSee('if (!chatRealtimeConnected) {', false)
+            ->assertDontSee('setInterval(syncMessages, 3000);', false)
+            ->assertDontSee('setInterval(refreshSidebar, 5000);', false);
+    }
+
     public function test_user_cannot_send_messages_to_a_disabled_private_recipient_and_the_composer_is_disabled(): void
     {
         $sender = User::factory()->create();
