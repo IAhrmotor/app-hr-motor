@@ -93,16 +93,30 @@ class AgendaController extends Controller
                 'phone',
                 'enreach_extension',
                 'role',
+                'extra_role',
+                'dealership',
+                'dealership_id',
             ])
             ->get()
             ->map(function (User $user): array {
+                $extraRoleLabel = $user->extra_role
+                    ? (User::extraRoleLabels()[$user->extra_role] ?? ucfirst((string) $user->extra_role))
+                    : null;
+
+                $subtitle = collect([
+                    $extraRoleLabel,
+                    $user->resolved_dealership_name,
+                ])
+                    ->filter()
+                    ->join(' · ');
+
                 return [
                     'type' => 'user',
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'enreach_extension' => $user->enreach_extension,
-                    'subtitle' => $user->role_label,
+                    'subtitle' => $subtitle !== '' ? $subtitle : 'Sin delegación',
                     'route' => route('agenda.users.show', $user),
                     'avatar' => $user->avatar_url,
                 ];
