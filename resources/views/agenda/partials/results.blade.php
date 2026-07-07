@@ -43,7 +43,7 @@
                                     <img src="{{ $entry['avatar'] }}" alt="Avatar de {{ $entry['name'] }}" class="h-11 w-11 rounded-full object-cover ring-1 ring-brand-secondary/10">
                                     <div>
                                         <span class="block">{{ $entry['name'] }}</span>
-                                        <span class="mt-1 block text-xs font-medium text-brand-secondary/60">{{ $entry['subtitle'] }}</span>
+                                        <span class="mt-1 block text-xs font-medium text-brand-secondary/60">{{ $entry['subtitle'] ?? 'Sin delegación' }}</span>
                                     </div>
                                 </a>
                             </td>
