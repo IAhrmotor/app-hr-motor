@@ -67,11 +67,11 @@
     $visibleRoleLabel = app_visible_role_label($authUser);
     $roleViewerActive = app_role_viewer_active($authUser);
     $roleViewerOptions = app_role_viewer_options($authUser);
-    $forumUnreadNotifications = $authUser
-        ? $authUser->unreadNotifications()
-            ->latest()
-            ->get()
-            ->groupBy(function ($notification): string {
+    $forumUnreadNotificationItems = $authUser
+        ? $authUser->unreadNotifications()->latest()->get()
+        : collect();
+    $forumUnreadNotifications = $forumUnreadNotificationItems
+        ->groupBy(function ($notification): string {
                 if ($notification->type === \App\Notifications\CompanyChatMessageNotification::class) {
                     $groupKey = data_get($notification->data, 'chat_group_key');
                     $conversationId = data_get($notification->data, 'conversation_id');
@@ -89,8 +89,8 @@
             })
             ->sortByDesc(fn ($notification) => $notification->created_at?->timestamp ?? 0)
             ->take(8)
-        : collect();
-    $forumUnreadNotificationCount = $forumUnreadNotifications->count();
+        ;
+    $forumUnreadNotificationCount = $forumUnreadNotificationItems->count();
 @endphp
 @php
     $navItemClass = 'inline-flex h-10 items-center whitespace-nowrap px-2 text-sm font-medium leading-none transition';
@@ -843,7 +843,7 @@
                                 }
 
                                 const payload = await response.json();
-                                const count = Number(payload.count || 0);
+                                const count = Number(payload.unread_count ?? payload.count ?? 0);
                                 const nextNotifications = Array.isArray(payload.notifications) ? payload.notifications : [];
                                 const rawNotifications = Array.isArray(payload.raw_notifications) ? payload.raw_notifications : [];
                                 const nextNotificationIds = new Set(nextNotifications.map((notification) => String(notification.id || '')));

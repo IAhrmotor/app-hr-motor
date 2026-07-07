@@ -62,11 +62,13 @@ class NotificationController extends Controller
     public function summary(Request $request): JsonResponse
     {
         $authUser = $request->user();
+        $unreadCount = $authUser?->unreadNotifications()->count() ?? 0;
         $notifications = $authUser ? $this->groupUnreadNotifications($authUser) : collect();
         $rawChatNotifications = $authUser ? $this->rawUnreadChatNotifications($authUser) : collect();
 
         return response()->json([
             'count' => $notifications->count(),
+            'unread_count' => $unreadCount,
             'notifications' => $notifications,
             'raw_notifications' => $rawChatNotifications,
         ]);
