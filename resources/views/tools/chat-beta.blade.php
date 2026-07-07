@@ -1319,8 +1319,31 @@
                         pending_attachments: Array.isArray(attachments) ? attachments : [],
                     };
                 };
-                const getOldestMessageId = () => Number(currentMessages?.[0]?.id || 0);
-                const getLatestMessageId = () => Number(currentMessages?.[currentMessages.length - 1]?.id || 0);
+                const getPersistedMessageIds = () => {
+                    return (Array.isArray(currentMessages) ? currentMessages : [])
+                        .map((message) => Number(message?.id || 0))
+                        .filter((messageId) => Number.isInteger(messageId) && messageId > 0);
+                };
+                const getOldestMessageId = () => {
+                    const persistedMessageIds = getPersistedMessageIds();
+                    return Number(persistedMessageIds[0] || 0);
+                };
+                const getLatestMessageId = () => {
+                    const persistedMessageIds = getPersistedMessageIds();
+                    return Number(persistedMessageIds[persistedMessageIds.length - 1] || 0);
+                };
+                const getHistorySyncCursorMessageId = (overlap = historySyncOverlap) => {
+                    const persistedMessageIds = getPersistedMessageIds();
+
+                    if (persistedMessageIds.length === 0) {
+                        return 0;
+                    }
+
+                    const safeOverlap = Math.max(0, Number(overlap) || 0);
+                    const cursorIndex = Math.max(0, persistedMessageIds.length - safeOverlap - 1);
+
+                    return Number(persistedMessageIds[cursorIndex] || 0);
+                };
                 const setHistoryLoaderVisible = (visible) => {
                     if (!historyLoader) {
                         return;
@@ -3268,7 +3291,7 @@
                     try {
                         const requestRevision = conversationRevision;
                         const latestId = getLatestMessageId();
-                        const syncFromId = Math.max(0, latestId - historySyncOverlap);
+                        const syncFromId = getHistorySyncCursorMessageId();
                         const response = await fetch(buildConversationMessagesUrl(sidebarSelectedConversationId || Number(wrapper?.dataset.conversationId || 0), {
                             after_message_id: syncFromId,
                             limit: Math.min(Math.max(historyPageSize, historySyncOverlap + 10), 100),
