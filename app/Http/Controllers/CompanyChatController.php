@@ -13,6 +13,7 @@ use App\Models\PolicyAcceptance;
 use App\Models\User;
 use App\Notifications\CompanyChatMessageNotification;
 use App\Support\ChatPolicy;
+use App\Services\NotificationBadgeBroadcaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -990,6 +991,8 @@ class CompanyChatController extends Controller
             ->where('type', CompanyChatMessageNotification::class)
             ->where('data->conversation_id', $conversation->id)
             ->update(['read_at' => now()]);
+
+        app(NotificationBadgeBroadcaster::class)->broadcast($user);
     }
 
     private function conversationUnreadMessagesCount(?CompanyChatConversation $conversation, User $user): int
@@ -1026,11 +1029,15 @@ class CompanyChatController extends Controller
         }
 
         foreach ($recipients as $recipient) {
-            $recipient->notifications()
+            $deletedCount = $recipient->notifications()
                 ->where('type', CompanyChatMessageNotification::class)
                 ->where('data->conversation_id', $conversation->id)
                 ->where('data->message_id', $messageId)
                 ->delete();
+
+            if ($deletedCount > 0) {
+                app(NotificationBadgeBroadcaster::class)->broadcast($recipient);
+            }
         }
     }
 

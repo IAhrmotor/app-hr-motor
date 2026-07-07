@@ -14,3 +14,7 @@ Broadcast::channel('chat.conversations.{conversationId}', function (User $user, 
 Broadcast::channel('chat.users.{userId}', function (User $user, int $userId): bool {
     return (int) $user->id === (int) $userId;
 });
+
+Broadcast::channel('notifications.users.{userId}', function (User $user, int $userId): bool {
+    return (int) $user->id === (int) $userId;
+});

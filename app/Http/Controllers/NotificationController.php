@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ForumThread;
 use App\Notifications\CompanyChatMessageNotification;
+use App\Services\NotificationBadgeBroadcaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,8 @@ class NotificationController extends Controller
         } else {
             $userNotification->markAsRead();
         }
+
+        app(NotificationBadgeBroadcaster::class)->broadcast($request->user());
 
         $threadId = data_get($userNotification->data, 'thread_id');
 
