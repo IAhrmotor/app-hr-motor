@@ -1249,6 +1249,7 @@
                 let realtimeSidebarTimer = null;
                 let realtimeHandshakeTimer = null;
                 let realtimeSuppressed = false;
+                let chatRealtimeConnected = false;
                 const realtimeCurrentUserId = Number(window.chatCurrentUserId || 0);
                 currentMessages = @js($selectedConversationMessages->values()->map(function ($message, $index) use ($authUser, $selectedConversationMessages) {
                     $nextMessage = $selectedConversationMessages->get($index + 1);
@@ -1611,6 +1612,8 @@
                 };
 
                 const disconnectChatRealtime = () => {
+                    chatRealtimeConnected = false;
+
                     if (realtimeReconnectTimer) {
                         window.clearTimeout(realtimeReconnectTimer);
                         realtimeReconnectTimer = null;
@@ -1704,6 +1707,7 @@
 
                             realtimeSocketId = String(connectionData?.socket_id || '');
                             realtimeReconnectAttempt = 0;
+                            chatRealtimeConnected = true;
                             updateChatRealtimeIndicator('active');
 
                             await subscribeRealtimeUserChannel();
@@ -1749,6 +1753,7 @@
                         realtimeSocketId = '';
                         realtimeConversationChannel = '';
                         realtimeUserChannel = '';
+                        chatRealtimeConnected = false;
 
                         if (!realtimeConfig.enabled || realtimeSuppressed) {
                             updateChatRealtimeIndicator('disabled');
@@ -4229,7 +4234,11 @@
 
                 autoScroll();
                 window.renderAttachmentsPreview?.();
-                setInterval(syncMessages, 3000);
+                setInterval(() => {
+                    if (!chatRealtimeConnected) {
+                        void syncMessages();
+                    }
+                }, 3000);
                 }
 
                 root.addEventListener('click', async (event) => {
@@ -4272,7 +4281,11 @@
                     }
                 });
 
-                setInterval(refreshSidebar, 5000);
+                setInterval(() => {
+                    if (!chatRealtimeConnected) {
+                        void refreshSidebar();
+                    }
+                }, 5000);
                 refreshSidebar();
                 updateChatRealtimeIndicator(hasComposer && realtimeConfig.enabled && typeof WebSocket !== 'undefined' && !realtimeSuppressed ? 'fallback' : 'disabled');
                 if (hasComposer) {
