@@ -67,30 +67,10 @@
     $visibleRoleLabel = app_visible_role_label($authUser);
     $roleViewerActive = app_role_viewer_active($authUser);
     $roleViewerOptions = app_role_viewer_options($authUser);
-    $forumUnreadNotificationItems = $authUser
-        ? $authUser->unreadNotifications()->latest()->get()
-        : collect();
-    $forumUnreadNotifications = $forumUnreadNotificationItems
-        ->groupBy(function ($notification): string {
-                if ($notification->type === \App\Notifications\CompanyChatMessageNotification::class) {
-                    $groupKey = data_get($notification->data, 'chat_group_key');
-                    $conversationId = data_get($notification->data, 'conversation_id');
-                    $senderId = data_get($notification->data, 'sender_id');
-
-                    return 'chat:' . ($groupKey ?: ($conversationId . ':' . $senderId));
-                }
-
-                return 'notification:' . $notification->id;
-            })
-            ->map(function ($group) {
-                $notification = $group->first();
-                $notification->message_count = $group->count();
-                return $notification;
-            })
-            ->sortByDesc(fn ($notification) => $notification->created_at?->timestamp ?? 0)
-            ->take(8)
-        ;
-    $forumUnreadNotificationCount = $forumUnreadNotificationItems->count();
+    $forumUnreadNotifications = collect();
+    $forumUnreadNotificationCount = $authUser
+        ? $authUser->unreadNotifications()->count()
+        : 0;
 @endphp
 @php
     $navItemClass = 'inline-flex h-10 items-center whitespace-nowrap px-2 text-sm font-medium leading-none transition';
@@ -387,7 +367,7 @@
                                 </a>
                             @empty
                                 <div class="rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center" data-notification-empty>
-                                    <p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p>
+                                    <p class="text-sm font-semibold text-brand-secondary">Abre la campana para cargar tus notificaciones</p>
                                 </div>
                             @endforelse
                         </div>
@@ -829,8 +809,32 @@
                             `;
                         };
 
+                        const renderNotificationLoadingState = () => {
+                            return `
+                                <div class="rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-4" data-notification-loading>
+                                    <div class="space-y-3 animate-pulse">
+                                        <div class="h-4 w-28 rounded-full bg-slate-200"></div>
+                                        <div class="h-3 w-full rounded-full bg-slate-200"></div>
+                                        <div class="h-3 w-4/5 rounded-full bg-slate-200"></div>
+                                        <div class="flex items-start gap-3 pt-2">
+                                            <div class="h-9 w-9 rounded-full bg-slate-200"></div>
+                                            <div class="min-w-0 flex-1 space-y-2">
+                                                <div class="h-3 w-1/2 rounded-full bg-slate-200"></div>
+                                                <div class="h-3 w-3/4 rounded-full bg-slate-200"></div>
+                                                <div class="h-3 w-2/3 rounded-full bg-slate-200"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        };
+
                         const refreshNotifications = async () => {
                             try {
+                                if (list) {
+                                    list.innerHTML = renderNotificationLoadingState();
+                                }
+
                                 const response = await fetch(summaryUrl, {
                                     headers: {
                                         'X-Requested-With': 'XMLHttpRequest',
