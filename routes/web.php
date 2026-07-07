@@ -151,15 +151,17 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('conversation')
         ->whereNumber('message')
         ->name('chat.beta.messages.destroy');
-    Route::get('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'messages'])
-        ->whereNumber('conversation')
-        ->name('chat.beta.messages.index');
+    Route::middleware('throttle:chat-api')->group(function (): void {
+        Route::get('/chat/conversations/{conversation}/mensajes', [CompanyChatController::class, 'messages'])
+            ->whereNumber('conversation')
+            ->name('chat.beta.messages.index');
+        Route::get('/chat/resumen', [CompanyChatController::class, 'summary'])->name('chat.beta.summary');
+    });
     Route::get('/chat/conversations/{conversation}/mensajes/{message}/adjuntos/{attachmentIndex}', [CompanyChatController::class, 'downloadAttachment'])
         ->whereNumber('conversation')
         ->whereNumber('message')
         ->whereNumber('attachmentIndex')
         ->name('chat.beta.attachments.show');
-    Route::get('/chat/resumen', [CompanyChatController::class, 'summary'])->name('chat.beta.summary');
     Route::post('/chat/favoritos/{user}', [CompanyChatController::class, 'toggleFavorite'])
         ->whereNumber('user')
         ->name('chat.beta.favorites.toggle');
