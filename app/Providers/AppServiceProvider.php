@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\NotificationBadgeBroadcaster;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +23,12 @@ class AppServiceProvider extends ServiceProvider
         if (! app()->environment('local')) {
             URL::forceScheme('https');
         }
+
+        RateLimiter::for('chat-api', function (Request $request): Limit {
+            $identifier = $request->user()?->id ?: $request->ip();
+
+            return Limit::perMinute(60)->by($identifier);
+        });
 
         DatabaseNotification::created(function (DatabaseNotification $notification): void {
             $notifiable = $notification->notifiable;

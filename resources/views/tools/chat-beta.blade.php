@@ -1464,6 +1464,8 @@
                     }, 75);
                 };
 
+                const shouldRunChatPolling = () => document.visibilityState === 'visible' && !chatRealtimeConnected;
+
                 const handleRealtimeChatEvent = (payload) => {
                     const conversationId = Number(payload?.conversation_id || 0);
                     const activeConversationId = Number(wrapper?.dataset.conversationId || sidebarSelectedConversationId || 0);
@@ -4193,7 +4195,7 @@
                 autoScroll();
                 window.renderAttachmentsPreview?.();
                 setInterval(() => {
-                    if (!chatRealtimeConnected) {
+                    if (shouldRunChatPolling()) {
                         void syncMessages();
                     }
                 }, 3000);
@@ -4240,11 +4242,21 @@
                 });
 
                 setInterval(() => {
-                    if (!chatRealtimeConnected) {
+                    if (shouldRunChatPolling()) {
                         void refreshSidebar();
                     }
                 }, 5000);
                 refreshSidebar();
+                document.addEventListener('visibilitychange', () => {
+                    if (!shouldRunChatPolling()) {
+                        return;
+                    }
+
+                    void refreshSidebar();
+                    if (hasComposer) {
+                        void syncMessages();
+                    }
+                });
                 updateChatRealtimeIndicator(hasComposer && realtimeConfig.enabled && typeof WebSocket !== 'undefined' && !realtimeSuppressed ? 'fallback' : 'disabled');
                 if (hasComposer) {
                     connectChatRealtime();
