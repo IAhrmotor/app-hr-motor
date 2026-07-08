@@ -11,6 +11,7 @@ services:
       - .env.docker
     volumes:
       - ./:/var/www
+      - ./docker/php-fpm/zz-production.conf:/usr/local/etc/php-fpm.d/zz-production.conf:ro
     depends_on:
       db:
         condition: service_healthy
