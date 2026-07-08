@@ -403,6 +403,8 @@
                         let notificationChannel = '';
                         let notificationDisconnecting = false;
                         let notificationRefreshTimer = null;
+                        let notificationRefreshInFlight = false;
+                        let notificationRefreshQueued = false;
                         const initialUnreadCount = @js((int) $forumUnreadNotificationCount);
                         const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
                         const defaultNotificationIconUrl = @js(asset('images/users/hrmotor-default-user-avatar.png'));
@@ -839,8 +841,17 @@
                         };
 
                         const refreshNotifications = async () => {
+                            if (notificationRefreshInFlight) {
+                                notificationRefreshQueued = true;
+                                return;
+                            }
+
+                            notificationRefreshInFlight = true;
+
                             try {
-                                if (list) {
+                                const showLoadingState = !list || list.dataset.notificationState !== 'empty';
+
+                                if (list && showLoadingState) {
                                     list.innerHTML = renderNotificationLoadingState();
                                 }
 
@@ -899,14 +910,23 @@
                                 if (list) {
                                     if (nextNotifications.length === 0) {
                                         list.innerHTML = `<div class="${emptyStateClass}"><p class="text-sm font-semibold text-brand-secondary">No tienes notificaciones pendientes</p></div>`;
+                                        list.dataset.notificationState = 'empty';
                                     } else {
                                         list.innerHTML = nextNotifications.map(renderNotification).join('');
+                                        list.dataset.notificationState = 'loaded';
                                     }
                                 }
 
                                 nextNotificationIds.forEach((notificationId) => knownNotificationIds.add(notificationId));
                             } catch (error) {
                                 console.error(error);
+                            } finally {
+                                notificationRefreshInFlight = false;
+
+                                if (notificationRefreshQueued) {
+                                    notificationRefreshQueued = false;
+                                    void refreshNotifications();
+                                }
                             }
                         };
 
