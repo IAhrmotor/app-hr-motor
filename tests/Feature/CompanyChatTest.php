@@ -398,6 +398,54 @@ class CompanyChatTest extends TestCase
         $this->assertNotNull($message->read_at);
     }
 
+    public function test_group_message_reads_are_registered_in_bulk_without_changing_the_final_read_state(): void
+    {
+        $sender = User::factory()->create(['name' => 'Emisor']);
+        $firstReader = User::factory()->create(['name' => 'Lector Uno']);
+        $secondReader = User::factory()->create(['name' => 'Lector Dos']);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($firstReader);
+        $this->acceptChatPolicy($secondReader);
+
+        $group = CompanyChatGroup::query()->create([
+            'name' => 'Grupo bulk',
+        ]);
+
+        $group->participants()->sync([$sender->id, $firstReader->id, $secondReader->id]);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'company_chat_group_id' => $group->id,
+        ]);
+
+        $messages = collect();
+        for ($index = 1; $index <= 4; $index++) {
+            $messages->push(CompanyChatMessage::query()->create([
+                'company_chat_conversation_id' => $conversation->id,
+                'sender_id' => $sender->id,
+                'body' => 'Mensaje ' . $index,
+            ]));
+        }
+
+        $this->actingAs($firstReader)
+            ->get(route('chat.beta', ['conversation' => $conversation->id]))
+            ->assertOk();
+
+        $messages->each(function (CompanyChatMessage $message): void {
+            $message->refresh();
+            $this->assertNull($message->read_at);
+        });
+
+        $this->actingAs($secondReader)
+            ->get(route('chat.beta', ['conversation' => $conversation->id]))
+            ->assertOk();
+
+        $messages->each(function (CompanyChatMessage $message): void {
+            $message->refresh();
+            $this->assertNotNull($message->read_at);
+        });
+    }
+
     public function test_group_messages_notify_all_members_except_the_sender_and_show_the_sender_name(): void
     {
         $sender = User::factory()->create(['name' => 'Emisor Grupo']);
