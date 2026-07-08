@@ -914,11 +914,16 @@ class CompanyChatController extends Controller
      */
     private function markGroupConversationAsRead(CompanyChatConversation $conversation, User $user): array
     {
+        $conversation->loadMissing('chatGroup.participants');
+
         $messages = $conversation->messages()
             ->with('sender')
             ->where(function ($query) use ($user): void {
                 $query->whereNull('sender_id')
                     ->orWhere('sender_id', '!=', $user->id);
+            })
+            ->whereDoesntHave('reads', function ($query) use ($user): void {
+                $query->where('user_id', $user->id);
             })
             ->get();
 
@@ -927,22 +932,56 @@ class CompanyChatController extends Controller
         }
 
         $now = now();
-        $messageIds = [];
+        $messageIds = $messages
+            ->pluck('id')
+            ->map(static fn ($value): int => (int) $value)
+            ->values()
+            ->all();
 
-        foreach ($messages as $message) {
-            $messageIds[] = (int) $message->id;
-
-            CompanyChatMessageRead::query()->updateOrCreate(
-                [
-                    'company_chat_message_id' => $message->id,
-                    'user_id' => $user->id,
-                ],
-                [
-                    'read_at' => $now,
-                ],
+        foreach ($messages->chunk(500) as $messageChunk) {
+            CompanyChatMessageRead::query()->upsert(
+                $messageChunk->map(static function (CompanyChatMessage $message) use ($user, $now): array {
+                    return [
+                        'company_chat_message_id' => $message->id,
+                        'user_id' => $user->id,
+                        'read_at' => $now,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                })->all(),
+                ['company_chat_message_id', 'user_id'],
+                ['read_at', 'updated_at']
             );
+        }
 
-            $this->refreshGroupMessageReadState($conversation, $message);
+        $participantCount = (int) ($conversation->chatGroup?->participants?->count() ?? 0);
+
+        if ($participantCount > 0) {
+            $readCountsByMessageId = CompanyChatMessageRead::query()
+                ->selectRaw('company_chat_message_id, COUNT(DISTINCT user_id) as read_count')
+                ->whereIn('company_chat_message_id', $messageIds)
+                ->groupBy('company_chat_message_id')
+                ->pluck('read_count', 'company_chat_message_id');
+
+            $fullyReadMessageIds = $messages
+                ->filter(function (CompanyChatMessage $message) use ($participantCount, $readCountsByMessageId): bool {
+                    $requiredReaderCount = $message->isSystemMessage() || ! $message->sender instanceof User
+                        ? $participantCount
+                        : max(0, $participantCount - 1);
+
+                    return (int) ($readCountsByMessageId->get($message->id) ?? 0) >= $requiredReaderCount;
+                })
+                ->pluck('id')
+                ->map(static fn ($value): int => (int) $value)
+                ->values()
+                ->all();
+
+            if ($fullyReadMessageIds !== []) {
+                CompanyChatMessage::query()
+                    ->whereKey($fullyReadMessageIds)
+                    ->whereNull('read_at')
+                    ->update(['read_at' => $now]);
+            }
         }
 
         return $messageIds;
