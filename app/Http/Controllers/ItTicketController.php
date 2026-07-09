@@ -8,6 +8,7 @@ use App\Models\TicketTool;
 use App\Services\TicketActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -47,7 +48,26 @@ class ItTicketController extends Controller
             'description' => ['required', 'string', 'max:5000'],
             'screenshots' => ['nullable', 'array', 'max:4'],
             'screenshots.*' => ['image', 'max:5120'],
+            'submission_token' => ['required', 'string', 'max:100'],
         ]);
+
+        $submissionToken = trim((string) $validated['submission_token']);
+        $submissionKey = 'it-ticket-submission:' . $request->user()->id . ':' . sha1($submissionToken);
+        $existingTicketId = Cache::get($submissionKey);
+
+        if (is_numeric($existingTicketId)) {
+            return redirect()
+                ->route('it-tickets.index')
+                ->with('success', 'Ya habíamos recibido esa incidencia.');
+        }
+
+        $submissionLockKey = $submissionKey . ':lock';
+
+        if (! Cache::add($submissionLockKey, true, now()->addMinutes(5))) {
+            return back()
+                ->withInput()
+                ->with('success', 'La incidencia ya se estaba procesando. Si no aparece en tu listado, vuelve a intentarlo en unos segundos.');
+        }
 
         $uploadedScreenshots = collect($request->file('screenshots', []))
             ->map(function ($file): array {
@@ -61,31 +81,33 @@ class ItTicketController extends Controller
             ->values()
             ->all();
 
-        $ticket = ItTicket::query()->create([
-            'user_id' => $request->user()->id,
-            'ticket_tool_id' => (int) $validated['tool'],
-            'number' => 'IT-' . strtoupper(Str::random(6)),
-            'tool' => $ticketTools[$validated['tool']]['label'],
-            'priority' => $validated['priority'],
-            'status' => 'new',
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'screenshots' => $uploadedScreenshots,
-        ]);
-
-        app(TicketActivityLogger::class)->record(
-            $request->user(),
-            $ticket,
-            'created',
-            'Ticket creado',
-            [
-                'tool' => $ticket->tool,
-                'priority' => $ticket->priority,
-                'status' => $ticket->status,
-            ]
-        );
-
         try {
+            $ticket = ItTicket::query()->create([
+                'user_id' => $request->user()->id,
+                'ticket_tool_id' => (int) $validated['tool'],
+                'number' => 'IT-' . strtoupper(Str::random(6)),
+                'tool' => $ticketTools[$validated['tool']]['label'],
+                'priority' => $validated['priority'],
+                'status' => 'new',
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'screenshots' => $uploadedScreenshots,
+            ]);
+
+            Cache::put($submissionKey, $ticket->id, now()->addDay());
+
+            app(TicketActivityLogger::class)->record(
+                $request->user(),
+                $ticket,
+                'created',
+                'Ticket creado',
+                [
+                    'tool' => $ticket->tool,
+                    'priority' => $ticket->priority,
+                    'status' => $ticket->status,
+                ]
+            );
+
             $priorityLabel = $ticketPriorities[$validated['priority']]['label'] ?? $validated['priority'];
 
             Mail::to('carlos.torres@hrmotor.es')
@@ -99,6 +121,8 @@ class ItTicketController extends Controller
                 ));
         } catch (Throwable $exception) {
             report($exception);
+        } finally {
+            Cache::forget($submissionLockKey);
         }
 
         return redirect()

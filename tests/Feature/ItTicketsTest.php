@@ -73,6 +73,7 @@ class ItTicketsTest extends TestCase
 
         $response = $this->actingAs($user)
             ->post(route('it-tickets.store'), [
+                'submission_token' => (string) \Illuminate\Support\Str::uuid(),
                 'tool' => (string) $tool->id,
                 'priority' => 'urgent',
                 'title' => 'El formulario no guarda',
@@ -111,6 +112,7 @@ class ItTicketsTest extends TestCase
 
         $response = $this->actingAs($user)
             ->post(route('it-tickets.store'), [
+                'submission_token' => (string) \Illuminate\Support\Str::uuid(),
                 'tool' => (string) $tool->id,
                 'priority' => 'high',
                 'title' => 'Problema de acceso',
@@ -136,5 +138,44 @@ class ItTicketsTest extends TestCase
             return $mail->hasTo('carlos.torres@hrmotor.es')
                 && $mail->hasCc('javier.arruabarrena@hrmotor.com');
         });
+    }
+
+    public function test_duplicate_form_submission_token_does_not_create_multiple_tickets(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'name' => 'Usuario Prueba',
+            'email' => 'usuario-prueba@example.com',
+        ]);
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $payload = [
+            'submission_token' => 'fixed-submission-token',
+            'tool' => (string) $tool->id,
+            'priority' => 'medium',
+            'title' => 'Ticket duplicable',
+            'description' => 'Este ticket solo debe crearse una vez.',
+            'screenshots' => [],
+        ];
+
+        $this->actingAs($user)
+            ->post(route('it-tickets.store'), $payload)
+            ->assertRedirect(route('it-tickets.index'));
+
+        $this->actingAs($user)
+            ->post(route('it-tickets.store'), $payload)
+            ->assertRedirect(route('it-tickets.index'));
+
+        $this->assertSame(1, ItTicket::query()->where('user_id', $user->id)->count());
+        $this->assertSame(
+            1,
+            ItTicket::query()
+                ->where('user_id', $user->id)
+                ->where('title', 'Ticket duplicable')
+                ->count()
+        );
     }
 }

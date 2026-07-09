@@ -77,7 +77,13 @@ window.itTicketToolSelector = (options, initialSelected = '', initialLabel = '')
 window.itTicketCreateForm = () => ({
     confirmedWithoutScreenshots: false,
     showConfirmDialog: false,
+    isSubmitting: false,
     handleSubmit(event) {
+        if (this.isSubmitting) {
+            event.preventDefault();
+            return;
+        }
+
         if (this.confirmedWithoutScreenshots) {
             return;
         }
@@ -94,6 +100,7 @@ window.itTicketCreateForm = () => ({
         const hasScreenshots = Boolean(screenshotInput?.files?.length);
 
         if (hasScreenshots) {
+            this.isSubmitting = true;
             return;
         }
 
@@ -103,6 +110,7 @@ window.itTicketCreateForm = () => ({
     confirmWithoutScreenshots() {
         this.confirmedWithoutScreenshots = true;
         this.showConfirmDialog = false;
+        this.isSubmitting = true;
 
         this.$nextTick(() => {
             this.$refs.form?.requestSubmit?.();
