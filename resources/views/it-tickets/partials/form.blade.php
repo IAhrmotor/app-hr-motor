@@ -8,6 +8,11 @@
     @submit="handleSubmit($event)"
 >
     @csrf
+    @php
+        $submissionToken = old('submission_token', (string) \Illuminate\Support\Str::uuid());
+    @endphp
+
+    <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
 
     <div
         class="space-y-2"
@@ -138,7 +143,11 @@
         @enderror
     </div>
 
-    <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <button
+        type="submit"
+        class="inline-flex w-full items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+        :disabled="isSubmitting"
+    >
         Preparar incidencia
     </button>
 
@@ -184,7 +193,8 @@
                             <button
                                 type="button"
                                 @click="confirmWithoutScreenshots()"
-                                class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                                :disabled="isSubmitting"
                             >
                                 Sí, continuar
                             </button>

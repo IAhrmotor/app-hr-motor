@@ -247,6 +247,9 @@ class TicketsController extends Controller
     {
         $search = trim((string) $request->input($section . '_search', ''));
         $statuses = $this->normalizeSectionFilters($request->input($section . '_status', []));
+        if ($statuses === []) {
+            $statuses = $this->defaultTicketSectionStatuses();
+        }
         $priorities = $this->normalizeSectionFilters($request->input($section . '_priority', []));
         $sort = $managed ? 'updated_desc' : $this->normalizeSortOption((string) $request->input($section . '_sort', 'updated_desc'));
         $pageName = $section . '_page';
@@ -757,6 +760,19 @@ class TicketsController extends Controller
                 'label' => 'Clausurado',
                 'badge' => 'bg-slate-900 text-white ring-slate-900',
             ],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function defaultTicketSectionStatuses(): array
+    {
+        return [
+            'new',
+            'in_progress',
+            'pending_user',
+            'reopen_requested',
         ];
     }
 

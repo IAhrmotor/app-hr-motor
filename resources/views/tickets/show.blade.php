@@ -14,6 +14,7 @@
         $isReopenRequested = $ticket->status === 'reopen_requested';
         $isPermanentlyClosed = $ticket->status === 'clausurado';
         $ticketOpeningAttachments = collect($ticket->screenshots ?? []);
+        $requesterExtraRoleLabel = filled($ticket->user?->extra_role) ? ($ticket->user?->chat_role_label ?? ucfirst((string) $ticket->user->extra_role)) : null;
     @endphp
 
     <main
@@ -134,7 +135,15 @@
                                 </div>
 
                                 <div class="rounded-[1.25rem] border border-white/18 bg-slate-950/30 px-4 py-4 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] backdrop-blur-md ring-1 ring-white/10">
-                                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Solicitante</dt>
+                                    <dt class="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
+                                        <span>Solicitante</span>
+
+                                        @if ($requesterExtraRoleLabel)
+                                            <span class="inline-flex shrink-0 items-center rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75 ring-1 ring-white/15">
+                                                {{ $requesterExtraRoleLabel }}
+                                            </span>
+                                        @endif
+                                    </dt>
                                     <dd class="mt-2 space-y-1">
                                         <div class="text-lg font-semibold text-white sm:text-xl">
                                             {{ $ticket->user?->name ?? 'Sin nombre' }}

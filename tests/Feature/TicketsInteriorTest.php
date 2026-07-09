@@ -278,7 +278,8 @@ class TicketsInteriorTest extends TestCase
     public function test_regular_user_cannot_open_the_tickets_interior(): void
     {
         $user = User::factory()->create([
-            'role' => User::ROLE_COMMERCIAL,
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'email' => 'no-access@example.com',
         ]);
 
@@ -299,7 +300,8 @@ class TicketsInteriorTest extends TestCase
         ]);
 
         $creator = User::factory()->create([
-            'role' => User::ROLE_COMMERCIAL,
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'name' => 'Creador',
             'email' => 'creador@example.com',
             'dealership_id' => $dealership->id,
@@ -324,6 +326,44 @@ class TicketsInteriorTest extends TestCase
             ->assertSee('Aqui se ve todo lo que ha escrito.', false)
             ->assertSee('Delegación', false)
             ->assertSee('Delegación Norte', false);
+    }
+
+    public function test_ticket_detail_shows_requester_extra_role_next_to_the_dealership(): void
+    {
+        $dealership = Dealership::query()->create([
+            'name' => 'Delegación Sur',
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $creator = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'name' => 'Creador Perfil',
+            'email' => 'creador-perfil@example.com',
+            'dealership_id' => $dealership->id,
+        ]);
+
+        $ticket = ItTicket::query()->create([
+            'user_id' => $creator->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-333334',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'new',
+            'title' => 'Ticket con perfil',
+            'description' => 'El solicitante tiene rol extra.',
+            'screenshots' => [],
+        ]);
+
+        $this->actingAs($creator)
+            ->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Delegación Sur', false)
+            ->assertSee('Comercial', false);
     }
 
     public function test_ticket_participants_can_reply_with_images(): void
@@ -611,6 +651,92 @@ class TicketsInteriorTest extends TestCase
             ->assertSee('assigned_page=2', false)
             ->assertSee('IT-000011', false)
             ->assertDontSee('IT-000001', false);
+    }
+
+    public function test_tickets_index_uses_open_statuses_by_default_when_paginating(): void
+    {
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Filtro',
+            'email' => 'gestor-filtro@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $requester = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'name' => 'Solicitante Filtro',
+            'email' => 'solicitante-filtro@example.com',
+        ]);
+
+        foreach (range(1, 12) as $index) {
+            $ticket = ItTicket::query()->create([
+                'user_id' => $requester->id,
+                'assigned_to_user_id' => $manager->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => sprintf('IT-100%03d', $index),
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'new',
+                'title' => 'Ticket abierto ' . $index,
+                'description' => 'Ticket abierto de prueba ' . $index,
+                'screenshots' => [],
+            ]);
+
+            $ticket->forceFill([
+                'created_at' => now()->subMinutes(12 - $index),
+                'updated_at' => now()->subMinutes(12 - $index),
+            ])->saveQuietly();
+        }
+
+        foreach (['closed', 'clausurado', 'closed'] as $offset => $status) {
+            $ticket = ItTicket::query()->create([
+                'user_id' => $requester->id,
+                'assigned_to_user_id' => $manager->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => sprintf('IT-200%03d', $offset + 1),
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => $status,
+                'title' => 'Ticket cerrado ' . ($offset + 1),
+                'description' => 'Ticket cerrado de prueba ' . ($offset + 1),
+                'screenshots' => [],
+            ]);
+
+            $ticket->forceFill([
+                'created_at' => now()->subHours($offset + 1),
+                'updated_at' => now()->subHours($offset + 1),
+            ])->saveQuietly();
+        }
+
+        $response = $this->actingAs($manager)
+            ->get(route('tickets.index', [
+                'managed_page' => 2,
+                'assigned_page' => 2,
+                'ajax' => 1,
+            ]));
+
+        $response->assertOk();
+
+        $html = (string) $response->json('html');
+
+        $this->assertStringContainsString('IT-100001', $html);
+        $this->assertStringContainsString('IT-100002', $html);
+        $this->assertStringNotContainsString('IT-200001', $html);
+        $this->assertStringNotContainsString('IT-200002', $html);
+        $this->assertStringNotContainsString('IT-200003', $html);
     }
 
     public function test_assigned_tickets_search_works_beyond_first_page(): void
