@@ -55,6 +55,26 @@ class TicketsController extends Controller
         return view('tickets.index', $viewData);
     }
 
+    public function reports(Request $request): View
+    {
+        abort_unless(app_can_access_tickets($request->user()), 403);
+        abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
+
+        $ticketStatuses = $this->ticketStatuses();
+        $openStatuses = $this->openTicketStatuses();
+
+        return view('tickets.reports', [
+            'backUrl' => route('tickets.index'),
+            'heroImageUrl' => asset('images/hero/hero-informes-tickets.webp'),
+            'reportCards' => $this->buildCurrentIncidentsReportCards(),
+            'openStatusMeta' => array_intersect_key($ticketStatuses, array_flip($openStatuses)),
+            'openStatusOrder' => array_values(array_filter(
+                $openStatuses,
+                fn (string $statusKey): bool => $statusKey !== 'new'
+            )),
+        ]);
+    }
+
     public function show(Request $request, ItTicket $itTicket): View
     {
         $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
@@ -739,26 +759,32 @@ class TicketsController extends Controller
             'new' => [
                 'label' => 'Nuevo',
                 'badge' => 'bg-sky-50 text-sky-700 ring-sky-200',
+                'badgeColor' => '#0ea5e9',
             ],
             'in_progress' => [
                 'label' => 'En curso',
                 'badge' => 'bg-amber-50 text-amber-700 ring-amber-200',
+                'badgeColor' => '#f59e0b',
             ],
             'pending_user' => [
                 'label' => 'Pendiente usuario',
                 'badge' => 'bg-violet-50 text-violet-700 ring-violet-200',
+                'badgeColor' => '#8b5cf6',
             ],
             'reopen_requested' => [
                 'label' => 'Reapertura',
                 'badge' => 'bg-rose-50 text-rose-700 ring-rose-200',
+                'badgeColor' => '#f43f5e',
             ],
             'closed' => [
                 'label' => 'Cerrado',
                 'badge' => 'bg-slate-100 text-slate-700 ring-slate-200',
+                'badgeColor' => '#64748b',
             ],
             'clausurado' => [
                 'label' => 'Clausurado',
                 'badge' => 'bg-slate-900 text-white ring-slate-900',
+                'badgeColor' => '#0f172a',
             ],
         ];
     }
@@ -891,5 +917,81 @@ class TicketsController extends Controller
         }
 
         return array_values(array_filter($value, fn ($item): bool => is_string($item) && $item !== ''));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function openTicketStatuses(): array
+    {
+        return [
+            'new',
+            'in_progress',
+            'pending_user',
+            'reopen_requested',
+        ];
+    }
+
+    /**
+     * @return array<int, array{
+     *     id:int,
+     *     name:string,
+     *     total:int,
+     *     segments:array<int, array{key:string,label:string,count:int,color:string,percentage:float,offset:float}>,
+     *     totalOpenTickets:int
+     * }>
+     */
+    private function buildCurrentIncidentsReportCards(): array
+    {
+        $openStatuses = $this->openTicketStatuses();
+        $statusMeta = array_intersect_key($this->ticketStatuses(), array_flip($openStatuses));
+        $assignableUsers = collect($this->assignableUsers());
+        $assignableUserIds = $assignableUsers->pluck('id')->map(fn ($id): int => (int) $id)->all();
+
+        $ticketsByAssignee = ItTicket::query()
+            ->select(['assigned_to_user_id', 'status'])
+            ->whereIn('status', $openStatuses)
+            ->whereIn('assigned_to_user_id', $assignableUserIds)
+            ->get()
+            ->groupBy('assigned_to_user_id');
+
+        return $assignableUsers
+            ->map(function (array $user) use ($ticketsByAssignee, $statusMeta, $openStatuses): array {
+                $userTickets = $ticketsByAssignee->get($user['id'], collect());
+                $counts = $userTickets->countBy('status');
+                $total = (int) $userTickets->count();
+                $segments = [];
+                $offset = 0.0;
+
+                foreach ($openStatuses as $statusKey) {
+                    $count = (int) ($counts[$statusKey] ?? 0);
+
+                    if ($count <= 0) {
+                        continue;
+                    }
+
+                    $percentage = $total > 0 ? ($count / $total) * 100 : 0.0;
+                    $segments[] = [
+                        'key' => $statusKey,
+                        'label' => $statusMeta[$statusKey]['label'] ?? $statusKey,
+                        'count' => $count,
+                        'color' => $statusMeta[$statusKey]['badgeColor'] ?? '#94a3b8',
+                        'percentage' => $percentage,
+                        'offset' => $offset,
+                    ];
+                    $offset += $percentage;
+                }
+
+                return [
+                    'id' => (int) $user['id'],
+                    'name' => $user['name'],
+                    'total' => $total,
+                    'segments' => $segments,
+                    'totalOpenTickets' => $total,
+                ];
+            })
+            ->filter(fn (array $card): bool => $card['total'] > 0)
+            ->values()
+            ->all();
     }
 }

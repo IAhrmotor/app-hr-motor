@@ -145,6 +145,7 @@ class TicketsInteriorTest extends TestCase
             ->get(route('tickets.index'))
             ->assertOk()
             ->assertSee('Todos los tickets', false)
+            ->assertSee(route('tickets.reports'), false)
             ->assertSee($otherTicket->number, false)
             ->assertSee($ownTicket->number, false)
             ->assertSee('Vista previa', false)
@@ -193,6 +194,143 @@ class TicketsInteriorTest extends TestCase
             'status' => 'in_progress',
             'priority' => 'high',
         ]);
+    }
+
+    public function test_ticket_reports_page_is_only_available_to_users_who_can_manage_tickets(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Informes',
+            'email' => 'gestor-informes@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('tickets.reports'))
+            ->assertOk()
+            ->assertSee('Informes de ticketing', false)
+            ->assertSee(route('tickets.index'), false);
+
+        $regularUser = User::factory()->create([
+            'role' => User::ROLE_COMMERCIAL,
+            'email' => 'comercial-informes@example.com',
+        ]);
+
+        $this->actingAs($regularUser)
+            ->get(route('tickets.reports'))
+            ->assertForbidden();
+    }
+
+    public function test_ticket_reports_page_shows_open_incidents_by_it_person_and_status(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Informes',
+            'email' => 'gestor-informes@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $itOne = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Uno',
+            'email' => 'it-uno@example.com',
+        ]);
+
+        $itTwo = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Dos',
+            'email' => 'it-dos@example.com',
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itOne->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-900101',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'new',
+            'title' => 'Abierto 1',
+            'description' => 'Abierto 1',
+            'screenshots' => [],
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itOne->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-900102',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'pending_user',
+            'title' => 'Abierto 2',
+            'description' => 'Abierto 2',
+            'screenshots' => [],
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itOne->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-900103',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'closed',
+            'title' => 'Cerrado',
+            'description' => 'Cerrado',
+            'screenshots' => [],
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itTwo->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-900201',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'reopen_requested',
+            'title' => 'Reapertura',
+            'description' => 'Reapertura',
+            'screenshots' => [],
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('tickets.reports'))
+            ->assertOk()
+            ->assertSee('Informes de ticketing', false)
+            ->assertSee('IT Uno', false)
+            ->assertSee('2 incidencias abiertas', false)
+            ->assertSee('IT Dos', false)
+            ->assertSee('1 incidencias abiertas', false)
+            ->assertSee('Nuevo', false)
+            ->assertSee('En curso', false)
+            ->assertSee('Pendiente usuario', false)
+            ->assertSee('Reapertura', false)
+            ->assertDontSee('Cerrado', false)
+            ->assertDontSee('Clausurado', false);
     }
 
     public function test_user_with_manage_permission_can_delete_tickets_and_cleanup_files(): void

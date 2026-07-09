@@ -170,6 +170,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/visor-roles', [RoleViewerController::class, 'destroy'])->name('role-viewer.destroy');
     Route::post('/feedback', [FeedbackReportController::class, 'store'])->name('feedback.store');
     Route::get('/tickets', [TicketsController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/informes', [TicketsController::class, 'reports'])->name('tickets.reports');
     Route::get('/tickets/{itTicket}', [TicketsController::class, 'show'])
         ->whereNumber('itTicket')
         ->name('tickets.show');
