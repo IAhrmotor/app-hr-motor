@@ -5,6 +5,7 @@
         $totalOpenTickets = collect($reportCards)->sum('totalOpenTickets');
         $peopleWithOpenTickets = collect($reportCards)->count();
         $topCard = collect($reportCards)->sortByDesc('totalOpenTickets')->first();
+        $maxClosedTickets = (int) (collect($closedReportRows ?? [])->max('totalClosedTickets') ?? 0);
         $polarToCartesian = function (float $centerX, float $centerY, float $radius, float $angleDeg): array {
             $angleRad = deg2rad($angleDeg - 90);
 
@@ -175,7 +176,7 @@
                     </div>
                 </div>
 
-                <div class="mt-6 grid gap-6 xl:grid-cols-4">
+                <div class="mt-6 grid gap-4 xl:grid-cols-6">
                     @foreach ($reportCards as $card)
                         @php
                             $sliceStart = 0.0;
@@ -200,9 +201,9 @@
                             $singleSegment = count($chartSegments) === 1;
                         @endphp
 
-                        <article class="rounded-[2rem] bg-white p-6">
-                            <div class="flex flex-col items-center gap-5">
-                                <div class="relative w-full max-w-[18rem] shrink-0">
+                        <article class="rounded-[2rem] bg-white p-4">
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="relative w-full max-w-[11rem] shrink-0">
                                     <svg viewBox="0 0 280 280" class="h-auto w-full" role="img" aria-label="Rosco de incidencias de {{ $card['name'] }}">
 
                                         @foreach ($chartSegments as $segment)
@@ -225,9 +226,9 @@
                                                     fill="{{ $labelColor }}"
                                                     text-anchor="middle"
                                                     dominant-baseline="middle"
-                                                    font-size="22"
-                                                    font-weight="800"
-                                                    style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.2); stroke-width: 2px;"
+                                                    font-size="30"
+                                                    font-weight="900"
+                                                    style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;"
                                                 >
                                                     {{ $segment['count'] }}
                                                 </text>
@@ -241,7 +242,7 @@
                                                 fill="{{ $contrastTextColor($chartSegments[0]['color']) }}"
                                                 text-anchor="middle"
                                                 dominant-baseline="middle"
-                                                font-size="36"
+                                                font-size="46"
                                                 font-weight="900"
                                                 style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;"
                                             >
@@ -253,10 +254,10 @@
                                 </div>
 
                                 <div class="text-center">
-                                    <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">
+                                    <h2 class="text-lg font-bold tracking-tight text-brand-secondary">
                                         {{ $card['name'] }}
                                     </h2>
-                                    <p class="mt-2 text-sm text-brand-secondary/65">
+                                    <p class="mt-1 text-xs text-brand-secondary/65">
                                         {{ $card['totalOpenTickets'] }} incidencias abiertas
                                     </p>
                                 </div>
@@ -265,6 +266,84 @@
                         </article>
                     @endforeach
                 </div>
+            </section>
+
+            <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+                <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">
+                    Tickets cerrados por usuario
+                </h2>
+
+                @if (empty($closedReportRows))
+                    <div class="mt-6 rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-brand-secondary/65">
+                        No hay tickets cerrados ni clausurados para mostrar.
+                    </div>
+                @else
+                    @php
+                        $closedChartWidth = max(1260, count($closedReportRows) * 190);
+                        $closedChartHeight = 290;
+                        $closedBarAreaHeight = 180;
+                        $closedAxisY = 220;
+                        $closedMaxBarHeight = 145;
+                        $closedChartLeft = 70;
+                        $closedChartRight = 70;
+                        $closedChartInnerWidth = $closedChartWidth - $closedChartLeft - $closedChartRight;
+                    @endphp
+
+                    <div class="mt-6 overflow-x-auto">
+                        <svg
+                            viewBox="0 0 {{ $closedChartWidth }} {{ $closedChartHeight }}"
+                            class="mx-auto block h-auto"
+                            style="width: {{ $closedChartWidth }}px; max-width: 100%;"
+                            role="img"
+                            aria-label="Gráfica de tickets cerrados por usuario"
+                        >
+                            <line x1="{{ $closedChartLeft }}" y1="{{ $closedAxisY }}" x2="{{ $closedChartWidth - $closedChartRight }}" y2="{{ $closedAxisY }}" stroke="#cbd5e1" stroke-width="2" />
+
+                            @foreach ($closedReportRows as $index => $row)
+                                @php
+                                    $slotWidth = $closedChartInnerWidth / max(count($closedReportRows), 1);
+                                    $barWidth = min(62, max(30, $slotWidth * 0.38));
+                                    $barX = $closedChartLeft + ($slotWidth * $index) + (($slotWidth - $barWidth) / 2);
+                                    $barHeight = $maxClosedTickets > 0 ? (($row['totalClosedTickets'] / $maxClosedTickets) * $closedMaxBarHeight) : 0;
+                                    $barTop = $closedAxisY - $barHeight;
+                                    $labelX = $barX + ($barWidth / 2);
+                                    $barRadius = min(8, $barHeight / 2);
+                                @endphp
+
+                                <g>
+                                    @if ($barHeight > 0)
+                                        <path
+                                            d="M {{ $barX }} {{ $closedAxisY }} H {{ $barX + $barWidth }} V {{ $barTop + $barRadius }} A {{ $barRadius }} {{ $barRadius }} 0 0 0 {{ $barX + $barWidth - $barRadius }} {{ $barTop }} H {{ $barX + $barRadius }} A {{ $barRadius }} {{ $barRadius }} 0 0 0 {{ $barX }} {{ $barTop + $barRadius }} Z"
+                                            fill="#E51A2E"
+                                        />
+                                    @endif
+
+                                    <text
+                                        x="{{ $labelX }}"
+                                        y="{{ max(36, $barTop - 8) }}"
+                                        text-anchor="middle"
+                                        fill="#0f172a"
+                                        font-size="22"
+                                        font-weight="800"
+                                    >
+                                        {{ $row['totalClosedTickets'] }}
+                                    </text>
+
+                                    <text
+                                        x="{{ $labelX }}"
+                                        y="{{ $closedAxisY + 30 }}"
+                                        text-anchor="middle"
+                                        fill="#334155"
+                                        font-size="16"
+                                        font-weight="700"
+                                    >
+                                        {{ $row['name'] }}
+                                    </text>
+                                </g>
+                            @endforeach
+                        </svg>
+                    </div>
+                @endif
             </section>
         @endif
     </main>

@@ -67,6 +67,7 @@ class TicketsController extends Controller
             'backUrl' => route('tickets.index'),
             'heroImageUrl' => asset('images/hero/hero-informes-tickets.webp'),
             'reportCards' => $this->buildCurrentIncidentsReportCards(),
+            'closedReportRows' => $this->buildClosedTicketsReportRows(),
             'openStatusMeta' => array_intersect_key($ticketStatuses, array_flip($openStatuses)),
             'openStatusOrder' => array_values(array_filter(
                 $openStatuses,
@@ -933,6 +934,17 @@ class TicketsController extends Controller
     }
 
     /**
+     * @return array<int, string>
+     */
+    private function closedTicketStatuses(): array
+    {
+        return [
+            'closed',
+            'clausurado',
+        ];
+    }
+
+    /**
      * @return array<int, array{
      *     id:int,
      *     name:string,
@@ -991,6 +1003,42 @@ class TicketsController extends Controller
                 ];
             })
             ->filter(fn (array $card): bool => $card['total'] > 0)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{
+     *     id:int,
+     *     name:string,
+     *     totalClosedTickets:int
+     * }>
+     */
+    private function buildClosedTicketsReportRows(): array
+    {
+        $closedStatuses = $this->closedTicketStatuses();
+        $assignableUsers = collect($this->assignableUsers());
+        $assignableUserIds = $assignableUsers->pluck('id')->map(fn ($id): int => (int) $id)->all();
+
+        $ticketsByAssignee = ItTicket::query()
+            ->select(['assigned_to_user_id', 'status'])
+            ->whereIn('status', $closedStatuses)
+            ->whereIn('assigned_to_user_id', $assignableUserIds)
+            ->get()
+            ->groupBy('assigned_to_user_id');
+
+        return $assignableUsers
+            ->map(function (array $user) use ($ticketsByAssignee): array {
+                $userTickets = $ticketsByAssignee->get($user['id'], collect());
+
+                return [
+                    'id' => (int) $user['id'],
+                    'name' => $user['name'],
+                    'totalClosedTickets' => (int) $userTickets->count(),
+                ];
+            })
+            ->filter(fn (array $row): bool => $row['totalClosedTickets'] > 0)
+            ->sortByDesc('totalClosedTickets')
             ->values()
             ->all();
     }
