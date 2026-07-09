@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: laravel-prod-app
+    restart: unless-stopped
     working_dir: /var/www
     env_file:
       - .env.docker
@@ -68,6 +69,7 @@ services:
   nginx:
     image: nginx:stable-alpine
     container_name: laravel-prod-nginx
+    restart: unless-stopped
     ports:
       - "8080:80"
     volumes:
