@@ -84,10 +84,6 @@ window.itTicketCreateForm = () => ({
             return;
         }
 
-        if (this.confirmedWithoutScreenshots) {
-            return;
-        }
-
         const form = this.$refs.form;
 
         if (!form?.checkValidity?.()) {
@@ -96,25 +92,13 @@ window.itTicketCreateForm = () => ({
             return;
         }
 
-        const screenshotInput = this.$refs.screenshots;
-        const hasScreenshots = Boolean(screenshotInput?.files?.length);
-
-        if (hasScreenshots) {
-            this.isSubmitting = true;
-            return;
-        }
-
-        event.preventDefault();
-        this.showConfirmDialog = true;
+        this.isSubmitting = true;
+        this.showConfirmDialog = false;
     },
     confirmWithoutScreenshots() {
         this.confirmedWithoutScreenshots = true;
         this.showConfirmDialog = false;
         this.isSubmitting = true;
-
-        this.$nextTick(() => {
-            this.$refs.form?.requestSubmit?.();
-        });
     },
     cancelWithoutScreenshots() {
         this.showConfirmDialog = false;

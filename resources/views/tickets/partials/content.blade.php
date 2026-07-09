@@ -24,6 +24,14 @@
                         <p class="text-sm font-medium text-white/90">
                             Se pueden asignar tickets a usuarios de IT si tu propio usuario lo permite.
                         </p>
+                        <div class="pt-2">
+                            <a
+                                href="{{ route('tickets.reports') }}"
+                                class="inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-brand-secondary shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
+                            >
+                                Ver informes de ticketing
+                            </a>
+                        </div>
                     @endif
                 </div>
             </div>
