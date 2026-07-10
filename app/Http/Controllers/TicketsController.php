@@ -68,6 +68,7 @@ class TicketsController extends Controller
             'heroImageUrl' => asset('images/hero/hero-informes-tickets.webp'),
             'reportCards' => $this->buildCurrentIncidentsReportCards(),
             'closedReportRows' => $this->buildClosedTicketsReportRows(),
+            'resolutionReport' => $this->buildResolutionTimeReport(),
             'openStatusMeta' => array_intersect_key($ticketStatuses, array_flip($openStatuses)),
             'openStatusOrder' => array_values(array_filter(
                 $openStatuses,
@@ -1041,5 +1042,143 @@ class TicketsController extends Controller
             ->sortByDesc('totalClosedTickets')
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array{
+     *     totalResolvedTickets:int,
+     *     overallAverageMinutes:int,
+     *     overallAverageLabel:string,
+     *     rows:array<int, array{
+     *         id:int,
+     *         name:string,
+     *         tickets:int,
+     *         averageMinutes:int,
+     *         averageLabel:string
+     *     }>
+     * }
+     */
+    private function buildResolutionTimeReport(): array
+    {
+        $closedStatuses = $this->closedTicketStatuses();
+        $assignableUsers = collect($this->assignableUsers())->keyBy('id');
+        $assignableUserIds = $assignableUsers->keys()->map(fn ($id): int => (int) $id)->all();
+
+        $tickets = ItTicket::query()
+            ->select(['id', 'assigned_to_user_id', 'status'])
+            ->whereIn('status', $closedStatuses)
+            ->whereIn('assigned_to_user_id', $assignableUserIds)
+            ->with(['activityLogs:id,it_ticket_id,event,created_at'])
+            ->get();
+
+        $rows = [];
+        $totalMinutes = 0;
+        $totalTickets = 0;
+
+        foreach ($tickets as $ticket) {
+            $timeline = $ticket->activityLogs
+                ->sortBy(function (TicketActivityLog $log): array {
+                    return [
+                        (int) ($log->created_at?->timestamp ?? 0),
+                        (int) $log->id,
+                    ];
+                })
+                ->values();
+
+            $resolvedLog = $timeline->first(function (TicketActivityLog $log): bool {
+                return in_array($log->event, [
+                    TicketActivityLog::EVENT_CLOSED,
+                    TicketActivityLog::EVENT_PERMANENTLY_CLOSED,
+                ], true);
+            });
+
+            if (! $resolvedLog?->created_at) {
+                continue;
+            }
+
+            $assignedLog = $timeline
+                ->filter(function (TicketActivityLog $log) use ($resolvedLog): bool {
+                    return $log->event === TicketActivityLog::EVENT_ASSIGNED
+                        && $log->created_at !== null
+                        && $log->created_at->lessThanOrEqualTo($resolvedLog->created_at);
+                })
+                ->last();
+
+            if (! $assignedLog?->created_at) {
+                continue;
+            }
+
+            $minutes = (int) round($assignedLog->created_at->diffInMinutes($resolvedLog->created_at));
+
+            if ($minutes < 0) {
+                continue;
+            }
+
+            $assigneeId = (int) $ticket->assigned_to_user_id;
+            $user = $assignableUsers->get($assigneeId);
+
+            if (! $user) {
+                continue;
+            }
+
+            $rows[$assigneeId] ??= [
+                'id' => $assigneeId,
+                'name' => $user['name'],
+                'tickets' => 0,
+                'averageMinutes' => 0,
+            ];
+
+            $rows[$assigneeId]['tickets']++;
+            $rows[$assigneeId]['averageMinutes'] += $minutes;
+
+            $totalMinutes += $minutes;
+            $totalTickets++;
+        }
+
+        $formattedRows = collect($rows)
+            ->map(function (array $row): array {
+                $averageMinutes = $row['tickets'] > 0
+                    ? (int) round($row['averageMinutes'] / $row['tickets'])
+                    : 0;
+
+                return [
+                    'id' => $row['id'],
+                    'name' => $row['name'],
+                    'tickets' => $row['tickets'],
+                    'averageMinutes' => $averageMinutes,
+                    'averageLabel' => $this->formatMinutesAsDurationLabel($averageMinutes),
+                ];
+            })
+            ->sortByDesc('averageMinutes')
+            ->values()
+            ->all();
+
+        $overallAverageMinutes = $totalTickets > 0
+            ? (int) round($totalMinutes / $totalTickets)
+            : 0;
+
+        return [
+            'totalResolvedTickets' => $totalTickets,
+            'overallAverageMinutes' => $overallAverageMinutes,
+            'overallAverageLabel' => $this->formatMinutesAsDurationLabel($overallAverageMinutes),
+            'rows' => $formattedRows,
+        ];
+    }
+
+    private function formatMinutesAsDurationLabel(int $minutes): string
+    {
+        $minutes = max(0, $minutes);
+        $hours = intdiv($minutes, 60);
+        $remainingMinutes = $minutes % 60;
+
+        if ($hours <= 0) {
+            return $remainingMinutes . ' min';
+        }
+
+        if ($remainingMinutes <= 0) {
+            return $hours . ' h';
+        }
+
+        return $hours . ' h ' . $remainingMinutes . ' min';
     }
 }
