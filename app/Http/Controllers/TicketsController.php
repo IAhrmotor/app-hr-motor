@@ -1124,7 +1124,13 @@ class TicketsController extends Controller
                 continue;
             }
 
-            $minutes = (int) round($assignedLog->created_at->diffInMinutes($resolvedLog->created_at));
+            $resolvedSchedule = $this->resolveTicketResolutionSchedule($resolvedLog);
+
+            if ($resolvedSchedule === null) {
+                continue;
+            }
+
+            $minutes = $this->businessMinutesBetween($assignedLog->created_at, $resolvedLog->created_at, $resolvedSchedule);
             $pendingStartedAt = null;
             $pendingMinutes = 0;
 
@@ -1150,13 +1156,13 @@ class TicketsController extends Controller
                 }
 
                 if ($pendingStartedAt) {
-                    $pendingMinutes += (int) round($pendingStartedAt->diffInMinutes($log->created_at));
+                    $pendingMinutes += $this->businessMinutesBetween($pendingStartedAt, $log->created_at, $resolvedSchedule);
                     $pendingStartedAt = null;
                 }
             }
 
             if ($pendingStartedAt) {
-                $pendingMinutes += (int) round($pendingStartedAt->diffInMinutes($resolvedLog->created_at));
+                $pendingMinutes += $this->businessMinutesBetween($pendingStartedAt, $resolvedLog->created_at, $resolvedSchedule);
             }
 
             $minutes = max(0, $minutes - $pendingMinutes);
@@ -1213,6 +1219,95 @@ class TicketsController extends Controller
             'overallAverageLabel' => $this->formatMinutesAsDurationLabel($overallAverageMinutes),
             'rows' => $formattedRows,
         ];
+    }
+
+    /**
+     * @return array<string, array{start:string,end:string}>|null
+     */
+    private function resolveTicketResolutionSchedule(TicketActivityLog $resolvedLog): ?array
+    {
+        $snapshot = data_get($resolvedLog->details, 'assignee_schedule');
+
+        if (is_array($snapshot) && $snapshot !== []) {
+            return $this->normalizeItScheduleSnapshot($snapshot);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $snapshot
+     * @return array<string, array{start:string,end:string}>|null
+     */
+    private function normalizeItScheduleSnapshot(array $snapshot): ?array
+    {
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        $normalized = [];
+
+        foreach ($days as $day) {
+            $daySchedule = $snapshot[$day] ?? null;
+
+            if (! is_array($daySchedule)) {
+                return null;
+            }
+
+            $start = trim((string) ($daySchedule['start'] ?? ''));
+            $end = trim((string) ($daySchedule['end'] ?? ''));
+
+            if ($start === '' || $end === '') {
+                return null;
+            }
+
+            $normalized[$day] = [
+                'start' => $start,
+                'end' => $end,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<string, array{start:string,end:string}> $schedule
+     */
+    private function businessMinutesBetween(\Illuminate\Support\Carbon $start, \Illuminate\Support\Carbon $end, array $schedule): int
+    {
+        if ($end->lessThanOrEqualTo($start)) {
+            return 0;
+        }
+
+        $minutes = 0;
+        $cursor = $start->copy()->startOfDay();
+        $endDay = $end->copy()->startOfDay();
+        $daysByIso = [
+            1 => 'monday',
+            2 => 'tuesday',
+            3 => 'wednesday',
+            4 => 'thursday',
+            5 => 'friday',
+            6 => 'saturday',
+            7 => 'sunday',
+        ];
+
+        while ($cursor->lessThanOrEqualTo($endDay)) {
+            $dayKey = $daysByIso[$cursor->dayOfWeekIso] ?? null;
+            $daySchedule = $dayKey ? ($schedule[$dayKey] ?? null) : null;
+
+            if ($daySchedule) {
+                $dayStart = $cursor->copy()->setTimeFromTimeString($daySchedule['start']);
+                $dayEnd = $cursor->copy()->setTimeFromTimeString($daySchedule['end']);
+                $segmentStart = $start->greaterThan($dayStart) ? $start : $dayStart;
+                $segmentEnd = $end->lessThan($dayEnd) ? $end : $dayEnd;
+
+                if ($segmentEnd->greaterThan($segmentStart)) {
+                    $minutes += (int) round($segmentStart->diffInMinutes($segmentEnd));
+                }
+            }
+
+            $cursor->addDay();
+        }
+
+        return $minutes;
     }
 
     private function formatMinutesAsDurationLabel(int $minutes): string

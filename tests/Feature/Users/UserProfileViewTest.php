@@ -85,6 +85,37 @@ class UserProfileViewTest extends TestCase
             ->assertDontSee('Delegación');
     }
 
+    public function test_it_user_profile_does_not_show_the_schedule_block(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $itUser = User::factory()->create([
+            'name' => 'Perfil IT',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'it_monday_start' => '08:00',
+            'it_monday_end' => '17:00',
+            'it_tuesday_start' => '08:00',
+            'it_tuesday_end' => '17:00',
+            'it_wednesday_start' => '08:00',
+            'it_wednesday_end' => '17:00',
+            'it_thursday_start' => '08:00',
+            'it_thursday_end' => '17:00',
+            'it_friday_start' => '08:00',
+            'it_friday_end' => '17:00',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.show', $itUser));
+
+        $response
+            ->assertOk()
+            ->assertDontSee('Horario IT')
+            ->assertDontSee('08:00')
+            ->assertDontSee('17:00');
+    }
+
     public function test_any_registered_user_can_open_another_users_profile_view(): void
     {
         $commercial = User::factory()->create([
