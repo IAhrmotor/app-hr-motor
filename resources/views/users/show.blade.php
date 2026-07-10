@@ -10,6 +10,13 @@
         $purchaseRankingPosition = $rankingPositions['purchases']['position'] ?? null;
         $purchaseTotal = $rankingPositions['purchases']['total'] ?? 0;
         $tenureBadge = $user->tenure_badge;
+        $itScheduleDays = [
+            'monday' => 'Lunes',
+            'tuesday' => 'Martes',
+            'wednesday' => 'Miercoles',
+            'thursday' => 'Jueves',
+            'friday' => 'Viernes',
+        ];
         $tenureBadgeStyles = [
             'starter' => [
                 'container' => 'border-amber-200/80 bg-gradient-to-br from-amber-50 to-white text-amber-950 shadow-amber-100/40',
