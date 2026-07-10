@@ -1068,7 +1068,7 @@ class TicketsController extends Controller
             ->select(['id', 'assigned_to_user_id', 'status'])
             ->whereIn('status', $closedStatuses)
             ->whereIn('assigned_to_user_id', $assignableUserIds)
-            ->with(['activityLogs:id,it_ticket_id,event,created_at'])
+            ->with(['activityLogs:id,it_ticket_id,actor_user_id,event,created_at,details'])
             ->get();
 
         $rows = [];
@@ -1096,25 +1096,75 @@ class TicketsController extends Controller
                 continue;
             }
 
-            $assignedLog = $timeline
+            $assignedLogs = $timeline
                 ->filter(function (TicketActivityLog $log) use ($resolvedLog): bool {
                     return $log->event === TicketActivityLog::EVENT_ASSIGNED
                         && $log->created_at !== null
                         && $log->created_at->lessThanOrEqualTo($resolvedLog->created_at);
                 })
-                ->last();
+                ->values();
+
+            if ($assignedLogs->isEmpty()) {
+                continue;
+            }
+
+            $assignedLog = $assignedLogs->last();
 
             if (! $assignedLog?->created_at) {
                 continue;
             }
 
+            $assigneeId = (int) data_get($assignedLog->details, 'assigned_to_user_id', $ticket->assigned_to_user_id);
+
+            if ($assigneeId <= 0) {
+                continue;
+            }
+
+            if ((int) ($resolvedLog->actor_user_id ?? 0) !== $assigneeId) {
+                continue;
+            }
+
             $minutes = (int) round($assignedLog->created_at->diffInMinutes($resolvedLog->created_at));
+            $pendingStartedAt = null;
+            $pendingMinutes = 0;
+
+            foreach ($timeline as $log) {
+                if (! $log->created_at) {
+                    continue;
+                }
+
+                if ($log->created_at->lessThan($assignedLog->created_at) || $log->created_at->greaterThan($resolvedLog->created_at)) {
+                    continue;
+                }
+
+                if ($log->event !== TicketActivityLog::EVENT_STATUS_CHANGED) {
+                    continue;
+                }
+
+                $nextStatus = (string) data_get($log->details, 'status', '');
+
+                if ($nextStatus === 'pending_user') {
+                    $pendingStartedAt ??= $log->created_at;
+
+                    continue;
+                }
+
+                if ($pendingStartedAt) {
+                    $pendingMinutes += (int) round($pendingStartedAt->diffInMinutes($log->created_at));
+                    $pendingStartedAt = null;
+                }
+            }
+
+            if ($pendingStartedAt) {
+                $pendingMinutes += (int) round($pendingStartedAt->diffInMinutes($resolvedLog->created_at));
+            }
+
+            $minutes = max(0, $minutes - $pendingMinutes);
 
             if ($minutes < 0) {
                 continue;
             }
 
-            $assigneeId = (int) $ticket->assigned_to_user_id;
             $user = $assignableUsers->get($assigneeId);
 
             if (! $user) {
