@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Mail\ItTicketAssignedMail;
 use App\Notifications\ItTicketAssignedNotification;
 use App\Notifications\ItTicketMessageNotification;
+use App\Models\TicketActivityLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
@@ -334,6 +335,103 @@ class TicketsInteriorTest extends TestCase
             ->assertDontSee('Clausurado', false);
     }
 
+    public function test_ticket_reports_page_shows_average_resolution_time_by_it_person_and_total(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Resolución',
+            'email' => 'gestor-resolucion@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $itOne = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Resolución Uno',
+            'email' => 'it-resolucion-uno@example.com',
+        ]);
+
+        $itTwo = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Resolución Dos',
+            'email' => 'it-resolucion-dos@example.com',
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $ticketA = ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itOne->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-800001',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'closed',
+            'title' => 'Resolución 1',
+            'description' => 'Resolución 1',
+            'screenshots' => [],
+        ]);
+
+        $ticketB = ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itOne->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-800002',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'clausurado',
+            'title' => 'Resolución 2',
+            'description' => 'Resolución 2',
+            'screenshots' => [],
+        ]);
+
+        $ticketC = ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itTwo->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-800003',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'closed',
+            'title' => 'Resolución 3',
+            'description' => 'Resolución 3',
+            'screenshots' => [],
+        ]);
+
+        $this->createTicketActivityLog($ticketA, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', now()->subHours(5));
+        $this->createTicketActivityLog($ticketA, $manager, TicketActivityLog::EVENT_CLOSED, 'Cerrado', now()->subHours(4));
+
+        $this->createTicketActivityLog($ticketB, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', now()->subHours(3));
+        $this->createTicketActivityLog($ticketB, $manager, TicketActivityLog::EVENT_PERMANENTLY_CLOSED, 'Clausurado', now()->subHours(2)->subMinutes(30));
+
+        $this->createTicketActivityLog($ticketC, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', now()->subHours(2));
+        $this->createTicketActivityLog($ticketC, $manager, TicketActivityLog::EVENT_CLOSED, 'Cerrado', now()->subHours(0)->subMinutes(30));
+
+        $this->actingAs($manager)
+            ->get(route('tickets.reports'))
+            ->assertOk()
+            ->assertSee('Tiempo medio de resolución', false)
+            ->assertSee('Media total', false)
+            ->assertSee('Tickets medidos', false)
+            ->assertSee('1 h', false)
+            ->assertSee('IT Resolución Uno', false)
+            ->assertSee('45 min', false)
+            ->assertSee('IT Resolución Dos', false)
+            ->assertSee('1 h 30 min', false);
+    }
+
     public function test_user_with_manage_permission_can_delete_tickets_and_cleanup_files(): void
     {
         Storage::fake('public');
@@ -412,6 +510,24 @@ class TicketsInteriorTest extends TestCase
         ]);
         Storage::disk('public')->assertMissing($ticketScreenshotPath);
         Storage::disk('public')->assertMissing($messageAttachmentPath);
+    }
+
+    private function createTicketActivityLog(ItTicket $ticket, User $actor, string $event, string $title, \Illuminate\Support\Carbon $createdAt): void
+    {
+        $log = TicketActivityLog::query()->create([
+            'it_ticket_id' => $ticket->id,
+            'actor_user_id' => $actor->id,
+            'actor_name' => $actor->name,
+            'actor_email' => $actor->email,
+            'event' => $event,
+            'title' => $title,
+            'details' => [],
+        ]);
+
+        $log->forceFill([
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ])->saveQuietly();
     }
 
     public function test_regular_user_cannot_open_the_tickets_interior(): void
