@@ -311,6 +311,10 @@ class TicketsInteriorTest extends TestCase
         $this->createTicketActivityLog($ticketA, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $base->copy()->subHours(5), [
             'assigned_to_user_id' => $itOne->id,
         ]);
+        $this->createTicketActivityLog($ticketA, $itOne, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $base->copy()->subHours(5)->addMinute(), [
+            'previous_status' => 'new',
+            'status' => 'in_progress',
+        ]);
         $this->createTicketActivityLog($ticketA, $itOne, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a Pendiente usuario', $base->copy()->subHours(4)->subMinutes(30), [
             'previous_status' => 'in_progress',
             'status' => 'pending_user',
@@ -323,12 +327,20 @@ class TicketsInteriorTest extends TestCase
         $this->createTicketActivityLog($ticketB, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $base->copy()->subHours(3), [
             'assigned_to_user_id' => $itOne->id,
         ]);
+        $this->createTicketActivityLog($ticketB, $itOne, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $base->copy()->subHours(3)->addMinute(), [
+            'previous_status' => 'new',
+            'status' => 'in_progress',
+        ]);
         $this->createTicketActivityLog($ticketB, $itOne, TicketActivityLog::EVENT_PERMANENTLY_CLOSED, 'Clausurado', $base->copy()->subHours(2), [
             'status' => 'clausurado',
         ]);
 
         $this->createTicketActivityLog($ticketC, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $base->copy()->subHours(2), [
             'assigned_to_user_id' => $itTwo->id,
+        ]);
+        $this->createTicketActivityLog($ticketC, $itTwo, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $base->copy()->subHours(2)->addMinute(), [
+            'previous_status' => 'new',
+            'status' => 'in_progress',
         ]);
         $this->createTicketActivityLog($ticketC, $itTwo, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $base->copy()->subMinutes(30), [
             'status' => 'closed',
@@ -337,9 +349,17 @@ class TicketsInteriorTest extends TestCase
         $this->createTicketActivityLog($reassignedTicket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado a IT Resolución Uno', $base->copy()->subHours(6), [
             'assigned_to_user_id' => $itOne->id,
         ]);
+        $this->createTicketActivityLog($reassignedTicket, $itOne, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $base->copy()->subHours(6)->addMinute(), [
+            'previous_status' => 'new',
+            'status' => 'in_progress',
+        ]);
         $this->createTicketActivityLog($reassignedTicket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Reasignado a IT Resolución Dos', $base->copy()->subHours(4), [
             'previous_assigned_to_user_id' => $itOne->id,
             'assigned_to_user_id' => $itTwo->id,
+        ]);
+        $this->createTicketActivityLog($reassignedTicket, $itTwo, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $base->copy()->subHours(4)->addMinute(), [
+            'previous_status' => 'in_progress',
+            'status' => 'in_progress',
         ]);
         $this->createTicketActivityLog($reassignedTicket, $itTwo, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $base->copy()->subHours(3), [
             'status' => 'closed',
@@ -414,6 +434,10 @@ class TicketsInteriorTest extends TestCase
         $this->createTicketActivityLog($ticket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $friday1750, [
             'assigned_to_user_id' => $itUser->id,
         ]);
+        $this->createTicketActivityLog($ticket, $itUser, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $friday1750->copy()->addMinute(), [
+            'previous_status' => 'new',
+            'status' => 'in_progress',
+        ]);
         $this->createTicketActivityLog($ticket, $itUser, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $monday0915, [
             'status' => 'closed',
         ]);
@@ -421,7 +445,7 @@ class TicketsInteriorTest extends TestCase
         $this->actingAs($manager)
             ->get(route('tickets.reports'))
             ->assertOk()
-            ->assertSee('25 min', false)
+            ->assertSee('24 min', false)
             ->assertSee('Tickets medidos', false);
     }
 
@@ -472,6 +496,10 @@ class TicketsInteriorTest extends TestCase
 
         $this->createTicketActivityLog($ticket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $assignedAt, [
             'assigned_to_user_id' => $itUser->id,
+        ]);
+        $this->createTicketActivityLog($ticket, $itUser, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $assignedAt->copy()->addMinute(), [
+            'previous_status' => 'new',
+            'status' => 'in_progress',
         ]);
         $this->createTicketActivityLog($ticket, $itUser, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $closedAt, [
             'status' => 'closed',
