@@ -1130,44 +1130,9 @@ class TicketsController extends Controller
                 continue;
             }
 
-            $minutes = $this->businessMinutesBetween($assignedLog->created_at, $resolvedLog->created_at, $resolvedSchedule);
-            $pendingStartedAt = null;
-            $pendingMinutes = 0;
+            $minutes = $this->businessMinutesWhileInProgress($timeline, $assignedLog, $resolvedLog->created_at, $resolvedSchedule);
 
-            foreach ($timeline as $log) {
-                if (! $log->created_at) {
-                    continue;
-                }
-
-                if ($log->created_at->lessThan($assignedLog->created_at) || $log->created_at->greaterThan($resolvedLog->created_at)) {
-                    continue;
-                }
-
-                if ($log->event !== TicketActivityLog::EVENT_STATUS_CHANGED) {
-                    continue;
-                }
-
-                $nextStatus = (string) data_get($log->details, 'status', '');
-
-                if ($nextStatus === 'pending_user') {
-                    $pendingStartedAt ??= $log->created_at;
-
-                    continue;
-                }
-
-                if ($pendingStartedAt) {
-                    $pendingMinutes += $this->businessMinutesBetween($pendingStartedAt, $log->created_at, $resolvedSchedule);
-                    $pendingStartedAt = null;
-                }
-            }
-
-            if ($pendingStartedAt) {
-                $pendingMinutes += $this->businessMinutesBetween($pendingStartedAt, $resolvedLog->created_at, $resolvedSchedule);
-            }
-
-            $minutes = max(0, $minutes - $pendingMinutes);
-
-            if ($minutes < 0) {
+            if ($minutes <= 0) {
                 continue;
             }
 
@@ -1233,6 +1198,89 @@ class TicketsController extends Controller
         }
 
         return null;
+    }
+
+    private function timelineStatus(TicketActivityLog $log): ?string
+    {
+        return match ($log->event) {
+            TicketActivityLog::EVENT_STATUS_CHANGED,
+            TicketActivityLog::EVENT_REOPENED => (string) data_get($log->details, 'status', ''),
+            TicketActivityLog::EVENT_CLOSED => 'closed',
+            TicketActivityLog::EVENT_PERMANENTLY_CLOSED => 'clausurado',
+            default => null,
+        };
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, TicketActivityLog> $timeline
+     * @param array<string, array{start:string,end:string}> $schedule
+     */
+    private function businessMinutesWhileInProgress($timeline, TicketActivityLog $assignedLog, \Illuminate\Support\Carbon $end, array $schedule): int
+    {
+        $start = $assignedLog->created_at;
+
+        if (! $start || $end->lessThanOrEqualTo($start)) {
+            return 0;
+        }
+
+        $minutes = 0;
+        $currentStatus = null;
+        $segmentStart = null;
+
+        foreach ($timeline as $log) {
+            if ($log->id === $assignedLog->id) {
+                break;
+            }
+
+            if (! $log->created_at || $log->created_at->greaterThan($start)) {
+                break;
+            }
+
+            $nextStatus = $this->timelineStatus($log);
+
+            if ($nextStatus === null || $nextStatus === '') {
+                continue;
+            }
+
+            $currentStatus = $nextStatus;
+        }
+
+        if ($currentStatus === 'in_progress') {
+            $segmentStart = $start;
+        }
+
+        foreach ($timeline as $log) {
+            if ($log->id === $assignedLog->id) {
+                continue;
+            }
+
+            if (! $log->created_at || $log->created_at->lessThan($start) || $log->created_at->greaterThan($end)) {
+                continue;
+            }
+
+            $nextStatus = $this->timelineStatus($log);
+
+            if ($nextStatus === null || $nextStatus === '') {
+                continue;
+            }
+
+            if ($currentStatus === 'in_progress' && $nextStatus !== 'in_progress' && $segmentStart) {
+                $minutes += $this->businessMinutesBetween($segmentStart, $log->created_at, $schedule);
+                $segmentStart = null;
+            }
+
+            $currentStatus = $nextStatus;
+
+            if ($currentStatus === 'in_progress' && $segmentStart === null) {
+                $segmentStart = $log->created_at;
+            }
+        }
+
+        if ($segmentStart) {
+            $minutes += $this->businessMinutesBetween($segmentStart, $end, $schedule);
+        }
+
+        return $minutes;
     }
 
     /**
