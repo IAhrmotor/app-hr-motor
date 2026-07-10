@@ -128,6 +128,7 @@ class UserController extends Controller
         $submittedBaseRole = $this->resolveSubmittedBaseRole($request, $authUser);
         $submittedExtraRole = $this->resolveSubmittedExtraRole($request);
         $isRankedCommercial = $this->isRankedCommercialRole($submittedBaseRole, $submittedExtraRole);
+        $isItUser = $submittedExtraRole === User::ROLE_INFORMATION_TECHNOLOGY;
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -138,6 +139,7 @@ class UserController extends Controller
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
             'enreach_extension' => $this->agendaExtensionRules(),
+            ...$this->itScheduleRules($isItUser),
             'salesforce_user_id' => [
                 Rule::requiredIf($isRankedCommercial),
                 'nullable',
@@ -153,7 +155,7 @@ class UserController extends Controller
         $validator->validate();
 
         try {
-            [$user, $status] = DB::transaction(function () use ($validated, $submittedBaseRole, $submittedExtraRole, $isRankedCommercial) {
+            [$user, $status] = DB::transaction(function () use ($validated, $submittedBaseRole, $submittedExtraRole, $isRankedCommercial, $isItUser) {
                 $dealership = filled($validated['dealership_id'] ?? null)
                     ? Dealership::query()->find($validated['dealership_id'])
                     : null;
@@ -167,6 +169,16 @@ class UserController extends Controller
                     'extra_role' => $submittedExtraRole,
                     'phone' => $validated['phone'] ?? null,
                     'enreach_extension' => $validated['enreach_extension'] ?? null,
+                    'it_monday_start' => $isItUser ? $validated['it_monday_start'] : null,
+                    'it_monday_end' => $isItUser ? $validated['it_monday_end'] : null,
+                    'it_tuesday_start' => $isItUser ? $validated['it_tuesday_start'] : null,
+                    'it_tuesday_end' => $isItUser ? $validated['it_tuesday_end'] : null,
+                    'it_wednesday_start' => $isItUser ? $validated['it_wednesday_start'] : null,
+                    'it_wednesday_end' => $isItUser ? $validated['it_wednesday_end'] : null,
+                    'it_thursday_start' => $isItUser ? $validated['it_thursday_start'] : null,
+                    'it_thursday_end' => $isItUser ? $validated['it_thursday_end'] : null,
+                    'it_friday_start' => $isItUser ? $validated['it_friday_start'] : null,
+                    'it_friday_end' => $isItUser ? $validated['it_friday_end'] : null,
                     'salesforce_user_id' => $isRankedCommercial ? $validated['salesforce_user_id'] : null,
                     'dealership' => $dealership?->name,
                     'dealership_id' => $dealership?->id,
@@ -370,6 +382,7 @@ class UserController extends Controller
         $submittedBaseRole = $this->resolveSubmittedBaseRole($request, $authUser);
         $submittedExtraRole = $this->resolveSubmittedExtraRole($request);
         $isRankedCommercial = $this->isRankedCommercialRole($submittedBaseRole, $submittedExtraRole);
+        $isItUser = $submittedExtraRole === User::ROLE_INFORMATION_TECHNOLOGY;
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -380,6 +393,7 @@ class UserController extends Controller
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
             'enreach_extension' => $this->agendaExtensionRules(),
+            ...$this->itScheduleRules($isItUser),
             'salesforce_user_id' => [
                 Rule::requiredIf($isRankedCommercial),
                 'nullable',
@@ -408,6 +422,16 @@ class UserController extends Controller
             'extra_role' => $submittedExtraRole,
             'phone' => $validated['phone'] ?? null,
             'enreach_extension' => $validated['enreach_extension'] ?? null,
+            'it_monday_start' => $isItUser ? $validated['it_monday_start'] : null,
+            'it_monday_end' => $isItUser ? $validated['it_monday_end'] : null,
+            'it_tuesday_start' => $isItUser ? $validated['it_tuesday_start'] : null,
+            'it_tuesday_end' => $isItUser ? $validated['it_tuesday_end'] : null,
+            'it_wednesday_start' => $isItUser ? $validated['it_wednesday_start'] : null,
+            'it_wednesday_end' => $isItUser ? $validated['it_wednesday_end'] : null,
+            'it_thursday_start' => $isItUser ? $validated['it_thursday_start'] : null,
+            'it_thursday_end' => $isItUser ? $validated['it_thursday_end'] : null,
+            'it_friday_start' => $isItUser ? $validated['it_friday_start'] : null,
+            'it_friday_end' => $isItUser ? $validated['it_friday_end'] : null,
             'salesforce_user_id' => $isRankedCommercial ? $validated['salesforce_user_id'] : null,
             'dealership' => $dealership?->name,
         ]);
@@ -420,6 +444,16 @@ class UserController extends Controller
         $user->extra_role = $submittedExtraRole;
         $user->phone = $validated['phone'] ?? null;
         $user->enreach_extension = $validated['enreach_extension'] ?? null;
+        $user->it_monday_start = $isItUser ? $validated['it_monday_start'] : null;
+        $user->it_monday_end = $isItUser ? $validated['it_monday_end'] : null;
+        $user->it_tuesday_start = $isItUser ? $validated['it_tuesday_start'] : null;
+        $user->it_tuesday_end = $isItUser ? $validated['it_tuesday_end'] : null;
+        $user->it_wednesday_start = $isItUser ? $validated['it_wednesday_start'] : null;
+        $user->it_wednesday_end = $isItUser ? $validated['it_wednesday_end'] : null;
+        $user->it_thursday_start = $isItUser ? $validated['it_thursday_start'] : null;
+        $user->it_thursday_end = $isItUser ? $validated['it_thursday_end'] : null;
+        $user->it_friday_start = $isItUser ? $validated['it_friday_start'] : null;
+        $user->it_friday_end = $isItUser ? $validated['it_friday_end'] : null;
         $user->salesforce_user_id = $this->isRankedCommercialRole($user->role, $user->extra_role)
             ? $validated['salesforce_user_id']
             : null;
@@ -578,6 +612,16 @@ class UserController extends Controller
             'job_position' => 'Puesto',
             'phone' => 'Telefono',
             'enreach_extension' => 'Extension Enreach',
+            'it_monday_start' => 'Horario lunes inicio',
+            'it_monday_end' => 'Horario lunes fin',
+            'it_tuesday_start' => 'Horario martes inicio',
+            'it_tuesday_end' => 'Horario martes fin',
+            'it_wednesday_start' => 'Horario miercoles inicio',
+            'it_wednesday_end' => 'Horario miercoles fin',
+            'it_thursday_start' => 'Horario jueves inicio',
+            'it_thursday_end' => 'Horario jueves fin',
+            'it_friday_start' => 'Horario viernes inicio',
+            'it_friday_end' => 'Horario viernes fin',
             'role' => 'Rol',
             'extra_role' => 'Rol adicional',
             'salesforce_user_id' => 'ID Salesforce',
@@ -732,6 +776,30 @@ class UserController extends Controller
         }
 
         return filled($extraRole) ? $extraRole : null;
+    }
+
+    protected function itScheduleRules(bool $required): array
+    {
+        return [
+            'it_monday_start' => $this->itScheduleFieldRules($required),
+            'it_monday_end' => $this->itScheduleFieldRules($required),
+            'it_tuesday_start' => $this->itScheduleFieldRules($required),
+            'it_tuesday_end' => $this->itScheduleFieldRules($required),
+            'it_wednesday_start' => $this->itScheduleFieldRules($required),
+            'it_wednesday_end' => $this->itScheduleFieldRules($required),
+            'it_thursday_start' => $this->itScheduleFieldRules($required),
+            'it_thursday_end' => $this->itScheduleFieldRules($required),
+            'it_friday_start' => $this->itScheduleFieldRules($required),
+            'it_friday_end' => $this->itScheduleFieldRules($required),
+        ];
+    }
+
+    protected function itScheduleFieldRules(bool $required): array
+    {
+        return [
+            $required ? 'required' : 'nullable',
+            'date_format:H:i',
+        ];
     }
 
     protected function invalidateUserSessions(User $user): void

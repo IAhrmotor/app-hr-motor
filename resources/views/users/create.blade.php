@@ -10,6 +10,14 @@
         $selectedExtraRole = old('extra_role');
         $showSalesforceFields = $selectedBaseRole === \App\Models\User::ROLE_USER
             && in_array($selectedExtraRole, [\App\Models\User::ROLE_COMMERCIAL, \App\Models\User::ROLE_STORE_MANAGER], true);
+        $showItScheduleFields = $selectedExtraRole === \App\Models\User::ROLE_INFORMATION_TECHNOLOGY;
+        $itScheduleDays = [
+            'monday' => 'Lunes',
+            'tuesday' => 'Martes',
+            'wednesday' => 'Miercoles',
+            'thursday' => 'Jueves',
+            'friday' => 'Viernes',
+        ];
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-6">
@@ -162,6 +170,35 @@
                         <input id="salesforce_user_id" name="salesforce_user_id" type="text" value="{{ old('salesforce_user_id') }}" @required($showSalesforceFields)
                             class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
                     </div>
+
+                    <div id="it-schedule-wrapper" @class(['rounded-2xl border border-brand-secondary/10 bg-slate-50 px-4 py-4 md:col-span-2', 'hidden' => ! $showItScheduleFields])>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-sm font-semibold text-brand-secondary">Horario IT</p>
+                            <p class="text-xs text-brand-secondary/60">Los sabados y domingos no llevan horario.</p>
+                        </div>
+
+                        <div class="mt-5 space-y-4">
+                            @foreach ($itScheduleDays as $dayKey => $dayLabel)
+                                <div class="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)] md:items-end">
+                                    <div>
+                                        <label class="mb-2 block pl-2 text-sm font-medium text-brand-secondary">{{ $dayLabel }} <span class="text-rose-600">*</span></label>
+                                    </div>
+
+                                    <div>
+                                        <label for="it_{{ $dayKey }}_start" class="mb-2 block pl-2 text-xs font-medium uppercase tracking-wide text-brand-secondary/60">Inicio</label>
+                                        <input id="it_{{ $dayKey }}_start" name="it_{{ $dayKey }}_start" type="time" step="60" value="{{ old('it_' . $dayKey . '_start') }}" data-it-schedule-input @required($showItScheduleFields)
+                                            class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                                    </div>
+
+                                    <div>
+                                        <label for="it_{{ $dayKey }}_end" class="mb-2 block pl-2 text-xs font-medium uppercase tracking-wide text-brand-secondary/60">Fin</label>
+                                        <input id="it_{{ $dayKey }}_end" name="it_{{ $dayKey }}_end" type="time" step="60" value="{{ old('it_' . $dayKey . '_end') }}" data-it-schedule-input @required($showItScheduleFields)
+                                            class="w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm text-brand-secondary outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
 
                 <div class="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-4 text-sm text-brand-secondary/80">
@@ -182,6 +219,8 @@
             const extraRoleSelect = document.querySelector('[data-extra-role-select]');
             const salesforceWrapper = document.getElementById('salesforce-user-id-wrapper');
             const salesforceInput = document.getElementById('salesforce_user_id');
+            const itScheduleWrapper = document.getElementById('it-schedule-wrapper');
+            const itScheduleInputs = Array.from(document.querySelectorAll('[data-it-schedule-input]'));
 
             if (!salesforceWrapper || !salesforceInput || !extraRoleSelect) {
                 return;
@@ -201,9 +240,20 @@
                 }
             };
 
+            const toggleItScheduleFields = () => {
+                const needsSchedule = extraRoleSelect.value === '{{ \App\Models\User::ROLE_INFORMATION_TECHNOLOGY }}';
+
+                itScheduleWrapper?.classList.toggle('hidden', !needsSchedule);
+                itScheduleInputs.forEach((input) => {
+                    input.required = needsSchedule;
+                });
+            };
+
             toggleSalesforceFields();
+            toggleItScheduleFields();
             roleSelect?.addEventListener('change', toggleSalesforceFields);
             extraRoleSelect.addEventListener('change', toggleSalesforceFields);
+            extraRoleSelect.addEventListener('change', toggleItScheduleFields);
         });
     </script>
 @endsection

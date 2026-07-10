@@ -160,6 +160,16 @@ class User extends Authenticatable
         'linkedin_url',
         'phone',
         'enreach_extension',
+        'it_monday_start',
+        'it_monday_end',
+        'it_tuesday_start',
+        'it_tuesday_end',
+        'it_wednesday_start',
+        'it_wednesday_end',
+        'it_thursday_start',
+        'it_thursday_end',
+        'it_friday_start',
+        'it_friday_end',
         'password',
         'is_active',
         'must_change_password',
@@ -344,6 +354,16 @@ class User extends Authenticatable
     public function isStoreManager(): bool
     {
         return $this->extra_role === self::ROLE_STORE_MANAGER;
+    }
+
+    public function isInformationTechnology(): bool
+    {
+        return $this->extra_role === self::ROLE_INFORMATION_TECHNOLOGY;
+    }
+
+    public function getIsInformationTechnologyAttribute(): bool
+    {
+        return $this->isInformationTechnology();
     }
 
     public function getRoleLabelAttribute(): string
