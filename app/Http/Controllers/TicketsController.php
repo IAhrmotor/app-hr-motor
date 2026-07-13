@@ -146,7 +146,7 @@ class TicketsController extends Controller
         return back()->with('success', 'El tipo de incidencia del ticket se ha actualizado correctamente.');
     }
 
-    public function assign(Request $request, ItTicket $itTicket): RedirectResponse
+    public function assign(Request $request, ItTicket $itTicket): RedirectResponse|JsonResponse
     {
         abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
 
@@ -162,6 +162,16 @@ class TicketsController extends Controller
                 }),
             ],
         ]);
+
+        if (! $request->boolean('assignment_force') && $this->shouldBlockStaleAssignment($request, $itTicket)) {
+            if ($request->expectsJson() || $request->boolean('ajax')) {
+                return $this->assignmentConflictResponse($itTicket);
+            }
+
+            return back()->withErrors([
+                'assigned_to_user_id' => 'Este ticket ya ha sido reasignado por otra persona. Recarga la tabla y vuelve a intentarlo.',
+            ]);
+        }
 
         $previousStatus = $itTicket->status;
         $previousAssigneeId = $itTicket->assigned_to_user_id;
@@ -218,7 +228,45 @@ class TicketsController extends Controller
             );
         }
 
+        if ($request->expectsJson() || $request->boolean('ajax')) {
+            return response()->json([
+                'success' => true,
+                'ticket_id' => $itTicket->id,
+                'assigned_to_user_id' => $itTicket->assigned_to_user_id,
+            ]);
+        }
+
         return back()->with('success', 'El ticket se ha asignado correctamente.');
+    }
+
+    private function shouldBlockStaleAssignment(Request $request, ItTicket $itTicket): bool
+    {
+        if (! $request->exists('assignment_snapshot_assigned_to_user_id')) {
+            return false;
+        }
+
+        $snapshotAssigneeId = (int) $request->input('assignment_snapshot_assigned_to_user_id', 0);
+
+        return (int) ($itTicket->assigned_to_user_id ?? 0) !== $snapshotAssigneeId;
+    }
+
+    private function assignmentConflictResponse(ItTicket $itTicket): JsonResponse
+    {
+        $lastAssignmentLog = $itTicket->activityLogs()
+            ->where('event', TicketActivityLog::EVENT_ASSIGNED)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first(['actor_name', 'details']);
+
+        $assignedBy = (string) ($lastAssignmentLog?->actor_name ?? 'otro usuario');
+        $assignedTo = (string) ($itTicket->assignedTo?->name ?? 'Sin asignar');
+
+        return response()->json([
+            'message' => "Este ticket ya ha sido asignado por {$assignedBy} a {$assignedTo}. ¿Estás seguro de que quieres reasignarlo?",
+            'assigned_by_name' => $assignedBy,
+            'assigned_to_name' => $assignedTo,
+            'ticket_number' => $itTicket->number,
+        ], 409);
     }
 
     public function destroy(Request $request, ItTicket $itTicket): RedirectResponse
@@ -564,7 +612,13 @@ class TicketsController extends Controller
     public function reopen(Request $request, ItTicket $itTicket): RedirectResponse
     {
         $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
-        abort_unless($canManageTickets && $itTicket->status === 'reopen_requested', 403);
+        abort_unless($canManageTickets, 403);
+
+        if ($itTicket->status === 'in_progress') {
+            return back()->with('success', 'El ticket ya estaba reabierto.');
+        }
+
+        abort_unless($itTicket->status === 'reopen_requested', 403);
 
         $validated = $request->validate([
             'priority' => ['required', Rule::in(array_keys($this->ticketPriorities()))],
@@ -661,7 +715,13 @@ class TicketsController extends Controller
     public function permanentlyClose(Request $request, ItTicket $itTicket): RedirectResponse
     {
         $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
-        abort_unless($canManageTickets && $itTicket->status === 'reopen_requested', 403);
+        abort_unless($canManageTickets, 403);
+
+        if ($itTicket->status === 'clausurado') {
+            return back()->with('success', 'El ticket ya estaba clausurado definitivamente.');
+        }
+
+        abort_unless($itTicket->status === 'reopen_requested', 403);
 
         $validated = $request->validate([
             'reason' => ['required', 'string', 'max:3000'],
