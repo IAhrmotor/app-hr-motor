@@ -24,12 +24,121 @@
             let abortController = null;
             let lastRequestKey = '';
             const timeouts = new Map();
+            let pendingAssignmentForm = null;
 
             const getSectionRoot = (sectionKey) => root.querySelector(`[data-ticket-section="${sectionKey}"]`);
+            const getAssignmentConflictModal = () => root.querySelector('[data-ticket-assignment-conflict-modal]');
+            const getAssignmentConflictMessage = () => root.querySelector('[data-ticket-assignment-conflict-message]');
+            const getAssignmentConflictTicketNumber = () => root.querySelector('[data-ticket-assignment-conflict-ticket-number]');
+            const getAssignmentConflictAssignedBy = () => root.querySelector('[data-ticket-assignment-conflict-assigned-by]');
+            const getAssignmentConflictAssignedTo = () => root.querySelector('[data-ticket-assignment-conflict-assigned-to]');
 
             const setLoadingState = (isLoading) => {
                 root.classList.toggle('opacity-75', isLoading);
                 root.classList.toggle('pointer-events-none', isLoading);
+            };
+
+            const setAssignmentFormBusyState = (form, isBusy) => {
+                if (!form) {
+                    return;
+                }
+
+                form.dataset.ticketAssignSubmitting = isBusy ? '1' : '0';
+
+                form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                    button.disabled = isBusy;
+                    button.classList.toggle('cursor-not-allowed', isBusy);
+                    button.classList.toggle('opacity-80', isBusy);
+                });
+            };
+
+            const openAssignmentConflictModal = (payload, form) => {
+                const modal = getAssignmentConflictModal();
+                const message = getAssignmentConflictMessage();
+
+                if (!modal || !message) {
+                    return;
+                }
+
+                pendingAssignmentForm = form;
+                message.textContent = payload?.message || 'Este ticket ya ha sido reasignado por otra persona. ¿Quieres continuar igualmente?';
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                modal.setAttribute('aria-hidden', 'false');
+            };
+
+            const closeAssignmentConflictModal = () => {
+                const modal = getAssignmentConflictModal();
+
+                if (!modal) {
+                    pendingAssignmentForm = null;
+                    return;
+                }
+
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modal.setAttribute('aria-hidden', 'true');
+                pendingAssignmentForm = null;
+            };
+
+            const fillAssignmentConflictModal = (payload) => {
+                const ticketNumber = getAssignmentConflictTicketNumber();
+                const assignedBy = getAssignmentConflictAssignedBy();
+                const assignedTo = getAssignmentConflictAssignedTo();
+
+                if (ticketNumber) {
+                    ticketNumber.textContent = payload?.ticket_number ? `Ticket ${payload.ticket_number}` : 'Ticket';
+                }
+
+                if (assignedBy) {
+                    assignedBy.textContent = payload?.assigned_by_name || 'Otro usuario';
+                }
+
+                if (assignedTo) {
+                    assignedTo.textContent = payload?.assigned_to_name || 'Sin asignar';
+                }
+            };
+
+            const refreshTicketsView = async () => {
+                lastRequestKey = '';
+                const requestUrl = new URL(window.location.href);
+                requestUrl.searchParams.set('ajax', '1');
+                await loadResults({ requestUrl });
+            };
+
+            const submitAssignmentForm = async (form, force = false) => {
+                const formData = new FormData(form);
+                formData.set('ajax', '1');
+
+                if (force) {
+                    formData.set('assignment_force', '1');
+                } else {
+                    formData.delete('assignment_force');
+                }
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                });
+
+                if (response.status === 409 && !force) {
+                    const payload = await response.json().catch(() => ({}));
+                    setAssignmentFormBusyState(form, false);
+                    fillAssignmentConflictModal(payload);
+                    openAssignmentConflictModal(payload, form);
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('No se pudo asignar el ticket');
+                }
+
+                closeAssignmentConflictModal();
+                await refreshTicketsView();
             };
 
             const collectSelectedValues = (sectionRoot, groupName) => {
@@ -213,6 +322,33 @@
             });
 
             document.addEventListener('click', (event) => {
+                const assignmentCancelButton = event.target.closest('[data-ticket-assignment-conflict-cancel]');
+                if (assignmentCancelButton && root.contains(assignmentCancelButton)) {
+                    event.preventDefault();
+                    closeAssignmentConflictModal();
+                    setAssignmentFormBusyState(pendingAssignmentForm, false);
+                    return;
+                }
+
+                const assignmentConfirmButton = event.target.closest('[data-ticket-assignment-conflict-confirm]');
+                if (assignmentConfirmButton && root.contains(assignmentConfirmButton)) {
+                    event.preventDefault();
+
+                    if (!pendingAssignmentForm) {
+                        closeAssignmentConflictModal();
+                        return;
+                    }
+
+                    setAssignmentFormBusyState(pendingAssignmentForm, true);
+
+                    submitAssignmentForm(pendingAssignmentForm, true).catch((error) => {
+                        console.error(error);
+                        setAssignmentFormBusyState(pendingAssignmentForm, false);
+                    });
+
+                    return;
+                }
+
                 const pill = event.target.closest('[data-ticket-filter-value]');
                 if (pill && root.contains(pill)) {
                     const sectionRoot = pill.closest('[data-ticket-section]');
@@ -242,6 +378,27 @@
                     url.searchParams.set('ajax', '1');
                     loadResults({ requestUrl: url });
                 }
+            });
+
+            document.addEventListener('submit', (event) => {
+                const assignmentForm = event.target.closest('[data-ticket-assign-form]');
+
+                if (!assignmentForm || !root.contains(assignmentForm)) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (assignmentForm.dataset.ticketAssignSubmitting === '1') {
+                    return;
+                }
+
+                setAssignmentFormBusyState(assignmentForm, true);
+
+                submitAssignmentForm(assignmentForm).catch((error) => {
+                    console.error(error);
+                    setAssignmentFormBusyState(assignmentForm, false);
+                });
             });
 
         })();

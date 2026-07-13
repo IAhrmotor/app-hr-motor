@@ -201,7 +201,7 @@
                             </span>
                         </div>
 
-                        <form method="POST" action="{{ route('tickets.reopen', $ticket) }}" class="mt-5 space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-4">
+                        <form method="POST" action="{{ route('tickets.reopen', $ticket) }}" class="mt-5 space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-4" data-ticket-final-action-form>
                             @csrf
 
                             <div class="grid gap-3 sm:grid-cols-2">
@@ -285,7 +285,7 @@
                                     </button>
                                 </div>
 
-                                <form method="POST" action="{{ route('tickets.permanently-close', $ticket) }}" class="mt-5 space-y-4">
+                                <form method="POST" action="{{ route('tickets.permanently-close', $ticket) }}" class="mt-5 space-y-4" data-ticket-final-action-form>
                                     @csrf
                                     <div>
                                         <label for="permanent-close-reason" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/50">
@@ -1015,6 +1015,24 @@
                 }
 
                 removeAttachmentAtIndex(index);
+            });
+
+            document.querySelectorAll('[data-ticket-final-action-form]').forEach((finalActionForm) => {
+                let submitted = false;
+
+                finalActionForm.addEventListener('submit', (event) => {
+                    if (submitted) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    submitted = true;
+
+                    finalActionForm.querySelectorAll('button[type="submit"]').forEach((button) => {
+                        button.disabled = true;
+                        button.classList.add('cursor-not-allowed', 'opacity-80');
+                    });
+                });
             });
         });
     </script>

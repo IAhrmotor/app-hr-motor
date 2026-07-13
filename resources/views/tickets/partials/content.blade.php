@@ -57,6 +57,8 @@
             'ticketPriorities' => $ticketPriorities,
             'assignableUsers' => $assignableUsers,
             'isManaged' => true,
+            'jumpTargetId' => 'mis-tickets',
+            'jumpTargetLabel' => 'Bajar a mis tickets',
         ])
     @endif
 
@@ -72,5 +74,6 @@
         'ticketPriorities' => $ticketPriorities,
         'assignableUsers' => $assignableUsers,
         'isManaged' => false,
+        'sectionId' => 'mis-tickets',
     ])
 </div>

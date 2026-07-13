@@ -198,6 +198,89 @@ class TicketsInteriorTest extends TestCase
         ]);
     }
 
+    public function test_ticket_assignment_returns_conflict_when_the_ticket_was_already_reassigned(): void
+    {
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Conflicto',
+            'email' => 'gestor-conflicto@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $initialAssignee = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Técnico Inicial',
+            'email' => 'tecnico-inicial@example.com',
+        ]);
+
+        $nextAssignee = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Técnico Nuevo',
+            'email' => 'tecnico-nuevo@example.com',
+        ]);
+
+        $previousAssigner = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Anterior',
+            'email' => 'gestor-anterior@example.com',
+        ]);
+
+        $ticket = ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $initialAssignee->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-333333',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'in_progress',
+            'title' => 'Ticket con conflicto',
+            'description' => 'Se reasignó antes de pulsar asignar.',
+            'screenshots' => [],
+        ]);
+
+        $this->createTicketActivityLog($ticket, $previousAssigner, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', now()->subMinutes(10), [
+            'previous_assigned_to_user_id' => null,
+            'assigned_to_user_id' => $initialAssignee->id,
+        ]);
+
+        $response = $this->actingAs($manager)
+            ->post(route('tickets.assign', $ticket), [
+                'priority' => 'high',
+                'assigned_to_user_id' => $nextAssignee->id,
+                'assignment_snapshot_assigned_to_user_id' => 0,
+                'ajax' => 1,
+            ]);
+
+        $response->assertStatus(409);
+        $response->assertJson([
+            'assigned_by_name' => $previousAssigner->name,
+            'assigned_to_name' => $initialAssignee->name,
+            'ticket_number' => $ticket->number,
+        ]);
+
+        $this->assertDatabaseHas('it_tickets', [
+            'id' => $ticket->id,
+            'assigned_to_user_id' => $initialAssignee->id,
+            'priority' => 'medium',
+        ]);
+    }
+
     public function test_ticket_reports_page_shows_average_resolution_time_by_it_person_and_total(): void
     {
         $manager = User::factory()->create([
@@ -885,6 +968,129 @@ class TicketsInteriorTest extends TestCase
                 'body' => 'Intento responder después del cierre.',
             ])
             ->assertForbidden();
+    }
+
+    public function test_ticket_reopen_is_idempotent_when_double_submitted(): void
+    {
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Reapertura',
+            'email' => 'gestor-reapertura@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $assignee = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Técnico Reapertura',
+            'email' => 'tecnico-reapertura@example.com',
+        ]);
+
+        $ticket = ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $assignee->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-777888',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'reopen_requested',
+            'title' => 'Ticket para reabrir',
+            'description' => 'La reapertura no debe fallar si se repite el envío.',
+            'screenshots' => [],
+        ]);
+
+        $payload = [
+            'priority' => 'medium',
+            'assigned_to_user_id' => $assignee->id,
+        ];
+
+        $this->actingAs($manager)
+            ->post(route('tickets.reopen', $ticket), $payload)
+            ->assertRedirect();
+
+        $ticket->refresh();
+        $this->assertSame('in_progress', $ticket->status);
+
+        $this->actingAs($manager)
+            ->post(route('tickets.reopen', $ticket), $payload)
+            ->assertRedirect();
+
+        $ticket->refresh();
+        $this->assertSame('in_progress', $ticket->status);
+    }
+
+    public function test_ticket_permanent_close_is_idempotent_when_double_submitted(): void
+    {
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Clausura',
+            'email' => 'gestor-clausura@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $assignee = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Técnico Clausura',
+            'email' => 'tecnico-clausura@example.com',
+        ]);
+
+        $ticket = ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $assignee->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-888999',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'reopen_requested',
+            'title' => 'Ticket para clausurar',
+            'description' => 'La clausura no debe fallar si se repite el envío.',
+            'screenshots' => [],
+        ]);
+
+        $payload = [
+            'reason' => 'Cierre definitivo.',
+        ];
+
+        $this->actingAs($manager)
+            ->post(route('tickets.permanently-close', $ticket), $payload)
+            ->assertRedirect();
+
+        $ticket->refresh();
+        $this->assertSame('clausurado', $ticket->status);
+
+        $this->actingAs($manager)
+            ->post(route('tickets.permanently-close', $ticket), $payload)
+            ->assertRedirect();
+
+        $ticket->refresh();
+        $this->assertSame('clausurado', $ticket->status);
     }
 
     public function test_ticket_creator_can_close_ticket_with_comment(): void
