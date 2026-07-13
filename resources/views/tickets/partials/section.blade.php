@@ -5,12 +5,18 @@
     $searchValue = $section['search'] ?? '';
     $currentSort = $section['sort'] ?? 'updated_desc';
     $filterColumnsClass = $isManaged ? 'lg:grid-cols-2' : 'lg:grid-cols-3';
+    $sectionId = $sectionId ?? null;
+    $jumpTargetId = $jumpTargetId ?? null;
+    $jumpTargetLabel = $jumpTargetLabel ?? 'Bajar a mis tickets';
 @endphp
 
 <section
-    class="rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6"
+    class="scroll-mt-28 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:scroll-mt-32 sm:p-6"
     data-ticket-section="{{ $sectionKey }}"
     data-ticket-search-fields="{{ $searchFields }}"
+    @if ($sectionId)
+        id="{{ $sectionId }}"
+    @endif
     @if ($isManaged)
         x-data="Object.assign(imageLightbox(), { previewOpen: false, previewTicket: null, openPreview(ticket) { this.previewTicket = ticket; this.previewOpen = true; }, closePreview() { this.previewOpen = false; this.previewTicket = null; }, openPreviewImage(index = 0) { this.openGallery((this.previewTicket?.screenshots || []).map((screenshot) => ({ src: screenshot.url, alt: screenshot.name, title: screenshot.name })), index); } })"
         x-effect="document.body.classList.toggle('overflow-hidden', previewOpen || isImageOpen)"
@@ -24,21 +30,36 @@
                 <p class="mt-1 text-sm text-brand-secondary/60">{{ $description }}</p>
             </div>
 
-            <label class="relative block w-full sm:w-[22rem]">
-                <span class="sr-only">Buscar tickets</span>
-                <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-brand-secondary/40">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3m1.8-5.2a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
-                    </svg>
-                </span>
-                <input
-                    type="search"
-                    value="{{ $searchValue }}"
-                    placeholder="{{ $searchPlaceholder }}"
-                    class="w-full rounded-2xl border border-brand-secondary/15 bg-white py-3 pl-11 pr-4 text-sm text-brand-secondary shadow-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
-                    data-ticket-search-input
-                >
-            </label>
+            <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                @if ($isManaged && $jumpTargetId)
+                    <a
+                        href="#{{ $jumpTargetId }}"
+                        class="inline-flex items-center justify-center gap-2 rounded-full border border-brand-primary/15 bg-brand-primary/5 px-4 py-3 text-sm font-semibold text-brand-primary transition-colors duration-300 ease-in-out hover:border-brand-primary hover:bg-brand-primary hover:text-white"
+                        aria-label="{{ $jumpTargetLabel }}"
+                    >
+                        <span>{{ $jumpTargetLabel }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                        </svg>
+                    </a>
+                @endif
+
+                <label class="relative block w-full sm:w-[22rem]">
+                    <span class="sr-only">Buscar tickets</span>
+                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-brand-secondary/40">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3m1.8-5.2a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
+                        </svg>
+                    </span>
+                    <input
+                        type="search"
+                        value="{{ $searchValue }}"
+                        placeholder="{{ $searchPlaceholder }}"
+                        class="w-full rounded-2xl border border-brand-secondary/15 bg-white py-3 pl-11 pr-4 text-sm text-brand-secondary shadow-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                        data-ticket-search-input
+                    >
+                </label>
+            </div>
         </div>
 
         <div class="grid gap-4 {{ $filterColumnsClass }}">
@@ -242,7 +263,12 @@
                                             </button>
                                         </div>
 
-                                        <form method="POST" action="{{ route('tickets.reopen', $ticket) }}" class="flex flex-col gap-2">
+                                        <form
+                                            method="POST"
+                                            action="{{ route('tickets.reopen', $ticket) }}"
+                                            class="flex flex-col gap-2"
+                                            onsubmit="this.querySelectorAll('button[type=submit]').forEach((button) => { button.disabled = true; button.classList.add('cursor-not-allowed', 'opacity-80'); });"
+                                        >
                                             @csrf
                                             <select name="priority" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
                                                 @foreach ($ticketPriorities as $priorityKey => $priorityMetaOption)
@@ -414,8 +440,14 @@
                                         </div>
                                     </div>
                                 @else
-                                    <form method="POST" action="{{ route('tickets.assign', $ticket) }}" class="flex flex-col gap-2">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('tickets.assign', $ticket) }}"
+                                        class="flex flex-col gap-2"
+                                        data-ticket-assign-form
+                                    >
                                         @csrf
+                                        <input type="hidden" name="assignment_snapshot_assigned_to_user_id" value="{{ $ticket->assigned_to_user_id ?? '' }}">
                                         <select name="priority" class="w-full rounded-xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/15">
                                             @foreach ($ticketPriorities as $priorityKey => $priorityMetaOption)
                                                 <option value="{{ $priorityKey }}" @selected($ticket->priority === $priorityKey)>
@@ -557,6 +589,71 @@
             </div>
         @endif
     </div>
+
+    @if ($isManaged)
+        <div
+            class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm"
+            x-cloak
+            data-ticket-assignment-conflict-modal
+            aria-hidden="true"
+        >
+                    <div class="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
+                        <div class="flex items-start justify-between gap-4 border-b border-brand-secondary/10 pb-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">Asignación detectada</p>
+                                <h3 class="mt-1 text-xl font-bold tracking-tight text-brand-secondary" data-ticket-assignment-conflict-ticket-number>Ticket</h3>
+                            </div>
+
+                    <button
+                        type="button"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                        aria-label="Cerrar modal"
+                        data-ticket-assignment-conflict-cancel
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mt-5 rounded-[1.35rem] border border-amber-100 bg-amber-50/70 px-4 py-4 text-sm leading-6 text-brand-secondary/80">
+                    <p class="font-semibold text-brand-secondary" data-ticket-assignment-conflict-message>
+                        Este ticket ya ha sido reasignado por otra persona. ¿Quieres continuar igualmente?
+                    </p>
+
+                    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                        <div class="rounded-2xl bg-white px-4 py-3 ring-1 ring-amber-100">
+                            <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary/45">Asignado por</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary" data-ticket-assignment-conflict-assigned-by>Otro usuario</dd>
+                        </div>
+
+                        <div class="rounded-2xl bg-white px-4 py-3 ring-1 ring-amber-100">
+                            <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary/45">Asignado a</dt>
+                            <dd class="mt-1 font-semibold text-brand-secondary" data-ticket-assignment-conflict-assigned-to>Sin asignar</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="mt-6 flex flex-wrap justify-end gap-3">
+                    <button
+                        type="button"
+                        class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-brand-secondary transition hover:bg-slate-50"
+                        data-ticket-assignment-conflict-cancel
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="inline-flex h-11 items-center justify-center rounded-2xl bg-amber-600 px-5 text-sm font-semibold text-white transition hover:bg-amber-500"
+                        data-ticket-assignment-conflict-confirm
+                    >
+                        Reasignar igualmente
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @if ($isManaged)
         <div
