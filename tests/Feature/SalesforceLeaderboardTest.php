@@ -11,6 +11,8 @@ use App\Models\SalesforceConnection;
 use App\Models\User;
 use App\Models\VehicleLeaderboardDailySnapshot;
 use App\Models\VehicleLeaderboardEntry;
+use App\Services\PurchaseLeaderboardService;
+use App\Services\SalesforceLeaderboardService;
 use App\Services\VehicleLeaderboardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -40,6 +42,19 @@ class SalesforceLeaderboardTest extends TestCase
     public function test_authenticated_user_can_open_sales_leaderboard_page(): void
     {
         $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('leaderboard.sales'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Ranking de ventas');
+    }
+
+    public function test_admin_can_open_sales_leaderboard_page_without_role_viewer_mode(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
 
         $response = $this->actingAs($user)->get(route('leaderboard.sales'));
 
@@ -506,6 +521,99 @@ class SalesforceLeaderboardTest extends TestCase
         ]);
     }
 
+    public function test_callback_updates_existing_salesforce_connection_instead_of_inserting_duplicate(): void
+    {
+        config()->set('services.salesforce.client_id', 'client-id');
+        config()->set('services.salesforce.client_secret', 'client-secret');
+        config()->set('services.salesforce.redirect_uri', 'https://staging.hrmotor.com/integraciones/salesforce/callback');
+        config()->set(
+            'services.salesforce.leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.purchase_leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.vehicle_hot_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c vehicleId, LEA_BUS_Vehiculo_de_interes__r.Name vehicleName, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c vehicleCommercialName, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c vehiclePlate, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) DESC'
+        );
+        config()->set(
+            'services.salesforce.vehicle_cold_leaderboard_soql',
+            'SELECT LEA_BUS_Vehiculo_de_interes__c vehicleId, LEA_BUS_Vehiculo_de_interes__r.Name vehicleName, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c vehicleCommercialName, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c vehiclePlate, COUNT(Id) totalLeads FROM Lead GROUP BY LEA_BUS_Vehiculo_de_interes__c, LEA_BUS_Vehiculo_de_interes__r.Name, LEA_BUS_Vehiculo_de_interes__r.NombreComercial__c, LEA_BUS_Vehiculo_de_interes__r.PRO_TEX_Matricula__c ORDER BY COUNT(Id) ASC'
+        );
+
+        SalesforceConnection::query()->create([
+            'provider' => 'salesforce',
+            'instance_url' => 'https://old.example.my.salesforce.com',
+            'access_token' => 'old-access-token',
+            'refresh_token' => 'old-refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'api',
+            'metadata' => [
+                'issued_at' => 'old-issued-at',
+            ],
+        ]);
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Http::fake([
+            'https://login.salesforce.com/services/oauth2/token' => Http::sequence()
+                ->push([
+                    'access_token' => 'new-access-token',
+                    'refresh_token' => 'new-refresh-token',
+                    'instance_url' => 'https://example.my.salesforce.com',
+                    'token_type' => 'Bearer',
+                    'scope' => 'api refresh_token',
+                ], 200),
+            'https://example.my.salesforce.com/*' => Http::sequence()
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => '005xx0000000001AAA',
+                            'ownerName' => 'Laura Ventas',
+                            'totalSales' => 1,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => '005xx0000000001AAA',
+                            'ownerName' => 'Laura Ventas',
+                            'totalPurchases' => 1,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [],
+                ], 200)
+                ->push([
+                    'records' => [],
+                ], 200),
+        ]);
+
+        $response = $this
+            ->withSession(['salesforce_oauth_state' => 'known-state'])
+            ->actingAs($admin)
+            ->get(route('salesforce.callback', [
+                'code' => 'oauth-code',
+                'state' => 'known-state',
+            ]));
+
+        $response
+            ->assertRedirect(route('leaderboard.sales'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseCount('salesforce_connections', 1);
+        $this->assertDatabaseHas('salesforce_connections', [
+            'provider' => 'salesforce',
+            'instance_url' => 'https://example.my.salesforce.com',
+        ]);
+    }
+
     public function test_vehicle_leaderboard_shows_hot_and_cold_rankings(): void
     {
         $user = User::factory()->create([
@@ -923,6 +1031,98 @@ class SalesforceLeaderboardTest extends TestCase
 
         $this->assertDatabaseHas('purchase_leaderboard_entries', [
             'salesforce_user_id' => 'SF-KEEP-001',
+            'ranking_position' => 1,
+        ]);
+    }
+
+    public function test_sync_skips_local_users_who_are_not_ranked_commercials_without_failing(): void
+    {
+        config()->set('services.salesforce.client_id', 'client-id');
+        config()->set('services.salesforce.client_secret', 'client-secret');
+        config()->set(
+            'services.salesforce.leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.purchase_leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+
+        SalesforceConnection::query()->create([
+            'provider' => 'salesforce',
+            'instance_url' => 'https://example.my.salesforce.com',
+            'access_token' => 'access-token',
+            'refresh_token' => 'refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'api refresh_token',
+        ]);
+
+        $rankedCommercial = User::factory()->create([
+            'role' => 'usuario',
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'name' => 'Comercial Visible',
+            'salesforce_user_id' => 'SF-RANK-001',
+        ]);
+
+        User::factory()->create([
+            'role' => 'usuario',
+            'extra_role' => User::ROLE_MARKETING,
+            'name' => 'Usuario No Rankeado',
+            'salesforce_user_id' => 'SF-SKIP-001',
+        ]);
+
+        Http::fake([
+            'https://example.my.salesforce.com/*' => Http::sequence()
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => 'SF-SKIP-001',
+                            'ownerName' => 'Usuario No Rankeado',
+                            'totalSales' => 99,
+                        ],
+                        [
+                            'ownerId' => 'SF-RANK-001',
+                            'ownerName' => 'Comercial Visible',
+                            'totalSales' => 7,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => 'SF-SKIP-001',
+                            'ownerName' => 'Usuario No Rankeado',
+                            'totalPurchases' => 99,
+                        ],
+                        [
+                            'ownerId' => 'SF-RANK-001',
+                            'ownerName' => 'Comercial Visible',
+                            'totalPurchases' => 3,
+                        ],
+                    ],
+                ], 200),
+        ]);
+
+        app(SalesforceLeaderboardService::class)->sync();
+        app(PurchaseLeaderboardService::class)->sync();
+
+        $this->assertDatabaseMissing('sales_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-SKIP-001',
+        ]);
+
+        $this->assertDatabaseMissing('purchase_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-SKIP-001',
+        ]);
+
+        $this->assertDatabaseHas('sales_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-RANK-001',
+            'user_id' => $rankedCommercial->id,
+            'ranking_position' => 1,
+        ]);
+
+        $this->assertDatabaseHas('purchase_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-RANK-001',
+            'user_id' => $rankedCommercial->id,
             'ranking_position' => 1,
         ]);
     }

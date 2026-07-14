@@ -62,7 +62,7 @@ class SalesforceLeaderboardService
 
         $entries = collect($records)
             ->reject(fn (array $record): bool => $this->isExcludedSalesforceUserId($this->extractSalesforceUserId($record)))
-            ->map(function (array $record, int $index) use ($syncedAt): array {
+            ->map(function (array $record, int $index) use ($syncedAt): ?array {
                 $salesforceUserId = $this->extractSalesforceUserId($record);
                 $user = $salesforceUserId
                     ? User::query()->where('salesforce_user_id', $salesforceUserId)->first()
@@ -201,7 +201,7 @@ class SalesforceLeaderboardService
 
     private function persistTokens(array $payload, ?SalesforceConnection $connection = null): SalesforceConnection
     {
-        $connection ??= new SalesforceConnection([
+        $connection ??= SalesforceConnection::query()->firstOrNew([
             'provider' => self::PROVIDER,
         ]);
 
