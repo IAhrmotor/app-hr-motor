@@ -11,6 +11,8 @@ use App\Models\SalesforceConnection;
 use App\Models\User;
 use App\Models\VehicleLeaderboardDailySnapshot;
 use App\Models\VehicleLeaderboardEntry;
+use App\Services\PurchaseLeaderboardService;
+use App\Services\SalesforceLeaderboardService;
 use App\Services\VehicleLeaderboardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -923,6 +925,98 @@ class SalesforceLeaderboardTest extends TestCase
 
         $this->assertDatabaseHas('purchase_leaderboard_entries', [
             'salesforce_user_id' => 'SF-KEEP-001',
+            'ranking_position' => 1,
+        ]);
+    }
+
+    public function test_sync_skips_local_users_who_are_not_ranked_commercials_without_failing(): void
+    {
+        config()->set('services.salesforce.client_id', 'client-id');
+        config()->set('services.salesforce.client_secret', 'client-secret');
+        config()->set(
+            'services.salesforce.leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalSales FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+        config()->set(
+            'services.salesforce.purchase_leaderboard_soql',
+            'SELECT OwnerId ownerId, Owner.Name ownerName, COUNT(Id) totalPurchases FROM Opportunity GROUP BY OwnerId, Owner.Name'
+        );
+
+        SalesforceConnection::query()->create([
+            'provider' => 'salesforce',
+            'instance_url' => 'https://example.my.salesforce.com',
+            'access_token' => 'access-token',
+            'refresh_token' => 'refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'api refresh_token',
+        ]);
+
+        $rankedCommercial = User::factory()->create([
+            'role' => 'usuario',
+            'extra_role' => User::ROLE_COMMERCIAL,
+            'name' => 'Comercial Visible',
+            'salesforce_user_id' => 'SF-RANK-001',
+        ]);
+
+        User::factory()->create([
+            'role' => 'usuario',
+            'extra_role' => User::ROLE_MARKETING,
+            'name' => 'Usuario No Rankeado',
+            'salesforce_user_id' => 'SF-SKIP-001',
+        ]);
+
+        Http::fake([
+            'https://example.my.salesforce.com/*' => Http::sequence()
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => 'SF-SKIP-001',
+                            'ownerName' => 'Usuario No Rankeado',
+                            'totalSales' => 99,
+                        ],
+                        [
+                            'ownerId' => 'SF-RANK-001',
+                            'ownerName' => 'Comercial Visible',
+                            'totalSales' => 7,
+                        ],
+                    ],
+                ], 200)
+                ->push([
+                    'records' => [
+                        [
+                            'ownerId' => 'SF-SKIP-001',
+                            'ownerName' => 'Usuario No Rankeado',
+                            'totalPurchases' => 99,
+                        ],
+                        [
+                            'ownerId' => 'SF-RANK-001',
+                            'ownerName' => 'Comercial Visible',
+                            'totalPurchases' => 3,
+                        ],
+                    ],
+                ], 200),
+        ]);
+
+        app(SalesforceLeaderboardService::class)->sync();
+        app(PurchaseLeaderboardService::class)->sync();
+
+        $this->assertDatabaseMissing('sales_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-SKIP-001',
+        ]);
+
+        $this->assertDatabaseMissing('purchase_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-SKIP-001',
+        ]);
+
+        $this->assertDatabaseHas('sales_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-RANK-001',
+            'user_id' => $rankedCommercial->id,
+            'ranking_position' => 1,
+        ]);
+
+        $this->assertDatabaseHas('purchase_leaderboard_entries', [
+            'salesforce_user_id' => 'SF-RANK-001',
+            'user_id' => $rankedCommercial->id,
             'ranking_position' => 1,
         ]);
     }
