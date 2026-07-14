@@ -459,6 +459,80 @@ class TicketsInteriorTest extends TestCase
             ->assertDontSee('Resolución reasignada', false);
     }
 
+    public function test_ticket_reports_page_shows_tickets_by_tool_with_legend_and_total(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Herramientas',
+            'email' => 'gestor-herramientas@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $toolOne = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $toolTwo = TicketTool::query()->create([
+            'name' => 'ERP',
+            'color' => '#e11d48',
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'ticket_tool_id' => $toolOne->id,
+            'number' => 'IT-700001',
+            'tool' => $toolOne->name,
+            'priority' => 'medium',
+            'status' => 'new',
+            'title' => 'Ticket herramienta 1',
+            'description' => 'Primero.',
+            'screenshots' => [],
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'ticket_tool_id' => $toolOne->id,
+            'number' => 'IT-700002',
+            'tool' => $toolOne->name,
+            'priority' => 'medium',
+            'status' => 'closed',
+            'title' => 'Ticket herramienta 1 bis',
+            'description' => 'Segundo.',
+            'screenshots' => [],
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'ticket_tool_id' => $toolTwo->id,
+            'number' => 'IT-700003',
+            'tool' => $toolTwo->name,
+            'priority' => 'medium',
+            'status' => 'in_progress',
+            'title' => 'Ticket herramienta 2',
+            'description' => 'Tercero.',
+            'screenshots' => [],
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('tickets.reports'))
+            ->assertOk()
+            ->assertSee('Tickets por tipo de incidencia', false)
+            ->assertSee('Web HR Motor', false)
+            ->assertSee('ERP', false)
+            ->assertSee('3 incidencias en total', false)
+            ->assertSee('2', false)
+            ->assertSee('1', false);
+    }
+
     public function test_resolution_report_counts_only_working_hours_across_weekends(): void
     {
         $manager = User::factory()->create([

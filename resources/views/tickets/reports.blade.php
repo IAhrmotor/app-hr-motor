@@ -5,6 +5,8 @@
         $totalOpenTickets = collect($reportCards)->sum('totalOpenTickets');
         $peopleWithOpenTickets = collect($reportCards)->count();
         $topCard = collect($reportCards)->sortByDesc('totalOpenTickets')->first();
+        $ticketToolReportRows = collect(data_get($ticketToolReport ?? [], 'rows', []));
+        $ticketToolReportTotal = (int) data_get($ticketToolReport, 'totalTickets', 0);
         $maxClosedTickets = (int) (collect($closedReportRows ?? [])->max('totalClosedTickets') ?? 0);
         $resolutionRows = collect(data_get($resolutionReport ?? [], 'rows', []));
         $resolutionChartRows = $resolutionRows->sortBy('averageMinutes')->values();
@@ -322,6 +324,117 @@
                     </g>
                 @endforeach
             </svg>
+        </div>
+    @endif
+</section>
+<section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets por tipo de incidencia</h2>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-brand-secondary/65">
+                Este gráfico agrupa todos los tickets, sin importar su estado o la persona asignada. Pasa el cursor sobre cada segmento para ver a qué herramienta corresponde.
+            </p>
+        </div>
+        <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3 text-sm font-semibold text-brand-secondary/70">
+            {{ $ticketToolReportTotal }} incidencias en total
+        </div>
+    </div>
+
+    @if ($ticketToolReportRows->isEmpty())
+        <div class="mt-6 rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-brand-secondary/65">
+            No hay tickets suficientes para mostrar el informe por tipo de incidencia.
+        </div>
+    @else
+        @php
+            $ticketToolSegments = [];
+            $ticketToolSliceStart = 0.0;
+            $ticketToolTotal = max($ticketToolReportRows->sum('total'), 1);
+        @endphp
+
+        <div
+            class="mt-6 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
+            x-data="{
+                ticketToolTooltip: null,
+                ticketToolTooltipTimer: null,
+                ticketToolTooltipPoint: null,
+                scheduleTicketToolTooltip(payload) {
+                    clearTimeout(this.ticketToolTooltipTimer);
+                    this.ticketToolTooltipPoint = payload;
+                    this.ticketToolTooltipTimer = setTimeout(() => {
+                        this.ticketToolTooltip = this.ticketToolTooltipPoint;
+                    }, 220);
+                },
+                hideTicketToolTooltip() {
+                    clearTimeout(this.ticketToolTooltipTimer);
+                    this.ticketToolTooltipTimer = null;
+                    this.ticketToolTooltipPoint = null;
+                    this.ticketToolTooltip = null;
+                },
+            }"
+        >
+            <div class="relative mx-auto w-full max-w-[20rem] shrink-0">
+                <svg viewBox="0 0 280 280" class="h-auto w-full" role="img" aria-label="Gráfica de tickets por tipo de incidencia">
+                    @foreach ($ticketToolReportRows as $row)
+                        @php
+                            $percentage = ($row['total'] / $ticketToolTotal) * 100;
+                            $ticketToolSegments[] = [
+                                'name' => $row['name'],
+                                'total' => $row['total'],
+                                'color' => $row['color'],
+                                'start' => $ticketToolSliceStart,
+                                'end' => $ticketToolSliceStart + ($percentage * 3.6),
+                            ];
+                            $ticketToolSliceStart += ($percentage * 3.6);
+                        @endphp
+                    @endforeach
+
+                    @foreach ($ticketToolSegments as $segment)
+                        @php
+                            $slicePath = $describePieSlice(140, 140, 122, $segment['start'], $segment['end']);
+                            $isSingleSegment = count($ticketToolSegments) === 1;
+                            $strokeColor = $isSingleSegment ? 'none' : '#ffffff';
+                            $strokeWidth = $isSingleSegment ? '0' : '5';
+                        @endphp
+                        <path
+                            d="{{ $slicePath }}"
+                            fill="{{ $segment['color'] }}"
+                            stroke="{{ $strokeColor }}"
+                            stroke-width="{{ $strokeWidth }}"
+                            stroke-linejoin="round"
+                            class="cursor-help"
+                            @mouseenter="scheduleTicketToolTooltip({ name: @js($segment['name']), total: {{ $segment['total'] }}, x: $event.clientX, y: $event.clientY })"
+                            @mousemove="hideTicketToolTooltip(); scheduleTicketToolTooltip({ name: @js($segment['name']), total: {{ $segment['total'] }}, x: $event.clientX, y: $event.clientY })"
+                            @mouseleave="hideTicketToolTooltip()"
+                        />
+                    @endforeach
+                </svg>
+
+                <div
+                    x-cloak
+                    x-show="ticketToolTooltip"
+                    x-transition.opacity.duration.150ms
+                    class="pointer-events-none fixed z-50 rounded-xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white shadow-lg"
+                    :style="ticketToolTooltip ? `left: ${Math.min(ticketToolTooltip.x + 16, window.innerWidth - 20)}px; top: ${Math.min(ticketToolTooltip.y + 16, window.innerHeight - 20)}px; transform: translate(-100%, -100%);` : ''"
+                >
+                    <div class="whitespace-nowrap" x-text="ticketToolTooltip?.name"></div>
+                    <div class="mt-0.5 text-white/75" x-text="ticketToolTooltip ? `${ticketToolTooltip.total} incidencias` : ''"></div>
+                </div>
+            </div>
+
+            <div class="w-full max-w-[18rem] shrink-0 space-y-3 lg:ml-auto">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Leyenda</p>
+                <div class="space-y-2">
+                    @foreach ($ticketToolReportRows as $row)
+                        <div class="flex items-center justify-between gap-3 rounded-[1.25rem] border border-brand-secondary/10 bg-slate-50 px-4 py-3">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span class="h-3.5 w-3.5 shrink-0 rounded-full" style="background-color: {{ $row['color'] }}"></span>
+                                <span class="truncate text-sm font-semibold text-brand-secondary">{{ $row['name'] }}</span>
+                            </div>
+                            <span class="shrink-0 text-sm font-bold text-brand-secondary/75">{{ $row['total'] }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     @endif
 </section>

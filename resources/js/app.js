@@ -116,7 +116,6 @@ window.itTicketCreateForm = () => ({
     confirmWithoutScreenshots() {
         this.confirmedWithoutScreenshots = true;
         this.showConfirmDialog = false;
-        this.isSubmitting = true;
         this.$nextTick(() => this.$refs.form?.requestSubmit?.());
     },
     cancelWithoutScreenshots() {
