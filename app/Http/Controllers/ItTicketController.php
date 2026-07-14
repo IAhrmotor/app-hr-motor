@@ -49,7 +49,16 @@ class ItTicketController extends Controller
             'screenshots' => ['nullable', 'array', 'max:4'],
             'screenshots.*' => ['image', 'max:5120'],
             'submission_token' => ['required', 'string', 'max:100'],
+            'after_hours_acknowledged' => ['nullable', 'boolean'],
         ]);
+
+        if (now()->hour >= 15 && ! $request->boolean('after_hours_acknowledged')) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'after_hours_acknowledged' => 'Debes revisar el aviso de horario de verano antes de enviar la incidencia.',
+                ]);
+        }
 
         $submissionToken = trim((string) $validated['submission_token']);
         $submissionKey = 'it-ticket-submission:' . $request->user()->id . ':' . sha1($submissionToken);

@@ -13,6 +13,7 @@
     @endphp
 
     <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
+    <input type="hidden" name="after_hours_acknowledged" value="0" x-ref="afterHoursAcknowledged">
 
     <div
         class="space-y-2"
@@ -145,11 +146,17 @@
 
     <button
         type="submit"
-        class="inline-flex w-full items-center justify-center rounded-2xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+        class="inline-flex w-full items-center justify-center rounded-2xl bg-brand-primary px-5 py-4 text-base font-semibold text-white shadow-[0_18px_30px_rgba(229,26,46,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-brand-primary/95 hover:shadow-[0_22px_40px_rgba(229,26,46,0.24)] disabled:cursor-not-allowed disabled:opacity-70"
         :disabled="isSubmitting"
     >
         Preparar incidencia
     </button>
+
+    @error('after_hours_acknowledged')
+        <p class="text-sm font-medium text-amber-700">{{ $message }}</p>
+    @enderror
+
+    @include('it-tickets.partials.after-hours-warning', ['mode' => 'create'])
 
     <div
         x-cloak

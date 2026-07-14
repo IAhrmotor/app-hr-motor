@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ItTicketsTest extends TestCase
@@ -35,6 +36,7 @@ class ItTicketsTest extends TestCase
             ->assertOk()
             ->assertSee('Tus tickets de IT, en un solo sitio', false)
             ->assertSee('Crear incidencia', false)
+            ->assertSee('Ver aviso horario', false)
             ->assertSee(route('it-tickets.create'), false);
     }
 
@@ -177,5 +179,51 @@ class ItTicketsTest extends TestCase
                 ->where('title', 'Ticket duplicable')
                 ->count()
         );
+    }
+
+    public function test_user_must_acknowledge_the_summer_schedule_warning_after_three_pm(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-14 15:30:00', 'Europe/Madrid'));
+
+        try {
+            $user = User::factory()->create([
+                'role' => User::ROLE_COMMERCIAL,
+                'name' => 'Usuario Prueba',
+            ]);
+            $tool = TicketTool::query()->create([
+                'name' => 'Web HR Motor',
+                'color' => '#1d4ed8',
+            ]);
+
+            $response = $this->actingAs($user)
+                ->post(route('it-tickets.store'), [
+                    'submission_token' => (string) \Illuminate\Support\Str::uuid(),
+                    'tool' => (string) $tool->id,
+                    'priority' => 'medium',
+                    'title' => 'Ticket fuera de horario',
+                    'description' => 'Debe bloquearse si no se acepta el aviso.',
+                    'after_hours_acknowledged' => '0',
+                    'screenshots' => [],
+                ]);
+
+            $response->assertSessionHasErrors('after_hours_acknowledged');
+            $this->assertSame(0, ItTicket::query()->count());
+
+            $this->actingAs($user)
+                ->post(route('it-tickets.store'), [
+                    'submission_token' => (string) \Illuminate\Support\Str::uuid(),
+                    'tool' => (string) $tool->id,
+                    'priority' => 'medium',
+                    'title' => 'Ticket fuera de horario',
+                    'description' => 'Debe crearse al aceptar el aviso.',
+                    'after_hours_acknowledged' => '1',
+                    'screenshots' => [],
+                ])
+                ->assertRedirect(route('it-tickets.index'));
+
+            $this->assertSame(1, ItTicket::query()->count());
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
