@@ -321,6 +321,7 @@ class TicketsController extends Controller
         if ($statuses === []) {
             $statuses = $this->defaultTicketSectionStatuses();
         }
+        $assignedToUserIds = $this->normalizeSectionFilters($request->input($section . '_assigned_to', []));
         $priorities = $this->normalizeSectionFilters($request->input($section . '_priority', []));
         $sort = $managed ? 'updated_desc' : $this->normalizeSortOption((string) $request->input($section . '_sort', 'updated_desc'));
         $pageName = $section . '_page';
@@ -353,6 +354,10 @@ class TicketsController extends Controller
 
         if ($statuses !== []) {
             $query->whereIn('status', $statuses);
+        }
+
+        if ($managed && $assignedToUserIds !== []) {
+            $query->whereIn('assigned_to_user_id', array_map('intval', $assignedToUserIds));
         }
 
         if ($priorities !== []) {

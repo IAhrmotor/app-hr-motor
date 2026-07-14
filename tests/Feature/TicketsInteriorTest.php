@@ -533,6 +533,57 @@ class TicketsInteriorTest extends TestCase
             ->assertSee('1', false);
     }
 
+    public function test_open_ticket_report_segments_link_to_filtered_ticket_list(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Informe',
+            'email' => 'gestor-informe@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $itUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Rosco',
+            'email' => 'it-rosco@example.com',
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $manager->id,
+            'assigned_to_user_id' => $itUser->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-700010',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'in_progress',
+            'title' => 'Ticket abierto clicable',
+            'description' => 'Debe enlazar al listado filtrado.',
+            'screenshots' => [],
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('tickets.reports'))
+            ->assertOk()
+            ->assertSee(e(route('tickets.index', [
+                'managed_search' => $itUser->name,
+                'managed_status' => 'in_progress',
+            ])), false);
+    }
+
     public function test_resolution_report_counts_only_working_hours_across_weekends(): void
     {
         $manager = User::factory()->create([

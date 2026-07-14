@@ -199,11 +199,25 @@
                                         $labelColor = $contrastTextColor($segment["color"]);
                                         $strokeColor = $singleSegment ? "none" : "#ffffff";
                                         $strokeWidth = $singleSegment ? "0" : "5";
+                                        $segmentLink = route('tickets.index', [
+                                            'managed_search' => $card['name'],
+                                            'managed_status' => $segment['key'],
+                                        ]);
                                     @endphp
-                                    <path d="{{ $slicePath }}" fill="{{ $segment["color"] }}" stroke="{{ $strokeColor }}" stroke-width="{{ $strokeWidth }}" stroke-linejoin="round" />
-                                    @if (! $singleSegment)
-                                        <text x="{{ $labelPosition["x"] }}" y="{{ $labelPosition["y"] }}" fill="{{ $labelColor }}" text-anchor="middle" dominant-baseline="middle" font-size="30" font-weight="900" style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;">{{ $segment["count"] }}</text>
-                                    @endif
+                                    <a href="{{ $segmentLink }}" class="group">
+                                        <path
+                                            d="{{ $slicePath }}"
+                                            fill="{{ $segment["color"] }}"
+                                            stroke="{{ $strokeColor }}"
+                                            stroke-width="{{ $strokeWidth }}"
+                                            stroke-linejoin="round"
+                                            class="cursor-pointer transition duration-150 ease-out group-hover:opacity-90 group-hover:scale-[1.02]"
+                                            style="transform-box: fill-box; transform-origin: center;"
+                                        />
+                                        @if (! $singleSegment)
+                                            <text x="{{ $labelPosition["x"] }}" y="{{ $labelPosition["y"] }}" fill="{{ $labelColor }}" text-anchor="middle" dominant-baseline="middle" font-size="30" font-weight="900" style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;">{{ $segment["count"] }}</text>
+                                        @endif
+                                    </a>
                                 @endforeach
                                 @if ($singleSegment)
                                     <text x="{{ $centerX }}" y="{{ $centerY }}" fill="{{ $contrastTextColor($chartSegments[0]["color"]) }}" text-anchor="middle" dominant-baseline="middle" font-size="46" font-weight="900" style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;">{{ $chartSegments[0]["count"] }}</text>
