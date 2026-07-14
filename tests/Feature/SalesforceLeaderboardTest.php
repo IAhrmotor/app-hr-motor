@@ -50,6 +50,19 @@ class SalesforceLeaderboardTest extends TestCase
             ->assertSee('Ranking de ventas');
     }
 
+    public function test_admin_can_open_sales_leaderboard_page_without_role_viewer_mode(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboard.sales'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Ranking de ventas');
+    }
+
     public function test_authenticated_user_can_open_purchase_leaderboard_page(): void
     {
         $user = User::factory()->create();

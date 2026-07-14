@@ -83,6 +83,23 @@ if (! function_exists('app_can_access_rankings')) {
     }
 }
 
+if (! function_exists('app_can_open_rankings_pages')) {
+    function app_can_open_rankings_pages(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->role === User::ROLE_ADMIN) {
+            return true;
+        }
+
+        return app_can_access_rankings($user);
+    }
+}
+
 if (! function_exists('app_can_access_forum')) {
     function app_can_access_forum(?User $user = null): bool
     {

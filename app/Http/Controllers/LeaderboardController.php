@@ -25,14 +25,14 @@ class LeaderboardController extends Controller
 {
     public function index()
     {
-        abort_unless(app_can_access_rankings(), 403);
+        abort_unless(app_can_open_rankings_pages(), 403);
 
         return redirect()->route('leaderboard.sales');
     }
 
     public function sales(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
     {
-        abort_unless(app_can_access_rankings(), 403);
+        abort_unless(app_can_open_rankings_pages(), 403);
 
         $leaderboardTablesReady = Schema::hasTable('sales_leaderboard_entries')
             && Schema::hasTable('sales_leaderboard_daily_snapshots')
@@ -73,7 +73,7 @@ class LeaderboardController extends Controller
 
     public function purchases(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
     {
-        abort_unless(app_can_access_rankings(), 403);
+        abort_unless(app_can_open_rankings_pages(), 403);
 
         $leaderboardTablesReady = Schema::hasTable('purchase_leaderboard_entries')
             && Schema::hasTable('purchase_leaderboard_daily_snapshots')
@@ -114,7 +114,7 @@ class LeaderboardController extends Controller
 
     public function vehicles(Request $request, SalesforceLeaderboardService $service, LeaderboardTrendService $trendService)
     {
-        abort_unless(app_can_access_rankings(), 403);
+        abort_unless(app_can_open_rankings_pages(), 403);
 
         $connection = $service->getConnection();
         $leaderboardTablesReady = Schema::hasTable('vehicle_leaderboard_entries')
