@@ -355,20 +355,24 @@
             class="mt-6 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
             x-data="{
                 ticketToolTooltip: null,
+                ticketToolTooltipVisible: false,
                 ticketToolTooltipTimer: null,
-                ticketToolTooltipPoint: null,
                 scheduleTicketToolTooltip(payload) {
                     clearTimeout(this.ticketToolTooltipTimer);
-                    this.ticketToolTooltipPoint = payload;
                     this.ticketToolTooltipTimer = setTimeout(() => {
-                        this.ticketToolTooltip = this.ticketToolTooltipPoint;
+                        this.ticketToolTooltip = payload;
+                        this.ticketToolTooltipVisible = true;
                     }, 220);
                 },
                 hideTicketToolTooltip() {
                     clearTimeout(this.ticketToolTooltipTimer);
                     this.ticketToolTooltipTimer = null;
-                    this.ticketToolTooltipPoint = null;
-                    this.ticketToolTooltip = null;
+                    this.ticketToolTooltipVisible = false;
+                    window.setTimeout(() => {
+                        if (!this.ticketToolTooltipVisible) {
+                            this.ticketToolTooltip = null;
+                        }
+                    }, 160);
                 },
             }"
         >
@@ -393,7 +397,7 @@
                             $slicePath = $describePieSlice(140, 140, 122, $segment['start'], $segment['end']);
                             $isSingleSegment = count($ticketToolSegments) === 1;
                             $strokeColor = $isSingleSegment ? 'none' : '#ffffff';
-                            $strokeWidth = $isSingleSegment ? '0' : '5';
+                            $strokeWidth = $isSingleSegment ? '0' : '1.25';
                         @endphp
                         <path
                             d="{{ $slicePath }}"
@@ -402,8 +406,8 @@
                             stroke-width="{{ $strokeWidth }}"
                             stroke-linejoin="round"
                             class="cursor-help"
-                            @mouseenter="scheduleTicketToolTooltip({ name: @js($segment['name']), total: {{ $segment['total'] }}, x: $event.clientX, y: $event.clientY })"
-                            @mousemove="hideTicketToolTooltip(); scheduleTicketToolTooltip({ name: @js($segment['name']), total: {{ $segment['total'] }}, x: $event.clientX, y: $event.clientY })"
+                            @mouseenter="scheduleTicketToolTooltip({ name: @js($segment['name']), total: {{ $segment['total'] }} })"
+                            @mousemove="hideTicketToolTooltip(); scheduleTicketToolTooltip({ name: @js($segment['name']), total: {{ $segment['total'] }} })"
                             @mouseleave="hideTicketToolTooltip()"
                         />
                     @endforeach
@@ -411,26 +415,25 @@
 
                 <div
                     x-cloak
-                    x-show="ticketToolTooltip"
+                    x-show="ticketToolTooltipVisible"
                     x-transition.opacity.duration.150ms
-                    class="pointer-events-none fixed z-50 rounded-xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white shadow-lg"
-                    :style="ticketToolTooltip ? `left: ${Math.min(ticketToolTooltip.x + 16, window.innerWidth - 20)}px; top: ${Math.min(ticketToolTooltip.y + 16, window.innerHeight - 20)}px; transform: translate(-100%, -100%);` : ''"
+                    class="pointer-events-none absolute left-1/2 top-full z-50 mt-3 w-max max-w-[18rem] -translate-x-1/2 rounded-xl bg-brand-secondary px-3 py-2 text-xs font-semibold text-white shadow-lg"
                 >
                     <div class="whitespace-nowrap" x-text="ticketToolTooltip?.name"></div>
-                    <div class="mt-0.5 text-white/75" x-text="ticketToolTooltip ? `${ticketToolTooltip.total} incidencias` : ''"></div>
+                    <div class="mt-0.5 text-white/75" x-text="ticketToolTooltip ? `${ticketToolTooltip.total} ${ticketToolTooltip.total === 1 ? 'incidencia' : 'incidencias'}` : ''"></div>
                 </div>
             </div>
 
-            <div class="w-full max-w-[18rem] shrink-0 space-y-3 lg:ml-auto">
+            <div class="w-full max-w-[32rem] shrink-0 space-y-3 lg:ml-auto">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Leyenda</p>
-                <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-x-10 gap-y-2 lg:grid-cols-3">
                     @foreach ($ticketToolReportRows as $row)
-                        <div class="flex items-center justify-between gap-3 rounded-[1.25rem] border border-brand-secondary/10 bg-slate-50 px-4 py-3">
-                            <div class="flex min-w-0 items-center gap-3">
+                        <div class="flex items-center gap-3 py-1.5">
+                            <div class="flex min-w-0 flex-1 items-center gap-2">
                                 <span class="h-3.5 w-3.5 shrink-0 rounded-full" style="background-color: {{ $row['color'] }}"></span>
-                                <span class="truncate text-sm font-semibold text-brand-secondary">{{ $row['name'] }}</span>
+                                <span class="truncate text-sm font-medium leading-tight text-brand-secondary">{{ $row['name'] }}</span>
                             </div>
-                            <span class="shrink-0 text-sm font-bold text-brand-secondary/75">{{ $row['total'] }}</span>
+                            <span class="shrink-0 text-sm font-semibold text-brand-secondary/65">{{ $row['total'] }}</span>
                         </div>
                     @endforeach
                 </div>
