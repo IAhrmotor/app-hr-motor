@@ -70,6 +70,7 @@ class TicketsController extends Controller
             'reportCards' => $this->buildCurrentIncidentsReportCards(),
             'closedReportRows' => $this->buildClosedTicketsReportRows(),
             'resolutionReport' => $this->buildResolutionTimeReport(),
+            'dealershipReport' => $this->buildDealershipTicketReport(),
             'openStatusMeta' => array_intersect_key($ticketStatuses, array_flip($openStatuses)),
             'openStatusOrder' => array_values(array_filter(
                 $openStatuses,
@@ -1305,6 +1306,50 @@ class TicketsController extends Controller
             'overallAverageMinutes' => $overallAverageMinutes,
             'overallAverageLabel' => $this->formatMinutesAsDurationLabel($overallAverageMinutes),
             'rows' => $formattedRows,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     totalTickets:int,
+     *     rows:array<int, array{
+     *         id:int,
+     *         name:string,
+     *         totalTickets:int
+     *     }>
+     * }
+     */
+    private function buildDealershipTicketReport(): array
+    {
+        $rows = ItTicket::query()
+            ->select([
+                'it_tickets.id',
+                'it_tickets.user_id',
+            ])
+            ->with(['user.assignedDealership:id,name'])
+            ->get()
+            ->groupBy(function (ItTicket $ticket): string {
+                $dealershipId = (int) ($ticket->user?->assignedDealership?->id ?? 0);
+
+                return $dealershipId > 0 ? 'dealership:' . $dealershipId : 'dealership:none';
+            })
+            ->map(function ($tickets, string $groupKey): array {
+                $firstTicket = $tickets->first();
+                $dealership = $firstTicket?->user?->assignedDealership;
+
+                return [
+                    'id' => $dealership?->id ? (int) $dealership->id : 0,
+                    'name' => $dealership?->name ?: 'Sin delegación',
+                    'totalTickets' => (int) $tickets->count(),
+                ];
+            })
+            ->sortByDesc('totalTickets')
+            ->values()
+            ->all();
+
+        return [
+            'totalTickets' => (int) collect($rows)->sum('totalTickets'),
+            'rows' => $rows,
         ];
     }
 

@@ -533,6 +533,95 @@ class TicketsInteriorTest extends TestCase
             ->assertSee('1', false);
     }
 
+    public function test_ticket_reports_page_shows_tickets_by_dealership(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Delegaciones',
+            'email' => 'gestor-delegaciones@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $northDealership = Dealership::query()->create([
+            'name' => 'Delegación Norte',
+        ]);
+
+        $southDealership = Dealership::query()->create([
+            'name' => 'Delegación Sur',
+        ]);
+
+        $northUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'name' => 'Solicitante Norte',
+            'email' => 'solicitante-norte@example.com',
+            'dealership_id' => $northDealership->id,
+        ]);
+
+        $southUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'name' => 'Solicitante Sur',
+            'email' => 'solicitante-sur@example.com',
+            'dealership_id' => $southDealership->id,
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $northUser->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-800001',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'new',
+            'title' => 'Ticket Norte 1',
+            'description' => 'Primero.',
+            'screenshots' => [],
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $northUser->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-800002',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'closed',
+            'title' => 'Ticket Norte 2',
+            'description' => 'Segundo.',
+            'screenshots' => [],
+        ]);
+
+        ItTicket::query()->create([
+            'user_id' => $southUser->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-800003',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'in_progress',
+            'title' => 'Ticket Sur',
+            'description' => 'Tercero.',
+            'screenshots' => [],
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('tickets.reports'))
+            ->assertOk()
+            ->assertSee('Tickets por delegaciones', false)
+            ->assertSee('Delegación Norte', false)
+            ->assertSee('Delegación Sur', false)
+            ->assertSee('3 incidencias en total', false);
+    }
+
     public function test_open_ticket_report_segments_link_to_filtered_ticket_list(): void
     {
         $manager = User::factory()->create([
