@@ -77,7 +77,12 @@ window.itTicketToolSelector = (options, initialSelected = '', initialLabel = '')
 window.itTicketCreateForm = () => ({
     confirmedWithoutScreenshots: false,
     showConfirmDialog: false,
+    showAfterHoursDialog: false,
+    afterHoursAcknowledged: false,
     isSubmitting: false,
+    isAfterHoursNow() {
+        return new Date().getHours() >= 15;
+    },
     handleSubmit(event) {
         if (this.isSubmitting) {
             event.preventDefault();
@@ -92,17 +97,47 @@ window.itTicketCreateForm = () => ({
             return;
         }
 
+        if (this.isAfterHoursNow() && !this.afterHoursAcknowledged) {
+            event.preventDefault();
+            this.showAfterHoursDialog = true;
+            return;
+        }
+
+        if (!this.confirmedWithoutScreenshots && this.$refs.screenshots?.files.length === 0) {
+            event.preventDefault();
+            this.showConfirmDialog = true;
+            return;
+        }
+
         this.isSubmitting = true;
         this.showConfirmDialog = false;
+        this.showAfterHoursDialog = false;
     },
     confirmWithoutScreenshots() {
         this.confirmedWithoutScreenshots = true;
         this.showConfirmDialog = false;
         this.isSubmitting = true;
+        this.$nextTick(() => this.$refs.form?.requestSubmit?.());
     },
     cancelWithoutScreenshots() {
         this.showConfirmDialog = false;
         this.$refs.screenshots?.focus?.();
+    },
+    confirmAfterHours() {
+        this.afterHoursAcknowledged = true;
+        if (this.$refs.afterHoursAcknowledged) {
+            this.$refs.afterHoursAcknowledged.value = '1';
+        }
+
+        this.showAfterHoursDialog = false;
+        this.$nextTick(() => this.$refs.form?.requestSubmit?.());
+    },
+    cancelAfterHours() {
+        this.showAfterHoursDialog = false;
+        this.afterHoursAcknowledged = false;
+        if (this.$refs.afterHoursAcknowledged) {
+            this.$refs.afterHoursAcknowledged.value = '0';
+        }
     },
 });
 window.imageLightbox = () => ({
