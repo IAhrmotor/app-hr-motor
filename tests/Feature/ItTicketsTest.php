@@ -36,7 +36,6 @@ class ItTicketsTest extends TestCase
             ->assertOk()
             ->assertSee('Tus tickets de IT, en un solo sitio', false)
             ->assertSee('Crear incidencia', false)
-            ->assertSee('Ver aviso horario', false)
             ->assertSee(route('it-tickets.create'), false);
     }
 

@@ -66,6 +66,7 @@ class TicketsController extends Controller
         return view('tickets.reports', [
             'backUrl' => route('tickets.index'),
             'heroImageUrl' => asset('images/hero/hero-informes-tickets.webp'),
+            'ticketToolReport' => $this->buildTicketToolReport(),
             'reportCards' => $this->buildCurrentIncidentsReportCards(),
             'closedReportRows' => $this->buildClosedTicketsReportRows(),
             'resolutionReport' => $this->buildResolutionTimeReport(),
@@ -904,6 +905,62 @@ class TicketsController extends Controller
                 ],
             ])
             ->all();
+    }
+
+    /**
+     * @return array{
+     *     totalTickets:int,
+     *     rows:array<int, array{
+     *         id:int,
+     *         name:string,
+     *         color:string,
+     *         total:int
+     *     }>
+     * }
+     */
+    private function buildTicketToolReport(): array
+    {
+        $toolMeta = collect($this->ticketTools())
+            ->map(fn (array $tool, string $toolId): array => [
+                'id' => (int) $toolId,
+                'name' => $tool['label'],
+                'color' => $tool['color'] ?: '#94a3b8',
+            ])
+            ->values();
+
+        $counts = ItTicket::query()
+            ->selectRaw('COALESCE(ticket_tool_id, 0) as tool_bucket, COUNT(*) as total')
+            ->groupByRaw('COALESCE(ticket_tool_id, 0)')
+            ->pluck('total', 'tool_bucket')
+            ->map(fn ($total): int => (int) $total);
+
+        $rows = $toolMeta
+            ->map(function (array $tool) use ($counts): array {
+                return [
+                    'id' => $tool['id'],
+                    'name' => $tool['name'],
+                    'color' => $tool['color'],
+                    'total' => (int) ($counts[$tool['id']] ?? 0),
+                ];
+            })
+            ->filter(fn (array $row): bool => $row['total'] > 0)
+            ->values();
+
+        $uncategorizedTotal = (int) ($counts[0] ?? 0);
+
+        if ($uncategorizedTotal > 0) {
+            $rows->push([
+                'id' => 0,
+                'name' => 'Sin tipo',
+                'color' => '#94a3b8',
+                'total' => $uncategorizedTotal,
+            ]);
+        }
+
+        return [
+            'totalTickets' => (int) $rows->sum('total'),
+            'rows' => $rows->values()->all(),
+        ];
     }
 
     /**
