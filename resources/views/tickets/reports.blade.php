@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('content')
     @php
@@ -12,6 +12,8 @@
         $resolutionChartRows = $resolutionRows->sortBy('averageMinutes')->values();
         $resolutionMaxMinutes = (int) ($resolutionRows->max('averageMinutes') ?? 0);
         $resolutionOverallAverageMinutes = (int) data_get($resolutionReport, 'overallAverageMinutes', 0);
+        $dealershipReportRows = collect(data_get($dealershipReport ?? [], 'rows', []));
+        $dealershipReportTotal = (int) data_get($dealershipReport, 'totalTickets', 0);
         $polarToCartesian = function (float $centerX, float $centerY, float $radius, float $angleDeg): array {
             $angleRad = deg2rad($angleDeg - 90);
 
@@ -199,11 +201,25 @@
                                         $labelColor = $contrastTextColor($segment["color"]);
                                         $strokeColor = $singleSegment ? "none" : "#ffffff";
                                         $strokeWidth = $singleSegment ? "0" : "5";
+                                        $segmentLink = route('tickets.index', [
+                                            'managed_search' => $card['name'],
+                                            'managed_status' => $segment['key'],
+                                        ]);
                                     @endphp
-                                    <path d="{{ $slicePath }}" fill="{{ $segment["color"] }}" stroke="{{ $strokeColor }}" stroke-width="{{ $strokeWidth }}" stroke-linejoin="round" />
-                                    @if (! $singleSegment)
-                                        <text x="{{ $labelPosition["x"] }}" y="{{ $labelPosition["y"] }}" fill="{{ $labelColor }}" text-anchor="middle" dominant-baseline="middle" font-size="30" font-weight="900" style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;">{{ $segment["count"] }}</text>
-                                    @endif
+                                    <a href="{{ $segmentLink }}" class="group">
+                                        <path
+                                            d="{{ $slicePath }}"
+                                            fill="{{ $segment["color"] }}"
+                                            stroke="{{ $strokeColor }}"
+                                            stroke-width="{{ $strokeWidth }}"
+                                            stroke-linejoin="round"
+                                            class="cursor-pointer transition duration-150 ease-out group-hover:opacity-90 group-hover:scale-[1.02]"
+                                            style="transform-box: fill-box; transform-origin: center;"
+                                        />
+                                        @if (! $singleSegment)
+                                            <text x="{{ $labelPosition["x"] }}" y="{{ $labelPosition["y"] }}" fill="{{ $labelColor }}" text-anchor="middle" dominant-baseline="middle" font-size="30" font-weight="900" style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;">{{ $segment["count"] }}</text>
+                                        @endif
+                                    </a>
                                 @endforeach
                                 @if ($singleSegment)
                                     <text x="{{ $centerX }}" y="{{ $centerY }}" fill="{{ $contrastTextColor($chartSegments[0]["color"]) }}" text-anchor="middle" dominant-baseline="middle" font-size="46" font-weight="900" style="paint-order: stroke; stroke: rgba(15, 23, 42, 0.18); stroke-width: 3px;">{{ $chartSegments[0]["count"] }}</text>
@@ -441,5 +457,49 @@
         </div>
     @endif
 </section>
+
+<section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets por delegaciones</h2>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-brand-secondary/65">
+                Este gráfico agrupa todos los tickets por la delegación de la persona que los abrió, para detectar qué ubicaciones generan más carga de trabajo.
+            </p>
+        </div>
+        <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3 text-sm font-semibold text-brand-secondary/70">
+            {{ $dealershipReportTotal }} incidencias en total
+        </div>
+    </div>
+
+    @if ($dealershipReportRows->isEmpty())
+        <div class="mt-6 rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-brand-secondary/65">
+            No hay tickets suficientes para mostrar el informe por delegaciones.
+        </div>
+    @else
+        @php
+            $dealershipChartRows = $dealershipReportRows->sortByDesc('totalTickets')->values();
+            $dealershipMaxTickets = max((int) $dealershipChartRows->max('totalTickets'), 1);
+        @endphp
+
+        <div class="mt-6 space-y-3">
+            @foreach ($dealershipChartRows as $row)
+                @php
+                    $barPercentage = ($row['totalTickets'] / $dealershipMaxTickets) * 100;
+                @endphp
+                <div class="flex items-center gap-3 text-sm">
+                    <span class="w-44 shrink-0 truncate font-semibold text-brand-secondary">{{ $row['name'] }}</span>
+                    <div class="h-3.5 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <div class="h-full rounded-full bg-[#E51A2E]" style="width: {{ max(3, $barPercentage) }}%;" aria-hidden="true"></div>
+                    </div>
+                    <span class="w-10 shrink-0 text-right font-bold text-brand-secondary/70">{{ $row['totalTickets'] }}</span>
+                </div>
+            @endforeach
+        </div>
+    @endif
+</section>
 </main>
 @endsection
+
+
+
+
