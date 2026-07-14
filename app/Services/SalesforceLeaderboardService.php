@@ -201,7 +201,7 @@ class SalesforceLeaderboardService
 
     private function persistTokens(array $payload, ?SalesforceConnection $connection = null): SalesforceConnection
     {
-        $connection ??= new SalesforceConnection([
+        $connection ??= SalesforceConnection::query()->firstOrNew([
             'provider' => self::PROVIDER,
         ]);
 
