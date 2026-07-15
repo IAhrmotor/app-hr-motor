@@ -202,7 +202,7 @@ class User extends Authenticatable
                 return;
             }
 
-            if (! $user->wasChanged(['extra_role', 'dealership_id'])) {
+            if (! $user->wasChanged(['role', 'extra_role', 'dealership_id'])) {
                 return;
             }
 

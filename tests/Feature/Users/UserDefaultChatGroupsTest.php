@@ -6,6 +6,7 @@ use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatConversation;
 use App\Models\Dealership;
 use App\Models\User;
+use App\Services\CompanyChatDefaultGroupSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
@@ -105,6 +106,27 @@ class UserDefaultChatGroupsTest extends TestCase
 
         $this->assertFalse($user->chatGroups()->whereKey($firstGroup->id)->exists());
         $this->assertTrue($user->chatGroups()->whereKey($secondGroup->id)->exists());
+    }
+
+    public function test_changing_a_users_base_role_triggers_chat_sync(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'dealership_id' => null,
+            'dealership' => null,
+        ]);
+
+        $syncService = $this->mock(CompanyChatDefaultGroupSyncService::class);
+        $syncService->shouldReceive('syncUser')
+            ->once()
+            ->withArgs(function (User $syncedUser, bool $recordSystemMessages) use ($user): bool {
+                return $syncedUser->is($user) && $recordSystemMessages === true;
+            });
+
+        $user->update([
+            'role' => User::ROLE_MANAGER,
+        ]);
     }
 
     public function test_changing_a_users_extra_role_writes_system_messages_in_the_old_and_new_groups(): void
