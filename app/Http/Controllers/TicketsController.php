@@ -66,6 +66,7 @@ class TicketsController extends Controller
         return view('tickets.reports', [
             'backUrl' => route('tickets.index'),
             'heroImageUrl' => asset('images/hero/hero-informes-tickets.webp'),
+            'openTicketsHistoryReport' => $this->buildOpenTicketsHistoryReport(),
             'ticketToolReport' => $this->buildTicketToolReport(),
             'reportCards' => $this->buildCurrentIncidentsReportCards(),
             'closedReportRows' => $this->buildClosedTicketsReportRows(),
@@ -1195,6 +1196,62 @@ class TicketsController extends Controller
             ->filter(fn (array $card): bool => $card['total'] > 0)
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array{
+     *     totalTickets:int,
+     *     peakDayLabel:string,
+     *     peakDayCount:int,
+     *     series:array<int, array{date:string,label:string,dayInitial:string,count:int}>
+     * }
+     */
+    private function buildOpenTicketsHistoryReport(): array
+    {
+        $startDate = now()->subDays(29)->startOfDay();
+        $endDate = now()->endOfDay();
+        $openStatuses = $this->openTicketStatuses();
+
+        $countsByDate = ItTicket::query()
+            ->whereIn('status', $openStatuses)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as ticket_date, COUNT(*) as total')
+            ->groupByRaw('DATE(created_at)')
+            ->pluck('total', 'ticket_date')
+            ->map(fn ($total): int => (int) $total);
+
+        $series = collect(range(0, 29))
+            ->map(function (int $offset) use ($startDate, $countsByDate): array {
+                $date = $startDate->copy()->addDays($offset);
+                $key = $date->toDateString();
+                $count = (int) ($countsByDate[$key] ?? 0);
+                $dayInitials = [
+                    0 => 'D',
+                    1 => 'L',
+                    2 => 'M',
+                    3 => 'X',
+                    4 => 'J',
+                    5 => 'V',
+                    6 => 'S',
+                ];
+
+                return [
+                    'date' => $key,
+                    'label' => $date->translatedFormat('d/m'),
+                    'dayInitial' => $dayInitials[(int) $date->dayOfWeek] ?? '',
+                    'count' => $count,
+                ];
+            })
+            ->values();
+
+        $peakDay = $series->sortByDesc('count')->first() ?? ['label' => 'Sin datos', 'count' => 0];
+
+        return [
+            'totalTickets' => (int) $series->sum('count'),
+            'peakDayLabel' => (string) ($peakDay['label'] ?? 'Sin datos'),
+            'peakDayCount' => (int) ($peakDay['count'] ?? 0),
+            'series' => $series->all(),
+        ];
     }
 
     /**
