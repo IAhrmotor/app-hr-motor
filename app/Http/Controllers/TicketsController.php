@@ -96,6 +96,7 @@ class TicketsController extends Controller
             'ticketPriorities' => $this->ticketPriorities(),
             'ticketTools' => $this->ticketTools(),
             'assignableUsers' => $this->assignableUsers(),
+            'requesterUsers' => $this->requesterUsers(),
             'canManageTickets' => $canManageTickets,
             'canUpdateTicketTool' => $this->canUpdateTicketTool($request->user(), $itTicket, $canManageTickets),
             'canCloseTicket' => $this->canCloseTicket($request->user(), $itTicket, $canManageTickets),
@@ -146,6 +147,49 @@ class TicketsController extends Controller
         );
 
         return back()->with('success', 'El tipo de incidencia del ticket se ha actualizado correctamente.');
+    }
+
+    public function updateRequester(Request $request, ItTicket $itTicket): RedirectResponse
+    {
+        $canManageTickets = app_user_has_admin_permission($request->user(), 'tickets-it.manage');
+        abort_unless($canManageTickets, 403);
+
+        $validated = $request->validate([
+            'user_id' => [
+                'required',
+                'integer',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query->where('is_active', true)
+                        ->whereNull('disabled_at');
+                }),
+            ],
+        ]);
+
+        $newRequester = User::query()->findOrFail((int) $validated['user_id']);
+        $previousRequesterId = $itTicket->user_id;
+        $previousRequesterName = $itTicket->user?->name ?? 'Sin nombre';
+
+        if ((int) $previousRequesterId === (int) $newRequester->id) {
+            return back()->with('success', 'El solicitante ya estaba actualizado.');
+        }
+
+        $itTicket->user_id = $newRequester->id;
+        $itTicket->save();
+
+        app(TicketActivityLogger::class)->record(
+            $request->user(),
+            $itTicket,
+            TicketActivityLog::EVENT_REQUESTER_CHANGED,
+            'Solicitante cambiado a ' . $newRequester->name,
+            [
+                'previous_user_id' => $previousRequesterId,
+                'user_id' => $newRequester->id,
+                'previous_user_name' => $previousRequesterName,
+                'user_name' => $newRequester->name,
+            ]
+        );
+
+        return back()->with('success', 'El solicitante del ticket se ha actualizado correctamente.');
     }
 
     public function assign(Request $request, ItTicket $itTicket): RedirectResponse|JsonResponse
@@ -985,6 +1029,28 @@ class TicketsController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<string, array{id:int,label:string,name:string,email:string}>
+     */
+    private function requesterUsers(): array
+    {
+        return User::query()
+            ->select(['id', 'name', 'email'])
+            ->where('is_active', true)
+            ->whereNull('disabled_at')
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(fn (User $user): array => [
+                (string) $user->id => [
+                    'id' => $user->id,
+                    'label' => $user->name,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
             ])
             ->all();
     }

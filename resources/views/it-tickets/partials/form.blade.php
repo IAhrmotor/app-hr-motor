@@ -61,7 +61,7 @@
                 <template x-for="option in filteredOptions" :key="option[0]">
                     <button
                         type="button"
-                        @click="select(option[0])"
+                        @pointerdown.prevent="select(option[0])"
                         class="flex w-full items-start gap-3 border-b border-brand-secondary/5 px-4 py-3 text-left text-sm transition last:border-b-0 hover:bg-slate-50"
                     >
                         <span
