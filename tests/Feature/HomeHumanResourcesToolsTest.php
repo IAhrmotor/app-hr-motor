@@ -51,6 +51,26 @@ class HomeHumanResourcesToolsTest extends TestCase
         }
     }
 
+    public function test_hr_newcars_role_only_sees_the_basic_home_sections(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_HR_NEWCARS,
+            'email' => 'hrnewcars@example.com',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('home'))
+            ->assertOk();
+
+        $response
+            ->assertSee('Herramientas generales')
+            ->assertSee('DocuSign')
+            ->assertDontSee('Otros recursos')
+            ->assertDontSee('Documentos Sistemas')
+            ->assertDontSee('CMS Motorflash')
+            ->assertDontSee('Poder Judicial');
+    }
+
     public function test_it_role_sees_cms_motorflash_and_not_enreach_normal(): void
     {
         $user = User::factory()->create([

@@ -42,7 +42,7 @@ class RoleViewerTest extends TestCase
         $this->actingAs($admin)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('Volver a vista admin')
+            ->assertSee('Volver a admin')
             ->assertSee('Comercial');
 
         $this->from(route('home'))
@@ -55,7 +55,27 @@ class RoleViewerTest extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('Visor de roles')
-            ->assertDontSee('Volver a vista admin');
+            ->assertDontSee('Volver a admin');
+    }
+
+    public function test_admin_role_viewer_places_hr_newcars_last(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email' => 'admin-order@example.com',
+        ]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('home'))
+            ->assertOk()
+            ->getContent();
+
+        $rentingPosition = strrpos($html, 'Renting');
+        $hrNewcarsPosition = strrpos($html, 'HR Newcars');
+
+        $this->assertNotFalse($rentingPosition);
+        $this->assertNotFalse($hrNewcarsPosition);
+        $this->assertGreaterThan($rentingPosition, $hrNewcarsPosition);
     }
 
     public function test_non_admin_users_do_not_see_or_use_the_role_viewer(): void

@@ -22,6 +22,8 @@ class User extends Authenticatable
 
     public const ROLE_USER = 'usuario';
 
+    public const ROLE_HR_NEWCARS = 'hr_newcars';
+
     public const ROLE_COMMERCIAL = 'comercial';
 
     public const ROLE_STORE_MANAGER = 'jefe_tienda';
@@ -71,6 +73,7 @@ class User extends Authenticatable
             self::ROLE_ADMIN => 'Admin',
             self::ROLE_MANAGER => 'Gestor',
             self::ROLE_USER => 'Usuario',
+            self::ROLE_HR_NEWCARS => 'HR Newcars',
         ];
     }
 

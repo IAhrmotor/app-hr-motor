@@ -227,6 +227,34 @@ class UserInvitationTest extends TestCase
         Notification::assertNotSentTo($createdUser, UserOnboardingNotification::class);
     }
 
+    public function test_admin_can_create_an_hr_newcars_user(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('users.store'), $this->baseUserPayload([
+            'name' => 'HR Newcars',
+            'email' => 'hr.newcars@example.com',
+            'role' => User::ROLE_HR_NEWCARS,
+        ]));
+
+        $createdUser = User::where('email', 'hr.newcars@example.com')->first();
+
+        $response
+            ->assertRedirect(route('users.index'))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($createdUser);
+        $this->assertSame(User::ROLE_HR_NEWCARS, $createdUser->role);
+        $this->assertNull($createdUser->extra_role);
+        Notification::assertSentTo($createdUser, ResetPassword::class);
+        $this->assertWelcomeNotificationWasSentTo($createdUser);
+        Notification::assertNotSentTo($createdUser, UserOnboardingNotification::class);
+    }
+
     public function test_admin_can_resend_invitation_email_to_pending_user(): void
     {
         Notification::fake();
