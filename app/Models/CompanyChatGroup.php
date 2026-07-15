@@ -13,6 +13,8 @@ class CompanyChatGroup extends Model
 {
     use HasFactory;
 
+    public const SYSTEM_GROUP_TYPE_ROLE = 'role';
+
     public const SYSTEM_GROUP_TYPE_EXTRA_ROLE = 'extra_role';
 
     public const SYSTEM_GROUP_TYPE_DEALERSHIP = 'dealership';
