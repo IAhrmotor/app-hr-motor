@@ -533,6 +533,114 @@ class TicketsInteriorTest extends TestCase
             ->assertSee('1', false);
     }
 
+    public function test_ticket_reports_page_shows_a_thirty_day_open_tickets_line_chart(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Histograma',
+            'email' => 'gestor-histograma@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $now = Carbon::parse('2026-07-30 12:00:00');
+        Carbon::setTestNow($now);
+
+        try {
+            $openDates = [
+                $now->copy()->subDays(1),
+                $now->copy()->subDays(1)->addHours(2),
+                $now->copy()->subDays(2),
+                $now->copy()->subDays(15),
+            ];
+
+            foreach ($openDates as $index => $date) {
+                $ticket = ItTicket::query()->create([
+                    'user_id' => $manager->id,
+                    'ticket_tool_id' => $tool->id,
+                    'number' => sprintf('IT-9100%02d', $index + 1),
+                    'tool' => $tool->name,
+                    'priority' => 'medium',
+                    'status' => ['new', 'in_progress', 'pending_user', 'reopen_requested'][$index],
+                    'title' => 'Ticket abierto ' . ($index + 1),
+                    'description' => 'Debe entrar en la serie de 30 días.',
+                    'screenshots' => [],
+                ]);
+
+                $ticket->forceFill([
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ])->saveQuietly();
+            }
+
+            $oldTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-910005',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'new',
+                'title' => 'Ticket fuera de ventana',
+                'description' => 'No debe contarse.',
+                'screenshots' => [],
+            ]);
+
+            $oldTicket->forceFill([
+                'created_at' => $now->copy()->subDays(30),
+                'updated_at' => $now->copy()->subDays(30),
+            ])->saveQuietly();
+
+            $closedTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-910006',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'closed',
+                'title' => 'Ticket cerrado',
+                'description' => 'No debe contarse porque ya está cerrado.',
+                'screenshots' => [],
+            ]);
+
+            $closedTicket->forceFill([
+                'created_at' => $now->copy()->subDays(3),
+                'updated_at' => $now->copy()->subDays(3),
+            ])->saveQuietly();
+
+            $this->actingAs($manager)
+                ->get(route('tickets.reports'))
+                ->assertOk()
+                ->assertSee('Incidencias abiertas por día', false)
+                ->assertSee('data-ticket-open-history-total-value="4"', false)
+                ->assertSee('data-ticket-open-history-peak-value="2"', false)
+                ->assertSee('29/07', false);
+
+            $response = $this->actingAs($manager)
+                ->get(route('tickets.reports'))
+                ->assertOk();
+
+            $content = $response->getContent();
+
+            $this->assertStringContainsString('data-ticket-open-history-day-label="J"', $content);
+            $this->assertSame(30, substr_count($content, 'data-ticket-open-history-day-label="'));
+            $this->assertStringNotContainsString('fill="#111827"', $content);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_ticket_reports_page_shows_tickets_by_dealership(): void
     {
         $manager = User::factory()->create([
@@ -1734,3 +1842,4 @@ class TicketsInteriorTest extends TestCase
         $this->assertTrue($olderPosition < $newerPosition);
     }
 }
+
