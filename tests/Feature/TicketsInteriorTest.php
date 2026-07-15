@@ -1040,6 +1040,75 @@ class TicketsInteriorTest extends TestCase
             ->assertSee('Comercial', false);
     }
 
+    public function test_manager_can_change_ticket_requester_from_the_detail_view(): void
+    {
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Solicitante',
+            'email' => 'gestor-solicitante@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $currentRequester = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'name' => 'Solicitante Original',
+            'email' => 'solicitante-original@example.com',
+        ]);
+
+        $nextRequester = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'name' => 'Solicitante Nuevo',
+            'email' => 'solicitante-nuevo@example.com',
+        ]);
+
+        $ticket = ItTicket::query()->create([
+            'user_id' => $currentRequester->id,
+            'ticket_tool_id' => $tool->id,
+            'number' => 'IT-333335',
+            'tool' => $tool->name,
+            'priority' => 'medium',
+            'status' => 'new',
+            'title' => 'Ticket con solicitante editable',
+            'description' => 'El solicitante se puede corregir.',
+            'screenshots' => [],
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee(route('tickets.requester.update', $ticket), false)
+            ->assertSee('Solicitante Original', false);
+
+        $this->actingAs($manager)
+            ->post(route('tickets.requester.update', $ticket), [
+                'user_id' => $nextRequester->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('it_tickets', [
+            'id' => $ticket->id,
+            'user_id' => $nextRequester->id,
+        ]);
+
+        $this->assertDatabaseHas('ticket_activity_logs', [
+            'it_ticket_id' => $ticket->id,
+            'event' => TicketActivityLog::EVENT_REQUESTER_CHANGED,
+        ]);
+    }
+
     public function test_ticket_participants_can_reply_with_images(): void
     {
         Storage::fake('public');
