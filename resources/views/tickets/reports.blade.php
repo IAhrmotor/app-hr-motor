@@ -1,10 +1,45 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('content')
     @php
         $totalOpenTickets = collect($reportCards)->sum('totalOpenTickets');
         $peopleWithOpenTickets = collect($reportCards)->count();
         $topCard = collect($reportCards)->sortByDesc('totalOpenTickets')->first();
+        $openTicketsHistorySeries = collect(data_get($openTicketsHistoryReport ?? [], 'series', []));
+        $openTicketsHistoryHasData = $openTicketsHistorySeries->contains(fn (array $point): bool => (int) ($point['count'] ?? 0) > 0);
+        $openTicketsChartWidth = 760;
+        $openTicketsChartHeight = 300;
+        $openTicketsChartPadding = [
+            'top' => 20,
+            'right' => 18,
+            'bottom' => 54,
+            'left' => 48,
+        ];
+        $openTicketsPlotWidth = $openTicketsChartWidth - $openTicketsChartPadding['left'] - $openTicketsChartPadding['right'];
+        $openTicketsPlotHeight = $openTicketsChartHeight - $openTicketsChartPadding['top'] - $openTicketsChartPadding['bottom'];
+        $openTicketsMaxCount = max(1, (int) $openTicketsHistorySeries->max('count'));
+        $openTicketsChartPoints = $openTicketsHistorySeries->values()->map(function (array $point, int $index) use ($openTicketsHistorySeries, $openTicketsChartPadding, $openTicketsPlotWidth, $openTicketsPlotHeight, $openTicketsMaxCount): array {
+            $count = max(1, $openTicketsHistorySeries->count());
+            $x = $openTicketsChartPadding['left'] + ($count === 1 ? $openTicketsPlotWidth / 2 : ($openTicketsPlotWidth * $index) / ($count - 1));
+            $value = (int) ($point['count'] ?? 0);
+            $normalized = $value / $openTicketsMaxCount;
+            $y = $openTicketsChartPadding['top'] + ($openTicketsPlotHeight - ($openTicketsPlotHeight * $normalized));
+            $labelY = $y <= $openTicketsChartPadding['top'] + 26 ? $y + 22 : max(16, $y - 14);
+
+            return $point + [
+                'x' => $x,
+                'y' => $y,
+                'label_x' => $x,
+                'label_anchor' => 'middle',
+                'label_y' => $labelY,
+            ];
+        });
+        $openTicketsLinePoints = $openTicketsChartPoints->map(fn (array $point): string => number_format((float) $point['x'], 2, '.', '') . ',' . number_format((float) $point['y'], 2, '.', ''))->implode(' ');
+        $openTicketsGridValues = collect(range(0, 5))
+            ->map(fn (int $step): int => (int) round(($openTicketsMaxCount * $step) / 5))
+            ->unique()
+            ->sortDesc()
+            ->values();
         $ticketToolReportRows = collect(data_get($ticketToolReport ?? [], 'rows', []));
         $ticketToolReportTotal = (int) data_get($ticketToolReport, 'totalTickets', 0);
         $maxClosedTickets = (int) (collect($closedReportRows ?? [])->max('totalClosedTickets') ?? 0);
@@ -140,6 +175,7 @@
                 </div>
             </div>
         </section>
+
 
         @if (empty($reportCards))
     <section class="mt-6 rounded-[2rem] border border-dashed border-brand-secondary/15 bg-white p-10 text-center shadow-sm">
@@ -458,6 +494,76 @@
     @endif
 </section>
 
+<section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6" data-ticket-open-history-report>
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Últimos 30 días</p>
+            <h2 class="mt-2 text-2xl font-bold tracking-tight text-brand-secondary">Incidencias abiertas por día</h2>
+            <p class="mt-2 max-w-3xl text-sm leading-6 text-brand-secondary/65">
+                Esta gráfica muestra cuántas incidencias se han creado cada día en los últimos 30 días.
+            </p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[18rem] lg:grid-cols-1">
+            <div class="rounded-[1.35rem] border border-brand-secondary/10 bg-slate-50 p-4" data-ticket-open-history-total data-ticket-open-history-total-value="{{ (int) data_get($openTicketsHistoryReport, 'totalTickets', 0) }}">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">Total en 30 días</p>
+                <p class="mt-2 text-3xl font-bold text-brand-secondary">{{ number_format((int) data_get($openTicketsHistoryReport, 'totalTickets', 0)) }}</p>
+            </div>
+            <div class="rounded-[1.35rem] border border-brand-secondary/10 bg-slate-50 p-4" data-ticket-open-history-peak data-ticket-open-history-peak-value="{{ (int) data_get($openTicketsHistoryReport, 'peakDayCount', 0) }}">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">Pico diario</p>
+                <p class="mt-2 text-3xl font-bold text-brand-secondary">{{ number_format((int) data_get($openTicketsHistoryReport, 'peakDayCount', 0)) }}</p>
+                <p class="mt-1 text-sm text-brand-secondary/65" data-ticket-open-history-peak-label>{{ data_get($openTicketsHistoryReport, 'peakDayLabel', 'Sin datos') }}</p>
+            </div>
+        </div>
+    </div>
+
+    @if ($openTicketsHistoryHasData)
+        <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-gray-100 bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5">
+            <svg viewBox="0 0 {{ $openTicketsChartWidth }} {{ $openTicketsChartHeight }}" class="h-auto w-full" role="img" aria-label="Evolución diaria de incidencias abiertas">
+                <title>Evolución diaria de incidencias abiertas</title>
+                <desc>Gráfica de líneas con el número de incidencias creadas cada día en los últimos 30 días.</desc>
+
+                @foreach ($openTicketsGridValues as $gridValue)
+                    @php
+                        $gridY = $openTicketsChartPadding['top'] + ($openTicketsPlotHeight - ($openTicketsPlotHeight * ($gridValue / $openTicketsMaxCount)));
+                    @endphp
+                    <line x1="{{ $openTicketsChartPadding['left'] }}" y1="{{ $gridY }}" x2="{{ $openTicketsChartWidth - $openTicketsChartPadding['right'] }}" y2="{{ $gridY }}" stroke="#e5e7eb" stroke-dasharray="4 5" stroke-width="1" />
+                    <text x="16" y="{{ $gridY + 4 }}" fill="#6b7280" font-size="12" font-weight="600">{{ $gridValue }}</text>
+                @endforeach
+
+                <line x1="{{ $openTicketsChartPadding['left'] }}" y1="{{ $openTicketsChartPadding['top'] + $openTicketsPlotHeight }}" x2="{{ $openTicketsChartWidth - $openTicketsChartPadding['right'] }}" y2="{{ $openTicketsChartPadding['top'] + $openTicketsPlotHeight }}" stroke="#d1d5db" stroke-width="1.25" />
+
+                <polyline
+                    fill="none"
+                    stroke="#E51A2E"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="4"
+                    points="{{ $openTicketsLinePoints }}"
+                />
+
+                @foreach ($openTicketsChartPoints as $point)
+                    <circle cx="{{ $point['x'] }}" cy="{{ $point['y'] }}" r="4" fill="#fff" stroke="#E51A2E" stroke-width="2" />
+                    <text
+                        x="{{ $point['label_x'] }}"
+                        y="{{ $openTicketsChartHeight - 18 }}"
+                        fill="#4b5563"
+                        font-size="12"
+                        font-weight="600"
+                        text-anchor="{{ $point['label_anchor'] }}"
+                        data-ticket-open-history-day-label="{{ $point['dayInitial'] }}"
+                    >
+                        {{ $point['dayInitial'] }}
+                    </text>
+                @endforeach
+            </svg>
+        </div>
+    @else
+        <div class="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+            Aún no hay incidencias abiertas creadas en los últimos 30 días.
+        </div>
+    @endif
+</section>
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
