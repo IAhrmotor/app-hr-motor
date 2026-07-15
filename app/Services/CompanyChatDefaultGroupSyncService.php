@@ -15,6 +15,10 @@ class CompanyChatDefaultGroupSyncService
     {
         $this->removeCommercialExtraRoleGroups();
 
+        foreach ($this->managedBaseRoles() as $baseRole) {
+            $this->ensureBaseRoleGroup($baseRole);
+        }
+
         foreach ($this->managedExtraRoles() as $extraRole) {
             $this->ensureExtraRoleGroup($extraRole);
         }
@@ -46,7 +50,7 @@ class CompanyChatDefaultGroupSyncService
                 ->keyBy('id');
 
             $desiredGroupIds = collect()
-                ->merge($this->desiredExtraRoleGroupId($user))
+                ->merge($this->desiredChatRoleGroupId($user))
                 ->merge($this->desiredDealershipGroupId($user))
                 ->filter()
                 ->unique()
@@ -106,6 +110,21 @@ class CompanyChatDefaultGroupSyncService
         );
     }
 
+    public function ensureBaseRoleGroup(string $baseRole): CompanyChatGroup
+    {
+        if (! $this->isManagedBaseRole($baseRole)) {
+            throw new \InvalidArgumentException('El grupo automatico solicitado no esta gestionado por chat.');
+        }
+
+        $groupName = (string) (User::baseRoleLabels()[$baseRole] ?? ucfirst($baseRole));
+
+        return $this->ensureSystemGroup(
+            type: CompanyChatGroup::SYSTEM_GROUP_TYPE_ROLE,
+            key: $baseRole,
+            name: $groupName,
+        );
+    }
+
     public function ensureDealershipGroup(Dealership $dealership): ?CompanyChatGroup
     {
         if (! $dealership->exists) {
@@ -151,13 +170,21 @@ class CompanyChatDefaultGroupSyncService
         return $group;
     }
 
-    private function desiredExtraRoleGroupId(User $user): Collection
+    private function desiredChatRoleGroupId(User $user): Collection
     {
-        if (blank($user->extra_role) || ! $this->isManagedExtraRole($user->extra_role)) {
+        if (filled($user->extra_role)) {
+            if (! $this->isManagedExtraRole($user->extra_role)) {
+                return collect();
+            }
+
+            return collect([$this->ensureExtraRoleGroup($user->extra_role)->id]);
+        }
+
+        if (blank($user->role) || ! $this->isManagedBaseRole($user->role)) {
             return collect();
         }
 
-        return collect([$this->ensureExtraRoleGroup($user->extra_role)->id]);
+        return collect([$this->ensureBaseRoleGroup($user->role)->id]);
     }
 
     /**
@@ -174,6 +201,19 @@ class CompanyChatDefaultGroupSyncService
     private function isManagedExtraRole(string $extraRole): bool
     {
         return $extraRole !== User::ROLE_COMMERCIAL;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function managedBaseRoles(): array
+    {
+        return array_keys(User::baseRoleLabels());
+    }
+
+    private function isManagedBaseRole(string $baseRole): bool
+    {
+        return array_key_exists($baseRole, User::baseRoleLabels());
     }
 
     private function removeCommercialExtraRoleGroups(): void

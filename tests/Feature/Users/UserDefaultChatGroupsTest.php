@@ -6,6 +6,7 @@ use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatConversation;
 use App\Models\Dealership;
 use App\Models\User;
+use App\Services\CompanyChatDefaultGroupSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
@@ -107,6 +108,80 @@ class UserDefaultChatGroupsTest extends TestCase
         $this->assertTrue($user->chatGroups()->whereKey($secondGroup->id)->exists());
     }
 
+    public function test_changing_a_users_base_role_triggers_chat_sync(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'dealership_id' => null,
+            'dealership' => null,
+        ]);
+
+        $syncService = $this->mock(CompanyChatDefaultGroupSyncService::class);
+        $syncService->shouldReceive('syncUser')
+            ->once()
+            ->withArgs(function (User $syncedUser, bool $recordSystemMessages) use ($user): bool {
+                return $syncedUser->is($user) && $recordSystemMessages === true;
+            });
+
+        $user->update([
+            'role' => User::ROLE_MANAGER,
+        ]);
+    }
+
+    public function test_changing_a_users_base_role_writes_system_messages_in_the_old_and_new_role_groups(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Usuario de pruebas',
+            'role' => User::ROLE_USER,
+            'extra_role' => null,
+            'dealership_id' => null,
+            'dealership' => null,
+        ]);
+
+        $oldGroup = CompanyChatGroup::query()
+            ->where('system_group_type', CompanyChatGroup::SYSTEM_GROUP_TYPE_ROLE)
+            ->where('system_group_key', User::ROLE_USER)
+            ->firstOrFail();
+
+        $newGroup = CompanyChatGroup::query()
+            ->where('system_group_type', CompanyChatGroup::SYSTEM_GROUP_TYPE_ROLE)
+            ->where('system_group_key', User::ROLE_MANAGER)
+            ->firstOrFail();
+
+        $this->assertTrue($user->fresh()->chatGroups()->whereKey($oldGroup->id)->exists());
+        $this->assertFalse($user->fresh()->chatGroups()->whereKey($newGroup->id)->exists());
+
+        $user->update([
+            'role' => User::ROLE_MANAGER,
+        ]);
+
+        $user->refresh();
+
+        $this->assertFalse($user->chatGroups()->whereKey($oldGroup->id)->exists());
+        $this->assertTrue($user->chatGroups()->whereKey($newGroup->id)->exists());
+
+        $removedConversation = CompanyChatConversation::query()
+            ->where('company_chat_group_id', $oldGroup->id)
+            ->firstOrFail();
+
+        $addedConversation = CompanyChatConversation::query()
+            ->where('company_chat_group_id', $newGroup->id)
+            ->firstOrFail();
+
+        $removedMessages = $removedConversation->messages()->orderBy('id')->get();
+        $addedMessages = $addedConversation->messages()->orderBy('id')->get();
+
+        $this->assertCount(1, $removedMessages);
+        $this->assertCount(1, $addedMessages);
+        $this->assertTrue($removedMessages->first()->is_system);
+        $this->assertTrue($addedMessages->first()->is_system);
+        $this->assertStringContainsString('salió', $removedMessages->first()->body);
+        $this->assertStringContainsString('se ha unido', $addedMessages->first()->body);
+        $this->assertStringContainsString($user->name, $removedMessages->first()->body);
+        $this->assertStringContainsString($user->name, $addedMessages->first()->body);
+    }
+
     public function test_changing_a_users_extra_role_writes_system_messages_in_the_old_and_new_groups(): void
     {
         $user = User::factory()->create([
@@ -146,7 +221,7 @@ class UserDefaultChatGroupsTest extends TestCase
         $this->assertTrue($removedMessages->first()->is_system);
         $this->assertTrue($addedMessages->first()->is_system);
         $this->assertStringContainsString('salió', $removedMessages->first()->body);
-        $this->assertStringContainsString('añadió', $addedMessages->first()->body);
+        $this->assertStringContainsString('se ha unido', $addedMessages->first()->body);
         $this->assertStringContainsString($user->name, $removedMessages->first()->body);
         $this->assertStringContainsString($user->name, $addedMessages->first()->body);
         $this->assertSame($removedMessages->first()->body, $removedConversation->fresh()->last_message_excerpt);
