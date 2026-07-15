@@ -15,6 +15,7 @@ class TicketActivityLog extends Model
     public const EVENT_COMMENT_ADDED = 'comment_added';
     public const EVENT_STATUS_CHANGED = 'status_changed';
     public const EVENT_TOOL_CHANGED = 'tool_changed';
+    public const EVENT_REQUESTER_CHANGED = 'requester_changed';
     public const EVENT_CLOSED = 'closed';
     public const EVENT_REOPEN_REQUESTED = 'reopen_requested';
     public const EVENT_REOPENED = 'reopened';
@@ -55,6 +56,7 @@ class TicketActivityLog extends Model
             self::EVENT_COMMENT_ADDED => 'Comentario añadido',
             self::EVENT_STATUS_CHANGED => 'Estado cambiado',
             self::EVENT_TOOL_CHANGED => 'Tipo de incidencia cambiada',
+            self::EVENT_REQUESTER_CHANGED => 'Solicitante cambiado',
             self::EVENT_CLOSED => 'Cerrado',
             self::EVENT_REOPEN_REQUESTED => 'Reapertura solicitada',
             self::EVENT_REOPENED => 'Reabierto',

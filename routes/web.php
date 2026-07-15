@@ -177,6 +177,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets/{itTicket}/tool', [TicketsController::class, 'updateTool'])
         ->whereNumber('itTicket')
         ->name('tickets.tool.update');
+    Route::post('/tickets/{itTicket}/requester', [TicketsController::class, 'updateRequester'])
+        ->whereNumber('itTicket')
+        ->name('tickets.requester.update');
     Route::post('/tickets/{itTicket}/priority', [TicketsController::class, 'updatePriority'])
         ->whereNumber('itTicket')
         ->name('tickets.priority.update');
