@@ -1210,10 +1210,7 @@ class TicketsController extends Controller
     {
         $startDate = now()->subDays(29)->startOfDay();
         $endDate = now()->endOfDay();
-        $openStatuses = $this->openTicketStatuses();
-
         $countsByDate = ItTicket::query()
-            ->whereIn('status', $openStatuses)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as ticket_date, COUNT(*) as total')
             ->groupByRaw('DATE(created_at)')

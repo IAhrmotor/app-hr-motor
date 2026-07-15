@@ -498,7 +498,7 @@
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary/45">Últimos 30 días</p>
-            <h2 class="mt-2 text-2xl font-bold tracking-tight text-brand-secondary">Incidencias abiertas por día</h2>
+            <h2 class="mt-2 text-2xl font-bold tracking-tight text-brand-secondary">Incidencias creadas por día</h2>
             <p class="mt-2 max-w-3xl text-sm leading-6 text-brand-secondary/65">
                 Esta gráfica muestra cuántas incidencias se han creado cada día en los últimos 30 días.
             </p>
@@ -510,7 +510,7 @@
                 <p class="mt-2 text-3xl font-bold text-brand-secondary">{{ number_format((int) data_get($openTicketsHistoryReport, 'totalTickets', 0)) }}</p>
             </div>
             <div class="rounded-[1.35rem] border border-brand-secondary/10 bg-slate-50 p-4" data-ticket-open-history-peak data-ticket-open-history-peak-value="{{ (int) data_get($openTicketsHistoryReport, 'peakDayCount', 0) }}">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">Pico diario</p>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-secondary/45">Día con más incidencias</p>
                 <p class="mt-2 text-3xl font-bold text-brand-secondary">{{ number_format((int) data_get($openTicketsHistoryReport, 'peakDayCount', 0)) }}</p>
                 <p class="mt-1 text-sm text-brand-secondary/65" data-ticket-open-history-peak-label>{{ data_get($openTicketsHistoryReport, 'peakDayLabel', 'Sin datos') }}</p>
             </div>
@@ -519,8 +519,8 @@
 
     @if ($openTicketsHistoryHasData)
         <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-gray-100 bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5">
-            <svg viewBox="0 0 {{ $openTicketsChartWidth }} {{ $openTicketsChartHeight }}" class="h-auto w-full" role="img" aria-label="Evolución diaria de incidencias abiertas">
-                <title>Evolución diaria de incidencias abiertas</title>
+            <svg viewBox="0 0 {{ $openTicketsChartWidth }} {{ $openTicketsChartHeight }}" class="h-auto w-full" role="img" aria-label="Evolución diaria de incidencias creadas">
+                <title>Evolución diaria de incidencias creadas</title>
                 <desc>Gráfica de líneas con el número de incidencias creadas cada día en los últimos 30 días.</desc>
 
                 @foreach ($openTicketsGridValues as $gridValue)

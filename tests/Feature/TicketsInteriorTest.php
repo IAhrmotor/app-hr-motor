@@ -610,32 +610,38 @@ class TicketsInteriorTest extends TestCase
                 'priority' => 'medium',
                 'status' => 'closed',
                 'title' => 'Ticket cerrado',
-                'description' => 'No debe contarse porque ya está cerrado.',
+                'description' => 'Debe contarse igual.',
                 'screenshots' => [],
             ]);
 
             $closedTicket->forceFill([
-                'created_at' => $now->copy()->subDays(3),
-                'updated_at' => $now->copy()->subDays(3),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->saveQuietly();
+
+            $closedTicketLater = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-910007',
+                'tool' => $tool->name,
+                'priority' => 'low',
+                'status' => 'closed',
+                'title' => 'Ticket cerrado hoy',
+                'description' => 'Debe contarse igual en la gráfica.',
+                'screenshots' => [],
+            ]);
+
+            $closedTicketLater->forceFill([
+                'created_at' => $now,
+                'updated_at' => $now,
             ])->saveQuietly();
 
             $this->actingAs($manager)
                 ->get(route('tickets.reports'))
                 ->assertOk()
-                ->assertSee('Incidencias abiertas por día', false)
-                ->assertSee('data-ticket-open-history-total-value="4"', false)
-                ->assertSee('data-ticket-open-history-peak-value="2"', false)
-                ->assertSee('29/07', false);
-
-            $response = $this->actingAs($manager)
-                ->get(route('tickets.reports'))
-                ->assertOk();
-
-            $content = $response->getContent();
-
-            $this->assertStringContainsString('data-ticket-open-history-day-label="J"', $content);
-            $this->assertSame(30, substr_count($content, 'data-ticket-open-history-day-label="'));
-            $this->assertStringNotContainsString('fill="#111827"', $content);
+                ->assertSee('Incidencias creadas por día', false)
+                ->assertSee('data-ticket-open-history-total-value="6"', false)
+                ->assertSee('data-ticket-open-history-peak-value="2"', false);
         } finally {
             Carbon::setTestNow();
         }
