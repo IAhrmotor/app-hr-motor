@@ -236,9 +236,10 @@ class UserInvitationTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)->post(route('users.store'), $this->baseUserPayload([
-            'name' => 'HR Newcars',
+            'name' => 'HR NewCars',
             'email' => 'hr.newcars@example.com',
-            'role' => User::ROLE_HR_NEWCARS,
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_HR_NEWCARS,
         ]));
 
         $createdUser = User::where('email', 'hr.newcars@example.com')->first();
@@ -248,8 +249,8 @@ class UserInvitationTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertNotNull($createdUser);
-        $this->assertSame(User::ROLE_HR_NEWCARS, $createdUser->role);
-        $this->assertNull($createdUser->extra_role);
+        $this->assertSame(User::ROLE_USER, $createdUser->role);
+        $this->assertSame(User::ROLE_HR_NEWCARS, $createdUser->extra_role);
         Notification::assertSentTo($createdUser, ResetPassword::class);
         $this->assertWelcomeNotificationWasSentTo($createdUser);
         Notification::assertNotSentTo($createdUser, UserOnboardingNotification::class);
