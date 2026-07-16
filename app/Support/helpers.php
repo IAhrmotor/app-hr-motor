@@ -631,15 +631,10 @@ if (! function_exists('app_role_viewer_options')) {
         }
 
         if ($user->role === User::ROLE_ADMIN) {
-            $roleLabels = array_filter(
+            return array_filter(
                 User::roleLabels(),
-                fn (string $label, string $role): bool => $role !== User::ROLE_USER && $role !== User::ROLE_HR_NEWCARS,
+                fn (string $label, string $role): bool => $role !== User::ROLE_USER,
                 ARRAY_FILTER_USE_BOTH
-            );
-
-            return array_merge(
-                $roleLabels,
-                [User::ROLE_HR_NEWCARS => User::roleLabels()[User::ROLE_HR_NEWCARS] ?? 'HR Newcars']
             );
         }
 

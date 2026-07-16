@@ -73,7 +73,6 @@ class User extends Authenticatable
             self::ROLE_ADMIN => 'Admin',
             self::ROLE_MANAGER => 'Gestor',
             self::ROLE_USER => 'Usuario',
-            self::ROLE_HR_NEWCARS => 'HR Newcars',
         ];
     }
 
@@ -98,6 +97,7 @@ class User extends Authenticatable
             self::ROLE_HUMAN_RESOURCES => 'Recursos Humanos',
             self::ROLE_SPARE_PARTS => 'Recambios',
             self::ROLE_RENTING => 'Renting',
+            self::ROLE_HR_NEWCARS => 'HR NewCars',
         ];
     }
 
@@ -371,7 +371,7 @@ class User extends Authenticatable
 
     public function getRoleLabelAttribute(): string
     {
-        $baseLabel = self::baseRoleLabels()[$this->role] ?? 'Usuario';
+        $baseLabel = self::roleLabels()[$this->role] ?? 'Usuario';
         $extraLabel = $this->extra_role ? (self::extraRoleLabels()[$this->extra_role] ?? ucfirst($this->extra_role)) : null;
 
         if (! $extraLabel) {
@@ -391,7 +391,7 @@ class User extends Authenticatable
             return self::extraRoleLabels()[$this->extra_role] ?? ucfirst((string) $this->extra_role);
         }
 
-        return self::baseRoleLabels()[$this->role] ?? 'Usuario';
+        return self::roleLabels()[$this->role] ?? 'Usuario';
     }
 
     public function getTenureBadgeAttribute(): ?array

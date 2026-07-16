@@ -54,7 +54,8 @@ class HomeHumanResourcesToolsTest extends TestCase
     public function test_hr_newcars_role_only_sees_the_basic_home_sections(): void
     {
         $user = User::factory()->create([
-            'role' => User::ROLE_HR_NEWCARS,
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_HR_NEWCARS,
             'email' => 'hrnewcars@example.com',
         ]);
 
