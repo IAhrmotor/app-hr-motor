@@ -71,7 +71,7 @@ class RoleViewerTest extends TestCase
             ->getContent();
 
         $rentingPosition = strrpos($html, 'Renting');
-        $hrNewcarsPosition = strrpos($html, 'HR Newcars');
+        $hrNewcarsPosition = strrpos($html, 'HR NewCars');
 
         $this->assertNotFalse($rentingPosition);
         $this->assertNotFalse($hrNewcarsPosition);

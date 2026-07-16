@@ -180,6 +180,10 @@ class CompanyChatDefaultGroupSyncService
             return collect([$this->ensureExtraRoleGroup($user->extra_role)->id]);
         }
 
+        if ($user->role === User::ROLE_HR_NEWCARS) {
+            return collect([$this->ensureExtraRoleGroup(User::ROLE_HR_NEWCARS)->id]);
+        }
+
         if (blank($user->role) || ! $this->isManagedBaseRole($user->role)) {
             return collect();
         }
