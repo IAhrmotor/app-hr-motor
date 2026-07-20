@@ -74,6 +74,27 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function destroyUnread(Request $request): RedirectResponse|JsonResponse
+    {
+        $authUser = $request->user();
+
+        if (! $authUser) {
+            abort(403);
+        }
+
+        $authUser->unreadNotifications()->delete();
+        app(NotificationBadgeBroadcaster::class)->broadcast($authUser);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'count' => 0,
+                'unread_count' => 0,
+            ]);
+        }
+
+        return back()->with('status', 'Se han borrado todas las notificaciones sin leer.');
+    }
+
     private function groupUnreadNotifications($authUser)
     {
         return $authUser

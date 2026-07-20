@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->whereNumber('thread')->name('forum.status.update');
     Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->whereNumber('thread')->name('forum.destroy');
     Route::get('/notificaciones/resumen', [NotificationController::class, 'summary'])->name('notifications.summary');
+    Route::delete('/notificaciones', [NotificationController::class, 'destroyUnread'])->name('notifications.destroy-unread');
     Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
     Route::get('/agenda/usuarios/{user}', [UserController::class, 'show'])->name('agenda.users.show');

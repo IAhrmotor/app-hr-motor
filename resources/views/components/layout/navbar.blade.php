@@ -295,10 +295,21 @@
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 translate-y-1"
                         class="absolute right-0 top-full mt-3 w-80 overflow-hidden rounded-2xl border border-brand-secondary/10 bg-white shadow-xl sm:w-96">
-                        <div class="flex items-center justify-between border-b border-brand-secondary/10 px-4 py-3">
+                        <div class="flex items-center justify-between gap-3 border-b border-brand-secondary/10 px-4 py-3">
                             <div>
                                 <p class="text-sm font-semibold text-brand-secondary">Notificaciones</p>
                             </div>
+
+                            <form method="POST" action="{{ route('notifications.destroy-unread') }}" class="shrink-0">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                    class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition {{ $forumUnreadNotificationCount > 0 ? 'text-red-600 hover:bg-red-50' : 'cursor-default text-brand-secondary/30' }} disabled:cursor-default disabled:hover:bg-transparent"
+                                    {{ $forumUnreadNotificationCount > 0 ? '' : 'disabled' }}
+                                    aria-label="Borrar todas las notificaciones sin leer">
+                                    Borrar todas
+                                </button>
+                            </form>
                         </div>
 
                         <div class="max-h-[28rem] overflow-y-auto p-2" data-notification-list>
