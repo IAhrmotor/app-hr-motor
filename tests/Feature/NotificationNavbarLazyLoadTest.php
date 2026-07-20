@@ -27,6 +27,7 @@ class NotificationNavbarLazyLoadTest extends TestCase
 
         $this->assertStringContainsString('Abre la campana para cargar tus notificaciones', $navbarHtml);
         $this->assertStringContainsString('data-notification-list', $navbarHtml);
+        $this->assertStringContainsString('Borrar todas', $navbarHtml);
     }
 
     public function test_notification_navbar_refreshes_the_summary_when_the_realtime_counter_updates(): void
