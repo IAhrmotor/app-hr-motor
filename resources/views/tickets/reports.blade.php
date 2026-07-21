@@ -42,11 +42,18 @@
             ->values();
         $ticketToolReportRows = collect(data_get($ticketToolReport ?? [], 'rows', []));
         $ticketToolReportTotal = (int) data_get($ticketToolReport, 'totalTickets', 0);
-        $maxClosedTickets = (int) (collect($closedReportRows ?? [])->max('totalClosedTickets') ?? 0);
+        $ticketToolRange = (string) ($ticketToolRange ?? 'all');
+        $ticketToolRangeOptions = collect($ticketToolRangeOptions ?? []);
+        $closedUsersRange = (string) ($closedUsersRange ?? 'all');
+        $closedUsersRangeOptions = collect($closedUsersRangeOptions ?? []);
+        $resolutionRange = (string) ($resolutionRange ?? 'all');
+        $resolutionRangeOptions = collect($resolutionRangeOptions ?? []);
         $resolutionRows = collect(data_get($resolutionReport ?? [], 'rows', []));
         $resolutionChartRows = $resolutionRows->sortBy('averageMinutes')->values();
         $resolutionMaxMinutes = (int) ($resolutionRows->max('averageMinutes') ?? 0);
         $resolutionOverallAverageMinutes = (int) data_get($resolutionReport, 'overallAverageMinutes', 0);
+        $dealershipRange = (string) ($dealershipRange ?? 'all');
+        $dealershipRangeOptions = collect($dealershipRangeOptions ?? []);
         $dealershipReportRows = collect(data_get($dealershipReport ?? [], 'rows', []));
         $dealershipReportTotal = (int) data_get($dealershipReport, 'totalTickets', 0);
         $polarToCartesian = function (float $centerX, float $centerY, float $radius, float $angleDeg): array {
@@ -274,43 +281,39 @@
 @endif
 
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
-    <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets cerrados por usuario</h2>
-    @if (empty($closedReportRows))
-        <div class="mt-6 rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-brand-secondary/65">No hay tickets cerrados ni clausurados para mostrar.</div>
-    @else
-        @php
-            $closedChartWidth = max(1260, count($closedReportRows) * 190);
-            $closedChartHeight = 290;
-            $closedAxisY = 220;
-            $closedMaxBarHeight = 145;
-            $closedChartLeft = 70;
-            $closedChartRight = 70;
-            $closedChartInnerWidth = $closedChartWidth - $closedChartLeft - $closedChartRight;
-        @endphp
-        <div class="mt-6 overflow-x-auto">
-            <svg viewBox="0 0 {{ $closedChartWidth }} {{ $closedChartHeight }}" class="mx-auto block h-auto" style="width: {{ $closedChartWidth }}px; max-width: 100%;" role="img" aria-label="Gráfica de tickets cerrados por usuario">
-                <line x1="{{ $closedChartLeft }}" y1="{{ $closedAxisY }}" x2="{{ $closedChartWidth - $closedChartRight }}" y2="{{ $closedAxisY }}" stroke="#cbd5e1" stroke-width="2" />
-                @foreach ($closedReportRows as $index => $row)
-                    @php
-                        $slotWidth = $closedChartInnerWidth / max(count($closedReportRows), 1);
-                        $barWidth = min(62, max(30, $slotWidth * 0.38));
-                        $barX = $closedChartLeft + ($slotWidth * $index) + (($slotWidth - $barWidth) / 2);
-                        $barHeight = $maxClosedTickets > 0 ? (($row["totalClosedTickets"] / $maxClosedTickets) * $closedMaxBarHeight) : 0;
-                        $barTop = $closedAxisY - $barHeight;
-                        $labelX = $barX + ($barWidth / 2);
-                        $barRadius = min(8, $barHeight / 2);
-                    @endphp
-                    <g>
-                        @if ($barHeight > 0)
-                            <path d="M {{ $barX }} {{ $closedAxisY }} H {{ $barX + $barWidth }} V {{ $barTop + $barRadius }} A {{ $barRadius }} {{ $barRadius }} 0 0 0 {{ $barX + $barWidth - $barRadius }} {{ $barTop }} H {{ $barX + $barRadius }} A {{ $barRadius }} {{ $barRadius }} 0 0 0 {{ $barX }} {{ $barTop + $barRadius }} Z" fill="#E51A2E" />
-                        @endif
-                        <text x="{{ $labelX }}" y="{{ max(36, $barTop - 8) }}" text-anchor="middle" fill="#0f172a" font-size="22" font-weight="800">{{ $row["totalClosedTickets"] }}</text>
-                        <text x="{{ $labelX }}" y="{{ $closedAxisY + 30 }}" text-anchor="middle" fill="#334155" font-size="16" font-weight="700">{{ $row["name"] }}</text>
-                    </g>
-                @endforeach
-            </svg>
+    <div
+        data-closed-users-report
+        data-closed-users-report-url="{{ route('tickets.reports') }}"
+        data-closed-users-range="{{ $closedUsersRange }}"
+    >
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets cerrados por usuario</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-brand-secondary/65">
+                    El filtro temporal se actualiza al instante y cambia esta gráfica sin recargar la página.
+                </p>
+            </div>
+
+            <div class="inline-flex w-fit max-w-full">
+                <select
+                    id="closed-users-range"
+                    data-closed-users-range-select
+                    class="w-auto min-w-[13rem] max-w-full rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-sm font-semibold text-brand-secondary shadow-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                    style="width: max-content;"
+                >
+                    @foreach ($closedUsersRangeOptions as $rangeKey => $rangeOption)
+                        <option value="{{ $rangeKey }}" @selected($closedUsersRange === $rangeKey)>{{ $rangeOption['label'] ?? $rangeKey }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
-    @endif
+
+        <div class="mt-6 transition-[opacity,transform] duration-300 ease-out" data-closed-users-report-body>
+            @include('tickets.partials.closed-users-report-body', [
+                'closedReportRows' => $closedReportRows,
+            ])
+        </div>
+    </div>
 </section>
 
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
@@ -378,8 +381,14 @@
             </svg>
         </div>
     @endif
+    </div>
 </section>
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+    <div
+        data-ticket-tool-report
+        data-ticket-tool-report-url="{{ route('tickets.reports') }}"
+        data-ticket-tool-range="{{ $ticketToolRange }}"
+    >
     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
             <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets por tipo de incidencia</h2>
@@ -390,8 +399,21 @@
         <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3 text-sm font-semibold text-brand-secondary/70">
             {{ $ticketToolReportTotal }} incidencias en total
         </div>
+            <div class="inline-flex w-fit max-w-full">
+                <select
+                    id="ticket-tool-range"
+                    data-ticket-tool-range-select
+                    class="w-auto min-w-[13rem] max-w-full rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-sm font-semibold text-brand-secondary shadow-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                    style="width: max-content;"
+                >
+                @foreach ($ticketToolRangeOptions as $rangeKey => $rangeOption)
+                    <option value="{{ $rangeKey }}" @selected($ticketToolRange === $rangeKey)>{{ $rangeOption['label'] ?? $rangeKey }}</option>
+                @endforeach
+            </select>
+        </div>
     </div>
 
+    <div class="mt-6 transition-[opacity,transform] duration-300 ease-out" data-ticket-tool-report-body>
     @if ($ticketToolReportRows->isEmpty())
         <div class="mt-6 rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-brand-secondary/65">
             No hay tickets suficientes para mostrar el informe por tipo de incidencia.
@@ -492,6 +514,9 @@
             </div>
         </div>
     @endif
+    </div>
+</div>
+</div>
 </section>
 
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6" data-ticket-open-history-report>
@@ -565,6 +590,11 @@
     @endif
 </section>
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+    <div
+        data-dealership-report
+        data-dealership-report-url="{{ route('tickets.reports') }}"
+        data-dealership-range="{{ $dealershipRange }}"
+    >
     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
             <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets por delegaciones</h2>
@@ -575,8 +605,21 @@
         <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3 text-sm font-semibold text-brand-secondary/70">
             {{ $dealershipReportTotal }} incidencias en total
         </div>
+        <div class="inline-flex w-fit max-w-full">
+            <select
+                id="dealership-range"
+                data-dealership-range-select
+                class="w-auto min-w-[13rem] max-w-full rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-sm font-semibold text-brand-secondary shadow-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                style="width: max-content;"
+            >
+                @foreach ($dealershipRangeOptions as $rangeKey => $rangeOption)
+                    <option value="{{ $rangeKey }}" @selected($dealershipRange === $rangeKey)>{{ $rangeOption['label'] ?? $rangeKey }}</option>
+                @endforeach
+            </select>
+        </div>
     </div>
 
+    <div class="mt-6 transition-[opacity,transform] duration-300 ease-out" data-dealership-report-body>
     @if ($dealershipReportRows->isEmpty())
         <div class="mt-6 rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-brand-secondary/65">
             No hay tickets suficientes para mostrar el informe por delegaciones.
@@ -602,10 +645,203 @@
             @endforeach
         </div>
     @endif
+    </div>
 </section>
 </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const reportOptions = @js($resolutionRangeOptions->map(fn (array $option, string $key): array => [
+            'label' => $option['label'] ?? $key,
+        ]));
+
+        const buildOptionsMarkup = (options, selectedRange) => {
+            return Object.entries(options).map(([value, option]) => {
+                const label = option?.label ?? value;
+                const selected = value === selectedRange ? ' selected' : '';
+                return `<option value="${value}"${selected}>${label}</option>`;
+            }).join('');
+        };
+
+        const createReportController = ({ root, body, select, endpoint, rangeParam, reportKey, dynamicHeader = null }) => {
+            if (!root || !body || !select || !endpoint) {
+                return null;
+            }
+
+            let controller = null;
+            let transitionTimer = null;
+
+            const setLoadingState = (isLoading) => {
+                select.disabled = isLoading;
+                body.classList.toggle('pointer-events-none', isLoading);
+            };
+
+            const setBodyTransitionState = (state) => {
+                body.classList.toggle('opacity-0', state === 'hiding');
+                body.classList.toggle('translate-y-1', state === 'hiding');
+                body.classList.toggle('opacity-100', state === 'showing');
+                body.classList.toggle('translate-y-0', state === 'showing');
+            };
+
+            body.classList.add('opacity-100', 'translate-y-0');
+
+            const swapReportMarkup = (html) => {
+                if (transitionTimer) {
+                    window.clearTimeout(transitionTimer);
+                    transitionTimer = null;
+                }
+
+                setBodyTransitionState('hiding');
+
+                transitionTimer = window.setTimeout(() => {
+                    body.innerHTML = html;
+                    body.classList.remove('opacity-0', 'translate-y-1');
+                    body.classList.add('opacity-100', 'translate-y-0');
+                    window.Alpine?.initTree?.(body);
+                    transitionTimer = null;
+                }, 180);
+            };
+
+            const loadReport = async (range) => {
+                if (controller) {
+                    controller.abort();
+                }
+
+                controller = new AbortController();
+                setLoadingState(true);
+
+                try {
+                    const url = new URL(endpoint, window.location.origin);
+                    url.searchParams.set('ajax', '1');
+                    url.searchParams.set(rangeParam, range);
+                    url.searchParams.set('report', reportKey);
+
+                    const response = await fetch(url.toString(), {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            Accept: 'application/json',
+                        },
+                        signal: controller.signal,
+                    });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const payload = await response.json();
+
+                    if (typeof payload.html === 'string') {
+                        swapReportMarkup(payload.html);
+                    }
+                } catch (error) {
+                    if (error?.name !== 'AbortError') {
+                        console.error(error);
+                    }
+                } finally {
+                    setLoadingState(false);
+                }
+            };
+
+            select.addEventListener('change', (event) => {
+                void loadReport(event.target.value);
+            });
+
+            return {
+                loadReport,
+                body,
+                select,
+                root,
+                dynamicHeader,
+            };
+        };
+
+        const closedUsersRoot = document.querySelector('[data-closed-users-report]');
+
+        if (closedUsersRoot) {
+            createReportController({
+                root: closedUsersRoot,
+                endpoint: closedUsersRoot.dataset.closedUsersReportUrl || '',
+                select: closedUsersRoot.querySelector('[data-closed-users-range-select]'),
+                body: closedUsersRoot.querySelector('[data-closed-users-report-body]'),
+                rangeParam: 'closed_users_range',
+                reportKey: 'closed_users',
+            });
+        }
+
+        const resolutionSection = Array.from(document.querySelectorAll('section')).find((section) => {
+            const title = section.querySelector('h2');
+            return title?.textContent?.includes('Tiempo medio de resolución');
+        });
+
+        if (resolutionSection && !resolutionSection.dataset.resolutionReportHydrated) {
+            const title = resolutionSection.querySelector('h2');
+
+            if (title) {
+                const header = document.createElement('div');
+                header.className = 'flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between';
+
+                const titleWrap = document.createElement('div');
+                titleWrap.appendChild(title);
+
+                const selectWrap = document.createElement('div');
+                selectWrap.className = 'inline-flex w-fit max-w-full';
+                selectWrap.innerHTML = `
+                    <select id="resolution-range" data-resolution-range-select class="w-auto min-w-[13rem] max-w-full rounded-2xl border border-brand-secondary/10 bg-white px-4 py-3 text-sm font-semibold text-brand-secondary shadow-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15" style="width: max-content;">
+                        ${buildOptionsMarkup(reportOptions, @js($resolutionRange))}
+                    </select>
+                `;
+
+                header.appendChild(titleWrap);
+                header.appendChild(selectWrap);
+                resolutionSection.insertBefore(header, resolutionSection.firstChild);
+
+                const body = document.createElement('div');
+                body.className = 'mt-6 transition-[opacity,transform] duration-300 ease-out';
+                body.dataset.resolutionReportBody = '';
+
+                while (header.nextSibling) {
+                    body.appendChild(header.nextSibling);
+                }
+
+                resolutionSection.appendChild(body);
+                resolutionSection.dataset.resolutionReportHydrated = 'true';
+
+                createReportController({
+                    root: resolutionSection,
+                    endpoint: @js(route('tickets.reports')),
+                    select: resolutionSection.querySelector('[data-resolution-range-select]'),
+                    body,
+                    rangeParam: 'resolution_range',
+                    reportKey: 'resolution',
+                });
+            }
+        }
+
+        const ticketToolRoot = document.querySelector('[data-ticket-tool-report]');
+
+        if (ticketToolRoot) {
+            createReportController({
+                root: ticketToolRoot,
+                endpoint: ticketToolRoot.dataset.ticketToolReportUrl || '',
+                select: ticketToolRoot.querySelector('[data-ticket-tool-range-select]'),
+                body: ticketToolRoot.querySelector('[data-ticket-tool-report-body]'),
+                rangeParam: 'ticket_tool_range',
+                reportKey: 'ticket_tool',
+            });
+        }
+
+        const dealershipRoot = document.querySelector('[data-dealership-report]');
+
+        if (dealershipRoot) {
+            createReportController({
+                root: dealershipRoot,
+                endpoint: dealershipRoot.dataset.dealershipReportUrl || '',
+                select: dealershipRoot.querySelector('[data-dealership-range-select]'),
+                body: dealershipRoot.querySelector('[data-dealership-report-body]'),
+                rangeParam: 'dealership_range',
+                reportKey: 'dealership',
+            });
+        }
+    });
+</script>
 @endsection
-
-
-
-
