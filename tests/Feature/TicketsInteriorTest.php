@@ -459,6 +459,252 @@ class TicketsInteriorTest extends TestCase
             ->assertDontSee('Resolución reasignada', false);
     }
 
+    public function test_ticket_reports_page_shows_a_live_filter_for_closed_tickets_by_user(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Cerrados',
+            'email' => 'gestor-cerrados@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $itRecent = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Reciente',
+            'email' => 'it-reciente@example.com',
+        ]);
+
+        $itOld = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Antiguo',
+            'email' => 'it-antiguo@example.com',
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $now = Carbon::parse('2026-07-21 12:00:00');
+        Carbon::setTestNow($now);
+
+        try {
+            $recentTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'assigned_to_user_id' => $itRecent->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-920001',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'closed',
+                'title' => 'Ticket reciente',
+                'description' => 'Debe entrar en 1 mes.',
+                'screenshots' => [],
+            ]);
+
+            $oldTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'assigned_to_user_id' => $itOld->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-920002',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'closed',
+                'title' => 'Ticket antiguo',
+                'description' => 'Debe quedar fuera de 1 mes.',
+                'screenshots' => [],
+            ]);
+
+            $this->createTicketActivityLog($recentTicket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $now->copy()->subDays(10), [
+                'assigned_to_user_id' => $itRecent->id,
+            ]);
+            $this->createTicketActivityLog($recentTicket, $itRecent, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $now->copy()->subDays(9), [
+                'status' => 'closed',
+            ]);
+
+            $this->createTicketActivityLog($oldTicket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $now->copy()->subMonths(4), [
+                'assigned_to_user_id' => $itOld->id,
+            ]);
+            $this->createTicketActivityLog($oldTicket, $itOld, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $now->copy()->subMonths(3)->subDays(2), [
+                'status' => 'closed',
+            ]);
+
+            $this->actingAs($manager)
+                ->get(route('tickets.reports'))
+                ->assertOk()
+                ->assertSee('data-closed-users-range-select', false)
+                ->assertSee('Histórico total', false)
+                ->assertSee('Últimos 6 meses', false)
+                ->assertSee('Últimos 3 meses', false)
+                ->assertSee('Último mes', false)
+                ->assertSee('Últimas 2 semanas', false)
+                ->assertSee('Última semana', false)
+                ->assertSee('Hoy', false)
+                ->assertSee('value="all"', false);
+
+            $this->assertMatchesRegularExpression('/<option value="all"[^>]*selected/', $this->actingAs($manager)->get(route('tickets.reports'))->getContent());
+
+            $ajaxResponse = $this->actingAs($manager)
+                ->get(route('tickets.reports', [
+                    'ajax' => 1,
+                    'closed_users_range' => '1m',
+                ]));
+
+            $ajaxResponse->assertOk()->assertJsonStructure(['html']);
+            $html = (string) $ajaxResponse->json('html');
+
+            $this->assertStringContainsString('IT Reciente', $html);
+            $this->assertStringNotContainsString('IT Antiguo', $html);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_ticket_reports_page_can_filter_resolution_time_in_real_time(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Resolución',
+            'email' => 'gestor-resolucion@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $itRecent = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Resolución Reciente',
+            'email' => 'it-resolucion-reciente@example.com',
+            'it_monday_start' => '09:00',
+            'it_monday_end' => '18:00',
+            'it_tuesday_start' => '09:00',
+            'it_tuesday_end' => '18:00',
+            'it_wednesday_start' => '09:00',
+            'it_wednesday_end' => '18:00',
+            'it_thursday_start' => '09:00',
+            'it_thursday_end' => '18:00',
+            'it_friday_start' => '09:00',
+            'it_friday_end' => '18:00',
+        ]);
+
+        $itOld = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'IT Resolución Antiguo',
+            'email' => 'it-resolucion-antiguo@example.com',
+            'it_monday_start' => '09:00',
+            'it_monday_end' => '18:00',
+            'it_tuesday_start' => '09:00',
+            'it_tuesday_end' => '18:00',
+            'it_wednesday_start' => '09:00',
+            'it_wednesday_end' => '18:00',
+            'it_thursday_start' => '09:00',
+            'it_thursday_end' => '18:00',
+            'it_friday_start' => '09:00',
+            'it_friday_end' => '18:00',
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $now = Carbon::parse('2026-07-21 12:00:00');
+        Carbon::setTestNow($now);
+
+        try {
+            $recentTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'assigned_to_user_id' => $itRecent->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-930001',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'closed',
+                'title' => 'Ticket resolución reciente',
+                'description' => 'Debe entrar en el filtro de un mes.',
+                'screenshots' => [],
+            ]);
+
+            $oldTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'assigned_to_user_id' => $itOld->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-930002',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'closed',
+                'title' => 'Ticket resolución antiguo',
+                'description' => 'Debe quedarse fuera del filtro de un mes.',
+                'screenshots' => [],
+            ]);
+
+            $recentTicket->forceFill([
+                'created_at' => $now->copy()->subDays(12),
+                'updated_at' => $now->copy()->subDays(12),
+            ])->saveQuietly();
+
+            $oldTicket->forceFill([
+                'created_at' => $now->copy()->subMonths(4),
+                'updated_at' => $now->copy()->subMonths(4),
+            ])->saveQuietly();
+
+            $this->createTicketActivityLog($recentTicket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $now->copy()->subDays(8), [
+                'assigned_to_user_id' => $itRecent->id,
+            ]);
+            $this->createTicketActivityLog($recentTicket, $itRecent, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $now->copy()->subDays(8)->addMinute(), [
+                'previous_status' => 'new',
+                'status' => 'in_progress',
+            ]);
+            $this->createTicketActivityLog($recentTicket, $itRecent, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $now->copy()->subDays(7), [
+                'status' => 'closed',
+            ]);
+
+            $this->createTicketActivityLog($oldTicket, $manager, TicketActivityLog::EVENT_ASSIGNED, 'Asignado', $now->copy()->subMonths(4), [
+                'assigned_to_user_id' => $itOld->id,
+            ]);
+            $this->createTicketActivityLog($oldTicket, $itOld, TicketActivityLog::EVENT_STATUS_CHANGED, 'Estado cambiado a En curso', $now->copy()->subMonths(4)->addMinute(), [
+                'previous_status' => 'new',
+                'status' => 'in_progress',
+            ]);
+            $this->createTicketActivityLog($oldTicket, $itOld, TicketActivityLog::EVENT_CLOSED, 'Cerrado', $now->copy()->subMonths(3)->subDays(1), [
+                'status' => 'closed',
+            ]);
+
+            $response = $this->actingAs($manager)
+                ->get(route('tickets.reports', [
+                    'ajax' => 1,
+                    'report' => 'resolution',
+                    'resolution_range' => '1m',
+                ]));
+
+            $response->assertOk()->assertJsonStructure(['html']);
+
+            $html = (string) $response->json('html');
+            $this->assertStringContainsString('IT Resolución Reciente', $html);
+            $this->assertStringNotContainsString('IT Resolución Antiguo', $html);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_ticket_reports_page_shows_tickets_by_tool_with_legend_and_total(): void
     {
         $manager = User::factory()->create([
@@ -526,11 +772,101 @@ class TicketsInteriorTest extends TestCase
             ->get(route('tickets.reports'))
             ->assertOk()
             ->assertSee('Tickets por tipo de incidencia', false)
+            ->assertSee('data-ticket-tool-range-select', false)
+            ->assertSee('Histórico total', false)
+            ->assertSee('Últimos 6 meses', false)
+            ->assertSee('Últimos 3 meses', false)
+            ->assertSee('Último mes', false)
+            ->assertSee('Últimas 2 semanas', false)
+            ->assertSee('Última semana', false)
+            ->assertSee('Hoy', false)
             ->assertSee('Web HR Motor', false)
             ->assertSee('ERP', false)
             ->assertSee('3 incidencias en total', false)
             ->assertSee('2', false)
             ->assertSee('1', false);
+    }
+
+    public function test_ticket_reports_page_can_filter_ticket_tools_in_real_time(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Tipos',
+            'email' => 'gestor-tipos@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $toolRecent = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $toolOld = TicketTool::query()->create([
+            'name' => 'ERP',
+            'color' => '#e11d48',
+        ]);
+
+        $now = Carbon::parse('2026-07-21 12:00:00');
+        Carbon::setTestNow($now);
+
+        try {
+            $recentTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'ticket_tool_id' => $toolRecent->id,
+                'number' => 'IT-940001',
+                'tool' => $toolRecent->name,
+                'priority' => 'medium',
+                'status' => 'new',
+                'title' => 'Tipo reciente',
+                'description' => 'Debe entrar en el filtro de un mes.',
+                'screenshots' => [],
+            ]);
+
+            $oldTicket = ItTicket::query()->create([
+                'user_id' => $manager->id,
+                'ticket_tool_id' => $toolOld->id,
+                'number' => 'IT-940002',
+                'tool' => $toolOld->name,
+                'priority' => 'medium',
+                'status' => 'closed',
+                'title' => 'Tipo antiguo',
+                'description' => 'Debe quedarse fuera del filtro de un mes.',
+                'screenshots' => [],
+            ]);
+
+            $recentTicket->forceFill([
+                'created_at' => $now->copy()->subDays(12),
+                'updated_at' => $now->copy()->subDays(12),
+            ])->saveQuietly();
+
+            $oldTicket->forceFill([
+                'created_at' => $now->copy()->subMonths(4),
+                'updated_at' => $now->copy()->subMonths(4),
+            ])->saveQuietly();
+
+            $response = $this->actingAs($manager)
+                ->get(route('tickets.reports', [
+                    'ajax' => 1,
+                    'report' => 'ticket_tool',
+                    'ticket_tool_range' => '1m',
+                ]));
+
+            $response->assertOk()->assertJsonStructure(['html']);
+
+            $html = (string) $response->json('html');
+            $this->assertStringContainsString('Web HR Motor', $html);
+            $this->assertStringNotContainsString('ERP', $html);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_ticket_reports_page_shows_a_thirty_day_open_tickets_line_chart(): void
@@ -731,9 +1067,126 @@ class TicketsInteriorTest extends TestCase
             ->get(route('tickets.reports'))
             ->assertOk()
             ->assertSee('Tickets por delegaciones', false)
+            ->assertSee('data-dealership-range-select', false)
             ->assertSee('Delegación Norte', false)
             ->assertSee('Delegación Sur', false)
             ->assertSee('3 incidencias en total', false);
+    }
+
+    public function test_ticket_reports_page_can_filter_tickets_by_dealership_in_real_time(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_INFORMATION_TECHNOLOGY,
+            'name' => 'Gestor Delegaciones Filtro',
+            'email' => 'gestor-delegaciones-filtro@example.com',
+        ]);
+
+        AdminPermissionGrant::query()->create([
+            'permission_key' => 'tickets-it.manage',
+            'user_id' => $manager->id,
+            'group_id' => null,
+            'group_role' => null,
+            'granted_by_user_id' => null,
+        ]);
+
+        $northDealership = Dealership::query()->create([
+            'name' => 'Delegación Norte Filtro',
+        ]);
+
+        $southDealership = Dealership::query()->create([
+            'name' => 'Delegación Sur Filtro',
+        ]);
+
+        $northUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'name' => 'Solicitante Norte Filtro',
+            'email' => 'solicitante-norte-filtro@example.com',
+            'dealership_id' => $northDealership->id,
+        ]);
+
+        $southUser = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'name' => 'Solicitante Sur Filtro',
+            'email' => 'solicitante-sur-filtro@example.com',
+            'dealership_id' => $southDealership->id,
+        ]);
+
+        $tool = TicketTool::query()->create([
+            'name' => 'Web HR Motor',
+            'color' => '#1d4ed8',
+        ]);
+
+        $now = Carbon::parse('2026-07-21 12:00:00');
+        Carbon::setTestNow($now);
+
+        try {
+            $recentNorthTicket = ItTicket::query()->create([
+                'user_id' => $northUser->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-800101',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'new',
+                'title' => 'Ticket Norte reciente',
+                'description' => 'Debe entrar en 1 mes.',
+                'screenshots' => [],
+            ]);
+
+            $oldNorthTicket = ItTicket::query()->create([
+                'user_id' => $northUser->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-800102',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'closed',
+                'title' => 'Ticket Norte antiguo',
+                'description' => 'Debe quedar fuera de 1 mes.',
+                'screenshots' => [],
+            ]);
+
+            $southTicket = ItTicket::query()->create([
+                'user_id' => $southUser->id,
+                'ticket_tool_id' => $tool->id,
+                'number' => 'IT-800103',
+                'tool' => $tool->name,
+                'priority' => 'medium',
+                'status' => 'in_progress',
+                'title' => 'Ticket Sur antiguo',
+                'description' => 'Debe quedar fuera de 1 mes.',
+                'screenshots' => [],
+            ]);
+
+            $recentNorthTicket->forceFill([
+                'created_at' => $now->copy()->subDays(12),
+                'updated_at' => $now->copy()->subDays(12),
+            ])->saveQuietly();
+
+            $oldNorthTicket->forceFill([
+                'created_at' => $now->copy()->subMonths(4),
+                'updated_at' => $now->copy()->subMonths(4),
+            ])->saveQuietly();
+
+            $southTicket->forceFill([
+                'created_at' => $now->copy()->subMonths(5),
+                'updated_at' => $now->copy()->subMonths(5),
+            ])->saveQuietly();
+
+            $response = $this->actingAs($manager)
+                ->get(route('tickets.reports', [
+                    'ajax' => 1,
+                    'report' => 'dealership',
+                    'dealership_range' => '1m',
+                ]));
+
+            $response->assertOk()->assertJsonStructure(['html']);
+            $html = (string) $response->json('html');
+
+            $this->assertStringContainsString('Delegación Norte Filtro', $html);
+            $this->assertStringNotContainsString('Delegación Sur Filtro', $html);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_open_ticket_report_segments_link_to_filtered_ticket_list(): void
@@ -1848,4 +2301,3 @@ class TicketsInteriorTest extends TestCase
         $this->assertTrue($olderPosition < $newerPosition);
     }
 }
-

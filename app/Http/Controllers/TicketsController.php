@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
@@ -55,29 +56,67 @@ class TicketsController extends Controller
         return view('tickets.index', $viewData);
     }
 
-    public function reports(Request $request): View
+    public function reports(Request $request): View|JsonResponse
     {
         abort_unless(app_can_access_tickets($request->user()), 403);
         abort_unless(app_user_has_admin_permission($request->user(), 'tickets-it.manage'), 403);
 
         $ticketStatuses = $this->ticketStatuses();
         $openStatuses = $this->openTicketStatuses();
+        $closedUsersRange = $this->normalizeClosedUsersRange((string) $request->input('closed_users_range', 'all'));
+        $resolutionRange = $this->normalizeResolutionRange((string) $request->input('resolution_range', 'all'));
+        $ticketToolRange = $this->normalizeTicketToolRange((string) $request->input('ticket_tool_range', 'all'));
+        $dealershipRange = $this->normalizeDealershipRange((string) $request->input('dealership_range', 'all'));
+        $closedUsersRangeOptions = $this->closedUsersRangeOptions();
+        $resolutionRangeOptions = $this->resolutionRangeOptions();
+        $ticketToolRangeOptions = $this->ticketToolRangeOptions();
+        $dealershipRangeOptions = $this->dealershipRangeOptions();
+        $closedReportRows = $this->buildClosedTicketsReportRows($closedUsersRange);
+        $resolutionReport = $this->buildResolutionTimeReport($resolutionRange);
+        $ticketToolReport = $this->buildTicketToolReport($ticketToolRange);
+        $dealershipReport = $this->buildDealershipTicketReport($dealershipRange);
 
-        return view('tickets.reports', [
+        $viewData = [
             'backUrl' => route('tickets.index'),
             'heroImageUrl' => asset('images/hero/hero-informes-tickets.webp'),
             'openTicketsHistoryReport' => $this->buildOpenTicketsHistoryReport(),
-            'ticketToolReport' => $this->buildTicketToolReport(),
+            'ticketToolReport' => $ticketToolReport,
+            'ticketToolReportRows' => $ticketToolReport['rows'] ?? [],
+            'ticketToolRange' => $ticketToolRange,
+            'ticketToolRangeOptions' => $ticketToolRangeOptions,
+            'dealershipReport' => $dealershipReport,
+            'dealershipReportRows' => $dealershipReport['rows'] ?? [],
+            'dealershipRange' => $dealershipRange,
+            'dealershipRangeOptions' => $dealershipRangeOptions,
             'reportCards' => $this->buildCurrentIncidentsReportCards(),
-            'closedReportRows' => $this->buildClosedTicketsReportRows(),
-            'resolutionReport' => $this->buildResolutionTimeReport(),
-            'dealershipReport' => $this->buildDealershipTicketReport(),
+            'closedReportRows' => $closedReportRows,
+            'closedUsersRange' => $closedUsersRange,
+            'closedUsersRangeOptions' => $closedUsersRangeOptions,
+            'resolutionReport' => $resolutionReport,
+            'resolutionRange' => $resolutionRange,
+            'resolutionRangeOptions' => $resolutionRangeOptions,
             'openStatusMeta' => array_intersect_key($ticketStatuses, array_flip($openStatuses)),
             'openStatusOrder' => array_values(array_filter(
                 $openStatuses,
                 fn (string $statusKey): bool => $statusKey !== 'new'
             )),
-        ]);
+        ];
+
+        if ($request->boolean('ajax')) {
+            $report = (string) $request->input('report', 'closed_users');
+            $partialView = match ($report) {
+                'resolution' => 'tickets.partials.resolution-time-report-body',
+                'ticket_tool' => 'tickets.partials.ticket-tool-report-body',
+                'dealership' => 'tickets.partials.dealership-report-body',
+                default => 'tickets.partials.closed-users-report-body',
+            };
+
+            return response()->json([
+                'html' => view($partialView, $viewData)->render(),
+            ]);
+        }
+
+        return view('tickets.reports', $viewData);
     }
 
     public function show(Request $request, ItTicket $itTicket): View
@@ -969,8 +1008,9 @@ class TicketsController extends Controller
      *     }>
      * }
      */
-    private function buildTicketToolReport(): array
+    private function buildTicketToolReport(string $range = 'all'): array
     {
+        $window = $this->ticketToolRangeWindow($range);
         $toolMeta = collect($this->ticketTools())
             ->map(fn (array $tool, string $toolId): array => [
                 'id' => (int) $toolId,
@@ -981,6 +1021,12 @@ class TicketsController extends Controller
 
         $counts = ItTicket::query()
             ->selectRaw('COALESCE(ticket_tool_id, 0) as tool_bucket, COUNT(*) as total')
+            ->when($window['start'], function (Builder $query) use ($window): void {
+                $query->where('created_at', '>=', $window['start']);
+            })
+            ->when($window['end'], function (Builder $query) use ($window): void {
+                $query->where('created_at', '<=', $window['end']);
+            })
             ->groupByRaw('COALESCE(ticket_tool_id, 0)')
             ->pluck('total', 'tool_bucket')
             ->map(fn ($total): int => (int) $total);
@@ -1258,18 +1304,234 @@ class TicketsController extends Controller
      *     totalClosedTickets:int
      * }>
      */
-    private function buildClosedTicketsReportRows(): array
+    /**
+     * @return array<string, array{label:string,start:?Carbon,end:?Carbon}>
+     */
+    private function closedUsersRangeOptions(): array
+    {
+        $now = now();
+
+        return [
+            'all' => [
+                'label' => 'Histórico total',
+                'start' => null,
+                'end' => null,
+            ],
+            '6m' => [
+                'label' => 'Últimos 6 meses',
+                'start' => $now->copy()->subMonthsNoOverflow(6)->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+            ],
+            '3m' => [
+                'label' => 'Últimos 3 meses',
+                'start' => $now->copy()->subMonthsNoOverflow(3)->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+            ],
+            '1m' => [
+                'label' => 'Último mes',
+                'start' => $now->copy()->subMonthNoOverflow()->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+            ],
+            '2w' => [
+                'label' => 'Últimas 2 semanas',
+                'start' => $now->copy()->subWeeks(2)->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+            ],
+            '1w' => [
+                'label' => 'Última semana',
+                'start' => $now->copy()->subWeek()->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+            ],
+            'today' => [
+                'label' => 'Hoy',
+                'start' => $now->copy()->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+            ],
+        ];
+    }
+
+    private function normalizeClosedUsersRange(string $range): string
+    {
+        return array_key_exists($range, $this->closedUsersRangeOptions()) ? $range : 'all';
+    }
+
+    /**
+     * @return array<string, array{label:string,start:?Carbon,end:?Carbon}>
+     */
+    private function resolutionRangeOptions(): array
+    {
+        return $this->closedUsersRangeOptions();
+    }
+
+    /**
+     * @return array<string, array{label:string,start:?Carbon,end:?Carbon}>
+     */
+    private function ticketToolRangeOptions(): array
+    {
+        return $this->closedUsersRangeOptions();
+    }
+
+    /**
+     * @return array<string, array{label:string,start:?Carbon,end:?Carbon}>
+     */
+    private function dealershipRangeOptions(): array
+    {
+        return $this->closedUsersRangeOptions();
+    }
+
+    private function normalizeResolutionRange(string $range): string
+    {
+        return array_key_exists($range, $this->resolutionRangeOptions()) ? $range : 'all';
+    }
+
+    private function normalizeTicketToolRange(string $range): string
+    {
+        return array_key_exists($range, $this->ticketToolRangeOptions()) ? $range : 'all';
+    }
+
+    private function normalizeDealershipRange(string $range): string
+    {
+        return array_key_exists($range, $this->dealershipRangeOptions()) ? $range : 'all';
+    }
+
+    /**
+     * @return array{start:?Carbon,end:?Carbon}
+     */
+    private function closedUsersRangeWindow(string $range): array
+    {
+        $options = $this->closedUsersRangeOptions();
+
+        return [
+            'start' => $options[$range]['start'] ?? null,
+            'end' => $options[$range]['end'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array{start:?Carbon,end:?Carbon}
+     */
+    private function resolutionRangeWindow(string $range): array
+    {
+        $options = $this->resolutionRangeOptions();
+
+        return [
+            'start' => $options[$range]['start'] ?? null,
+            'end' => $options[$range]['end'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array{start:?Carbon,end:?Carbon}
+     */
+    private function ticketToolRangeWindow(string $range): array
+    {
+        $options = $this->ticketToolRangeOptions();
+
+        return [
+            'start' => $options[$range]['start'] ?? null,
+            'end' => $options[$range]['end'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array{start:?Carbon,end:?Carbon}
+     */
+    private function dealershipRangeWindow(string $range): array
+    {
+        $options = $this->dealershipRangeOptions();
+
+        return [
+            'start' => $options[$range]['start'] ?? null,
+            'end' => $options[$range]['end'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array<int, array{
+     *     id:int,
+     *     name:string,
+     *     totalClosedTickets:int
+     * }>
+     */
+    private function buildClosedTicketsReportRows(string $range = 'all'): array
     {
         $closedStatuses = $this->closedTicketStatuses();
         $assignableUsers = collect($this->assignableUsers());
         $assignableUserIds = $assignableUsers->pluck('id')->map(fn ($id): int => (int) $id)->all();
+        $window = $this->closedUsersRangeWindow($range);
 
-        $ticketsByAssignee = ItTicket::query()
+        $tickets = ItTicket::query()
             ->select(['assigned_to_user_id', 'status'])
             ->whereIn('status', $closedStatuses)
             ->whereIn('assigned_to_user_id', $assignableUserIds)
+            ->with(['activityLogs:id,it_ticket_id,actor_user_id,event,created_at,details'])
+            ->when($window['start'] || $window['end'], function (Builder $query) use ($window): void {
+                $query->whereHas('activityLogs', function (Builder $activityQuery) use ($window): void {
+                    $activityQuery->whereIn('event', [
+                        TicketActivityLog::EVENT_CLOSED,
+                        TicketActivityLog::EVENT_PERMANENTLY_CLOSED,
+                    ]);
+
+                    if ($window['start']) {
+                        $activityQuery->where('created_at', '>=', $window['start']);
+                    }
+
+                    if ($window['end']) {
+                        $activityQuery->where('created_at', '<=', $window['end']);
+                    }
+                });
+            })
             ->get()
-            ->groupBy('assigned_to_user_id');
+            ->values();
+
+        $ticketsByAssignee = $tickets->groupBy(function (ItTicket $ticket) use ($window): int {
+            $timeline = $ticket->activityLogs
+                ->sortBy(function (TicketActivityLog $log): array {
+                    return [
+                        (int) ($log->created_at?->timestamp ?? 0),
+                        (int) $log->id,
+                    ];
+                })
+                ->values();
+
+            $resolvedLog = $timeline
+                ->filter(function (TicketActivityLog $log) use ($window): bool {
+                    if (! in_array($log->event, [
+                        TicketActivityLog::EVENT_CLOSED,
+                        TicketActivityLog::EVENT_PERMANENTLY_CLOSED,
+                    ], true)) {
+                        return false;
+                    }
+
+                    if ($window['start'] && $log->created_at && $log->created_at->lt($window['start'])) {
+                        return false;
+                    }
+
+                    if ($window['end'] && $log->created_at && $log->created_at->gt($window['end'])) {
+                        return false;
+                    }
+
+                    return true;
+                })
+                ->values()
+                ->last();
+
+            if (! $resolvedLog?->created_at) {
+                return (int) $ticket->assigned_to_user_id;
+            }
+
+            $assignedLogs = $timeline
+                ->filter(function (TicketActivityLog $log) use ($resolvedLog): bool {
+                    return $log->event === TicketActivityLog::EVENT_ASSIGNED
+                        && $log->created_at !== null
+                        && $log->created_at->lessThanOrEqualTo($resolvedLog->created_at);
+                })
+                ->values();
+
+            $assignedLog = $assignedLogs->last();
+
+            return (int) data_get($assignedLog?->details, 'assigned_to_user_id', $ticket->assigned_to_user_id);
+        });
 
         return $assignableUsers
             ->map(function (array $user) use ($ticketsByAssignee): array {
@@ -1301,17 +1563,24 @@ class TicketsController extends Controller
      *     }>
      * }
      */
-    private function buildResolutionTimeReport(): array
+    private function buildResolutionTimeReport(string $range = 'all'): array
     {
         $closedStatuses = $this->closedTicketStatuses();
         $assignableUsers = collect($this->assignableUsers())->keyBy('id');
         $assignableUserIds = $assignableUsers->keys()->map(fn ($id): int => (int) $id)->all();
+        $window = $this->resolutionRangeWindow($range);
 
         $tickets = ItTicket::query()
             ->select(['id', 'assigned_to_user_id', 'status'])
             ->whereIn('status', $closedStatuses)
             ->whereIn('assigned_to_user_id', $assignableUserIds)
             ->with(['activityLogs:id,it_ticket_id,actor_user_id,event,created_at,details'])
+            ->when($window['start'], function (Builder $query) use ($window): void {
+                $query->where('created_at', '>=', $window['start']);
+            })
+            ->when($window['end'], function (Builder $query) use ($window): void {
+                $query->where('created_at', '<=', $window['end']);
+            })
             ->get();
 
         $rows = [];
@@ -1328,12 +1597,27 @@ class TicketsController extends Controller
                 })
                 ->values();
 
-            $resolvedLog = $timeline->first(function (TicketActivityLog $log): bool {
-                return in_array($log->event, [
-                    TicketActivityLog::EVENT_CLOSED,
-                    TicketActivityLog::EVENT_PERMANENTLY_CLOSED,
-                ], true);
-            });
+            $resolvedLog = $timeline
+                ->filter(function (TicketActivityLog $log) use ($window): bool {
+                    if (! in_array($log->event, [
+                        TicketActivityLog::EVENT_CLOSED,
+                        TicketActivityLog::EVENT_PERMANENTLY_CLOSED,
+                    ], true)) {
+                        return false;
+                    }
+
+                    if ($window['start'] && $log->created_at && $log->created_at->lt($window['start'])) {
+                        return false;
+                    }
+
+                    if ($window['end'] && $log->created_at && $log->created_at->gt($window['end'])) {
+                        return false;
+                    }
+
+                    return true;
+                })
+                ->values()
+                ->last();
 
             if (! $resolvedLog?->created_at) {
                 continue;
@@ -1439,14 +1723,21 @@ class TicketsController extends Controller
      *     }>
      * }
      */
-    private function buildDealershipTicketReport(): array
+    private function buildDealershipTicketReport(string $range = 'all'): array
     {
+        $window = $this->dealershipRangeWindow($range);
         $rows = ItTicket::query()
             ->select([
                 'it_tickets.id',
                 'it_tickets.user_id',
             ])
             ->with(['user.assignedDealership:id,name'])
+            ->when($window['start'], function (Builder $query) use ($window): void {
+                $query->where('created_at', '>=', $window['start']);
+            })
+            ->when($window['end'], function (Builder $query) use ($window): void {
+                $query->where('created_at', '<=', $window['end']);
+            })
             ->get()
             ->groupBy(function (ItTicket $ticket): string {
                 $dealershipId = (int) ($ticket->user?->assignedDealership?->id ?? 0);
