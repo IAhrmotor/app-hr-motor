@@ -266,7 +266,7 @@
                 @endif
 
                 <div class="relative shrink-0" @click.outside="notificationsOpen = false" data-notification-summary-url="{{ route('notifications.summary') }}">
-                    <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false; if (notificationsOpen) { window.refreshNotifications?.(); }"
+                    <button type="button" @click="notificationsOpen = !notificationsOpen; profileOpen = false; if (notificationsOpen) { window.refreshNotifications?.({ allowBrowserNotifications: false }); }"
                         class="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
                         aria-label="Ver notificaciones" :aria-expanded="notificationsOpen.toString()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -696,7 +696,7 @@
 
                                     notificationRefreshTimer = window.setTimeout(() => {
                                         notificationRefreshTimer = null;
-                                        void refreshNotifications();
+                                        void refreshNotifications({ allowBrowserNotifications: true });
                                     }, 75);
                                 }
                             });
@@ -851,7 +851,7 @@
                             `;
                         };
 
-                        const refreshNotifications = async () => {
+                        const refreshNotifications = async ({ allowBrowserNotifications = false } = {}) => {
                             if (notificationRefreshInFlight) {
                                 notificationRefreshQueued = true;
                                 return;
@@ -893,7 +893,7 @@
                                     });
 
                                     browserNotificationsSeeded = true;
-                                } else {
+                                } else if (allowBrowserNotifications) {
                                     rawNotifications.forEach((notification) => {
                                         const notificationId = String(notification.id || '');
 
@@ -906,15 +906,17 @@
                                     });
                                 }
 
-                                nextNotifications.forEach((notification) => {
-                                    const notificationId = String(notification.id || '');
+                                if (allowBrowserNotifications) {
+                                    nextNotifications.forEach((notification) => {
+                                        const notificationId = String(notification.id || '');
 
-                                    if (!notificationId || knownNotificationIds.has(notificationId)) {
-                                        return;
-                                    }
+                                        if (!notificationId || knownNotificationIds.has(notificationId)) {
+                                            return;
+                                        }
 
-                                    showBrowserNotification(notification);
-                                });
+                                        showBrowserNotification(notification);
+                                    });
+                                }
 
                                 updateNotificationBadge(count);
 

@@ -41,4 +41,16 @@ class NotificationNavbarLazyLoadTest extends TestCase
         $this->assertStringContainsString("if (payload.event === 'notifications.badge.updated')", $navbarHtml);
         $this->assertStringContainsString('void refreshNotifications();', $navbarHtml);
     }
+
+    public function test_notification_navbar_opens_without_triggering_browser_notifications_on_manual_refresh(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+
+        $this->assertStringContainsString('allowBrowserNotifications: false', $navbarHtml);
+        $this->assertStringContainsString('void refreshNotifications({ allowBrowserNotifications: true });', $navbarHtml);
+    }
 }
