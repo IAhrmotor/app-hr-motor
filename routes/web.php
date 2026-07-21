@@ -113,7 +113,7 @@ Route::middleware('auth')->group(function () {
         abort_unless(app_can_access_web(), 403);
 
         return view('tools.web-hr-motor', [
-            'hrMotorUrl' => 'https://hrmotor.com/gestor',
+            'hrMotorUrl' => config('portal.links.tools.web_hr_motor'),
         ]);
     })->name('tools.web');
 

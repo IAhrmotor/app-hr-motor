@@ -9,7 +9,7 @@ return [
         'tools' => [
             'docusign' => 'https://account.docusign.com/oauth/auth?response_type=code&scope=all%20click.manage%20me_profile%20room_forms%20room_fields%20inproductcommunication_read%20data_explorer_signing_insights%20notary_read%20notary_write%20search_read%20search_write%20webforms_manage%20dtr%20valmod_manage%20spring_read%20spring_write%20signature&client_id=2CC56DC9-4BCD-4B55-8AB0-8BA60BAE1065&redirect_uri=https://apps.docusign.com/authenticate&state=%7b%22widgetId%22:%22%40ds/send%22%2c%22xsrfToken%22:%22IYIogBvwZtz%2BEZviKPqyJlr915WEM8vmFZ14xMfBM5jq%2BBofLnLQDzRb37YARzOUNCSgjxu5e3ub3V0hoZVtzDbLaz7JvwviWui6HrM8DIybiaUP6kTN162yJKtVehy4Vm5nUroRdbTTg0cV3qpGirh%2BH3owkhvZb9GPMPNPPCE%3D%22%2c%22redirectUri%22:%22/send/authentication?back%3D%252Fhome%22%2c%22authTxnId%22:%2217f86b96-dd9d-4f8d-8d26-f741b689b5c2%22%7d',
             'google_drive' => 'https://drive.google.com',
-            'web_hr_motor' => 'https://www.hrmotor.com/',
+            'web_hr_motor' => 'https://www.hrmotor.com',
             'woffu' => 'https://hrmotor.woffu.com/v2/personal/dashboard/user',
             'salesforce_comunidad' => 'https://hrmotor.my.site.com/hrmotorcommunity/s/login/?ec=302&startURL=%2Fhrmotorcommunity%2Fs%2F',
             'lendismart' => 'https://hrmotor.lendismart.com/login',
