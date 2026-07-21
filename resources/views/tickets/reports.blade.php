@@ -282,16 +282,6 @@
 
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
     <div
-        data-dealership-report
-        data-dealership-report-url="{{ route('tickets.reports') }}"
-        data-dealership-range="{{ $dealershipRange }}"
-    >
-    <div
-        data-ticket-tool-report
-        data-ticket-tool-report-url="{{ route('tickets.reports') }}"
-        data-ticket-tool-range="{{ $ticketToolRange }}"
-    >
-    <div
         data-closed-users-report
         data-closed-users-report-url="{{ route('tickets.reports') }}"
         data-closed-users-range="{{ $closedUsersRange }}"
@@ -394,6 +384,11 @@
     </div>
 </section>
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+    <div
+        data-ticket-tool-report
+        data-ticket-tool-report-url="{{ route('tickets.reports') }}"
+        data-ticket-tool-range="{{ $ticketToolRange }}"
+    >
     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
             <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets por tipo de incidencia</h2>
@@ -521,6 +516,7 @@
     @endif
     </div>
 </div>
+</div>
 </section>
 
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6" data-ticket-open-history-report>
@@ -594,6 +590,11 @@
     @endif
 </section>
 <section class="mt-6 rounded-[2rem] border border-brand-secondary/10 bg-white p-5 shadow-sm sm:p-6">
+    <div
+        data-dealership-report
+        data-dealership-report-url="{{ route('tickets.reports') }}"
+        data-dealership-range="{{ $dealershipRange }}"
+    >
     <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
             <h2 class="text-2xl font-bold tracking-tight text-brand-secondary">Tickets por delegaciones</h2>
@@ -644,6 +645,7 @@
             @endforeach
         </div>
     @endif
+    </div>
 </section>
 </main>
 
