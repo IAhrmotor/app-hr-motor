@@ -13,6 +13,7 @@
         $selectedParticipantChatRoleLabel = $selectedParticipant?->chat_role_label ?? '';
         $selectedParticipantDealershipName = $selectedParticipant?->resolved_dealership_name ?: 'Sin delegación';
         $selectedParticipantIsDisabled = $selectedParticipant?->isDisabled() ?? false;
+        $selectedConversationIsDisabled = ! $selectedConversationIsGroup && $selectedParticipantIsDisabled;
         $composerDisabled = $selectedParticipantIsDisabled && ! $selectedConversationIsGroup;
         $selectedParticipantAvatarUrl = $selectedParticipant?->avatar_url ?? asset('images/users/hrmotor-default-user-avatar.png');
         $selectedParticipantName = $selectedParticipant?->name ?? 'Usuario';
@@ -28,6 +29,7 @@
     @endphp
     <script>
         window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
+        window.chatInitialConversationIsDisabled = @js($selectedConversationIsDisabled);
         window.chatCurrentUserId = @js($authUser->id);
         window.chatInitialConversationParticipants = @js($selectedConversationIsGroup && $selectedConversationGroup ? $selectedConversationGroup->participants->map(function ($participant) {
             return [
@@ -74,6 +76,7 @@
             data-chat-root
             data-chat-summary-url="{{ route('chat.beta.summary') }}"
             data-selected-conversation-id="{{ $selectedConversation?->id ?? '' }}"
+            data-chat-selected-conversation-is-disabled="{{ $selectedConversationIsDisabled ? '1' : '0' }}"
             data-chat-composer-disabled="{{ $composerDisabled ? '1' : '0' }}"
         >
         <div class="fixed inset-0 top-[calc(5rem+1px)] z-40 hidden bg-slate-950/20 md:hidden" data-chat-mobile-sidebar-backdrop onclick="window.chatToggleMobileSidebar?.(false)"></div>
@@ -1100,6 +1103,29 @@
                 const mentionSuggestionsList = document.querySelector('[data-chat-mention-suggestions-list]');
                 const searchInput = document.querySelector('[data-chat-search-input]');
                 const searchResults = document.querySelector('[data-chat-search-results]');
+                const clearChatSearch = () => {
+                    clearTimeout(searchDebounce);
+
+                    if (searchAbortController) {
+                        searchAbortController.abort();
+                        searchAbortController = null;
+                    }
+
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+
+                    if (searchResults) {
+                        searchResults.innerHTML = '';
+                    }
+
+                    const nextUrl = new URL(window.location.href);
+
+                    if (nextUrl.searchParams.has('search')) {
+                        nextUrl.searchParams.delete('search');
+                        window.history.replaceState(window.history.state, '', nextUrl.toString());
+                    }
+                };
                 let pollUrl = wrapper?.dataset.pollUrl;
                 const summaryRoot = document.querySelector('[data-chat-summary-url]');
                 const sidebarList = document.querySelector('[data-chat-conversations-list]');
@@ -1124,7 +1150,7 @@
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
                 const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
                 const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
-                let composerDisabled = root?.dataset.chatComposerDisabled === '1';
+                let composerDisabled = root?.dataset.chatComposerDisabled === '1' || window.chatInitialConversationIsDisabled === true;
                 const composerDisabledNotice = form?.querySelector('div[class*="bg-amber-50"][class*="border-amber-200"]');
                 const composerDisabledNoticeText = composerDisabledNotice?.querySelector('span');
                 const historyLoader = document.querySelector('[data-chat-history-loader]');
@@ -1178,9 +1204,16 @@
                         control.disabled = composerDisabled;
                     });
 
+                    if (input) {
+                        input.readOnly = composerDisabled;
+                        input.setAttribute('aria-disabled', composerDisabled ? 'true' : 'false');
+                        input.tabIndex = composerDisabled ? -1 : 0;
+                    }
+
                     composerShell?.classList.toggle('cursor-not-allowed', composerDisabled);
                     composerShell?.classList.toggle('bg-slate-50', composerDisabled);
                     composerShell?.classList.toggle('opacity-70', composerDisabled);
+                    composerShell?.classList.toggle('pointer-events-none', composerDisabled);
 
                     if (composerDisabledNotice) {
                         composerDisabledNotice.classList.toggle('hidden', !composerDisabled);
@@ -1891,7 +1924,7 @@
                 };
 
                 const focusComposer = () => {
-                    if (!input) {
+                    if (!input || composerDisabled) {
                         return;
                     }
 
@@ -3175,9 +3208,10 @@
                         clearComposerMentions();
 
                         updateHeader(payload);
+                        const conversationIsDisabled = Boolean(payload.conversation_is_disabled ?? payload.partner_is_disabled ?? false);
                         setComposerDisabledState(
-                            Boolean(payload.conversation_is_disabled),
-                            payload.conversation_is_disabled ? 'Este usuario está desactivado. No puedes enviarle mensajes, emojis ni archivos.' : ''
+                            conversationIsDisabled,
+                            conversationIsDisabled ? 'Este usuario está desactivado. No puedes enviarle mensajes, emojis ni archivos.' : ''
                         );
                         applyMessagesPayload(messages, {
                             preserveScroll,
@@ -3524,6 +3558,11 @@
                 };
 
                 const handleComposerDrop = (event) => {
+                    if (composerDisabled) {
+                        event.preventDefault();
+                        return;
+                    }
+
                     if (!isFileDragEvent(event)) {
                         return;
                     }
@@ -3542,6 +3581,11 @@
                 };
 
                 const handleComposerPaste = (event) => {
+                    if (composerDisabled) {
+                        event.preventDefault();
+                        return;
+                    }
+
                     const clipboardItems = Array.from(event.clipboardData?.items || []);
                     const pastedFiles = clipboardItems
                         .filter((item) => item.kind === 'file')
@@ -4040,6 +4084,11 @@
 
                 if (hasComposer) {
                     attachmentsButton.addEventListener('click', (event) => {
+                        if (composerDisabled) {
+                            event.preventDefault();
+                            return;
+                        }
+
                         event.preventDefault();
                         attachmentsInput.value = '';
                         attachmentsInput.click();
@@ -4059,7 +4108,16 @@
                     conversationPane.addEventListener('dragleave', handleComposerDragLeave);
                     conversationPane.addEventListener('drop', handleComposerDrop);
                     input.addEventListener('paste', handleComposerPaste);
+                    input.addEventListener('beforeinput', (event) => {
+                        if (composerDisabled) {
+                            event.preventDefault();
+                        }
+                    });
                     input.addEventListener('input', () => {
+                        if (composerDisabled) {
+                            return;
+                        }
+
                         if (!String(input.value || '').includes('@')) {
                             composerMentionIds = [];
                         }
@@ -4067,8 +4125,20 @@
                         updateComposerMentionSuggestions();
                     });
                     input.addEventListener('keyup', updateComposerMentionSuggestions);
-                    input.addEventListener('click', updateComposerMentionSuggestions);
-                    input.addEventListener('focus', updateComposerMentionSuggestions);
+                    input.addEventListener('click', () => {
+                        if (composerDisabled) {
+                            return;
+                        }
+
+                        updateComposerMentionSuggestions();
+                    });
+                    input.addEventListener('focus', () => {
+                        if (composerDisabled) {
+                            return;
+                        }
+
+                        updateComposerMentionSuggestions();
+                    });
 
                     attachmentsChips.addEventListener('click', (event) => {
                         const removeButton = event.target.closest('[data-chat-remove-attachment-index]');
@@ -4260,6 +4330,10 @@
                     }
 
                     event.preventDefault();
+                    if (link.matches('[data-chat-recipient-link]')) {
+                        clearChatSearch();
+                    }
+
                     if (window.matchMedia('(max-width: 767px)').matches) {
                         window.chatToggleMobileSidebar?.(false);
                     }
