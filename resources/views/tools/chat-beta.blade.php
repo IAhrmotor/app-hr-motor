@@ -335,13 +335,9 @@
                                 $chatGroupAvatarUrl = filled($chatGroup->avatar_url)
                                     ? $chatGroup->avatar_url
                                     : null;
-                                $groupConversationId = $groupConversation?->id;
                             @endphp
-                            <a href="{{ $groupConversationId ? route('chat.beta', ['conversation' => $groupConversationId]) : route('chat.beta', ['group' => $chatGroup->id]) }}"
+                            <a href="{{ route('chat.beta', ['group' => $chatGroup->id]) }}"
                                 data-chat-group-link
-                                @if ($groupConversationId)
-                                    data-chat-conversation-id="{{ $groupConversationId }}"
-                                @endif
                                 class="group flex w-full items-center gap-3 px-4 py-3 transition {{ $isSelectedGroup ? 'bg-brand-primary/10' : 'hover:bg-slate-50' }}">
                                 <div class="relative shrink-0">
                                     @if ($chatGroupAvatarUrl)
@@ -1150,9 +1146,7 @@
                 const summaryUrl = summaryRoot?.dataset.chatSummaryUrl;
                 const messagesUrlTemplate = wrapper?.dataset.chatMessagesUrlTemplate;
                 const storeUrlTemplate = wrapper?.dataset.chatStoreUrlTemplate;
-                let composerDisabled = root?.dataset.chatComposerDisabled === '1' || window.chatInitialConversationIsDisabled === true;
-                const composerDisabledNotice = form?.querySelector('div[class*="bg-amber-50"][class*="border-amber-200"]');
-                const composerDisabledNoticeText = composerDisabledNotice?.querySelector('span');
+                const composerDisabled = root?.dataset.chatComposerDisabled === '1';
                 const historyLoader = document.querySelector('[data-chat-history-loader]');
                 const headerGroupShell = document.querySelector('[data-chat-header-group-shell]');
                 const headerPrivateShell = document.querySelector('[data-chat-header-private-shell]');
@@ -1193,45 +1187,7 @@
                 }
 
                 const hasComposer = Boolean(wrapper && messagesContainer && form && input && pollUrl && messagesUrlTemplate && storeUrlTemplate && attachmentsInput && attachmentsButton && attachmentsPreview && attachmentsChips && composerShell && composerDropzoneHint && conversationPane && conversationDropzoneHint && chatError && emojiButton && emojiPicker && mentionSuggestionsPanel && mentionSuggestionsList);
-                const composerControls = [input, attachmentsInput, attachmentsButton, emojiButton, form?.querySelector('[data-chat-submit-button]')].filter(Boolean);
-                const setComposerDisabledState = (isDisabled, message = '') => {
-                    composerDisabled = Boolean(isDisabled);
-                    if (root) {
-                        root.dataset.chatComposerDisabled = composerDisabled ? '1' : '0';
-                    }
-
-                    composerControls.forEach((control) => {
-                        control.disabled = composerDisabled;
-                    });
-
-                    if (input) {
-                        input.readOnly = composerDisabled;
-                        input.setAttribute('aria-disabled', composerDisabled ? 'true' : 'false');
-                        input.tabIndex = composerDisabled ? -1 : 0;
-                    }
-
-                    composerShell?.classList.toggle('cursor-not-allowed', composerDisabled);
-                    composerShell?.classList.toggle('bg-slate-50', composerDisabled);
-                    composerShell?.classList.toggle('opacity-70', composerDisabled);
-                    composerShell?.classList.toggle('pointer-events-none', composerDisabled);
-
-                    if (composerDisabledNotice) {
-                        composerDisabledNotice.classList.toggle('hidden', !composerDisabled);
-                    }
-
-                    if (composerDisabledNoticeText && message) {
-                        composerDisabledNoticeText.textContent = message;
-                    }
-
-                    if (composerDisabled) {
-                        closeEmojiPicker();
-                        clearComposerMentions();
-                    }
-                };
-                setComposerDisabledState(
-                    composerDisabled,
-                    composerDisabled ? 'Este usuario está desactivado. No puedes enviarle mensajes, emojis ni archivos.' : ''
-                );
+                const canCompose = hasComposer && !composerDisabled;
                 let currentConversationIsGroup = Boolean(window.chatInitialConversationIsGroup);
                 let currentConversationParticipants = Array.isArray(window.chatInitialConversationParticipants) ? window.chatInitialConversationParticipants : [];
                 const historyPageSize = Number(wrapper?.dataset.chatMessagesPageSize || 30);
@@ -2898,9 +2854,7 @@
                         : `<span>${escapeHtml(conversation.partner_chat_role_label || '')}</span>${conversation.partner_is_disabled ? '<span class="ml-2 inline-flex align-middle text-amber-500" title="Usuario desactivado" aria-label="Usuario desactivado"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15H12.01M12 12V9M4.98207 19H19.0179C20.5615 19 21.5233 17.3256 20.7455 15.9923L13.7276 3.96153C12.9558 2.63852 11.0442 2.63852 10.2724 3.96153L3.25452 15.9923C2.47675 17.3256 3.43849 19 4.98207 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}`;
 
                     const href = isGroup
-                        ? (conversation.conversation_id
-                            ? `{{ route('chat.beta') }}?conversation=${encodeURIComponent(conversation.conversation_id)}`
-                            : `{{ route('chat.beta') }}?group=${encodeURIComponent(conversation.group_id || conversation.id)}`)
+                        ? `{{ route('chat.beta') }}?group=${encodeURIComponent(conversation.group_id || conversation.id)}`
                         : `{{ route('chat.beta') }}?conversation=${encodeURIComponent(conversation.id)}`;
                     const linkAttribute = isGroup ? 'data-chat-group-link' : 'data-chat-conversation-link';
 
@@ -3208,11 +3162,7 @@
                         clearComposerMentions();
 
                         updateHeader(payload);
-                        const conversationIsDisabled = Boolean(payload.conversation_is_disabled ?? payload.partner_is_disabled ?? false);
-                        setComposerDisabledState(
-                            conversationIsDisabled,
-                            conversationIsDisabled ? 'Este usuario está desactivado. No puedes enviarle mensajes, emojis ni archivos.' : ''
-                        );
+                        setSidebarTab(currentConversationIsGroup ? 'groups' : 'chats');
                         applyMessagesPayload(messages, {
                             preserveScroll,
                             replace: !shouldMergeHistory,
@@ -4082,7 +4032,7 @@
                     }
                 });
 
-                if (hasComposer) {
+                if (canCompose) {
                     attachmentsButton.addEventListener('click', (event) => {
                         if (composerDisabled) {
                             event.preventDefault();
@@ -4217,7 +4167,7 @@
                     });
                 }
 
-                if (hasComposer) {
+                if (canCompose) {
                     const submitButton = form.querySelector('[data-chat-submit-button]');
                     let submitButtonPointerActive = false;
                     let submitButtonPointerHandled = false;
