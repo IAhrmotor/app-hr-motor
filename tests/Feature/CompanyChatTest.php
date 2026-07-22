@@ -200,6 +200,30 @@ class CompanyChatTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_chat_messages_payload_marks_disabled_private_recipient_conversations_as_disabled(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Usuario desactivado',
+            'is_active' => false,
+            'disabled_at' => now(),
+        ]);
+
+        $this->acceptChatPolicy($sender);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->getJson(route('chat.beta.messages.index', $conversation))
+            ->assertOk()
+            ->assertJsonPath('conversation_is_disabled', true)
+            ->assertJsonPath('partner_is_disabled', true)
+            ->assertJsonPath('partner_status_label', 'Usuario desactivado');
+    }
+
     public function test_user_can_send_chat_messages_with_attachments_and_without_text(): void
     {
         $sender = User::factory()->create();
