@@ -10,7 +10,6 @@ class UserOnboardingNotification extends Notification
 {
     use Queueable;
 
-    public const TYPE_FORUM = 'onboarding.forum';
     public const TYPE_AGENDA = 'onboarding.agenda';
     public const TYPE_SALES_RANKING = 'onboarding.sales_ranking';
     public const TYPE_VEHICLE_RANKING = 'onboarding.vehicle_ranking';
@@ -25,17 +24,6 @@ class UserOnboardingNotification extends Notification
         private readonly string $linkUrl,
         private readonly string $linkLabel,
     ) {
-    }
-
-    public static function forum(): self
-    {
-        return new self(
-            self::TYPE_FORUM,
-            'Foro interno',
-            'El foro sirve para hacer preguntas a todos los compañeros, compartir dudas y ayudarse entre departamentos.',
-            route('forum.index'),
-            'Abrir foro',
-        );
     }
 
     public static function agenda(): self

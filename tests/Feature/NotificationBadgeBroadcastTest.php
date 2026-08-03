@@ -66,7 +66,7 @@ class NotificationBadgeBroadcastTest extends TestCase
 
         DB::table('notifications')->insert([
             'id' => $notificationId,
-            'type' => 'forum.thread.created',
+            'type' => 'custom.notice',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
             'data' => json_encode([

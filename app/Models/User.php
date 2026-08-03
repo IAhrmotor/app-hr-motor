@@ -262,16 +262,6 @@ class User extends Authenticatable
         return $this->belongsTo(Dealership::class, 'dealership_id');
     }
 
-    public function forumThreads(): HasMany
-    {
-        return $this->hasMany(ForumThread::class);
-    }
-
-    public function forumReplies(): HasMany
-    {
-        return $this->hasMany(ForumReply::class);
-    }
-
     public function chatFavoriteContacts(): HasMany
     {
         return $this->hasMany(CompanyChatFavoriteContact::class, 'user_id');

@@ -14,7 +14,7 @@
                 </span>
                 <h1 class="mt-4 text-2xl font-bold tracking-tight text-brand-secondary">Enviar notificación destacada</h1>
                 <p class="mt-2 text-sm leading-6 text-brand-secondary/70">
-                    Crea un aviso visible por encima de las notificaciones del foro para los usuarios activos de los roles seleccionados.
+                    Crea un aviso visible por encima de las notificaciones normales para los usuarios activos de los roles seleccionados.
                 </p>
             </div>
 

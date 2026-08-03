@@ -100,36 +100,6 @@ if (! function_exists('app_can_open_rankings_pages')) {
     }
 }
 
-if (! function_exists('app_can_access_forum')) {
-    function app_can_access_forum(?User $user = null): bool
-    {
-        $user ??= auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        $allowedRoles = [
-            User::ROLE_ADMIN,
-            User::ROLE_MANAGER,
-            User::ROLE_COMMERCIAL,
-            User::ROLE_STORE_MANAGER,
-            User::ROLE_AREA_MANAGER,
-            User::ROLE_MANAGEMENT,
-        ];
-
-        if ($user->role === User::ROLE_ADMIN) {
-            return ! app_role_viewer_active($user) || in_array(app_visible_role($user), $allowedRoles, true);
-        }
-
-        if ($user->role === User::ROLE_MANAGER) {
-            return true;
-        }
-
-        return app_user_has_any_role($user, $allowedRoles);
-    }
-}
-
 if (! function_exists('app_can_access_web')) {
     function app_can_access_web(?User $user = null): bool
     {
@@ -386,7 +356,6 @@ if (! function_exists('app_admin_permission_key_for_route')) {
             Str::startsWith($routeName, ['admin.zones.']) => 'zones.manage',
             Str::startsWith($routeName, ['admin.zone-logs.']) => 'zones.manage',
             Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
-            Str::startsWith($routeName, ['admin.forum-tags.']) => 'forum-tags.manage',
             Str::startsWith($routeName, ['admin.ticket-tools.']) => 'ticket-tools.manage',
             Str::startsWith($routeName, ['tickets.']) => 'tickets-it.manage',
             Str::startsWith($routeName, ['admin.magazine.']) => 'magazine.manage',
@@ -481,7 +450,7 @@ if (! function_exists('app_admin_visible_sections')) {
                 ],
                 [
                     'label' => 'Contenidos',
-                    'description' => 'Consulta el historial de la revista mensual, los tags del foro y los contactos en un único lugar.',
+                    'description' => 'Consulta el historial de la revista mensual, los contactos y el tablón en un único lugar.',
                     'route' => 'admin.content-logs.index',
                     'kind' => 'logs',
                     'icon' => 'content-log',

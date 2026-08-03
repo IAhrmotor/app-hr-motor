@@ -348,10 +348,27 @@ class CompanyChatController extends Controller
 
         $this->guardAgainstBrokenAttachmentUploads($request);
 
+        $allowedAttachmentMimeRule = 'mimes:jpg,jpeg,png,webp,gif,svg,pdf,txt,md,csv,doc,docx,xls,xlsx,ppt,pptx,zip,rar,json';
         $validated = $request->validate([
             'body' => ['nullable', 'string', 'max:4000'],
             'attachments' => ['nullable', 'array', 'max:4'],
-            'attachments.*' => ['file', 'max:' . self::MAX_ATTACHMENT_FILE_KILOBYTES, 'mimes:jpg,jpeg,png,webp,gif,svg,pdf,txt,md,csv,doc,docx,xls,xlsx,ppt,pptx,zip,rar'],
+            'attachments.*' => [
+                'file',
+                'max:' . self::MAX_ATTACHMENT_FILE_KILOBYTES,
+                function (string $attribute, mixed $value, \Closure $fail) use ($allowedAttachmentMimeRule): void {
+                    if (! $value instanceof UploadedFile) {
+                        return;
+                    }
+
+                    if (strtolower((string) $value->getClientOriginalExtension()) === 'rdp') {
+                        return;
+                    }
+
+                    if (validator(['file' => $value], ['file' => [$allowedAttachmentMimeRule]])->fails()) {
+                        $fail('El campo ' . $attribute . ' debe ser un archivo de tipo: jpg, jpeg, png, webp, gif, svg, pdf, txt, md, csv, doc, docx, xls, xlsx, ppt, pptx, zip, rar, json o rdp.');
+                    }
+                },
+            ],
             'mentioned_user_ids' => ['nullable', 'array'],
             'mentioned_user_ids.*' => ['integer'],
         ]);

@@ -38,16 +38,6 @@ return [
                 User::ROLE_MANAGER,
             ],
         ],
-        'forum-tags.manage' => [
-            'label' => 'Gestión de tags del foro comercial',
-            'description' => 'Crea, edita y elimina etiquetas para organizar las dudas del foro.',
-            'route' => 'admin.forum-tags.index',
-            'icon' => 'tags',
-            'default_roles' => [
-                User::ROLE_ADMIN,
-                User::ROLE_MANAGER,
-            ],
-        ],
         'ticket-tools.manage' => [
             'label' => 'Gestionar tipos de incidencia',
             'description' => 'Crea, edita y elimina los tipos de incidencia que se muestran al abrir un ticket.',
