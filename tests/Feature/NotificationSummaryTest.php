@@ -30,7 +30,7 @@ class NotificationSummaryTest extends TestCase
 
         DB::table('notifications')->insert([
             'id' => (string) Str::uuid(),
-            'type' => 'forum.thread.created',
+            'type' => 'custom.notice',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
             'data' => json_encode([
@@ -88,7 +88,7 @@ class NotificationSummaryTest extends TestCase
         DB::table('notifications')->insert([
             [
                 'id' => (string) Str::uuid(),
-                'type' => 'forum.thread.created',
+                'type' => 'custom.notice',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
                 'data' => json_encode([
@@ -104,7 +104,7 @@ class NotificationSummaryTest extends TestCase
             ],
             [
                 'id' => (string) Str::uuid(),
-                'type' => 'forum.thread.created',
+                'type' => 'custom.notice',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
                 'data' => json_encode([

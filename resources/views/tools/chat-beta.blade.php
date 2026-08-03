@@ -826,7 +826,7 @@
                     >
                         @csrf
                         <input type="hidden" name="conversation_id" value="{{ $selectedConversation->id }}">
-                        <input type="file" name="attachments[]" multiple class="hidden" data-chat-attachments-input accept="image/*,.svg,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar">
+                        <input type="file" name="attachments[]" multiple class="hidden" data-chat-attachments-input accept="image/*,.svg,.pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.json,.rdp">
 
                         @if ($composerDisabled)
                             <div class="mb-3 rounded-[1.2rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -1424,7 +1424,7 @@
                 };
                 currentMessagesFingerprint = buildMessagesFingerprint(currentMessages);
                 const favoriteUserIds = new Set(@js($favoriteUserIds ?? []));
-                const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'];
+                const allowedAttachmentExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', 'json', 'rdp'];
                 const maxAttachmentCount = 4;
                 const maxAttachmentTotalBytes = 30 * 1024 * 1024;
                 const pastedImageMimeToExtension = {

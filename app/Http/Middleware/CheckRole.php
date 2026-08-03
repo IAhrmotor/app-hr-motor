@@ -75,7 +75,6 @@ class CheckRole
             'dealerships.',
             'admin.zones.',
             'admin.contacts.',
-            'admin.forum-tags.',
             'admin.ticket-tools.',
             'admin.magazine.',
             'admin.tablon.',

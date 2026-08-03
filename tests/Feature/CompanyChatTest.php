@@ -805,6 +805,67 @@ class CompanyChatTest extends TestCase
             ->assertHeader('content-type', 'image/png');
     }
 
+    public function test_chat_accepts_json_attachments(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Marta Test',
+        ]);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => '',
+                'attachments' => [
+                    UploadedFile::fake()->create('config.json', 8, 'application/json'),
+                ],
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $message = CompanyChatMessage::query()->latest('id')->firstOrFail();
+
+        $this->assertCount(1, $message->attachments);
+        $this->assertSame('config.json', $message->attachments[0]['original_name']);
+        $this->assertSame('application/json', $message->attachments[0]['mime_type']);
+    }
+
+    public function test_chat_accepts_rdp_attachments(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Marta Test',
+        ]);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => '',
+                'attachments' => [
+                    UploadedFile::fake()->createWithContent('remote.rdp', "full address:s:example.com\r\nusername:s:usuario\r\n"),
+                ],
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $message = CompanyChatMessage::query()->latest('id')->firstOrFail();
+
+        $this->assertCount(1, $message->attachments);
+        $this->assertSame('remote.rdp', $message->attachments[0]['original_name']);
+    }
+
     public function test_user_cannot_send_chat_messages_when_total_attachment_size_is_too_large(): void
     {
         $sender = User::factory()->create();

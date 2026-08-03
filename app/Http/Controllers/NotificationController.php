@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ForumThread;
 use App\Notifications\CompanyChatMessageNotification;
 use App\Services\NotificationBadgeBroadcaster;
 use Illuminate\Http\JsonResponse;
@@ -39,16 +38,6 @@ class NotificationController extends Controller
         }
 
         app(NotificationBadgeBroadcaster::class)->broadcast($request->user());
-
-        $threadId = data_get($userNotification->data, 'thread_id');
-
-        if ($threadId && ! ForumThread::query()->whereKey($threadId)->exists()) {
-            $userNotification->delete();
-
-            return redirect()
-                ->route('forum.index')
-                ->with('error', 'Ese hilo del foro ya no existe.');
-        }
 
         $targetUrl = data_get(
             $userNotification->data,
