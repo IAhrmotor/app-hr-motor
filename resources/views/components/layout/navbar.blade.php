@@ -2,10 +2,6 @@
     $authUser = auth()->user();
     $navItems = collect(config('navigation.main', []))
         ->map(function (array $item) use ($authUser) {
-            if (($item['route'] ?? null) === 'forum.index' && ! app_can_access_forum($authUser)) {
-                return null;
-            }
-
             if (($item['route'] ?? null) === 'tools.web' && ! app_can_access_web($authUser)) {
                 return null;
             }
@@ -67,10 +63,10 @@
     $visibleRoleLabel = app_visible_role_label($authUser);
     $roleViewerActive = app_role_viewer_active($authUser);
     $roleViewerOptions = app_role_viewer_options($authUser);
-    $forumUnreadNotifications = collect();
-    $forumUnreadNotificationCount = $authUser
-        ? $authUser->unreadNotifications()->count()
-        : 0;
+    $unreadNotifications = $authUser
+        ? $authUser->unreadNotifications()->latest()->get()
+        : collect();
+    $unreadNotificationCount = $unreadNotifications->count();
 @endphp
 @php
     $navItemClass = 'inline-flex h-10 items-center whitespace-nowrap px-2 text-sm font-medium leading-none transition';
@@ -275,11 +271,11 @@
                                 d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 10-12 0v.05-.001v.701a8.967 8.967 0 00-2.312 6.022c1.733.64 3.561 1.083 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
                         </svg>
 
-                        @if ($forumUnreadNotificationCount > 0)
+                        @if ($unreadNotificationCount > 0)
                             <span
                                 class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white shadow-sm ring-2 ring-white"
                                 data-notification-badge>
-                                {{ $forumUnreadNotificationCount > 9 ? '+9' : $forumUnreadNotificationCount }}
+                                {{ $unreadNotificationCount > 9 ? '+9' : $unreadNotificationCount }}
                             </span>
                         @else
                             <span
@@ -304,8 +300,8 @@
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit"
-                                    class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition {{ $forumUnreadNotificationCount > 0 ? 'text-red-600 hover:bg-red-50' : 'cursor-default text-brand-secondary/30' }} disabled:cursor-default disabled:hover:bg-transparent"
-                                    {{ $forumUnreadNotificationCount > 0 ? '' : 'disabled' }}
+                                    class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition {{ $unreadNotificationCount > 0 ? 'text-red-600 hover:bg-red-50' : 'cursor-default text-brand-secondary/30' }} disabled:cursor-default disabled:hover:bg-transparent"
+                                    {{ $unreadNotificationCount > 0 ? '' : 'disabled' }}
                                     aria-label="Borrar todas las notificaciones sin leer">
                                     Borrar todas
                                 </button>
@@ -313,7 +309,7 @@
                         </div>
 
                         <div class="max-h-[28rem] overflow-y-auto p-2" data-notification-list>
-                            @forelse ($forumUnreadNotifications as $notification)
+                            @forelse ($unreadNotifications as $notification)
                                 @php
                                     $isPriorityNotification = (bool) data_get($notification->data, 'priority', false);
                                     $notificationTitle = data_get($notification->data, 'title', data_get($notification->data, 'message', 'Notificación'));
@@ -416,7 +412,7 @@
                         let notificationRefreshTimer = null;
                         let notificationRefreshInFlight = false;
                         let notificationRefreshQueued = false;
-                        const initialUnreadCount = @js((int) $forumUnreadNotificationCount);
+                        const initialUnreadCount = @js((int) $unreadNotificationCount);
                         const emptyStateClass = 'rounded-2xl border border-dashed border-brand-secondary/10 bg-slate-50 px-4 py-6 text-center';
                         const defaultNotificationIconUrl = @js(asset('images/users/hrmotor-default-user-avatar.png'));
 

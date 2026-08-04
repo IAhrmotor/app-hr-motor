@@ -3,10 +3,6 @@
 return [
     'main' => [
         [
-            'label' => 'Foro',
-            'route' => 'forum.index',
-        ],
-        [
             'label' => 'Rankings',
             'children' => [
                 [
@@ -108,10 +104,6 @@ return [
             [
                 'label' => 'Quiénes somos',
                 'route' => 'empresa.index',
-            ],
-            [
-                'label' => 'Foro',
-                'route' => 'forum.index',
             ],
             [
                 'label' => 'Reseñas',

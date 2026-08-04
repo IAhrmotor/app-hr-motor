@@ -83,7 +83,6 @@ Las rutas comunes incluyen:
 - `storage/app/public`
 - `public/images/users/avatars`
 - `public/images/dealerships`
-- `public/images/forum`
 - `public/revista`
 
 ## Paso 6: volver a aplicar la retencion legal de mensajes

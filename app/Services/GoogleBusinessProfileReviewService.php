@@ -178,6 +178,11 @@ class GoogleBusinessProfileReviewService
         return Schema::hasTable('google_business_profile_reviews');
     }
 
+    private function monthlySnapshotsTableExists(): bool
+    {
+        return Schema::hasTable('google_business_profile_monthly_snapshots');
+    }
+
     public function buildDuplicateReviewKey(GoogleBusinessProfileReview $review): string
     {
         $parts = [
@@ -327,6 +332,27 @@ class GoogleBusinessProfileReviewService
         $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
 
         return trim($value);
+    }
+
+    private function normalizeMonthFilter(?string $month): ?string
+    {
+        $month = trim((string) $month);
+
+        if ($month === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\\d{4})-(\\d{2})$/', $month, $matches) !== 1) {
+            return null;
+        }
+
+        [$all, $year, $monthNumber] = $matches;
+
+        if ((int) $monthNumber < 1 || (int) $monthNumber > 12) {
+            return null;
+        }
+
+        return sprintf('%04d-%02d', (int) $year, (int) $monthNumber);
     }
 
     public function canonicalGoogleReviewKey(?string $reviewName): string
@@ -772,6 +798,106 @@ class GoogleBusinessProfileReviewService
                 ]
             );
         }
+    }
+
+    /**
+     * Rebuilds monthly snapshots for a specific month or for every available review month.
+     *
+     * @return int Number of snapshots upserted
+     */
+    public function rebuildMonthlySnapshots(?string $month = null, ?array $dealershipIds = null): int
+    {
+        $this->ensureRequiredTablesExist();
+
+        if (! $this->monthlySnapshotsTableExists()) {
+            return 0;
+        }
+
+        $dealerships = Dealership::query()
+            ->withoutSalamanca()
+            ->when($dealershipIds !== null, fn ($query) => $query->whereIn('id', $dealershipIds))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        if ($dealerships->isEmpty()) {
+            return 0;
+        }
+
+        $reviews = GoogleBusinessProfileReview::query()
+            ->withoutSalamanca()
+            ->whereIn('dealership_id', $dealerships->pluck('id')->all())
+            ->whereNotNull('review_created_at')
+            ->orderBy('review_created_at')
+            ->orderBy('id')
+            ->get(['dealership_id', 'rating', 'reply_comment', 'review_created_at']);
+
+        if ($reviews->isEmpty()) {
+            return 0;
+        }
+
+        $selectedMonths = $month !== null
+            ? collect([$this->normalizeMonthFilter($month)])
+            : $reviews
+                ->groupBy(fn (GoogleBusinessProfileReview $review): string => $review->review_created_at?->format('Y-m') ?? '')
+                ->keys();
+
+        $selectedMonths = $selectedMonths
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($selectedMonths->isEmpty()) {
+            return 0;
+        }
+
+        $reviewsByDealership = $reviews->groupBy('dealership_id');
+        $upsertedCount = 0;
+
+        foreach ($selectedMonths as $monthKey) {
+            $snapshotMonth = Carbon::createFromFormat('Y-m', $monthKey)->startOfMonth();
+            $monthStart = $snapshotMonth->copy()->startOfMonth();
+            $monthEnd = $snapshotMonth->copy()->endOfMonth();
+            $capturedAt = $monthEnd->copy()->endOfDay();
+
+            foreach ($dealerships as $dealership) {
+                /** @var Collection<int, GoogleBusinessProfileReview> $dealershipReviews */
+                $dealershipReviews = $reviewsByDealership->get($dealership->id, collect());
+                $reviewsUpToMonth = $dealershipReviews->filter(function (GoogleBusinessProfileReview $review) use ($monthEnd): bool {
+                    return $review->review_created_at !== null && $review->review_created_at->lte($monthEnd);
+                });
+
+                if ($reviewsUpToMonth->isEmpty()) {
+                    continue;
+                }
+
+                $monthReviews = $reviewsUpToMonth->filter(function (GoogleBusinessProfileReview $review) use ($monthStart, $monthEnd): bool {
+                    return $review->review_created_at !== null
+                        && $review->review_created_at->betweenIncluded($monthStart, $monthEnd);
+                });
+
+                GoogleBusinessProfileMonthlySnapshot::query()->updateOrCreate(
+                    [
+                        'dealership_id' => $dealership->id,
+                        'snapshot_month' => $snapshotMonth->toDateString(),
+                    ],
+                    [
+                        'total_reviews' => $reviewsUpToMonth->count(),
+                        'average_rating' => $reviewsUpToMonth->avg('rating'),
+                        'monthly_reviews' => $monthReviews->count(),
+                        'monthly_average_rating' => $monthReviews->avg('rating'),
+                        'unanswered_reviews' => $reviewsUpToMonth->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+                        'captured_at' => $capturedAt,
+                    ]
+                );
+
+                $upsertedCount++;
+            }
+        }
+
+        Cache::forget('reviews.index.dashboard.v1');
+
+        return $upsertedCount;
     }
 
     private function syncLocation(

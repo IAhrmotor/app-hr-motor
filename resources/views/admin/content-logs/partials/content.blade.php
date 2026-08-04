@@ -9,7 +9,6 @@
 
     $contentTypeLabel = match ($contentType ?? null) {
         \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE => 'Revista mensual',
-        \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG => 'Tags del foro',
         \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT => 'Contactos',
         \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN => 'Tablón',
         default => 'Todo el contenido',
@@ -23,7 +22,7 @@
                 <span class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">Historial</span>
                 <h1 class="mt-3 text-3xl font-semibold text-brand-secondary md:text-4xl">Logs de contenidos</h1>
                 <p class="mt-3 text-sm leading-6 text-brand-secondary/70 md:text-base">
-                    Aqui puedes revisar los cambios de la revista mensual, los tags del foro y los contactos en un unico historial.
+                    Aqui puedes revisar los cambios de la revista mensual, los contactos y el tablón en un único historial.
                 </p>
             </div>
 
@@ -45,7 +44,6 @@
                                 <div data-display-content-type class="pointer-events-none pr-10 text-base font-semibold text-brand-secondary">
                                     {{ match ($contentType) {
                                         \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE => 'Revista mensual',
-                                        \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG => 'Tags del foro',
                                         \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT => 'Contactos',
                                         \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN => 'Tablón',
                                         default => 'Todo el contenido',
@@ -55,7 +53,6 @@
                                     class="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none rounded-2xl opacity-0 outline-none">
                                     <option value="">Todo el contenido</option>
                                     <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_MAGAZINE)>Revista mensual</option>
-                                    <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG)>Tags del foro</option>
                                     <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_CONTACT)>Contactos</option>
                                     <option value="{{ \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN }}" @selected(($contentType ?? null) === \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)>Tablón</option>
                                 </select>

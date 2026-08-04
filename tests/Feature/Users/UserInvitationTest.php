@@ -38,13 +38,6 @@ class UserInvitationTest extends TestCase
         Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
             $data = $notification->toDatabase($notifiable);
 
-            return $data['type'] === UserOnboardingNotification::TYPE_FORUM
-                && $data['link_url'] === route('forum.index');
-        });
-
-        Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {
-            $data = $notification->toDatabase($notifiable);
-
             return $data['type'] === UserOnboardingNotification::TYPE_AGENDA
                 && $data['link_url'] === route('agenda.index');
         });

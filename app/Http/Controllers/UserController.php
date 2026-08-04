@@ -830,7 +830,6 @@ class UserController extends Controller
     protected function onboardingNotifications(): array
     {
         return [
-            UserOnboardingNotification::forum(),
             UserOnboardingNotification::agenda(),
             UserOnboardingNotification::salesRanking(),
             UserOnboardingNotification::vehicleRanking(),

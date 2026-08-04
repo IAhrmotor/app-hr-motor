@@ -26,8 +26,6 @@ use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\ForumThreadController;
-use App\Http\Controllers\ForumTagController;
 use App\Http\Controllers\TicketToolController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyChatController;
@@ -58,13 +56,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/mi-perfil', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
-    Route::get('/foro', [ForumThreadController::class, 'index'])->name('forum.index');
-    Route::get('/foro/crear', [ForumThreadController::class, 'create'])->name('forum.create');
-    Route::post('/foro', [ForumThreadController::class, 'store'])->name('forum.store');
-    Route::get('/foro/{thread}', [ForumThreadController::class, 'show'])->whereNumber('thread')->name('forum.show');
-    Route::post('/foro/{thread}/respuestas', [ForumThreadController::class, 'reply'])->whereNumber('thread')->name('forum.reply');
-    Route::patch('/foro/{thread}/estado', [ForumThreadController::class, 'updateStatus'])->whereNumber('thread')->name('forum.status.update');
-    Route::delete('/foro/{thread}', [ForumThreadController::class, 'destroy'])->whereNumber('thread')->name('forum.destroy');
     Route::get('/notificaciones/resumen', [NotificationController::class, 'summary'])->name('notifications.summary');
     Route::delete('/notificaciones', [NotificationController::class, 'destroyUnread'])->name('notifications.destroy-unread');
     Route::get('/notificaciones/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
@@ -1564,13 +1555,6 @@ Route::middleware('auth')->group(function () {
                     'icon' => 'contacts',
                 ],
                 [
-                    'label' => 'Tags del foro',
-                    'description' => 'Crea, edita y elimina etiquetas para organizar las dudas del foro.',
-                    'route' => 'admin.forum-tags.index',
-                    'kind' => 'management',
-                    'icon' => 'tags',
-                ],
-                [
                     'label' => 'Revista mensual',
                     'description' => 'Publica la edición mensual, actualiza el texto visible de la portada y gestiona el nombre del archivo.',
                     'route' => 'admin.magazine.edit',
@@ -1579,7 +1563,7 @@ Route::middleware('auth')->group(function () {
                 ],
                 [
                     'label' => 'Notificaciones prioritarias',
-                    'description' => 'Envía avisos destacados a los roles que elijas para que aparezcan por encima de las notificaciones del foro.',
+                    'description' => 'Envía avisos destacados a los roles que elijas para que aparezcan por encima de las notificaciones normales.',
                     'route' => 'admin.notifications.create',
                     'kind' => 'management',
                     'icon' => 'notifications',
@@ -1607,7 +1591,7 @@ Route::middleware('auth')->group(function () {
                 ],
                 [
                     'label' => 'Logs de contenidos',
-                    'description' => 'Consulta el historial de la revista mensual, los tags del foro y los contactos en un único lugar.',
+                    'description' => 'Consulta el historial de la revista mensual, los contactos y el tablón en un único lugar.',
                     'route' => 'admin.content-logs.index',
                     'kind' => 'logs',
                     'icon' => 'content-log',
@@ -1714,12 +1698,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])
             ->whereNumber('dealership')
             ->name('dealerships.destroy');
-        Route::get('/foro/tags', [ForumTagController::class, 'index'])->name('admin.forum-tags.index');
-        Route::get('/foro/tags/crear', [ForumTagController::class, 'create'])->name('admin.forum-tags.create');
-        Route::post('/foro/tags', [ForumTagController::class, 'store'])->name('admin.forum-tags.store');
-        Route::get('/foro/tags/{forumTag}/editar', [ForumTagController::class, 'edit'])->name('admin.forum-tags.edit');
-        Route::put('/foro/tags/{forumTag}', [ForumTagController::class, 'update'])->name('admin.forum-tags.update');
-        Route::delete('/foro/tags/{forumTag}', [ForumTagController::class, 'destroy'])->name('admin.forum-tags.destroy');
         Route::get('/admin/herramientas-tickets', [TicketToolController::class, 'index'])->name('admin.ticket-tools.index');
         Route::get('/admin/herramientas-tickets/crear', [TicketToolController::class, 'create'])->name('admin.ticket-tools.create');
         Route::post('/admin/herramientas-tickets', [TicketToolController::class, 'store'])->name('admin.ticket-tools.store');
@@ -1736,8 +1714,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/logs/herramientas-tickets/descargar', [AdminTicketToolLogController::class, 'export'])->name('admin.ticket-tool-logs.export');
         Route::get('/admin/logs/contenidos', [AdminContentLogController::class, 'index'])->name('admin.content-logs.index');
         Route::get('/admin/logs/contenidos/descargar', [AdminContentLogController::class, 'export'])->name('admin.content-logs.export');
-        Route::redirect('/admin/logs/tags', '/admin/logs/contenidos?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
-        Route::redirect('/admin/logs/tags/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_FORUM_TAG);
         Route::get('/admin/logs/politica-aceptacion', [AdminPolicyAcceptanceLogController::class, 'index'])->name('admin.policy-acceptance-logs.index');
         Route::get('/admin/logs/politica-aceptacion/descargar', [AdminPolicyAcceptanceLogController::class, 'export'])->name('admin.policy-acceptance-logs.export');
         Route::get('/admin/logs/borrado-chats', [AdminChatRetentionLogController::class, 'index'])->name('admin.chat-retention-logs.index');

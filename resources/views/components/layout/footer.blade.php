@@ -6,10 +6,6 @@
                 return false;
             }
 
-            if (($item['route'] ?? null) === 'forum.index' && ! app_can_access_forum()) {
-                return false;
-            }
-
             if (($item['route'] ?? null) === 'videos' && ! app_can_access_videos()) {
                 return false;
             }
