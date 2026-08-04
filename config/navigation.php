@@ -20,10 +20,6 @@ return [
             ],
         ],
         [
-            'label' => 'Web',
-            'route' => 'tools.web',
-        ],
-        [
             'label' => 'Currículums',
             'route' => 'curriculums.index',
         ],

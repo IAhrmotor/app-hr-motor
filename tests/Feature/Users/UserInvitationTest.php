@@ -60,7 +60,7 @@ class UserInvitationTest extends TestCase
             $data = $notification->toDatabase($notifiable);
 
             return $data['type'] === UserOnboardingNotification::TYPE_WEB
-                && $data['link_url'] === route('tools.web');
+                && $data['link_url'] === config('portal.links.tools.web_hr_motor');
         });
 
         Notification::assertSentTo($user, UserOnboardingNotification::class, function (UserOnboardingNotification $notification, array $channels, User $notifiable): bool {

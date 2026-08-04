@@ -2,10 +2,6 @@
     $authUser = auth()->user();
     $navItems = collect(config('navigation.main', []))
         ->map(function (array $item) use ($authUser) {
-            if (($item['route'] ?? null) === 'tools.web' && ! app_can_access_web($authUser)) {
-                return null;
-            }
-
             if (($item['route'] ?? null) === 'chat.beta' && ! app_can_access_chat_beta($authUser)) {
                 return null;
             }

@@ -101,11 +101,7 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('user')
         ->name('users.show');
     Route::get('/web', function () {
-        abort_unless(app_can_access_web(), 403);
-
-        return view('tools.web-hr-motor', [
-            'hrMotorUrl' => config('portal.links.tools.web_hr_motor'),
-        ]);
+        return redirect()->away(config('portal.links.tools.web_hr_motor'));
     })->name('tools.web');
 
     Route::get('/informes', function () {
@@ -234,8 +230,7 @@ Route::middleware('auth')->group(function () {
         $salesforceLabel = $isDirectSalesforceRole ? 'Salesforce' : 'Salesforce comunidad';
         $callCenterSalesforceUrl = 'https://hrmotor.lightning.force.com';
         $itSupportUrl = app_it_support_url_for($authUser);
-        $webHrMotorUrl = app_can_access_web($authUser) ? route('tools.web') : 'https://www.hrmotor.com/';
-        $webHrMotorOpenInNewTab = ! app_can_access_web($authUser);
+        $webHrMotorUrl = config('portal.links.tools.web_hr_motor');
         $defaultToolImage = asset('images/tools/tareas-asignadas.webp');
 
         $buttonSections = [
@@ -256,7 +251,7 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Web HR Motor',
                         'url' => $webHrMotorUrl,
                         'image' => asset('images/tools/hrmotor.webp'),
-                        'open_in_new_tab' => $webHrMotorOpenInNewTab,
+                        'open_in_new_tab' => true,
                     ],
                     [
                         'label' => 'Dataprius',
