@@ -46,6 +46,21 @@ class NavigationVisibilityTest extends TestCase
         $this->assertStringNotContainsString(route('reviews.index'), $navbarHtml);
     }
 
+    public function test_navbar_does_not_include_the_web_interior_anymore(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email' => 'web-nav-check@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+
+        $this->assertStringNotContainsString(route('tools.web'), $navbarHtml);
+        $this->assertStringNotContainsString('Web HR Motor', $navbarHtml);
+    }
+
     public function test_admin_in_role_viewer_mode_sees_admin_nav_when_the_visible_role_has_admin_access(): void
     {
         $admin = User::factory()->create([
