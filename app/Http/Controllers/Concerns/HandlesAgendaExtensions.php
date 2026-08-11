@@ -6,6 +6,7 @@ use App\Models\Contact;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
+use Illuminate\Support\Str;
 
 trait HandlesAgendaExtensions
 {
@@ -43,6 +44,11 @@ trait HandlesAgendaExtensions
         $normalized = preg_replace('/\D+/', '', trim((string) $value));
 
         return $normalized === '' ? null : $normalized;
+    }
+
+    protected function normalizeAgendaText(mixed $value): string
+    {
+        return Str::ascii(Str::lower(trim((string) $value)));
     }
 
     protected function agendaExtensionExists(string $field, string $value, ?int $ignoreUserId = null, ?int $ignoreContactId = null): bool

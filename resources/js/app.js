@@ -146,6 +146,7 @@ window.imageLightbox = () => ({
     imageUrl: '',
     imageAlt: '',
     imageTitle: '',
+    imageHasTransparency: false,
     imageScale: 1,
     translateX: 0,
     translateY: 0,
@@ -231,6 +232,7 @@ window.imageLightbox = () => ({
         this.imageUrl = currentImage?.src ?? '';
         this.imageAlt = currentImage?.alt ?? '';
         this.imageTitle = currentImage?.title ?? '';
+        this.imageHasTransparency = false;
     },
     openGallery(images = [], index = 0) {
         const normalizedImages = Array.isArray(images)
@@ -276,7 +278,53 @@ window.imageLightbox = () => ({
         this.isImageOpen = false;
         this.galleryItems = [];
         this.imageIndex = 0;
+        this.imageHasTransparency = false;
         this.resetTransform();
+    },
+    detectImageTransparency(event) {
+        const image = event?.target;
+
+        if (!image || !image.naturalWidth || !image.naturalHeight) {
+            this.imageHasTransparency = false;
+            return;
+        }
+
+        try {
+            const sampleSize = 64;
+            const ratio = Math.min(
+                sampleSize / image.naturalWidth,
+                sampleSize / image.naturalHeight,
+                1
+            );
+            const width = Math.max(1, Math.round(image.naturalWidth * ratio));
+            const height = Math.max(1, Math.round(image.naturalHeight * ratio));
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+
+            if (!context) {
+                this.imageHasTransparency = false;
+                return;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            context.clearRect(0, 0, width, height);
+            context.drawImage(image, 0, 0, width, height);
+
+            const pixels = context.getImageData(0, 0, width, height).data;
+            let hasTransparency = false;
+
+            for (let index = 3; index < pixels.length; index += 4) {
+                if (pixels[index] < 255) {
+                    hasTransparency = true;
+                    break;
+                }
+            }
+
+            this.imageHasTransparency = hasTransparency;
+        } catch (error) {
+            this.imageHasTransparency = false;
+        }
     },
     async downloadImage() {
         if (!this.imageUrl) {

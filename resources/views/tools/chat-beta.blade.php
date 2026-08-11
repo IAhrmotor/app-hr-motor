@@ -31,6 +31,7 @@
         window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
         window.chatInitialConversationIsDisabled = @js($selectedConversationIsDisabled);
         window.chatCurrentUserId = @js($authUser->id);
+        window.chatActiveConversationId = @js($selectedConversation?->id ?? null);
         window.chatInitialConversationParticipants = @js($selectedConversationIsGroup && $selectedConversationGroup ? $selectedConversationGroup->participants->map(function ($participant) {
             return [
                 'id' => $participant->id,
@@ -494,7 +495,11 @@
 
                         <button
                             type="button"
-                            @click.stop="openImage({ src: @js($selectedParticipantAvatarUrl), alt: @js('Avatar de '.$selectedParticipantName), title: @js($selectedParticipantName) })"
+                            data-chat-private-header-avatar-button
+                            data-chat-private-header-avatar-src="{{ $selectedParticipantAvatarUrl }}"
+                            data-chat-private-header-avatar-alt="Avatar de {{ $selectedParticipantName }}"
+                            data-chat-private-header-avatar-title="{{ $selectedParticipantName }}"
+                            @click.stop="openImage({ src: $el.dataset.chatPrivateHeaderAvatarSrc, alt: $el.dataset.chatPrivateHeaderAvatarAlt, title: $el.dataset.chatPrivateHeaderAvatarTitle })"
                             class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                             aria-label="Ampliar imagen de {{ $selectedParticipantName }}"
                         >
@@ -996,7 +1001,7 @@
             <div class="inline-flex max-w-[calc(100vw-3rem)] flex-col items-center">
                 <div
                     x-ref="imageViewport"
-                    class="relative touch-none overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl"
+                    class="relative touch-none overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl"
                     :class="imageScale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'"
                     @wheel.prevent="handleWheel($event)"
                     @pointerdown="handlePointerDown($event)"
@@ -1022,7 +1027,7 @@
                         @dblclick="toggleZoom($event.clientX, $event.clientY)"
                         draggable="false"
                         @dragstart.prevent
-                        class="block max-h-[80vh] w-auto max-w-[calc(100vw-3rem)] select-none object-contain bg-slate-900 will-change-transform"
+                        class="block max-h-[80vh] w-auto max-w-[calc(100vw-3rem)] select-none object-contain bg-white will-change-transform"
                         :class="isDragging ? 'transition-none' : 'transition-transform duration-200'"
                         :style="`transform: translate3d(${translateX}px, ${translateY}px, 0) scale(${imageScale}); transform-origin: center center;`"
                     >
@@ -1162,6 +1167,7 @@
                 const headerPrivateRole = document.querySelector('[data-chat-private-header-role]');
                 const realtimeIndicator = document.querySelector('[data-chat-realtime-indicator]');
                 const headerAvatar = document.querySelector('[data-chat-private-header-avatar]');
+                const headerAvatarButton = document.querySelector('[data-chat-private-header-avatar-button]');
                 const headerProfileLink = document.querySelector('[data-chat-private-header-profile-link]');
                 const headerFavoriteStar = document.querySelector('[data-chat-favorite-star]');
                 const headerFavoriteToggleLabel = document.querySelector('[data-chat-favorite-toggle-label]');
@@ -2688,6 +2694,9 @@
                         return;
                     }
 
+                    cancelInlineEdit();
+                    renderMessages(currentMessages);
+
                     const formData = new FormData();
                     formData.append('_token', csrfToken);
                     formData.append('_method', 'PATCH');
@@ -2705,17 +2714,31 @@
 
                         const payload = await response.json().catch(() => ({}));
 
-                        if (requestRevision !== conversationRevision) {
-                            return;
-                        }
-
                         if (!response.ok) {
                             showChatError(payload?.message || 'No se pudo editar el mensaje.');
                             return;
                         }
 
-                        cancelInlineEdit();
-                        await loadConversation(conversationId, { pushState: false, preserveHistory: true });
+                        const updatedMessage = payload?.message
+                            ? {
+                                ...payload.message,
+                                is_pending: false,
+                            }
+                            : {
+                                ...message,
+                                body: body.trim(),
+                                rendered_body_html: escapeHtml(body.trim()),
+                                edited_at: new Date().toISOString(),
+                                is_pending: false,
+                            };
+
+                        applyMessagesPayload(
+                            mergeMessagesById(currentMessages, [updatedMessage]),
+                            {
+                                preserveScroll: 'exact',
+                                replace: true,
+                            }
+                        );
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
@@ -2824,7 +2847,23 @@
                             return;
                         }
 
-                        await loadConversation(conversationId, { pushState: false, preserveHistory: true });
+                        applyMessagesPayload(
+                            currentMessages.map((item) => {
+                                if (Number(item.id) !== Number(message.id)) {
+                                    return item;
+                                }
+
+                                return {
+                                    ...item,
+                                    deleted_at: new Date().toISOString(),
+                                    edited_at: item.edited_at || null,
+                                };
+                            }),
+                            {
+                                preserveScroll: 'exact',
+                                replace: true,
+                            }
+                        );
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
@@ -3076,9 +3115,19 @@
                         updateGroupModalAvatar(null);
                     }
 
-                    if (headerAvatar && !payload.conversation_is_group && payload.conversation_avatar_url) {
-                        headerAvatar.src = payload.conversation_avatar_url;
-                        headerAvatar.alt = `Avatar de ${payload.conversation_name || payload.partner_name || 'Usuario'}`;
+                    if (headerAvatar && !payload.conversation_is_group) {
+                        const avatarUrl = payload.partner_avatar_url || payload.conversation_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                        const avatarAlt = `Avatar de ${payload.partner_name || payload.conversation_name || 'Usuario'}`;
+
+                        headerAvatar.src = avatarUrl;
+                        headerAvatar.alt = avatarAlt;
+
+                        if (headerAvatarButton) {
+                            headerAvatarButton.dataset.chatPrivateHeaderAvatarSrc = avatarUrl;
+                            headerAvatarButton.dataset.chatPrivateHeaderAvatarAlt = avatarAlt;
+                            headerAvatarButton.dataset.chatPrivateHeaderAvatarTitle = payload.partner_name || payload.conversation_name || 'Usuario';
+                            headerAvatarButton.setAttribute('aria-label', `Ampliar imagen de ${payload.partner_name || payload.conversation_name || 'Usuario'}`);
+                        }
                     }
 
                     if (headerProfileLink) {
@@ -3170,16 +3219,18 @@
                         void subscribeRealtimeConversation(activeConversationId);
                         refreshSidebar();
 
-                        if (pushState) {
-                            const nextUrl = new URL(window.location.href);
-                            nextUrl.searchParams.set('conversation', String(activeConversationId));
-                            nextUrl.searchParams.delete('recipient');
-                            window.history.pushState({ conversationId: activeConversationId }, '', nextUrl.toString());
-                        }
-                    } catch (error) {
-                        console.error(error);
-                    }
-                };
+                if (pushState) {
+                    const nextUrl = new URL(window.location.href);
+                    nextUrl.searchParams.set('conversation', String(activeConversationId));
+                    nextUrl.searchParams.delete('recipient');
+                    window.history.pushState({ conversationId: activeConversationId }, '', nextUrl.toString());
+                }
+
+                window.chatActiveConversationId = activeConversationId;
+            } catch (error) {
+                console.error(error);
+            }
+        };
 
                 const openConversationFromLink = async (url) => {
                     try {

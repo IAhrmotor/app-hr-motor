@@ -470,11 +470,13 @@ class CompanyChatController extends Controller
 
         if ($request->expectsJson()) {
             $message = $message->load('sender');
+            $this->hydrateMessageMentions(collect([$message]), $request->user());
 
             return response()->json([
                 'message' => [
                     'id' => $message->id,
                     'body' => $message->body,
+                    'rendered_body_html' => (string) ($message->rendered_body_html ?? e((string) $message->body)),
                     'preview_text' => $message->preview_text,
                     'sender_id' => $message->sender_id,
                     'sender_name' => $message->sender?->name,
