@@ -1001,7 +1001,7 @@
             <div class="inline-flex max-w-[calc(100vw-3rem)] flex-col items-center">
                 <div
                     x-ref="imageViewport"
-                    class="relative touch-none overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl"
+                    class="relative touch-none overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl"
                     :class="imageScale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'"
                     @wheel.prevent="handleWheel($event)"
                     @pointerdown="handlePointerDown($event)"
@@ -1027,7 +1027,7 @@
                         @dblclick="toggleZoom($event.clientX, $event.clientY)"
                         draggable="false"
                         @dragstart.prevent
-                        class="block max-h-[80vh] w-auto max-w-[calc(100vw-3rem)] select-none object-contain bg-slate-900 will-change-transform"
+                        class="block max-h-[80vh] w-auto max-w-[calc(100vw-3rem)] select-none object-contain bg-white will-change-transform"
                         :class="isDragging ? 'transition-none' : 'transition-transform duration-200'"
                         :style="`transform: translate3d(${translateX}px, ${translateY}px, 0) scale(${imageScale}); transform-origin: center center;`"
                     >
