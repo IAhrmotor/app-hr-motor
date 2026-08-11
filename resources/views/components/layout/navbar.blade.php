@@ -393,7 +393,7 @@
                         }
 
                         const summaryUrl = root.dataset.notificationSummaryUrl;
-                        const badge = root.querySelector('[data-notification-badge]');
+                        const badges = Array.from(root.querySelectorAll('[data-notification-badge]'));
                         const list = root.querySelector('[data-notification-list]');
                         const knownNotificationIds = new Set(Array.from(list?.querySelectorAll('[data-notification-id]') ?? []).map((element) => String(element.dataset.notificationId || '')));
                         const knownBrowserNotificationIds = new Set();
@@ -480,17 +480,22 @@
                         const updateNotificationBadge = (count) => {
                             const nextCount = Math.max(0, Number(count) || 0);
 
-                            if (!badge) {
+                            if (!badges.length) {
                                 return;
                             }
 
-                            if (nextCount > 0) {
-                                badge.textContent = nextCount > 9 ? '+9' : String(nextCount);
-                                badge.classList.remove('hidden');
-                            } else {
-                                badge.textContent = '';
-                                badge.classList.add('hidden');
-                            }
+                            badges.forEach((badge) => {
+                                badge.hidden = nextCount <= 0;
+                                badge.setAttribute('aria-hidden', nextCount <= 0 ? 'true' : 'false');
+
+                                if (nextCount > 0) {
+                                    badge.textContent = nextCount > 9 ? '+9' : String(nextCount);
+                                    badge.classList.remove('hidden');
+                                } else {
+                                    badge.textContent = '';
+                                    badge.classList.add('hidden');
+                                }
+                            });
 
                             setPageTitleWithUnreadCount(nextCount);
                             void renderFaviconWithBadge(nextCount);
@@ -738,6 +743,29 @@
                             return 'Notification' in window && window.isSecureContext;
                         };
 
+                        const getActiveChatConversationId = () => {
+                            const value = window.chatActiveConversationId;
+                            const conversationId = Number(value || 0);
+
+                            return Number.isInteger(conversationId) && conversationId > 0 ? conversationId : 0;
+                        };
+
+                        const shouldSuppressChatBrowserNotification = (notification) => {
+                            const notificationType = String(notification.type || '');
+
+                            if (!notificationType.startsWith('chat.message.received')) {
+                                return false;
+                            }
+
+                            const notificationConversationId = Number(notification.conversation_id || 0);
+
+                            if (!notificationConversationId) {
+                                return false;
+                            }
+
+                            return notificationConversationId === getActiveChatConversationId();
+                        };
+
                         const requestBrowserNotificationPermission = async () => {
                             if (!isChatBrowserNotificationSupported() || Notification.permission !== 'default') {
                                 return;
@@ -758,6 +786,10 @@
                             const notificationType = String(notification.type || '');
 
                             if (!notificationType.startsWith('chat.message.received') && !notificationType.startsWith('it-ticket.')) {
+                                return;
+                            }
+
+                            if (shouldSuppressChatBrowserNotification(notification)) {
                                 return;
                             }
 
@@ -893,6 +925,11 @@
                                             return;
                                         }
 
+                                        if (shouldSuppressChatBrowserNotification(notification)) {
+                                            knownBrowserNotificationIds.add(notificationId);
+                                            return;
+                                        }
+
                                         showBrowserNotification(notification);
                                         knownBrowserNotificationIds.add(notificationId);
                                     });
@@ -903,6 +940,10 @@
                                         const notificationId = String(notification.id || '');
 
                                         if (!notificationId || knownNotificationIds.has(notificationId)) {
+                                            return;
+                                        }
+
+                                        if (shouldSuppressChatBrowserNotification(notification)) {
                                             return;
                                         }
 
