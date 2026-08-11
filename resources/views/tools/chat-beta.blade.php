@@ -2688,6 +2688,9 @@
                         return;
                     }
 
+                    cancelInlineEdit();
+                    renderMessages(currentMessages);
+
                     const formData = new FormData();
                     formData.append('_token', csrfToken);
                     formData.append('_method', 'PATCH');
@@ -2705,17 +2708,31 @@
 
                         const payload = await response.json().catch(() => ({}));
 
-                        if (requestRevision !== conversationRevision) {
-                            return;
-                        }
-
                         if (!response.ok) {
                             showChatError(payload?.message || 'No se pudo editar el mensaje.');
                             return;
                         }
 
-                        cancelInlineEdit();
-                        await loadConversation(conversationId, { pushState: false, preserveHistory: true });
+                        const updatedMessage = payload?.message
+                            ? {
+                                ...payload.message,
+                                is_pending: false,
+                            }
+                            : {
+                                ...message,
+                                body: body.trim(),
+                                rendered_body_html: escapeHtml(body.trim()),
+                                edited_at: new Date().toISOString(),
+                                is_pending: false,
+                            };
+
+                        applyMessagesPayload(
+                            mergeMessagesById(currentMessages, [updatedMessage]),
+                            {
+                                preserveScroll: 'exact',
+                                replace: true,
+                            }
+                        );
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
@@ -2824,7 +2841,23 @@
                             return;
                         }
 
-                        await loadConversation(conversationId, { pushState: false, preserveHistory: true });
+                        applyMessagesPayload(
+                            currentMessages.map((item) => {
+                                if (Number(item.id) !== Number(message.id)) {
+                                    return item;
+                                }
+
+                                return {
+                                    ...item,
+                                    deleted_at: new Date().toISOString(),
+                                    edited_at: item.edited_at || null,
+                                };
+                            }),
+                            {
+                                preserveScroll: 'exact',
+                                replace: true,
+                            }
+                        );
                         await refreshSidebar();
                     } catch (error) {
                         console.error(error);
