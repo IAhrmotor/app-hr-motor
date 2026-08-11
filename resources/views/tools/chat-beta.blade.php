@@ -495,7 +495,11 @@
 
                         <button
                             type="button"
-                            @click.stop="openImage({ src: @js($selectedParticipantAvatarUrl), alt: @js('Avatar de '.$selectedParticipantName), title: @js($selectedParticipantName) })"
+                            data-chat-private-header-avatar-button
+                            data-chat-private-header-avatar-src="{{ $selectedParticipantAvatarUrl }}"
+                            data-chat-private-header-avatar-alt="Avatar de {{ $selectedParticipantName }}"
+                            data-chat-private-header-avatar-title="{{ $selectedParticipantName }}"
+                            @click.stop="openImage({ src: $el.dataset.chatPrivateHeaderAvatarSrc, alt: $el.dataset.chatPrivateHeaderAvatarAlt, title: $el.dataset.chatPrivateHeaderAvatarTitle })"
                             class="group relative cursor-pointer overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
                             aria-label="Ampliar imagen de {{ $selectedParticipantName }}"
                         >
@@ -1163,6 +1167,7 @@
                 const headerPrivateRole = document.querySelector('[data-chat-private-header-role]');
                 const realtimeIndicator = document.querySelector('[data-chat-realtime-indicator]');
                 const headerAvatar = document.querySelector('[data-chat-private-header-avatar]');
+                const headerAvatarButton = document.querySelector('[data-chat-private-header-avatar-button]');
                 const headerProfileLink = document.querySelector('[data-chat-private-header-profile-link]');
                 const headerFavoriteStar = document.querySelector('[data-chat-favorite-star]');
                 const headerFavoriteToggleLabel = document.querySelector('[data-chat-favorite-toggle-label]');
@@ -3110,9 +3115,19 @@
                         updateGroupModalAvatar(null);
                     }
 
-                    if (headerAvatar && !payload.conversation_is_group && payload.conversation_avatar_url) {
-                        headerAvatar.src = payload.conversation_avatar_url;
-                        headerAvatar.alt = `Avatar de ${payload.conversation_name || payload.partner_name || 'Usuario'}`;
+                    if (headerAvatar && !payload.conversation_is_group) {
+                        const avatarUrl = payload.partner_avatar_url || payload.conversation_avatar_url || '{{ asset('images/users/hrmotor-default-user-avatar.png') }}';
+                        const avatarAlt = `Avatar de ${payload.partner_name || payload.conversation_name || 'Usuario'}`;
+
+                        headerAvatar.src = avatarUrl;
+                        headerAvatar.alt = avatarAlt;
+
+                        if (headerAvatarButton) {
+                            headerAvatarButton.dataset.chatPrivateHeaderAvatarSrc = avatarUrl;
+                            headerAvatarButton.dataset.chatPrivateHeaderAvatarAlt = avatarAlt;
+                            headerAvatarButton.dataset.chatPrivateHeaderAvatarTitle = payload.partner_name || payload.conversation_name || 'Usuario';
+                            headerAvatarButton.setAttribute('aria-label', `Ampliar imagen de ${payload.partner_name || payload.conversation_name || 'Usuario'}`);
+                        }
                     }
 
                     if (headerProfileLink) {
