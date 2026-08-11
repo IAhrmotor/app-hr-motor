@@ -33,14 +33,15 @@ class AgendaController extends Controller
     protected function paginateAgendaEntries(Request $request, string $search): LengthAwarePaginator
     {
         $normalizedSearch = $this->normalizeAgendaValue($search);
+        $normalizedSearchText = $this->normalizeAgendaText($search);
 
         $entries = $this->buildEntries()
-            ->filter(function (array $entry) use ($search, $normalizedSearch): bool {
+            ->filter(function (array $entry) use ($search, $normalizedSearch, $normalizedSearchText): bool {
                 if ($search === '') {
                     return true;
                 }
 
-                $haystack = strtolower(implode(' ', array_filter([
+                $haystack = $this->normalizeAgendaText(implode(' ', array_filter([
                     $entry['name'] ?? '',
                     $entry['email'] ?? '',
                     $entry['phone'] ?? '',
@@ -48,7 +49,7 @@ class AgendaController extends Controller
                     $entry['subtitle'] ?? '',
                 ])));
 
-                if (str_contains($haystack, strtolower($search))) {
+                if ($normalizedSearchText !== '' && str_contains($haystack, $normalizedSearchText)) {
                     return true;
                 }
 
