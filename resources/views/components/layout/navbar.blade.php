@@ -738,6 +738,29 @@
                             return 'Notification' in window && window.isSecureContext;
                         };
 
+                        const getActiveChatConversationId = () => {
+                            const value = window.chatActiveConversationId;
+                            const conversationId = Number(value || 0);
+
+                            return Number.isInteger(conversationId) && conversationId > 0 ? conversationId : 0;
+                        };
+
+                        const shouldSuppressChatBrowserNotification = (notification) => {
+                            const notificationType = String(notification.type || '');
+
+                            if (!notificationType.startsWith('chat.message.received')) {
+                                return false;
+                            }
+
+                            const notificationConversationId = Number(notification.conversation_id || 0);
+
+                            if (!notificationConversationId) {
+                                return false;
+                            }
+
+                            return notificationConversationId === getActiveChatConversationId();
+                        };
+
                         const requestBrowserNotificationPermission = async () => {
                             if (!isChatBrowserNotificationSupported() || Notification.permission !== 'default') {
                                 return;
@@ -758,6 +781,10 @@
                             const notificationType = String(notification.type || '');
 
                             if (!notificationType.startsWith('chat.message.received') && !notificationType.startsWith('it-ticket.')) {
+                                return;
+                            }
+
+                            if (shouldSuppressChatBrowserNotification(notification)) {
                                 return;
                             }
 
@@ -893,6 +920,11 @@
                                             return;
                                         }
 
+                                        if (shouldSuppressChatBrowserNotification(notification)) {
+                                            knownBrowserNotificationIds.add(notificationId);
+                                            return;
+                                        }
+
                                         showBrowserNotification(notification);
                                         knownBrowserNotificationIds.add(notificationId);
                                     });
@@ -903,6 +935,10 @@
                                         const notificationId = String(notification.id || '');
 
                                         if (!notificationId || knownNotificationIds.has(notificationId)) {
+                                            return;
+                                        }
+
+                                        if (shouldSuppressChatBrowserNotification(notification)) {
                                             return;
                                         }
 

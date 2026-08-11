@@ -31,6 +31,7 @@
         window.chatInitialConversationIsGroup = @js($selectedConversationIsGroup);
         window.chatInitialConversationIsDisabled = @js($selectedConversationIsDisabled);
         window.chatCurrentUserId = @js($authUser->id);
+        window.chatActiveConversationId = @js($selectedConversation?->id ?? null);
         window.chatInitialConversationParticipants = @js($selectedConversationIsGroup && $selectedConversationGroup ? $selectedConversationGroup->participants->map(function ($participant) {
             return [
                 'id' => $participant->id,
@@ -3203,16 +3204,18 @@
                         void subscribeRealtimeConversation(activeConversationId);
                         refreshSidebar();
 
-                        if (pushState) {
-                            const nextUrl = new URL(window.location.href);
-                            nextUrl.searchParams.set('conversation', String(activeConversationId));
-                            nextUrl.searchParams.delete('recipient');
-                            window.history.pushState({ conversationId: activeConversationId }, '', nextUrl.toString());
-                        }
-                    } catch (error) {
-                        console.error(error);
-                    }
-                };
+                if (pushState) {
+                    const nextUrl = new URL(window.location.href);
+                    nextUrl.searchParams.set('conversation', String(activeConversationId));
+                    nextUrl.searchParams.delete('recipient');
+                    window.history.pushState({ conversationId: activeConversationId }, '', nextUrl.toString());
+                }
+
+                window.chatActiveConversationId = activeConversationId;
+            } catch (error) {
+                console.error(error);
+            }
+        };
 
                 const openConversationFromLink = async (url) => {
                     try {
