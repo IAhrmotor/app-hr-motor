@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use App\Services\CompanyChatDefaultGroupSyncService;
+use App\Notifications\UserPasswordResetNotification;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -252,6 +255,16 @@ class User extends Authenticatable
         ];
     }
 
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_MANAGER], true);
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new UserPasswordResetNotification($token));
+    }
+
     public function getAvatarUrlAttribute(): string
     {
         return asset($this->avatar_path ?: self::DEFAULT_AVATAR_PATH);
@@ -330,7 +343,13 @@ class User extends Authenticatable
 
     public function isCommercialLike(): bool
     {
-        return $this->role === self::ROLE_USER && filled($this->extra_role);
+        return $this->role === self::ROLE_USER
+            && in_array($this->extra_role, [
+                self::ROLE_COMMERCIAL,
+                self::ROLE_STORE_MANAGER,
+                self::ROLE_AREA_MANAGER,
+                self::ROLE_HR_NEWCARS,
+            ], true);
     }
 
     public function isCommercialProfile(): bool
@@ -341,7 +360,12 @@ class User extends Authenticatable
     public function isRankedCommercial(): bool
     {
         return $this->role === self::ROLE_USER
-            && in_array($this->extra_role, [self::ROLE_COMMERCIAL, self::ROLE_STORE_MANAGER], true);
+            && in_array($this->extra_role, [
+                self::ROLE_COMMERCIAL,
+                self::ROLE_STORE_MANAGER,
+                self::ROLE_AREA_MANAGER,
+                self::ROLE_HR_NEWCARS,
+            ], true);
     }
 
     public function isStoreManager(): bool

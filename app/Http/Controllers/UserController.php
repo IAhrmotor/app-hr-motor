@@ -11,6 +11,7 @@ use App\Models\UserActivityLog;
 use App\Notifications\UserOnboardingNotification;
 use App\Notifications\UserWelcomeNotification;
 use App\Services\CompanyChatDefaultGroupSyncService;
+use App\Services\UserInvitationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,8 +27,6 @@ use Throwable;
 class UserController extends Controller
 {
     use HandlesAgendaExtensions;
-
-    protected const INVITATION_DELIVERY_FAILED = 'invitation_delivery_failed';
 
     public function index(Request $request): \Illuminate\Contracts\View\View|JsonResponse
     {
@@ -196,7 +195,7 @@ class UserController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', $this->invitationErrorMessage(self::INVITATION_DELIVERY_FAILED));
+                ->with('error', $this->invitationErrorMessage(UserInvitationService::DELIVERY_FAILED));
         }
 
         $this->storeActivityLog(
@@ -484,7 +483,7 @@ class UserController extends Controller
             ->with('success', 'Usuario actualizado correctamente.');
     }
 
-    public function resendInvitation(Request $request, User $user)
+    public function resendInvitation(Request $request, User $user, UserInvitationService $invitationService)
     {
         if ($response = $this->ensureCanManageListedUser($request->user(), $user, 'reenviar la invitacion', preventSelf: true)) {
             return $response;
@@ -492,41 +491,32 @@ class UserController extends Controller
 
         if ($user->isDisabled()) {
             return redirect()
-                ->route('users.index')
+                ->back()
                 ->with('error', 'No puedes reenviar la invitacion a un usuario desactivado. Reactivalo primero.');
         }
 
         if ($user->is_active && ! $user->must_change_password) {
             return redirect()
-                ->route('users.index')
+                ->back()
                 ->with('error', 'Solo puedes reenviar la invitacion a usuarios pendientes de activacion.');
         }
 
-        try {
-            $status = $this->sendInvitationLink($user);
-        } catch (Throwable $exception) {
-            report($exception);
+        $status = $invitationService->resend($user);
 
+        if ($status === UserInvitationService::DELIVERY_FAILED) {
             return redirect()
-                ->route('users.index')
-                ->with('error', $this->invitationErrorMessage(self::INVITATION_DELIVERY_FAILED));
+                ->back()
+                ->with('error', $this->invitationErrorMessage(UserInvitationService::DELIVERY_FAILED));
         }
 
         if ($status !== Password::RESET_LINK_SENT) {
             return redirect()
-                ->route('users.index')
+                ->back()
                 ->with('error', $this->invitationErrorMessage($status));
         }
 
-        $user->forceFill([
-            'is_active' => false,
-            'must_change_password' => true,
-            'activated_at' => null,
-            'invitation_sent_at' => now(),
-        ])->save();
-
         return redirect()
-            ->route('users.index')
+            ->back()
             ->with('success', 'Correo de activacion reenviado correctamente.');
     }
 
@@ -555,24 +545,22 @@ class UserController extends Controller
         return null;
     }
 
-    protected function sendInvitationLink(User $user): string
-    {
-        return Password::broker()->sendResetLink([
-            'email' => $user->email,
-        ]);
-    }
-
     protected function invitationErrorMessage(string $status): string
     {
-        if ($status === self::INVITATION_DELIVERY_FAILED) {
-            return 'No se ha podido enviar el correo de activacion. Revisa que el email sea correcto y que el dominio exista.';
+        if ($status === UserInvitationService::DELIVERY_FAILED) {
+            return 'El servidor SMTP ha rechazado el destinatario del correo de activación. Comprueba que ese buzón exista y que el servidor de correo de HR Motor lo acepte.';
         }
 
         return match ($status) {
-            Password::RESET_THROTTLED => 'Espera un momento antes de volver a enviar el correo de activacion.',
-            Password::INVALID_USER => 'No se ha encontrado un usuario valido para enviar el correo de activacion.',
-            default => 'No se ha podido enviar el correo de activacion. Intentalo de nuevo en unos minutos.',
+            Password::RESET_THROTTLED => 'Espera un momento antes de volver a enviar el correo de activación.',
+            Password::INVALID_USER => 'No se ha encontrado un usuario válido para enviar el correo de activación.',
+            default => 'No se ha podido enviar el correo de activación. Inténtalo de nuevo en unos minutos.',
         };
+    }
+
+    protected function sendInvitationLink(User $user): string
+    {
+        return app(UserInvitationService::class)->resend($user);
     }
 
     protected function storeActivityLog(
@@ -755,7 +743,12 @@ class UserController extends Controller
     protected function isRankedCommercialRole(?string $baseRole, ?string $extraRole): bool
     {
         return $baseRole === User::ROLE_USER
-            && in_array($extraRole, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER], true);
+            && in_array($extraRole, [
+                User::ROLE_COMMERCIAL,
+                User::ROLE_STORE_MANAGER,
+                User::ROLE_AREA_MANAGER,
+                User::ROLE_HR_NEWCARS,
+            ], true);
     }
 
     protected function resolveSubmittedBaseRole(Request $request, User $authUser): string

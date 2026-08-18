@@ -72,6 +72,7 @@ if (! function_exists('app_can_access_rankings')) {
             User::ROLE_COMMERCIAL,
             User::ROLE_STORE_MANAGER,
             User::ROLE_AREA_MANAGER,
+            User::ROLE_HR_NEWCARS,
             User::ROLE_MANAGEMENT,
         ];
 
