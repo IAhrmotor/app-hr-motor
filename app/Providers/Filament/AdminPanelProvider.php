@@ -34,7 +34,9 @@ class AdminPanelProvider extends PanelProvider
             ->collapsibleNavigationGroups()
             ->brandLogo(asset('images/logo-horizontal.svg'))
             ->darkModeBrandLogo(asset('images/logo-hr-white.svg'))
-            ->favicon(asset('images/favicon-black.png'))
+            ->favicon(fn (): string => request()->isSecure()
+                ? secure_asset('images/favicon-black.png')
+                : asset('images/favicon-black.png'))
             ->brandLogoHeight('2rem')
             ->renderHook(PanelsRenderHook::USER_MENU_BEFORE, fn (): string => view('filament.backoffice.theme-toggle')->render())
             ->colors([
