@@ -1666,6 +1666,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/usuarios/{user}/reenviar-invitacion', [UserController::class, 'resendInvitation'])
             ->whereNumber('user')
             ->name('users.resend-invitation');
+        Route::get('/usuarios/{user}/reenviar-invitacion', [UserController::class, 'resendInvitation'])
+            ->whereNumber('user')
+            ->name('users.resend-invitation.get');
         Route::patch('/usuarios/{user}/desactivar', [UserController::class, 'disable'])
             ->whereNumber('user')
             ->name('users.disable');

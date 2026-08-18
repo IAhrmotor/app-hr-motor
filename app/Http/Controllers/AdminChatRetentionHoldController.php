@@ -378,13 +378,8 @@ class AdminChatRetentionHoldController extends Controller
     private function ensureSchemaReady(): void
     {
         abort_unless(
-            Schema::hasColumns('company_chat_conversations', [
-                'retention_hold',
-                'retention_hold_reason',
-                'retention_hold_created_at',
-                'retention_hold_created_by',
-                'retention_hold_expires_at',
-            ]) && Schema::hasTable('company_chat_retention_hold_audits')
+            Schema::hasTable('company_chat_conversations')
+                && Schema::hasTable('company_chat_retention_hold_audits')
                 && Schema::hasTable('company_chat_retention_user_holds')
                 && Schema::hasTable('company_chat_retention_user_hold_audits'),
             503,

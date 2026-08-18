@@ -5,8 +5,8 @@ namespace Tests\Feature\Users;
 use App\Models\Dealership;
 use App\Models\User;
 use App\Notifications\UserOnboardingNotification;
+use App\Notifications\UserPasswordResetNotification;
 use App\Notifications\UserWelcomeNotification;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
@@ -124,7 +124,7 @@ class UserInvitationTest extends TestCase
         $this->assertSame($dealership->id, $createdUser->dealership_id);
         $this->assertSame(User::DEFAULT_AVATAR_PATH, $createdUser->avatar_path);
 
-        Notification::assertSentTo($createdUser, ResetPassword::class);
+        Notification::assertSentTo($createdUser, UserPasswordResetNotification::class);
         $this->assertWelcomeNotificationWasSentTo($createdUser);
         $this->assertOnboardingNotificationsWereSentTo($createdUser);
     }
@@ -162,7 +162,7 @@ class UserInvitationTest extends TestCase
         $this->assertSame('Bilbao', $createdUser->dealership);
         $this->assertSame($dealership->id, $createdUser->dealership_id);
 
-        Notification::assertSentTo($createdUser, ResetPassword::class);
+        Notification::assertSentTo($createdUser, UserPasswordResetNotification::class);
         $this->assertWelcomeNotificationWasSentTo($createdUser);
         $this->assertOnboardingNotificationsWereSentTo($createdUser);
     }
@@ -180,6 +180,7 @@ class UserInvitationTest extends TestCase
             'email' => 'area.manager@example.com',
             'role' => User::ROLE_USER,
             'extra_role' => User::ROLE_AREA_MANAGER,
+            'salesforce_user_id' => 'SF-AREA-001',
         ]));
 
         $createdUser = User::where('email', 'area.manager@example.com')->first();
@@ -189,7 +190,8 @@ class UserInvitationTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertNotNull($createdUser);
-        Notification::assertSentTo($createdUser, ResetPassword::class);
+        $this->assertSame('SF-AREA-001', $createdUser->salesforce_user_id);
+        Notification::assertSentTo($createdUser, UserPasswordResetNotification::class);
         $this->assertWelcomeNotificationWasSentTo($createdUser);
         $this->assertOnboardingNotificationsWereSentTo($createdUser);
     }
@@ -215,7 +217,7 @@ class UserInvitationTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertNotNull($createdUser);
-        Notification::assertSentTo($createdUser, ResetPassword::class);
+        Notification::assertSentTo($createdUser, UserPasswordResetNotification::class);
         $this->assertWelcomeNotificationWasSentTo($createdUser);
         Notification::assertNotSentTo($createdUser, UserOnboardingNotification::class);
     }
@@ -233,6 +235,7 @@ class UserInvitationTest extends TestCase
             'email' => 'hr.newcars@example.com',
             'role' => User::ROLE_USER,
             'extra_role' => User::ROLE_HR_NEWCARS,
+            'salesforce_user_id' => 'SF-NEWCARS-001',
         ]));
 
         $createdUser = User::where('email', 'hr.newcars@example.com')->first();
@@ -244,7 +247,8 @@ class UserInvitationTest extends TestCase
         $this->assertNotNull($createdUser);
         $this->assertSame(User::ROLE_USER, $createdUser->role);
         $this->assertSame(User::ROLE_HR_NEWCARS, $createdUser->extra_role);
-        Notification::assertSentTo($createdUser, ResetPassword::class);
+        $this->assertSame('SF-NEWCARS-001', $createdUser->salesforce_user_id);
+        Notification::assertSentTo($createdUser, UserPasswordResetNotification::class);
         $this->assertWelcomeNotificationWasSentTo($createdUser);
         Notification::assertNotSentTo($createdUser, UserOnboardingNotification::class);
     }
@@ -266,10 +270,10 @@ class UserInvitationTest extends TestCase
         $response = $this->actingAs($admin)->post(route('users.resend-invitation', $pendingUser));
 
         $response
-            ->assertRedirect(route('users.index'))
+            ->assertRedirect(url('/'))
             ->assertSessionHas('success', 'Correo de activacion reenviado correctamente.');
 
-        Notification::assertSentTo($pendingUser, ResetPassword::class);
+        Notification::assertSentTo($pendingUser, UserPasswordResetNotification::class);
     }
 
     public function test_admin_cannot_resend_invitation_email_to_active_user(): void
@@ -288,7 +292,7 @@ class UserInvitationTest extends TestCase
         $response = $this->actingAs($admin)->post(route('users.resend-invitation', $activeUser));
 
         $response
-            ->assertRedirect(route('users.index'))
+            ->assertRedirect(url('/'))
             ->assertSessionHas('error', 'Solo puedes reenviar la invitacion a usuarios pendientes de activacion.');
 
         Notification::assertNothingSent();
@@ -313,11 +317,13 @@ class UserInvitationTest extends TestCase
             ]));
 
         $response
-            ->assertRedirect(route('users.create'))
-            ->assertSessionHas('error', 'No se ha podido enviar el correo de activacion. Revisa que el email sea correcto y que el dominio exista.');
+            ->assertRedirect(route('users.index'))
+            ->assertSessionHas('error', 'El servidor SMTP ha rechazado el destinatario del correo de activación. Comprueba que ese buzón exista y que el servidor de correo de HR Motor lo acepte.');
 
-        $this->assertDatabaseMissing('users', [
+        $this->assertDatabaseHas('users', [
             'email' => 'test@tesstgsetgeatghaethaethbt.com',
+            'is_active' => false,
+            'must_change_password' => true,
         ]);
     }
 
@@ -340,8 +346,8 @@ class UserInvitationTest extends TestCase
         $response = $this->actingAs($admin)->post(route('users.resend-invitation', $pendingUser));
 
         $response
-            ->assertRedirect(route('users.index'))
-            ->assertSessionHas('error', 'No se ha podido enviar el correo de activacion. Revisa que el email sea correcto y que el dominio exista.');
+            ->assertRedirect(url('/'))
+            ->assertSessionHas('error', 'El servidor SMTP ha rechazado el destinatario del correo de activación. Comprueba que ese buzón exista y que el servidor de correo de HR Motor lo acepte.');
     }
 
     public function test_users_index_displays_the_user_avatar_next_to_the_name(): void

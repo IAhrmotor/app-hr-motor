@@ -97,7 +97,12 @@ class DealershipController extends Controller
 
     public function show(Dealership $dealership): View
     {
-        $dealership->load(['users' => fn ($query) => $query->orderBy('name')]);
+        $dealership->load([
+            'users' => fn ($query) => $query
+                ->where('is_active', true)
+                ->whereNull('disabled_at')
+                ->orderBy('name'),
+        ]);
 
         $monthlyPerformance = $this->buildMonthlyPerformanceData($dealership);
         $googleReviewsQuery = $dealership->googleBusinessProfileReviews()->withoutSalamanca();
