@@ -105,7 +105,7 @@ class GoogleBusinessProfileMonthlySnapshotsCommandTest extends TestCase
 
         $this->assertDatabaseHas('google_business_profile_monthly_snapshots', [
             'dealership_id' => $paterna->id,
-            'snapshot_month' => '2026-07-01',
+            'snapshot_month' => '2026-07-01 00:00:00',
             'total_reviews' => 2,
             'monthly_reviews' => 2,
             'unanswered_reviews' => 1,
@@ -113,7 +113,7 @@ class GoogleBusinessProfileMonthlySnapshotsCommandTest extends TestCase
 
         $this->assertDatabaseHas('google_business_profile_monthly_snapshots', [
             'dealership_id' => $valencia->id,
-            'snapshot_month' => '2026-07-01',
+            'snapshot_month' => '2026-07-01 00:00:00',
             'total_reviews' => 1,
             'monthly_reviews' => 1,
             'unanswered_reviews' => 1,

@@ -290,7 +290,8 @@ class SalesforceLeaderboardService
                     });
             })
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->reject(fn (User $user): bool => $this->isExcludedSalesforceUserId($user->salesforce_user_id));
 
         $nextRankingPosition = $entries->count() + 1;
 

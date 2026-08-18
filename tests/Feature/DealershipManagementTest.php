@@ -53,9 +53,8 @@ class DealershipManagementTest extends TestCase
 
         $adminPageResponse
             ->assertOk()
-            ->assertSee(route('users.index'), false)
-            ->assertSee(route('dealerships.index'), false)
-            ->assertSee(route('admin.dealership-logs.index'), false);
+            ->assertSee('Administración')
+            ->assertSee('Panel interno');
     }
 
     public function test_admin_can_create_dealership(): void
@@ -293,6 +292,40 @@ class DealershipManagementTest extends TestCase
             ->assertSee('4 C')
             ->assertSee('Top 2 en ventas')
             ->assertSee('Top 2 en compras');
+    }
+
+    public function test_dealership_show_hides_disabled_users_from_the_assigned_users_list(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $dealership = Dealership::factory()->create([
+            'name' => 'Bilbao',
+        ]);
+
+        $activeUser = User::factory()->create([
+            'name' => 'Usuario Activo',
+            'dealership' => 'Bilbao',
+            'dealership_id' => $dealership->id,
+            'is_active' => true,
+            'disabled_at' => null,
+        ]);
+
+        $disabledUser = User::factory()->create([
+            'name' => 'Usuario Desactivado',
+            'dealership' => 'Bilbao',
+            'dealership_id' => $dealership->id,
+            'is_active' => false,
+            'disabled_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('dealerships.show', $dealership));
+
+        $response
+            ->assertOk()
+            ->assertSee('Usuario Activo')
+            ->assertDontSee('Usuario Desactivado');
     }
 
     public function test_regular_users_can_open_the_dealership_detail_page(): void

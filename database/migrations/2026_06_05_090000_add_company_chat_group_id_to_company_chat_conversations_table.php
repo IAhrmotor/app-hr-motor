@@ -68,6 +68,11 @@ return new class extends Migration
             $table->foreignId('company_chat_group_id')->nullable()->constrained('company_chat_groups')->cascadeOnDelete();
             $table->timestamp('last_message_at')->nullable();
             $table->string('last_message_excerpt', 160)->nullable();
+            $table->boolean('retention_hold')->default(false);
+            $table->text('retention_hold_reason')->nullable();
+            $table->timestamp('retention_hold_created_at')->nullable();
+            $table->foreignId('retention_hold_created_by')->nullable();
+            $table->timestamp('retention_hold_expires_at')->nullable();
             $table->timestamps();
         });
 
@@ -81,6 +86,11 @@ return new class extends Migration
                 'company_chat_group_id' => null,
                 'last_message_at' => $row->last_message_at,
                 'last_message_excerpt' => $row->last_message_excerpt,
+                'retention_hold' => $row->retention_hold ?? false,
+                'retention_hold_reason' => $row->retention_hold_reason ?? null,
+                'retention_hold_created_at' => $row->retention_hold_created_at ?? null,
+                'retention_hold_created_by' => $row->retention_hold_created_by ?? null,
+                'retention_hold_expires_at' => $row->retention_hold_expires_at ?? null,
                 'created_at' => $row->created_at,
                 'updated_at' => $row->updated_at,
             ]);
@@ -108,6 +118,11 @@ return new class extends Migration
             $table->foreignId('user_two_id')->constrained('users', indexName: 'ccc_user_two_fk')->cascadeOnDelete();
             $table->timestamp('last_message_at')->nullable();
             $table->string('last_message_excerpt', 160)->nullable();
+            $table->boolean('retention_hold')->default(false);
+            $table->text('retention_hold_reason')->nullable();
+            $table->timestamp('retention_hold_created_at')->nullable();
+            $table->foreignId('retention_hold_created_by')->nullable();
+            $table->timestamp('retention_hold_expires_at')->nullable();
             $table->timestamps();
         });
 
@@ -120,6 +135,11 @@ return new class extends Migration
                 'user_two_id' => $row->user_two_id,
                 'last_message_at' => $row->last_message_at,
                 'last_message_excerpt' => $row->last_message_excerpt,
+                'retention_hold' => $row->retention_hold ?? false,
+                'retention_hold_reason' => $row->retention_hold_reason ?? null,
+                'retention_hold_created_at' => $row->retention_hold_created_at ?? null,
+                'retention_hold_created_by' => $row->retention_hold_created_by ?? null,
+                'retention_hold_expires_at' => $row->retention_hold_expires_at ?? null,
                 'created_at' => $row->created_at,
                 'updated_at' => $row->updated_at,
             ]);

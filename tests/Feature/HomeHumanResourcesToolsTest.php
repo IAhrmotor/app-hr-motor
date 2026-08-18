@@ -65,7 +65,7 @@ class HomeHumanResourcesToolsTest extends TestCase
 
         $response
             ->assertSee('Herramientas generales')
-            ->assertSee('DocuSign')
+            ->assertDontSee('DocuSign')
             ->assertDontSee('Otros recursos')
             ->assertDontSee('Documentos Sistemas')
             ->assertDontSee('CMS Motorflash')

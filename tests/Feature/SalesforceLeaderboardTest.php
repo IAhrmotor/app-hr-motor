@@ -300,7 +300,8 @@ class SalesforceLeaderboardTest extends TestCase
         ]);
 
         $commercial = User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'salesforce_user_id' => '005xx0000000001AAA',
             'email' => 'comercial@example.com',
         ]);
@@ -498,7 +499,7 @@ class SalesforceLeaderboardTest extends TestCase
             'vehicle_name' => '0074MLB Audi Q3',
             'vehicle_commercial_name' => 'Audi Q3 35 TDI Advanced',
             'vehicle_plate' => '0074MLB',
-            'vehicle_image_url' => 'http://localhost/storage/vehicle-leaderboard/a0Axx0000000001AAA.jpg',
+            'vehicle_image_url' => 'http://app-hr-motor.test/storage/vehicle-leaderboard/a0Axx0000000001AAA.jpg',
             'total_leads' => 12,
         ]);
 
@@ -509,7 +510,7 @@ class SalesforceLeaderboardTest extends TestCase
             'vehicle_name' => '5678DEF Seat Leon',
             'vehicle_commercial_name' => 'Seat Leon 1.5 eTSI',
             'vehicle_plate' => '5678DEF',
-            'vehicle_image_url' => 'http://localhost/storage/vehicle-leaderboard/a0Axx0000000003AAA.webp',
+            'vehicle_image_url' => 'http://app-hr-motor.test/storage/vehicle-leaderboard/a0Axx0000000003AAA.webp',
             'total_leads' => 1,
         ]);
 
@@ -618,6 +619,15 @@ class SalesforceLeaderboardTest extends TestCase
     {
         $user = User::factory()->create([
             'role' => 'admin',
+        ]);
+
+        SalesforceConnection::query()->create([
+            'provider' => 'salesforce',
+            'instance_url' => 'https://example.my.salesforce.com',
+            'access_token' => 'access-token',
+            'refresh_token' => 'refresh-token',
+            'token_type' => 'Bearer',
+            'scope' => 'api refresh_token',
         ]);
 
         VehicleLeaderboardEntry::query()->create([
@@ -899,13 +909,15 @@ class SalesforceLeaderboardTest extends TestCase
         ]);
 
         $commercialWithSales = User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'name' => 'Comercial con ventas',
             'salesforce_user_id' => 'SF-001',
         ]);
 
         $commercialWithoutSales = User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'name' => 'Comercial sin ventas',
             'salesforce_user_id' => 'SF-999',
         ]);
@@ -980,7 +992,8 @@ class SalesforceLeaderboardTest extends TestCase
         ]);
 
         User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'name' => 'Usuario Excluido',
             'salesforce_user_id' => '0057R00000B2SGHQA3',
         ]);
@@ -1146,13 +1159,15 @@ class SalesforceLeaderboardTest extends TestCase
         ]);
 
         $commercialWithoutSalesforceId = User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'name' => 'Ana Comercial',
             'salesforce_user_id' => null,
         ]);
 
         $commercialWithSalesforceId = User::factory()->create([
-            'role' => 'comercial',
+            'role' => User::ROLE_USER,
+            'extra_role' => User::ROLE_COMMERCIAL,
             'name' => 'Bernardo Comercial',
             'salesforce_user_id' => 'SF-404',
         ]);

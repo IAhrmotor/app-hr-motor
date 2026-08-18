@@ -34,7 +34,7 @@ class AdminNotificationTest extends TestCase
                 'data-notification-target-card="' . User::ROLE_ADMIN . '"',
             ], false)
             ->assertSee('Todos los usuarios')
-            ->assertSee('Destacado')
+            ->assertSee('Prioritaria')
             ->assertSee('Se enviará a todos los usuarios activos del portal.');
     }
 

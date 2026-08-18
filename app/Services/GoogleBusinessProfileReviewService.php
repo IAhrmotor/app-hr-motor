@@ -783,22 +783,29 @@ class GoogleBusinessProfileReviewService
                 ->whereBetween('review_created_at', [$snapshotMonth->copy()->startOfMonth(), $snapshotMonth->copy()->endOfMonth()])
                 ->get();
 
-            GoogleBusinessProfileMonthlySnapshot::query()->updateOrCreate(
-                [
+                $snapshot = GoogleBusinessProfileMonthlySnapshot::query()
+                    ->where('dealership_id', $dealership->id)
+                    ->whereDate('snapshot_month', $snapshotMonth->toDateString())
+                    ->first();
+
+                $snapshotData = [
                     'dealership_id' => $dealership->id,
                     'snapshot_month' => $snapshotMonth->toDateString(),
-                ],
-                [
                     'total_reviews' => $allReviews->count(),
                     'average_rating' => $allReviews->avg('rating'),
                     'monthly_reviews' => $monthReviews->count(),
                     'monthly_average_rating' => $monthReviews->avg('rating'),
                     'unanswered_reviews' => $allReviews->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
                     'captured_at' => $capturedAt,
-                ]
-            );
+                ];
+
+                if ($snapshot) {
+                    $snapshot->forceFill($snapshotData)->save();
+                } else {
+                    GoogleBusinessProfileMonthlySnapshot::query()->create($snapshotData);
+                }
+            }
         }
-    }
 
     /**
      * Rebuilds monthly snapshots for a specific month or for every available review month.
@@ -876,20 +883,27 @@ class GoogleBusinessProfileReviewService
                         && $review->review_created_at->betweenIncluded($monthStart, $monthEnd);
                 });
 
-                GoogleBusinessProfileMonthlySnapshot::query()->updateOrCreate(
-                    [
-                        'dealership_id' => $dealership->id,
-                        'snapshot_month' => $snapshotMonth->toDateString(),
-                    ],
-                    [
-                        'total_reviews' => $reviewsUpToMonth->count(),
-                        'average_rating' => $reviewsUpToMonth->avg('rating'),
-                        'monthly_reviews' => $monthReviews->count(),
-                        'monthly_average_rating' => $monthReviews->avg('rating'),
-                        'unanswered_reviews' => $reviewsUpToMonth->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
-                        'captured_at' => $capturedAt,
-                    ]
-                );
+                $snapshot = GoogleBusinessProfileMonthlySnapshot::query()
+                    ->where('dealership_id', $dealership->id)
+                    ->whereDate('snapshot_month', $snapshotMonth->toDateString())
+                    ->first();
+
+                $snapshotData = [
+                    'dealership_id' => $dealership->id,
+                    'snapshot_month' => $snapshotMonth->toDateString(),
+                    'total_reviews' => $reviewsUpToMonth->count(),
+                    'average_rating' => $reviewsUpToMonth->avg('rating'),
+                    'monthly_reviews' => $monthReviews->count(),
+                    'monthly_average_rating' => $monthReviews->avg('rating'),
+                    'unanswered_reviews' => $reviewsUpToMonth->filter(fn (GoogleBusinessProfileReview $review): bool => ! $review->isAnswered())->count(),
+                    'captured_at' => $capturedAt,
+                ];
+
+                if ($snapshot) {
+                    $snapshot->forceFill($snapshotData)->save();
+                } else {
+                    GoogleBusinessProfileMonthlySnapshot::query()->create($snapshotData);
+                }
 
                 $upsertedCount++;
             }

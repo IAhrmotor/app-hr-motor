@@ -5,7 +5,7 @@ namespace Tests\Feature\Users;
 use App\Models\Dealership;
 use App\Models\User;
 use App\Models\UserActivityLog;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\UserPasswordResetNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
@@ -63,7 +63,7 @@ class UserActivityLogTest extends TestCase
 
         $createdUser = User::query()->where('email', 'nuevo@example.com')->firstOrFail();
 
-        Notification::assertSentTo($createdUser, ResetPassword::class);
+        Notification::assertSentTo($createdUser, UserPasswordResetNotification::class);
     }
 
     public function test_user_update_is_logged_with_changed_fields(): void
