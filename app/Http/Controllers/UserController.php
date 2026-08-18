@@ -11,6 +11,7 @@ use App\Models\UserActivityLog;
 use App\Notifications\UserOnboardingNotification;
 use App\Notifications\UserWelcomeNotification;
 use App\Services\CompanyChatDefaultGroupSyncService;
+use App\Services\UserDeactivationService;
 use App\Services\UserInvitationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -284,26 +285,13 @@ class UserController extends Controller
             $disabledReason = 'Baja de empleado';
         }
 
-        DB::transaction(function () use ($authUser, $user, $disabledReason): void {
-            $user->forceFill([
-                'is_active' => false,
-                'disabled_at' => now(),
-                'disabled_by' => $authUser->id,
-                'disabled_reason' => $disabledReason,
-                'remember_token' => Str::random(60),
-            ])->save();
-
-            app(CompanyChatDefaultGroupSyncService::class)->syncUser($user, false);
-            $this->invalidateUserSessions($user);
-
-            $this->storeActivityLog(
-                actor: $authUser,
-                targetUser: $user,
-                action: UserActivityLog::ACTION_DISABLED,
-                result: 'success',
-                reason: $disabledReason,
-            );
-        });
+        try {
+            app(UserDeactivationService::class)->deactivate($authUser, $user, $disabledReason);
+        } catch (Throwable $e) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('users.index')

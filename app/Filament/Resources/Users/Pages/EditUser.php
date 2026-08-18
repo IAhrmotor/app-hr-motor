@@ -20,7 +20,7 @@ class EditUser extends EditRecord
             Action::make('resendActivationEmail')
                 ->label('Reenviar correo de activación')
                 ->icon('heroicon-o-envelope')
-                ->color('warning')
+                ->color('primary')
                 ->visible(fn (): bool => ! $this->getRecord()->isDisabled() && (
                     $this->getRecord()->isInvitationExpired()
                     || ! $this->getRecord()->is_active
