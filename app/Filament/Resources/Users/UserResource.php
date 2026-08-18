@@ -41,7 +41,9 @@ class UserResource extends Resource
 
     protected static ?string $slug = 'usuarios';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Backoffice';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administración';
+
+    protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder
     {
@@ -224,7 +226,7 @@ class UserResource extends Resource
                     ->imageSize(44)
                     ->width('4rem'),
                 TextColumn::make('name')
-                    ->label('Nombre de usuario')
+                    ->label('Usuario')
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::Bold)
