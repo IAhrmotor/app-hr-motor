@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\Users;
 
 use App\Models\User;
+use App\Services\UserDeactivationService;
 use BackedEnum;
 use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -23,6 +25,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Notifications\Notification;
 
 class UserResource extends Resource
 {
@@ -330,24 +333,58 @@ class UserResource extends Resource
                         return $authUser->role === User::ROLE_MANAGER
                             && $authUser->id !== $record->id
                             && $record->role === User::ROLE_USER;
-                    }),
+                }),
                 DeleteAction::make()
+                    ->label('Borrar')
+                    ->modalIconColor('primary')
+                    ->modalSubmitAction(fn (Action $action) => $action->color('primary'))
                     ->visible(function (User $record): bool {
                         $authUser = auth()->user();
 
-                        if (! $authUser) {
-                            return false;
-                        }
-
-                        if ($authUser->role === User::ROLE_ADMIN) {
-                            return $authUser->id !== $record->id;
-                        }
-
-                        return $authUser->role === User::ROLE_MANAGER
-                            && $authUser->id !== $record->id
-                            && $record->role === User::ROLE_USER;
+                        return $authUser instanceof User
+                            && $authUser->role === User::ROLE_ADMIN
+                            && $authUser->id !== $record->id;
                     })
-                    ->requiresConfirmation(),
+                    ->requiresConfirmation()
+                    ->modalHeading('Borrar usuario')
+                    ->modalDescription('¿Estás seguro de que quieres borrar este usuario? Esta acción no se puede deshacer.'),
+                Action::make('disable')
+                    ->label('Desactivar')
+                    ->icon('heroicon-o-user-minus')
+                    ->color('gray')
+                    ->visible(function (User $record): bool {
+                        $authUser = auth()->user();
+
+                        return $authUser instanceof User
+                            && app(UserDeactivationService::class)->canDeactivate($authUser, $record);
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Desactivar usuario')
+                    ->modalDescription('¿Estás seguro de que quieres desactivar este usuario? Se cerrarán sus sesiones y quedará marcado como desactivado.')
+                    ->action(function (User $record): void {
+                        $authUser = auth()->user();
+
+                        if (! $authUser instanceof User) {
+                            return;
+                        }
+
+                        try {
+                            app(UserDeactivationService::class)->deactivate($authUser, $record);
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->danger()
+                                ->title($e->getMessage())
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Usuario desactivado correctamente.')
+                            ->body('El usuario ya no podrá acceder al backoffice.')
+                            ->send();
+                    }),
             ]);
     }
 
