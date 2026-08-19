@@ -12,6 +12,7 @@ use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -20,6 +21,8 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\File;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class DealershipResource extends Resource
 {
@@ -52,6 +55,43 @@ class DealershipResource extends Resource
                 ->label('Nombre')
                 ->required()
                 ->maxLength(255),
+            FileUpload::make('image_path')
+                ->label('Foto')
+                ->image()
+                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                ->maxSize(2048)
+                ->required(fn (string $operation): bool => $operation === 'create')
+                ->getUploadedFileUsing(function (string $file): ?array {
+                    $publicPath = public_path($file);
+
+                    if (File::exists($publicPath)) {
+                        return [
+                            'name' => basename($file),
+                            'size' => File::size($publicPath),
+                            'type' => File::mimeType($publicPath) ?: 'image/jpeg',
+                            'url' => asset($file),
+                        ];
+                    }
+
+                    $storagePath = storage_path('app/public/' . ltrim($file, '/'));
+
+                    if (File::exists($storagePath)) {
+                        return [
+                            'name' => basename($file),
+                            'size' => File::size($storagePath),
+                            'type' => File::mimeType($storagePath) ?: 'image/jpeg',
+                            'url' => asset('storage/' . ltrim($file, '/')),
+                        ];
+                    }
+
+                    return null;
+                })
+                ->saveUploadedFileUsing(function (TemporaryUploadedFile $file): string {
+                    return Dealership::storeImageFile($file);
+                })
+                ->deleteUploadedFileUsing(function (string $file): void {
+                    Dealership::deleteStoredImagePath($file);
+                }),
             TextInput::make('salesforce_id')
                 ->label('ID Salesforce')
                 ->required()
@@ -150,6 +190,8 @@ class DealershipResource extends Resource
                             dealership: $record,
                             action: \App\Models\DealershipActivityLog::ACTION_DELETED,
                         );
+
+                        Dealership::deleteStoredImagePath($record->image_path);
 
                         return (bool) $record->delete();
                     }),
