@@ -4,9 +4,11 @@ namespace App\Filament\Resources\Dealerships;
 
 use App\Filament\Resources\Dealerships\Pages\EditDealership;
 use App\Filament\Resources\Dealerships\Pages\CreateDealership;
+use App\Filament\Resources\Dealerships\Pages\ListDealershipLogs;
 use App\Filament\Resources\Dealerships\Pages\ListDealerships;
 use App\Models\Dealership;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -108,6 +110,12 @@ class DealershipResource extends Resource
             ->defaultSort('name')
             ->striped()
             ->toolbarActions([
+                Action::make('viewLogs')
+                    ->label('Ver logs')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('gray')
+                    ->url(static::getUrl('logs'))
+                    ->visible(fn (): bool => auth()->user()?->role === \App\Models\User::ROLE_ADMIN),
                 CreateAction::make()
                     ->label('Crear delegación')
                     ->url(static::getUrl('create'))
@@ -125,16 +133,36 @@ class DealershipResource extends Resource
                         ? 'No puedes eliminar una delegación con usuarios asignados.'
                         : 'Eliminar delegación')
                     ->modalHeading('Borrar delegación')
-                    ->modalDescription('¿Seguro que quieres borrar esta delegación? Esta acción no se puede deshacer.'),
+                    ->modalDescription('¿Seguro que quieres borrar esta delegación? Esta acción no se puede deshacer.')
+                    ->using(function (Dealership $record): bool {
+                        if ($record->users()->exists()) {
+                            return false;
+                        }
+
+                        $actor = auth()->user();
+
+                        if (! $actor instanceof \App\Models\User) {
+                            return false;
+                        }
+
+                        app(\App\Services\DealershipActivityLogWriter::class)->record(
+                            actor: $actor,
+                            dealership: $record,
+                            action: \App\Models\DealershipActivityLog::ACTION_DELETED,
+                        );
+
+                        return (bool) $record->delete();
+                    }),
             ]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListDealerships::route('/'),
-            'create' => Pages\CreateDealership::route('/create'),
-            'edit' => Pages\EditDealership::route('/{record}/edit'),
+            'index' => ListDealerships::route('/'),
+            'logs' => ListDealershipLogs::route('/logs'),
+            'create' => CreateDealership::route('/create'),
+            'edit' => EditDealership::route('/{record}/edit'),
         ];
     }
 }
