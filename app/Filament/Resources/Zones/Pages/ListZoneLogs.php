@@ -1,15 +1,16 @@
 <?php
 
-namespace App\Filament\Resources\Users\Pages;
+namespace App\Filament\Resources\Zones\Pages;
 
-use App\Filament\Resources\Users\UserResource;
+use App\Filament\Resources\Zones\ZoneResource;
 use App\Models\User;
-use App\Models\UserActivityLog;
+use App\Models\ZoneActivityLog;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Resources\Pages\Page;
 use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Resources\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
@@ -18,17 +19,17 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-class ListUserLogs extends Page implements HasTable
+class ListZoneLogs extends Page implements HasTable
 {
     use InteractsWithTable;
 
-    protected static string $resource = UserResource::class;
+    protected static string $resource = ZoneResource::class;
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static ?string $breadcrumb = 'Logs de usuarios';
+    protected static ?string $breadcrumb = 'Logs de zonas';
 
-    protected static ?string $title = 'Logs de usuarios';
+    protected static ?string $title = 'Logs de zonas';
 
     public function mount(): void
     {
@@ -48,16 +49,16 @@ class ListUserLogs extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => UserActivityLog::query()
-                ->where(function (Builder $query): void {
-                    $query->where('action', '!=', UserActivityLog::ACTION_UPDATED)
-                        ->orWhere(function (Builder $query): void {
-                            $query->where('action', UserActivityLog::ACTION_UPDATED)
-                                ->whereNotNull('changes');
-                        });
-                }))
+            ->query(fn (): Builder => ZoneActivityLog::query())
             ->defaultSort('created_at', 'desc')
             ->filtersFormMaxHeight('60vh')
+            ->toolbarActions([
+                Action::make('downloadCsv')
+                    ->label('Descargar CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->url(fn (): string => $this->getCsvExportUrl()),
+            ])
             ->filters([
                 Filter::make('action')
                     ->label('Acción')
@@ -65,11 +66,9 @@ class ListUserLogs extends Page implements HasTable
                         Select::make('value')
                             ->label('Acción')
                             ->options([
-                                UserActivityLog::ACTION_CREATED => 'Altas',
-                                UserActivityLog::ACTION_UPDATED => 'Ediciones',
-                                UserActivityLog::ACTION_DELETED => 'Eliminaciones',
-                                UserActivityLog::ACTION_DISABLED => 'Desactivaciones',
-                                UserActivityLog::ACTION_REACTIVATED => 'Reactivaciones',
+                                ZoneActivityLog::ACTION_CREATED => 'Alta',
+                                ZoneActivityLog::ACTION_UPDATED => 'Edición',
+                                ZoneActivityLog::ACTION_DELETED => 'Eliminación',
                             ])
                             ->placeholder('Todas las acciones'),
                     ])
@@ -80,10 +79,10 @@ class ListUserLogs extends Page implements HasTable
                         );
                     }),
                 Filter::make('actor')
-                    ->label('Gestor')
+                    ->label('Gestionado por')
                     ->form([
                         Select::make('value')
-                            ->label('Gestor')
+                            ->label('Gestionado por')
                             ->options(fn (): array => User::query()
                                 ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_MANAGER])
                                 ->orderBy('name')
@@ -119,7 +118,7 @@ class ListUserLogs extends Page implements HasTable
                     ->dateTime('d/m/Y H:i:s')
                     ->sortable()
                     ->grow(false)
-                    ->width('10rem'),
+                    ->width('12rem'),
                 TextColumn::make('action_label')
                     ->label('Acción')
                     ->badge()
@@ -127,8 +126,6 @@ class ListUserLogs extends Page implements HasTable
                         'Alta' => 'success',
                         'Edición' => 'warning',
                         'Eliminación' => 'danger',
-                        'Desactivación' => 'gray',
-                        'Reactivación' => 'primary',
                         default => 'gray',
                     })
                     ->sortable(query: function (Builder $query, string $direction): Builder {
@@ -136,61 +133,30 @@ class ListUserLogs extends Page implements HasTable
                     })
                     ->grow(false)
                     ->width('11rem'),
-                TextColumn::make('result')
-                    ->label('Resultado')
-                    ->badge()
-                    ->state(fn (UserActivityLog $record): string => $record->result ?: 'success')
-                    ->color(fn (string $state): string => match ($state) {
-                        'success' => 'success',
-                        'warning' => 'warning',
-                        'error' => 'danger',
-                        default => 'gray',
-                    })
-                    ->description(function (UserActivityLog $record): ?string {
-                        $parts = array_filter([
-                            $record->reason ? 'Motivo: ' . $record->reason : null,
-                            $record->ip_address ? 'IP: ' . $record->ip_address : null,
-                            $record->user_agent ? 'UA: ' . $record->user_agent : null,
-                        ]);
-
-                        return $parts === [] ? null : implode(' · ', $parts);
-                    })
-                    ->grow(false)
-                    ->width('10rem'),
                 TextColumn::make('actor_name')
                     ->label('Gestionado por')
-                    ->state(fn (UserActivityLog $record): string => $record->actor_name)
-                    ->description(fn (UserActivityLog $record): ?string => $record->actor_email)
+                    ->state(fn (ZoneActivityLog $record): string => $record->actor_name)
                     ->searchable(query: function (Builder $query, string $search): Builder {
-                        return $query->where(function (Builder $query) use ($search): void {
-                            $query->where('actor_name', 'like', "%{$search}%")
-                                ->orWhere('actor_email', 'like', "%{$search}%");
-                        });
+                        return $query->where('actor_name', 'like', "%{$search}%");
                     })
                     ->grow(false)
-                    ->width('12rem'),
+                    ->width('14rem'),
                 TextColumn::make('target_name')
-                    ->label('Usuario afectado')
-                    ->state(fn (UserActivityLog $record): string => $record->target_name)
-                    ->description(fn (UserActivityLog $record): ?string => $record->target_email)
+                    ->label('Zona afectada')
+                    ->state(fn (ZoneActivityLog $record): string => $record->target_name)
                     ->searchable(query: function (Builder $query, string $search): Builder {
-                        return $query->where(function (Builder $query) use ($search): void {
-                            $query->where('target_name', 'like', "%{$search}%")
-                                ->orWhere('target_email', 'like', "%{$search}%")
-                                ->orWhere('target_role', 'like', "%{$search}%")
-                                ->orWhere('target_dealership', 'like', "%{$search}%");
-                        });
+                        return $query->where('target_name', 'like', "%{$search}%");
                     })
                     ->grow(false)
-                    ->width('12rem'),
+                    ->width('14rem'),
                 TextColumn::make('changes')
                     ->label('Detalle')
-                    ->state(function (UserActivityLog $record): string {
+                    ->state(function (ZoneActivityLog $record): string {
                         return $this->formatChanges($record);
                     })
                     ->wrap()
                     ->grow(true)
-                    ->width('52rem'),
+                    ->width('28rem'),
             ]);
     }
 
@@ -201,12 +167,27 @@ class ListUserLogs extends Page implements HasTable
         ]);
     }
 
-    protected function formatChanges(UserActivityLog $record): string
+    protected function getCsvExportUrl(): string
+    {
+        return route('admin.zone-logs.export', array_filter([
+            'action' => data_get($this->tableFilters, 'action.value'),
+            'actor' => data_get($this->tableFilters, 'actor.value'),
+            'date_from' => data_get($this->tableFilters, 'created_at.from'),
+            'date_to' => data_get($this->tableFilters, 'created_at.until'),
+        ], static fn (mixed $value): bool => filled($value)));
+    }
+
+    protected function formatChanges(ZoneActivityLog $record): string
     {
         $changes = $record->changes ?? [];
 
         if ($changes === []) {
-            return '';
+            return match ($record->action) {
+                ZoneActivityLog::ACTION_CREATED => 'Alta de zona',
+                ZoneActivityLog::ACTION_UPDATED => 'Sin cambios adicionales registrados',
+                ZoneActivityLog::ACTION_DELETED => 'Eliminación de zona',
+                default => 'Sin detalles registrados',
+            };
         }
 
         return collect($changes)
@@ -215,10 +196,10 @@ class ListUserLogs extends Page implements HasTable
                 $to = $change['to'] ?? null;
 
                 return sprintf(
-                    '%s: "%s" -> "%s"',
+                    '%s: %s -> %s',
                     $field,
-                    $from ?? 'vacio',
-                    $to ?? 'vacio',
+                    blank($from) ? 'Vacío' : $from,
+                    blank($to) ? 'Vacío' : $to,
                 );
             })
             ->implode(' | ');
