@@ -32,6 +32,10 @@ class AdminPanelProvider extends PanelProvider
             ->defaultThemeMode(ThemeMode::Dark)
             ->sidebarCollapsibleOnDesktop()
             ->collapsibleNavigationGroups()
+            ->navigationGroups([
+                'Administración',
+                'Contenido',
+            ])
             ->brandLogo(fn (): string => request()->isSecure()
                 ? secure_asset('images/logo-horizontal.svg')
                 : asset('images/logo-horizontal.svg'))
