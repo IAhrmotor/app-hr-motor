@@ -16,6 +16,8 @@ class EditDealership extends EditRecord
 
     protected array $pendingActivityLogChanges = [];
 
+    protected ?string $previousImagePath = null;
+
     protected function getHeaderActions(): array
     {
         return [
@@ -42,6 +44,8 @@ class EditDealership extends EditRecord
                         action: DealershipActivityLog::ACTION_DELETED,
                     );
 
+                    Dealership::deleteStoredImagePath($record->image_path);
+
                     return (bool) $record->delete();
                 }),
         ];
@@ -49,6 +53,7 @@ class EditDealership extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $this->previousImagePath = $this->getRecord()->image_path;
         $this->pendingActivityLogChanges = $this->buildChangeSet($this->getRecord(), $data);
 
         return $data;
@@ -56,13 +61,21 @@ class EditDealership extends EditRecord
 
     protected function afterSave(): void
     {
+        if ($this->previousImagePath !== null && $this->previousImagePath !== $this->getRecord()->image_path) {
+            Dealership::deleteStoredImagePath($this->previousImagePath);
+        }
+
         if ($this->pendingActivityLogChanges === []) {
+            $this->previousImagePath = null;
+
             return;
         }
 
         $actor = auth()->user();
 
         if (! $actor instanceof User) {
+            $this->previousImagePath = null;
+
             return;
         }
 
@@ -74,12 +87,14 @@ class EditDealership extends EditRecord
         );
 
         $this->pendingActivityLogChanges = [];
+        $this->previousImagePath = null;
     }
 
     protected function buildChangeSet(Dealership $dealership, array $newValues): array
     {
         $labels = [
             'name' => 'Nombre',
+            'image_path' => 'Foto',
             'salesforce_id' => 'ID Salesforce',
             'phone' => 'Teléfono',
             'google_maps_url' => 'URL Google Maps',
@@ -90,8 +105,12 @@ class EditDealership extends EditRecord
             ->filter(fn ($value, $field) => $dealership->{$field} !== $value)
             ->mapWithKeys(fn ($value, $field) => [
                 $labels[$field] ?? $field => [
-                    'from' => $dealership->{$field},
-                    'to' => $value,
+                    'from' => $field === 'image_path'
+                        ? (filled($dealership->{$field}) ? 'Anterior' : null)
+                        : $dealership->{$field},
+                    'to' => $field === 'image_path'
+                        ? (filled($value) ? 'Actualizada' : null)
+                        : $value,
                 ],
             ])
             ->all();
