@@ -139,21 +139,24 @@ class ListDealershipLogs extends Page implements HasTable
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->where('actor_name', 'like', "%{$search}%");
                     })
-                    ->grow(true),
+                    ->grow(false)
+                    ->width('14rem'),
                 TextColumn::make('target_name')
                     ->label('Delegación afectada')
                     ->state(fn (DealershipActivityLog $record): string => $record->target_name)
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->where('target_name', 'like', "%{$search}%");
                     })
-                    ->grow(true),
+                    ->grow(false)
+                    ->width('14rem'),
                 TextColumn::make('changes')
                     ->label('Detalle')
                     ->state(function (DealershipActivityLog $record): string {
                         return $this->formatChanges($record);
                     })
                     ->wrap()
-                    ->grow(true),
+                    ->grow(true)
+                    ->width('28rem'),
             ]);
     }
 
