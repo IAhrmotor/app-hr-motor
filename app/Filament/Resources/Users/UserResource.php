@@ -317,6 +317,12 @@ class UserResource extends Resource
                     }),
             ])
             ->toolbarActions([
+                Action::make('viewLogs')
+                    ->label('Ver logs')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('gray')
+                    ->url(static::getUrl('logs'))
+                    ->visible(fn (): bool => auth()->user()?->role === User::ROLE_ADMIN),
                 CreateAction::make(),
             ])
             ->actions([
@@ -349,7 +355,22 @@ class UserResource extends Resource
                     })
                     ->requiresConfirmation()
                     ->modalHeading('Borrar usuario')
-                    ->modalDescription('¿Estás seguro de que quieres borrar este usuario? Esta acción no se puede deshacer.'),
+                    ->modalDescription('¿Estás seguro de que quieres borrar este usuario? Esta acción no se puede deshacer.')
+                    ->using(function (User $record): bool {
+                        $actor = auth()->user();
+
+                        if (! $actor instanceof User) {
+                            return false;
+                        }
+
+                        app(\App\Services\UserActivityLogWriter::class)->record(
+                            actor: $actor,
+                            targetUser: $record,
+                            action: \App\Models\UserActivityLog::ACTION_DELETED,
+                        );
+
+                        return (bool) $record->delete();
+                    }),
                 Action::make('disable')
                     ->label('Desactivar')
                     ->icon('heroicon-o-user-minus')
@@ -394,6 +415,7 @@ class UserResource extends Resource
     {
         return [
             'index' => Pages\ListUsers::route('/'),
+            'logs' => Pages\ListUserLogs::route('/logs'),
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
