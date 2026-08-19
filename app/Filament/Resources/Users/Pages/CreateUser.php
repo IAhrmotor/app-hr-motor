@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\Users\Pages;
 
-use App\Models\User;
-use App\Notifications\UserWelcomeNotification;
 use App\Filament\Resources\Users\UserResource;
+use App\Models\Dealership;
+use App\Models\User;
+use App\Models\UserActivityLog;
+use App\Notifications\UserWelcomeNotification;
+use App\Services\UserActivityLogWriter;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -33,8 +36,13 @@ class CreateUser extends CreateRecord
             }
         }
 
+        $dealership = filled($data['dealership_id'] ?? null)
+            ? Dealership::query()->find($data['dealership_id'])
+            : null;
+
         return [
             ...$data,
+            'dealership' => $dealership?->name,
             'password' => Hash::make(Str::password(32)),
             'is_active' => false,
             'must_change_password' => true,
@@ -47,6 +55,15 @@ class CreateUser extends CreateRecord
     {
         /** @var User $user */
         $user = $this->record;
+        $actor = auth()->user();
+
+        if ($actor instanceof User) {
+            app(UserActivityLogWriter::class)->record(
+                actor: $actor,
+                targetUser: $user,
+                action: UserActivityLog::ACTION_CREATED,
+            );
+        }
 
         $user->notify(new UserWelcomeNotification());
 

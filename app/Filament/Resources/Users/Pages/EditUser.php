@@ -3,7 +3,10 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Models\Dealership;
 use App\Models\User;
+use App\Models\UserActivityLog;
+use App\Services\UserActivityLogWriter;
 use App\Services\UserInvitationService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -13,6 +16,8 @@ use Illuminate\Support\Facades\Password;
 class EditUser extends EditRecord
 {
     protected static string $resource = UserResource::class;
+
+    protected array $pendingActivityLogChanges = [];
 
     protected function getHeaderActions(): array
     {
@@ -89,7 +94,36 @@ class EditUser extends EditRecord
             }
         }
 
+        $dealership = filled($data['dealership_id'] ?? null)
+            ? Dealership::query()->find($data['dealership_id'])
+            : null;
+
+        $data['dealership'] = $dealership?->name;
+        $this->pendingActivityLogChanges = $this->buildChangeSet($this->getRecord(), $data);
+
         return $data;
+    }
+
+    protected function afterSave(): void
+    {
+        if ($this->pendingActivityLogChanges === []) {
+            return;
+        }
+
+        $actor = auth()->user();
+
+        if (! $actor instanceof User) {
+            return;
+        }
+
+        app(UserActivityLogWriter::class)->record(
+            actor: $actor,
+            targetUser: $this->getRecord(),
+            action: UserActivityLog::ACTION_UPDATED,
+            changes: $this->pendingActivityLogChanges,
+        );
+
+        $this->pendingActivityLogChanges = [];
     }
 
     protected function buildResendInvitationWarning(): string
@@ -107,5 +141,98 @@ class EditUser extends EditRecord
             : ($elapsedMinutes === 1 ? '1 minuto' : "{$elapsedMinutes} minutos");
 
         return "Solo han pasado {$elapsedText} desde el último reenvío. ¿Seguro que quieres reenviarlo de nuevo?";
+    }
+
+    protected function buildChangeSet(User $user, array $newValues): array
+    {
+        $labels = [
+            'name' => 'Nombre',
+            'email' => 'Correo',
+            'company_entry_date' => 'Día que entró en la empresa',
+            'job_position' => 'Puesto',
+            'phone' => 'Teléfono',
+            'enreach_extension' => 'Extensión Enreach',
+            'it_monday_start' => 'Horario lunes inicio',
+            'it_monday_end' => 'Horario lunes fin',
+            'it_tuesday_start' => 'Horario martes inicio',
+            'it_tuesday_end' => 'Horario martes fin',
+            'it_wednesday_start' => 'Horario miércoles inicio',
+            'it_wednesday_end' => 'Horario miércoles fin',
+            'it_thursday_start' => 'Horario jueves inicio',
+            'it_thursday_end' => 'Horario jueves fin',
+            'it_friday_start' => 'Horario viernes inicio',
+            'it_friday_end' => 'Horario viernes fin',
+            'role' => 'Rol',
+            'extra_role' => 'Rol adicional',
+            'salesforce_user_id' => 'ID Salesforce',
+            'dealership' => 'Delegación',
+        ];
+
+        return collect($newValues)
+            ->filter(fn ($value, $field) => $this->compareUserFieldValue($user, $field, $value))
+            ->mapWithKeys(fn ($value, $field) => [
+                $labels[$field] ?? $field => [
+                    'from' => $this->displayUserFieldValue($this->getUserFieldValue($user, $field), $field),
+                    'to' => $this->displayUserFieldValue($value, $field),
+                ],
+            ])
+            ->all();
+    }
+
+    protected function getUserFieldValue(User $user, string $field): mixed
+    {
+        if ($field === 'company_entry_date') {
+            return $user->getRawOriginal($field);
+        }
+
+        return $user->{$field};
+    }
+
+    protected function compareUserFieldValue(User $user, string $field, mixed $newValue): bool
+    {
+        if ($field === 'company_entry_date') {
+            return $this->normalizeDateValue($user->getRawOriginal($field)) !== $this->normalizeDateValue($newValue);
+        }
+
+        if (in_array($field, ['phone', 'enreach_extension'], true)) {
+            return $this->normalizeAgendaValue($user->{$field}) !== $this->normalizeAgendaValue($newValue);
+        }
+
+        return $user->{$field} !== $newValue;
+    }
+
+    protected function displayUserFieldValue(mixed $value, string $field): mixed
+    {
+        if ($field === 'company_entry_date') {
+            $normalized = $this->normalizeDateValue($value);
+
+            return $normalized ? \Illuminate\Support\Carbon::parse($normalized)->format('d/m/Y') : null;
+        }
+
+        return $value;
+    }
+
+    protected function normalizeDateValue(mixed $value): ?string
+    {
+        if ($value instanceof \Illuminate\Support\Carbon) {
+            return $value->toDateString();
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return \Illuminate\Support\Carbon::instance($value)->toDateString();
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::parse($value)->toDateString();
+    }
+
+    protected function normalizeAgendaValue(mixed $value): ?string
+    {
+        $normalized = preg_replace('/\D+/', '', trim((string) $value));
+
+        return $normalized === '' ? null : $normalized;
     }
 }

@@ -20,6 +20,7 @@ class AdminDealershipLogController extends Controller
         $dateTo = $this->sanitizeDate($request->query('date_to'));
         [$dateFrom, $dateTo] = $this->normalizeDateRange($dateFrom, $dateTo);
         $actorId = $this->sanitizeActorId($request->query('actor'));
+        $targetId = $this->sanitizeTargetId($request->query('target'));
         $actors = $this->availableActors();
 
         if (! Schema::hasTable('dealership_activity_logs')) {
@@ -36,17 +37,17 @@ class AdminDealershipLogController extends Controller
             $logs->withQueryString();
             $missingTable = true;
 
-            return $this->renderIndexResponse($request, compact('logs', 'action', 'dateFrom', 'dateTo', 'actorId', 'actors', 'missingTable'));
+            return $this->renderIndexResponse($request, compact('logs', 'action', 'dateFrom', 'dateTo', 'actorId', 'targetId', 'actors', 'missingTable'));
         }
 
-        $logs = $this->filteredLogsQuery($action, $dateFrom, $dateTo, $actorId)
+        $logs = $this->filteredLogsQuery($action, $dateFrom, $dateTo, $actorId, $targetId)
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
 
         $missingTable = false;
 
-        return $this->renderIndexResponse($request, compact('logs', 'action', 'dateFrom', 'dateTo', 'actorId', 'actors', 'missingTable'));
+        return $this->renderIndexResponse($request, compact('logs', 'action', 'dateFrom', 'dateTo', 'actorId', 'targetId', 'actors', 'missingTable'));
     }
 
     public function export(Request $request): StreamedResponse
@@ -56,6 +57,7 @@ class AdminDealershipLogController extends Controller
         $dateTo = $this->sanitizeDate($request->query('date_to'));
         [$dateFrom, $dateTo] = $this->normalizeDateRange($dateFrom, $dateTo);
         $actorId = $this->sanitizeActorId($request->query('actor'));
+        $targetId = $this->sanitizeTargetId($request->query('target'));
 
         if (! Schema::hasTable('dealership_activity_logs')) {
             return response()->streamDownload(function (): void {
@@ -78,7 +80,7 @@ class AdminDealershipLogController extends Controller
             ]);
         }
 
-        $logs = $this->filteredLogsQuery($action, $dateFrom, $dateTo, $actorId)
+        $logs = $this->filteredLogsQuery($action, $dateFrom, $dateTo, $actorId, $targetId)
             ->orderByDesc('created_at')
             ->get();
 
@@ -168,13 +170,25 @@ class AdminDealershipLogController extends Controller
             ->get(['id', 'name']);
     }
 
-    private function filteredLogsQuery(?string $action, ?string $dateFrom, ?string $dateTo, ?int $actorId): Builder
+    private function sanitizeTargetId(mixed $targetId): ?int
+    {
+        if (! is_numeric($targetId)) {
+            return null;
+        }
+
+        $targetId = (int) $targetId;
+
+        return $targetId > 0 ? $targetId : null;
+    }
+
+    private function filteredLogsQuery(?string $action, ?string $dateFrom, ?string $dateTo, ?int $actorId, ?int $targetId): Builder
     {
         return DealershipActivityLog::query()
             ->when($action, fn (Builder $query) => $query->where('action', $action))
             ->when($dateFrom, fn (Builder $query) => $query->whereDate('created_at', '>=', $dateFrom))
             ->when($dateTo, fn (Builder $query) => $query->whereDate('created_at', '<=', $dateTo))
-            ->when($actorId, fn (Builder $query) => $query->where('actor_user_id', $actorId));
+            ->when($actorId, fn (Builder $query) => $query->where('actor_user_id', $actorId))
+            ->when($targetId, fn (Builder $query) => $query->where('target_dealership_id', $targetId));
     }
 
     private function formatChanges(array $changes): string
