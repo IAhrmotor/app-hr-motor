@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\MonthlyMagazineActivityLog;
 use App\Models\MonthlyMagazineSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +36,7 @@ class ContentLogTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_content_logs_collect_magazine_changes(): void
+    public function test_monthly_magazine_logs_collect_magazine_changes(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
@@ -46,25 +47,17 @@ class ContentLogTest extends TestCase
             'magazine_file' => $pdf,
         ])->assertRedirect(route('admin.magazine.edit'));
 
-        $this->assertDatabaseCount('content_activity_logs', 1);
-
-        $page = $this->actingAs($admin)->get(route('admin.content-logs.index'));
-
-        $page
-            ->assertOk()
-            ->assertSee('Logs de contenidos')
-            ->assertSee('Revista mensual')
-            ->assertSee('Abril');
+        $this->assertDatabaseCount('monthly_magazine_activity_logs', 1);
 
         $magazine = MonthlyMagazineSetting::query()->first();
         if ($magazine) {
             $this->createdMagazineFiles[] = $magazine->pdf_path;
         }
 
-        $this->assertDatabaseHas('content_activity_logs', [
-            'content_type' => 'magazine',
-            'action' => 'updated',
+        $this->assertDatabaseHas('monthly_magazine_activity_logs', [
+            'action' => MonthlyMagazineActivityLog::ACTION_CREATED,
             'target_name' => 'Abril',
+            'target_reference' => 'revista/revista-abril-2026.pdf',
         ]);
     }
 }

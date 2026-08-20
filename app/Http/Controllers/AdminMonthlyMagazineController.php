@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ContentActivityLog;
+use App\Models\MonthlyMagazineActivityLog;
 use App\Models\MonthlyMagazineSetting;
-use App\Services\ContentActivityLogger;
+use App\Services\MonthlyMagazineActivityLogWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -55,29 +55,40 @@ class AdminMonthlyMagazineController extends Controller
 
         $file->move($directory, $filename);
 
-        DB::transaction(function () use ($magazine, $validated, $filename, $file, $previousTagLabel, $previousPdfPath, $previousOriginalFilename): void {
+        $isCreate = ! $magazine->exists;
+        $targetPath = 'revista/' . $filename;
+        $targetAbsolutePath = public_path($targetPath);
+
+        DB::transaction(function () use ($magazine, $validated, $filename, $file, $previousTagLabel, $previousPdfPath, $previousOriginalFilename, $isCreate, $targetPath): void {
             $magazine->fill([
                 'tag_label' => $validated['tag_label'],
-                'pdf_path' => 'revista/' . $filename,
+                'pdf_path' => $targetPath,
                 'original_filename' => $file->getClientOriginalName(),
                 'updated_by_user_id' => request()->user()?->id,
             ]);
 
             $magazine->save();
 
-            app(ContentActivityLogger::class)->record(
+            app(MonthlyMagazineActivityLogWriter::class)->record(
                 actor: request()->user(),
-                contentType: ContentActivityLog::CONTENT_TYPE_MAGAZINE,
-                action: ContentActivityLog::ACTION_UPDATED,
+                action: $isCreate ? MonthlyMagazineActivityLog::ACTION_CREATED : MonthlyMagazineActivityLog::ACTION_UPDATED,
                 targetName: $validated['tag_label'],
-                targetReference: 'revista/' . $filename,
+                targetReference: $targetPath,
                 changes: [
                     'tag_label' => ['from' => $previousTagLabel, 'to' => $validated['tag_label']],
-                    'pdf_path' => ['from' => $previousPdfPath, 'to' => 'revista/' . $filename],
+                    'pdf_path' => ['from' => $previousPdfPath, 'to' => $targetPath],
                     'original_filename' => ['from' => $previousOriginalFilename, 'to' => $file->getClientOriginalName()],
                 ],
             );
         });
+
+        if (
+            ($previousPdfPath !== MonthlyMagazineSetting::DEFAULT_PDF_PATH) &&
+            ($previousPdfPath !== $targetPath) &&
+            File::exists(public_path($previousPdfPath))
+        ) {
+            File::delete(public_path($previousPdfPath));
+        }
 
         return redirect()
             ->route('admin.magazine.edit')
