@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Users;
 
+use App\Filament\Resources\Users\UserResource;
 use App\Models\Dealership;
 use App\Models\User;
 use App\Models\UserActivityLog;
 use App\Notifications\UserPasswordResetNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -138,12 +138,17 @@ class UserActivityLogTest extends TestCase
         ]);
     }
 
-    public function test_admin_logs_page_lists_user_activity_and_allows_csv_download(): void
+    public function test_filament_user_logs_page_lists_user_activity_and_is_admin_only(): void
     {
         $admin = User::factory()->create([
             'role' => 'admin',
             'name' => 'Admin Principal',
             'email' => 'admin@example.com',
+        ]);
+        $manager = User::factory()->create([
+            'role' => 'gestor',
+            'name' => 'Gestor Principal',
+            'email' => 'gestor@example.com',
         ]);
 
         UserActivityLog::query()->create([
@@ -165,113 +170,32 @@ class UserActivityLogTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $pageResponse = $this->actingAs($admin)->get(route('admin.logs.index'));
-
-        $pageResponse
+        $this->actingAs($admin)
+            ->get(UserResource::getUrl('logs'))
             ->assertOk()
             ->assertSee('Logs de usuarios')
             ->assertSee('Usuario Audit')
-            ->assertSee('Admin Principal')
-            ->assertSee(route('admin.logs.export'), false);
+            ->assertSee('Admin Principal');
 
-        $downloadResponse = $this->actingAs($admin)->get(route('admin.logs.export'));
-
-        $downloadResponse
-            ->assertOk()
-            ->assertDownload();
-
-        $content = $downloadResponse->streamedContent();
-
-        $this->assertStringContainsString('fecha_hora;accion;resultado;gestionado_por', $content);
-        $this->assertStringContainsString('Usuario Audit', $content);
-        $this->assertStringContainsString('Admin Principal', $content);
-        $this->assertStringContainsString('Email: ""antes@example.com"" -> ""audit@example.com""', $content);
+        $this->actingAs($manager)
+            ->get(UserResource::getUrl('logs'))
+            ->assertForbidden();
     }
 
-    public function test_admin_logs_can_be_filtered_by_date_range_and_actor(): void
+    public function test_old_admin_user_logs_urls_are_removed(): void
     {
-        Carbon::setTestNow('2026-03-23 10:00:00');
-
         $admin = User::factory()->create([
             'role' => 'admin',
             'name' => 'Admin Principal',
             'email' => 'admin@example.com',
         ]);
-        $manager = User::factory()->create([
-            'role' => 'gestor',
-            'name' => 'Gestor Norte',
-            'email' => 'gestor@example.com',
-        ]);
 
-        UserActivityLog::query()->create([
-            'action' => UserActivityLog::ACTION_CREATED,
-            'actor_user_id' => $admin->id,
-            'actor_name' => $admin->name,
-            'actor_email' => $admin->email,
-            'target_user_id' => null,
-            'target_name' => 'Usuario Hoy Admin',
-            'target_email' => 'hoy-admin@example.com',
-            'target_role' => 'comercial',
-            'target_dealership' => 'Madrid',
-            'changes' => null,
-            'created_at' => Carbon::parse('2026-03-23 10:00:00'),
-        ]);
+        $this->actingAs($admin)
+            ->get('/admin/logs/usuarios')
+            ->assertNotFound();
 
-        UserActivityLog::query()->create([
-            'action' => UserActivityLog::ACTION_CREATED,
-            'actor_user_id' => $manager->id,
-            'actor_name' => $manager->name,
-            'actor_email' => $manager->email,
-            'target_user_id' => null,
-            'target_name' => 'Usuario Hoy Gestor',
-            'target_email' => 'hoy-gestor@example.com',
-            'target_role' => 'comercial',
-            'target_dealership' => 'Bilbao',
-            'changes' => null,
-            'created_at' => Carbon::parse('2026-03-23 11:00:00'),
-        ]);
-
-        UserActivityLog::query()->create([
-            'action' => UserActivityLog::ACTION_CREATED,
-            'actor_user_id' => $admin->id,
-            'actor_name' => $admin->name,
-            'actor_email' => $admin->email,
-            'target_user_id' => null,
-            'target_name' => 'Usuario Ayer Admin',
-            'target_email' => 'ayer-admin@example.com',
-            'target_role' => 'comercial',
-            'target_dealership' => 'Valencia',
-            'changes' => null,
-            'created_at' => Carbon::parse('2026-03-22 10:00:00'),
-        ]);
-
-        $response = $this->actingAs($admin)->get(route('admin.logs.index', [
-            'date_from' => '2026-03-23',
-            'date_to' => '2026-03-23',
-            'actor' => $manager->id,
-        ]));
-
-        $response
-            ->assertOk()
-            ->assertSee('Usuario Hoy Gestor')
-            ->assertDontSee('Usuario Hoy Admin')
-            ->assertDontSee('Usuario Ayer Admin')
-            ->assertSee('value="2026-03-23"', false)
-            ->assertSee('Del 23/03/2026 al 23/03/2026')
-            ->assertSee('Gestor Norte');
-
-        $downloadResponse = $this->actingAs($admin)->get(route('admin.logs.export', [
-            'date_from' => '2026-03-23',
-            'date_to' => '2026-03-23',
-            'actor' => $manager->id,
-        ]));
-
-        $content = $downloadResponse->streamedContent();
-
-        $this->assertStringContainsString('Usuario Hoy Gestor', $content);
-        $this->assertStringNotContainsString('Usuario Hoy Admin', $content);
-        $this->assertStringNotContainsString('Usuario Ayer Admin', $content);
-
-        Carbon::setTestNow();
+        $this->actingAs($admin)
+            ->get('/admin/logs/usuarios/descargar')
+            ->assertNotFound();
     }
 }

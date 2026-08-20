@@ -355,7 +355,6 @@ if (! function_exists('app_admin_permission_key_for_route')) {
             Str::startsWith($routeName, ['users.']) => 'users.manage',
             Str::startsWith($routeName, ['dealerships.']) => 'dealerships.manage',
             Str::startsWith($routeName, ['admin.zones.']) => 'zones.manage',
-            Str::startsWith($routeName, ['admin.zone-logs.']) => 'zones.manage',
             Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
             Str::startsWith($routeName, ['admin.ticket-tools.']) => 'ticket-tools.manage',
             Str::startsWith($routeName, ['tickets.']) => 'tickets-it.manage',
@@ -429,39 +428,11 @@ if (! function_exists('app_admin_visible_sections')) {
                     'icon' => 'notification-log',
                 ],
                 [
-                    'label' => 'Usuarios',
-                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de usuarios.',
-                    'route' => 'admin.logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'user-log',
-                ],
-                [
-                    'label' => 'Delegaciones',
-                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de delegaciones.',
-                    'route' => 'admin.dealership-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'dealership-log',
-                ],
-                [
-                    'label' => 'Zonas',
-                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de zonas.',
-                    'route' => 'admin.zone-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'zones-log',
-                ],
-                [
                     'label' => 'Contenidos',
                     'description' => 'Consulta el historial de la revista mensual, los contactos y el tablón en un único lugar.',
                     'route' => 'admin.content-logs.index',
                     'kind' => 'logs',
                     'icon' => 'content-log',
-                ],
-                [
-                    'label' => 'Herramientas de tickets',
-                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de herramientas de tickets.',
-                    'route' => 'admin.ticket-tool-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'ticket-tools-log',
                 ],
                 [
                     'label' => 'Tablón',
@@ -506,16 +477,6 @@ if (! function_exists('app_admin_visible_sections')) {
                     'icon' => 'permissions-log',
                 ],
             ]);
-        }
-
-        if (app_user_has_admin_permission($user, 'zones.manage') && ! $isAdminViewerMode) {
-            $sections[] = [
-                'label' => 'Logs de zonas',
-                'description' => 'Consulta el historial de altas, ediciones y eliminaciones de zonas.',
-                'route' => 'admin.zone-logs.index',
-                'kind' => 'logs',
-                'icon' => 'zones-log',
-            ];
         }
 
         return $sections;
