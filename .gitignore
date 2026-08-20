@@ -25,6 +25,7 @@ Thumbs.db
 /public/build
 /public/hot
 /public/storage
+/public/revista/*.pdf
 
 /storage/*.key
 /storage/pail
