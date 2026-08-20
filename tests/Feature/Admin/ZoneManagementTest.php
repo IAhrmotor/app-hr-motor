@@ -74,7 +74,7 @@ class ZoneManagementTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_view_zone_logs(): void
+    public function test_old_admin_zone_logs_routes_are_removed(): void
     {
         $admin = User::factory()->create([
             'role' => User::ROLE_ADMIN,
@@ -82,35 +82,16 @@ class ZoneManagementTest extends TestCase
             'email' => 'admin@example.com',
         ]);
 
-        $zone = Zone::query()->create(['name' => 'Zona Centro']);
+        $this->actingAs($admin)
+            ->get('/admin/logs/zonas')
+            ->assertNotFound();
 
-        ZoneActivityLog::query()->create([
-            'action' => ZoneActivityLog::ACTION_UPDATED,
-            'actor_user_id' => $admin->id,
-            'actor_name' => $admin->name,
-            'actor_email' => $admin->email,
-            'target_zone_id' => $zone->id,
-            'target_name' => $zone->name,
-            'target_dealerships' => ['Madrid'],
-            'changes' => [
-                'Nombre' => [
-                    'from' => 'Zona Centro',
-                    'to' => 'Zona Centro 2',
-                ],
-            ],
-            'created_at' => now(),
-        ]);
-
-        $response = $this->actingAs($admin)->get(route('admin.zone-logs.index'));
-
-        $response
-            ->assertOk()
-            ->assertSee('Logs de zonas')
-            ->assertSee('Zona Centro')
-            ->assertSee('Admin Principal');
+        $this->actingAs($admin)
+            ->get('/admin/logs/zonas/descargar')
+            ->assertNotFound();
     }
 
-    public function test_manager_can_access_zone_management_and_zone_logs(): void
+    public function test_manager_can_access_zone_management_without_old_zone_logs_route(): void
     {
         $manager = User::factory()->create([
             'role' => User::ROLE_MANAGER,
@@ -133,8 +114,7 @@ class ZoneManagementTest extends TestCase
             ->assertRedirect(route('admin.zones.index'));
 
         $this->actingAs($manager)
-            ->get(route('admin.zone-logs.index'))
-            ->assertOk()
-            ->assertSee('Logs de zonas');
+            ->get('/admin/logs/zonas')
+            ->assertNotFound();
     }
 }

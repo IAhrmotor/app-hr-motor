@@ -169,7 +169,7 @@ class ListDealershipLogs extends Page implements HasTable
 
     protected function getCsvExportUrl(): string
     {
-        return route('admin.dealership-logs.export', array_filter([
+        return route('backoffice.dealership-logs.export', array_filter([
             'action' => data_get($this->tableFilters, 'action.value'),
             'actor' => data_get($this->tableFilters, 'actor.value'),
             'date_from' => data_get($this->tableFilters, 'created_at.from'),

@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Filament\Resources\Zones\Pages;
+namespace App\Filament\Resources\TicketTools\Pages;
 
-use App\Filament\Resources\Zones\ZoneResource;
+use App\Filament\Resources\TicketTools\TicketToolResource;
+use App\Models\TicketToolActivityLog;
 use App\Models\User;
-use App\Models\ZoneActivityLog;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Resources\Pages\Page;
 use Filament\Schemas\Schema;
+use Filament\Resources\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -19,17 +19,17 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-class ListZoneLogs extends Page implements HasTable
+class ListTicketToolLogs extends Page implements HasTable
 {
     use InteractsWithTable;
 
-    protected static string $resource = ZoneResource::class;
+    protected static string $resource = TicketToolResource::class;
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static ?string $breadcrumb = 'Logs de zonas';
+    protected static ?string $breadcrumb = 'Logs de tipos de incidencia';
 
-    protected static ?string $title = 'Logs de zonas';
+    protected static ?string $title = 'Logs de tipos de incidencia';
 
     public function mount(): void
     {
@@ -49,7 +49,7 @@ class ListZoneLogs extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => ZoneActivityLog::query())
+            ->query(fn (): Builder => TicketToolActivityLog::query())
             ->defaultSort('created_at', 'desc')
             ->filtersFormMaxHeight('60vh')
             ->toolbarActions([
@@ -57,7 +57,12 @@ class ListZoneLogs extends Page implements HasTable
                     ->label('Descargar CSV')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
-                    ->url(fn (): string => $this->getCsvExportUrl()),
+                    ->url(fn (): string => route('backoffice.ticket-tool-logs.export', array_filter([
+                        'action' => data_get($this->tableFilters, 'action.value'),
+                        'actor' => data_get($this->tableFilters, 'actor.value'),
+                        'date_from' => data_get($this->tableFilters, 'created_at.from'),
+                        'date_to' => data_get($this->tableFilters, 'created_at.until'),
+                    ], static fn (mixed $value): bool => filled($value)))),
             ])
             ->filters([
                 Filter::make('action')
@@ -66,9 +71,9 @@ class ListZoneLogs extends Page implements HasTable
                         Select::make('value')
                             ->label('Acción')
                             ->options([
-                                ZoneActivityLog::ACTION_CREATED => 'Alta',
-                                ZoneActivityLog::ACTION_UPDATED => 'Edición',
-                                ZoneActivityLog::ACTION_DELETED => 'Eliminación',
+                                TicketToolActivityLog::ACTION_CREATED => 'Alta',
+                                TicketToolActivityLog::ACTION_UPDATED => 'Edición',
+                                TicketToolActivityLog::ACTION_DELETED => 'Eliminación',
                             ])
                             ->placeholder('Todas las acciones'),
                     ])
@@ -135,23 +140,23 @@ class ListZoneLogs extends Page implements HasTable
                     ->width('11rem'),
                 TextColumn::make('actor_name')
                     ->label('Gestionado por')
-                    ->state(fn (ZoneActivityLog $record): string => $record->actor_name)
+                    ->state(fn (TicketToolActivityLog $record): string => $record->actor_name)
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->where('actor_name', 'like', "%{$search}%");
                     })
                     ->grow(false)
                     ->width('14rem'),
                 TextColumn::make('target_name')
-                    ->label('Zona afectada')
-                    ->state(fn (ZoneActivityLog $record): string => $record->target_name)
+                    ->label('Tipo de incidencia afectado')
+                    ->state(fn (TicketToolActivityLog $record): string => $record->target_name)
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->where('target_name', 'like', "%{$search}%");
                     })
                     ->grow(false)
-                    ->width('14rem'),
+                    ->width('16rem'),
                 TextColumn::make('changes')
                     ->label('Detalle')
-                    ->state(function (ZoneActivityLog $record): string {
+                    ->state(function (TicketToolActivityLog $record): string {
                         return $this->formatChanges($record);
                     })
                     ->wrap()
@@ -167,25 +172,15 @@ class ListZoneLogs extends Page implements HasTable
         ]);
     }
 
-    protected function getCsvExportUrl(): string
-    {
-        return route('backoffice.zone-logs.export', array_filter([
-            'action' => data_get($this->tableFilters, 'action.value'),
-            'actor' => data_get($this->tableFilters, 'actor.value'),
-            'date_from' => data_get($this->tableFilters, 'created_at.from'),
-            'date_to' => data_get($this->tableFilters, 'created_at.until'),
-        ], static fn (mixed $value): bool => filled($value)));
-    }
-
-    protected function formatChanges(ZoneActivityLog $record): string
+    protected function formatChanges(TicketToolActivityLog $record): string
     {
         $changes = $record->changes ?? [];
 
         if ($changes === []) {
             return match ($record->action) {
-                ZoneActivityLog::ACTION_CREATED => 'Alta de zona',
-                ZoneActivityLog::ACTION_UPDATED => 'Sin cambios adicionales registrados',
-                ZoneActivityLog::ACTION_DELETED => 'Eliminación de zona',
+                TicketToolActivityLog::ACTION_CREATED => 'Alta de tipo de incidencia',
+                TicketToolActivityLog::ACTION_UPDATED => 'Sin cambios adicionales registrados',
+                TicketToolActivityLog::ACTION_DELETED => 'Eliminación de tipo de incidencia',
                 default => 'Sin detalles registrados',
             };
         }
@@ -198,8 +193,8 @@ class ListZoneLogs extends Page implements HasTable
                 return sprintf(
                     '%s: %s -> %s',
                     $field,
-                    blank($from) ? 'Vacío' : $from,
-                    blank($to) ? 'Vacío' : $to,
+                    $from ?? 'vacío',
+                    $to ?? 'vacío',
                 );
             })
             ->implode(' | ');

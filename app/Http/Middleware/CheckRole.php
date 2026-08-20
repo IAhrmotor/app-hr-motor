@@ -21,10 +21,6 @@ class CheckRole
         $routeName = $request->route()?->getName();
 
         if ($routeName && $this->isAdminLogRoute($routeName)) {
-            if ($this->isZoneLogRoute($routeName) && app_user_has_admin_permission($user, 'zones.manage')) {
-                return $this->authorizeRoleRequest($request, $next, $user, $roles, $routeName);
-            }
-
             if (app_real_role($user) !== User::ROLE_ADMIN) {
                 abort(403);
             }
@@ -92,20 +88,12 @@ class CheckRole
             'admin.logs.',
             'admin.content-logs.',
             'admin.bulletin-logs.',
-            'admin.dealership-logs.',
-            'admin.zone-logs.',
             'admin.notification-logs.',
-            'admin.ticket-tool-logs.',
             'admin.policy-acceptance-logs.',
             'admin.chat-retention-logs.',
             'admin.conversation-access.logs.',
             'admin.chat-group-logs.',
             'admin.permission-logs.',
         ]);
-    }
-
-    private function isZoneLogRoute(string $routeName): bool
-    {
-        return Str::startsWith($routeName, ['admin.zone-logs.']);
     }
 }

@@ -220,7 +220,7 @@ class UserResource extends Resource
         return $table
             ->columns([
                 ImageColumn::make('avatar_url')
-                    ->label('')
+                    ->label('Avatar')
                     ->circular()
                     ->grow(false)
                     ->imageSize(44)

@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\AdminDealershipLogController;
-use App\Http\Controllers\AdminZoneLogController;
 use App\Http\Controllers\AdminContentLogController;
 use App\Http\Controllers\AdminConversationAccessController;
 use App\Http\Controllers\AdminConversationAccessLogController;
@@ -18,8 +16,6 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AdminNotificationLogController;
 use App\Http\Controllers\AdminMonthlyMagazineController;
-use App\Http\Controllers\AdminLogController;
-use App\Http\Controllers\AdminTicketToolLogController;
 use App\Http\Controllers\GoogleBusinessProfileAuthController;
 use App\Http\Controllers\RoleViewerController;
 use App\Http\Controllers\LeaderboardController;
@@ -1571,20 +1567,6 @@ Route::middleware('auth')->group(function () {
                     'icon' => 'notification-log',
                 ],
                 [
-                    'label' => 'Logs de usuarios',
-                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de usuarios.',
-                    'route' => 'admin.logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'user-log',
-                ],
-                [
-                    'label' => 'Logs de delegaciones',
-                    'description' => 'Consulta el historial de altas, ediciones y eliminaciones de delegaciones.',
-                    'route' => 'admin.dealership-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'dealership-log',
-                ],
-                [
                     'label' => 'Logs de contenidos',
                     'description' => 'Consulta el historial de la revista mensual, los contactos y el tablón en un único lugar.',
                     'route' => 'admin.content-logs.index',
@@ -1708,8 +1690,70 @@ Route::middleware('auth')->group(function () {
         Route::delete('/admin/herramientas-tickets/{ticketTool}', [TicketToolController::class, 'destroy'])
             ->whereNumber('ticketTool')
             ->name('admin.ticket-tools.destroy');
-        Route::get('/admin/logs/herramientas-tickets', [AdminTicketToolLogController::class, 'index'])->name('admin.ticket-tool-logs.index');
-        Route::get('/admin/logs/herramientas-tickets/descargar', [AdminTicketToolLogController::class, 'export'])->name('admin.ticket-tool-logs.export');
+        Route::get('/backoffice/herramientas-tickets/logs/descargar', function () {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('ticket_tool_activity_logs')) {
+                return response()->streamDownload(function (): void {
+                    $output = fopen('php://output', 'w');
+
+                    fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'herramienta', 'color', 'cambios'], ';');
+
+                    fclose($output);
+                }, 'logs-herramientas-tickets-pendiente-migracion.csv', [
+                    'Content-Type' => 'text/csv; charset=UTF-8',
+                ]);
+            }
+
+            $action = request()->query('action');
+            $dateFrom = request()->query('date_from');
+            $dateTo = request()->query('date_to');
+            $actorId = request()->query('actor');
+
+            $logs = \App\Models\TicketToolActivityLog::query()
+                ->when($action, fn ($query) => $query->where('action', $action))
+                ->when($dateFrom, fn ($query) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('created_at', '<=', $dateTo))
+                ->when($actorId, fn ($query) => $query->where('actor_user_id', $actorId))
+                ->orderByDesc('created_at')
+                ->get();
+
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            $filename = $action
+                ? "logs-herramientas-tickets-{$action}-{$timestamp}.csv"
+                : "logs-herramientas-tickets-{$timestamp}.csv";
+
+            return response()->streamDownload(function () use ($logs): void {
+                $output = fopen('php://output', 'w');
+
+                fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'herramienta', 'color', 'cambios'], ';');
+
+                foreach ($logs as $log) {
+                    $changes = collect($log->changes ?? [])
+                        ->map(function (array $change, string $field): string {
+                            return sprintf(
+                                '%s: %s -> %s',
+                                $field,
+                                blank($change['from'] ?? null) ? 'Vacío' : $change['from'],
+                                blank($change['to'] ?? null) ? 'Vacío' : $change['to'],
+                            );
+                        })
+                        ->implode(' | ');
+
+                    fputcsv($output, [
+                        $log->created_at?->format('Y-m-d H:i:s'),
+                        $log->action_label,
+                        $log->actor_name,
+                        $log->actor_email,
+                        $log->target_name,
+                        $log->target_color,
+                        $changes,
+                    ], ';');
+                }
+
+                fclose($output);
+            }, $filename, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+            ]);
+        })->name('backoffice.ticket-tool-logs.export');
         Route::get('/admin/logs/contenidos', [AdminContentLogController::class, 'index'])->name('admin.content-logs.index');
         Route::get('/admin/logs/contenidos/descargar', [AdminContentLogController::class, 'export'])->name('admin.content-logs.export');
         Route::get('/admin/logs/politica-aceptacion', [AdminPolicyAcceptanceLogController::class, 'index'])->name('admin.policy-acceptance-logs.index');
@@ -1757,13 +1801,153 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/notificaciones', [AdminNotificationController::class, 'store'])->name('admin.notifications.store');
         Route::get('/admin/logs/notificaciones', [AdminNotificationLogController::class, 'index'])->name('admin.notification-logs.index');
         Route::get('/admin/logs/notificaciones/descargar', [AdminNotificationLogController::class, 'export'])->name('admin.notification-logs.export');
-        Route::redirect('/admin/logs', '/admin/logs/usuarios');
-        Route::get('/admin/logs/usuarios', [AdminLogController::class, 'index'])->name('admin.logs.index');
-        Route::get('/admin/logs/usuarios/descargar', [AdminLogController::class, 'export'])->name('admin.logs.export');
-        Route::get('/admin/logs/delegaciones', [AdminDealershipLogController::class, 'index'])->name('admin.dealership-logs.index');
-        Route::get('/admin/logs/delegaciones/descargar', [AdminDealershipLogController::class, 'export'])->name('admin.dealership-logs.export');
-        Route::get('/admin/logs/zonas', [AdminZoneLogController::class, 'index'])->name('admin.zone-logs.index');
-        Route::get('/admin/logs/zonas/descargar', [AdminZoneLogController::class, 'export'])->name('admin.zone-logs.export');
+        Route::get('/backoffice/delegaciones/logs/descargar', function (\Illuminate\Http\Request $request) {
+            abort_unless(auth()->user()?->role === 'admin', 403);
+
+            $action = $request->query('action');
+            $action = is_string($action) && $action !== '' ? $action : null;
+
+            $dateFrom = $request->query('date_from');
+            $dateFrom = is_string($dateFrom) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) ? $dateFrom : null;
+
+            $dateTo = $request->query('date_to');
+            $dateTo = is_string($dateTo) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo) ? $dateTo : null;
+
+            if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+                [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+            }
+
+            $actorId = $request->query('actor');
+            $actorId = is_numeric($actorId) && (int) $actorId > 0 ? (int) $actorId : null;
+
+            if (! \Illuminate\Support\Facades\Schema::hasTable('dealership_activity_logs')) {
+                return response()->streamDownload(function (): void {
+                    $output = fopen('php://output', 'w');
+                    fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'delegacion', 'cambios'], ';');
+                    fclose($output);
+                }, 'logs-delegaciones-pendiente-migracion.csv', [
+                    'Content-Type' => 'text/csv; charset=UTF-8',
+                ]);
+            }
+
+            $logs = \App\Models\DealershipActivityLog::query()
+                ->when($action, fn ($query) => $query->where('action', $action))
+                ->when($dateFrom, fn ($query) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('created_at', '<=', $dateTo))
+                ->when($actorId, fn ($query) => $query->where('actor_user_id', $actorId))
+                ->orderByDesc('created_at')
+                ->get();
+
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            $filename = $action
+                ? "logs-delegaciones-{$action}-{$timestamp}.csv"
+                : "logs-delegaciones-{$timestamp}.csv";
+
+            return response()->streamDownload(function () use ($logs): void {
+                $output = fopen('php://output', 'w');
+                fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'delegacion', 'cambios'], ';');
+
+                foreach ($logs as $log) {
+                    $changes = collect($log->changes ?? [])
+                        ->map(function (array $change, string $field): string {
+                            return sprintf(
+                                '%s: %s -> %s',
+                                $field,
+                                $change['from'] ?? 'vacío',
+                                $change['to'] ?? 'vacío',
+                            );
+                        })
+                        ->implode(' | ');
+
+                    fputcsv($output, [
+                        $log->created_at?->format('Y-m-d H:i:s'),
+                        $log->action_label,
+                        $log->actor_name,
+                        $log->actor_email,
+                        $log->target_name,
+                        $changes,
+                    ], ';');
+                }
+
+                fclose($output);
+            }, $filename, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+            ]);
+        })->name('backoffice.dealership-logs.export');
+        Route::get('/backoffice/zonas/logs/descargar', function (\Illuminate\Http\Request $request) {
+            abort_unless(auth()->user()?->role === 'admin', 403);
+
+            $action = $request->query('action');
+            $action = is_string($action) && $action !== '' ? $action : null;
+
+            $dateFrom = $request->query('date_from');
+            $dateFrom = is_string($dateFrom) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) ? $dateFrom : null;
+
+            $dateTo = $request->query('date_to');
+            $dateTo = is_string($dateTo) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo) ? $dateTo : null;
+
+            if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+                [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+            }
+
+            $actorId = $request->query('actor');
+            $actorId = is_numeric($actorId) && (int) $actorId > 0 ? (int) $actorId : null;
+
+            if (! \Illuminate\Support\Facades\Schema::hasTable('zone_activity_logs')) {
+                return response()->streamDownload(function (): void {
+                    $output = fopen('php://output', 'w');
+                    fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'zona', 'delegaciones', 'cambios'], ';');
+                    fclose($output);
+                }, 'logs-zonas-pendiente-migracion.csv', [
+                    'Content-Type' => 'text/csv; charset=UTF-8',
+                ]);
+            }
+
+            $logs = \App\Models\ZoneActivityLog::query()
+                ->when($action, fn ($query) => $query->where('action', $action))
+                ->when($dateFrom, fn ($query) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('created_at', '<=', $dateTo))
+                ->when($actorId, fn ($query) => $query->where('actor_user_id', $actorId))
+                ->orderByDesc('created_at')
+                ->get();
+
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            $filename = $action
+                ? "logs-zonas-{$action}-{$timestamp}.csv"
+                : "logs-zonas-{$timestamp}.csv";
+
+            return response()->streamDownload(function () use ($logs): void {
+                $output = fopen('php://output', 'w');
+                fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'zona', 'delegaciones', 'cambios'], ';');
+
+                foreach ($logs as $log) {
+                    $changes = collect($log->changes ?? [])
+                        ->map(function (array $change, string $field): string {
+                            return sprintf(
+                                '%s: %s -> %s',
+                                $field,
+                                blank($change['from'] ?? null) ? 'Vacío' : $change['from'],
+                                blank($change['to'] ?? null) ? 'Vacío' : $change['to'],
+                            );
+                        })
+                        ->implode(' | ');
+
+                    fputcsv($output, [
+                        $log->created_at?->format('Y-m-d H:i:s'),
+                        $log->action_label,
+                        $log->actor_name,
+                        $log->actor_email,
+                        $log->target_name,
+                        filled($log->target_dealerships ?? []) ? implode(' | ', $log->target_dealerships) : '',
+                        $changes,
+                    ], ';');
+                }
+
+                fclose($output);
+            }, $filename, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+            ]);
+        })->name('backoffice.zone-logs.export');
         Route::get('/admin/contactos', [ContactController::class, 'index'])->name('admin.contacts.index');
         Route::get('/admin/contactos/crear', [ContactController::class, 'create'])->name('admin.contacts.create');
         Route::post('/admin/contactos', [ContactController::class, 'store'])->name('admin.contacts.store');
