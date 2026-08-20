@@ -1874,6 +1874,79 @@ Route::middleware('auth')->group(function () {
                 'Content-Type' => 'text/csv; charset=UTF-8',
             ]);
         })->name('backoffice.dealership-logs.export');
+        Route::get('/backoffice/revista/logs/descargar', function (\Illuminate\Http\Request $request) {
+            abort_unless(auth()->user()?->role === 'admin', 403);
+
+            $action = $request->query('action');
+            $action = is_string($action) && $action !== '' ? $action : null;
+
+            $dateFrom = $request->query('date_from');
+            $dateFrom = is_string($dateFrom) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) ? $dateFrom : null;
+
+            $dateTo = $request->query('date_to');
+            $dateTo = is_string($dateTo) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo) ? $dateTo : null;
+
+            if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+                [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+            }
+
+            $actorId = $request->query('actor');
+            $actorId = is_numeric($actorId) && (int) $actorId > 0 ? (int) $actorId : null;
+
+            if (! \Illuminate\Support\Facades\Schema::hasTable('monthly_magazine_activity_logs')) {
+                return response()->streamDownload(function (): void {
+                    $output = fopen('php://output', 'w');
+                    fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'revista', 'cambios'], ';');
+                    fclose($output);
+                }, 'logs-revista-pendiente-migracion.csv', [
+                    'Content-Type' => 'text/csv; charset=UTF-8',
+                ]);
+            }
+
+            $logs = \App\Models\MonthlyMagazineActivityLog::query()
+                ->when($action, fn ($query) => $query->where('action', $action))
+                ->when($dateFrom, fn ($query) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('created_at', '<=', $dateTo))
+                ->when($actorId, fn ($query) => $query->where('actor_user_id', $actorId))
+                ->orderByDesc('created_at')
+                ->get();
+
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            $filename = $action
+                ? "logs-revista-{$action}-{$timestamp}.csv"
+                : "logs-revista-{$timestamp}.csv";
+
+            return response()->streamDownload(function () use ($logs): void {
+                $output = fopen('php://output', 'w');
+                fputcsv($output, ['fecha_hora', 'accion', 'gestionado_por', 'email_gestor', 'revista', 'cambios'], ';');
+
+                foreach ($logs as $log) {
+                    $changes = collect($log->changes ?? [])
+                        ->map(function (array $change, string $field): string {
+                            return sprintf(
+                                '%s: %s -> %s',
+                                $field,
+                                blank($change['from'] ?? null) ? 'Vacío' : $change['from'],
+                                blank($change['to'] ?? null) ? 'Vacío' : $change['to'],
+                            );
+                        })
+                        ->implode(' | ');
+
+                    fputcsv($output, [
+                        $log->created_at?->format('Y-m-d H:i:s'),
+                        $log->action_label,
+                        $log->actor_name,
+                        $log->actor_email,
+                        $log->target_name,
+                        $changes,
+                    ], ';');
+                }
+
+                fclose($output);
+            }, $filename, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+            ]);
+        })->name('backoffice.monthly-magazine-logs.export');
         Route::get('/backoffice/zonas/logs/descargar', function (\Illuminate\Http\Request $request) {
             abort_unless(auth()->user()?->role === 'admin', 403);
 
