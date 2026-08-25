@@ -113,4 +113,26 @@ class FilamentDealershipManagementTest extends TestCase
             ],
         ], $log->changes);
     }
+
+    public function test_admin_can_download_dealerships_csv_from_filament(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        Dealership::query()->create([
+            'name' => 'Madrid Norte',
+            'salesforce_id' => 'DLR-MAD-001',
+            'phone' => '910000111',
+            'google_maps_url' => 'https://maps.google.com/?q=madrid+norte',
+            'reviews_url' => 'https://example.com/resenas/madrid-norte',
+        ]);
+
+        $response = $this->actingAs($admin)->get('/delegaciones/exportar-csv');
+
+        $response
+            ->assertOk()
+            ->assertDownload()
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+    }
 }

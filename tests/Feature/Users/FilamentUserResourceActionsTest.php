@@ -75,4 +75,27 @@ class FilamentUserResourceActionsTest extends TestCase
         $this->assertTrue($service->canDeactivate($manager, $plainUser));
         $this->assertFalse($service->canDeactivate($manager, $adminUser));
     }
+
+    public function test_admin_can_download_users_csv_from_filament(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'is_active' => true,
+        ]);
+
+        User::factory()->create([
+            'name' => 'Usuario CSV',
+            'email' => 'csv@example.com',
+            'role' => User::ROLE_USER,
+            'extra_role' => null,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get('/usuarios/exportar-csv');
+
+        $response
+            ->assertOk()
+            ->assertDownload()
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+    }
 }

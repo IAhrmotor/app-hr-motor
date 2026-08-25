@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class UserController extends Controller
@@ -107,6 +108,38 @@ class UserController extends Controller
         return view('users.show', [
             'user' => $user,
             'rankingPositions' => $this->buildRankingPositions($user),
+        ]);
+    }
+
+    public function exportCsv(): StreamedResponse
+    {
+        $users = User::query()
+            ->with('assignedDealership')
+            ->orderBy('name')
+            ->get();
+
+        $filename = 'usuarios-' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($users): void {
+            $output = fopen('php://output', 'w');
+
+            fwrite($output, "\xEF\xBB\xBF");
+
+            fputcsv($output, ['Usuario', 'Correo', 'Rol', 'Delegación', 'Estado']);
+
+            foreach ($users as $user) {
+                fputcsv($output, [
+                    $user->name,
+                    $user->email,
+                    $user->role_label,
+                    $user->resolved_dealership_name ?? 'No aplica',
+                    $this->resolveCsvStatusLabel($user),
+                ]);
+            }
+
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -506,6 +539,23 @@ class UserController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Correo de activacion reenviado correctamente.');
+    }
+
+    protected function resolveCsvStatusLabel(User $user): string
+    {
+        if ($user->isDisabled()) {
+            return 'Desactivado';
+        }
+
+        if ($user->is_active) {
+            return 'Activo';
+        }
+
+        if ($user->isInvitationExpired()) {
+            return 'Caducado';
+        }
+
+        return 'Pendiente';
     }
 
     protected function ensureCanManageListedUser(User $authUser, User $targetUser, string $action, bool $preventSelf = false): ?RedirectResponse

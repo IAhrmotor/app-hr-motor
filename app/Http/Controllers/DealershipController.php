@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DealershipController extends Controller
 {
@@ -115,6 +116,38 @@ class DealershipController extends Controller
                 'total_reviews' => (clone $googleReviewsQuery)->count(),
                 'average_rating' => round((float) (clone $googleReviewsQuery)->avg('rating'), 2),
             ],
+        ]);
+    }
+
+    public function exportCsv(): StreamedResponse
+    {
+        $dealerships = Dealership::query()
+            ->withCount('users')
+            ->orderBy('name')
+            ->get();
+
+        $filename = 'delegaciones-' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($dealerships): void {
+            $output = fopen('php://output', 'w');
+
+            fwrite($output, "\xEF\xBB\xBF");
+
+            fputcsv($output, ['Delegación', 'ID Salesforce', 'Equipo']);
+
+            foreach ($dealerships as $dealership) {
+                $count = (int) ($dealership->users_count ?? 0);
+
+                fputcsv($output, [
+                    $dealership->name,
+                    $dealership->salesforce_id,
+                    $count . ' ' . ($count === 1 ? 'usuario' : 'usuarios'),
+                ]);
+            }
+
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

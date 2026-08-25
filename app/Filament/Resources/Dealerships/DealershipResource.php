@@ -150,6 +150,11 @@ class DealershipResource extends Resource
             ->defaultSort('name')
             ->striped()
             ->toolbarActions([
+                Action::make('exportCsv')
+                    ->label('Exportar CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->url(fn (): string => route('dealerships.export-csv')),
                 Action::make('viewLogs')
                     ->label('Ver logs')
                     ->icon('heroicon-o-clipboard-document-list')
