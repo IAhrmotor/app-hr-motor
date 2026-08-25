@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Models\Contact;
 use App\Models\User;
+use App\Services\EnreachExtensionConflictResolver;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use Illuminate\Support\Str;
@@ -35,6 +36,18 @@ trait HandlesAgendaExtensions
 
             if ($enreach && $this->agendaExtensionExists('enreach_extension', $enreach, $ignoreUserId, $ignoreContactId)) {
                 $validator->errors()->add('enreach_extension', 'Esa extension de Enreach ya esta asignada.');
+            }
+        });
+    }
+
+    protected function agendaUserValidationHook(Validator $validator, ?int $ignoreUserId = null, string $action = 'crear'): void
+    {
+        $validator->after(function (Validator $validator) use ($ignoreUserId, $action): void {
+            $message = app(EnreachExtensionConflictResolver::class)
+                ->resolveConflictMessage($validator->getData()['enreach_extension'] ?? null, $ignoreUserId, $action);
+
+            if ($message !== null) {
+                $validator->errors()->add('enreach_extension', $message);
             }
         });
     }

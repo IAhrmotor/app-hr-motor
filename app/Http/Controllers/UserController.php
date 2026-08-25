@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\UserActivityLog;
 use App\Notifications\UserOnboardingNotification;
 use App\Notifications\UserWelcomeNotification;
+use App\Rules\UserEnreachExtensionRule;
 use App\Services\CompanyChatDefaultGroupSyncService;
 use App\Services\UserDeactivationService;
 use App\Services\UserInvitationService;
@@ -171,7 +172,10 @@ class UserController extends Controller
             'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
-            'enreach_extension' => $this->agendaExtensionRules(),
+            'enreach_extension' => array_merge(
+                $this->agendaExtensionRules(),
+                [new UserEnreachExtensionRule(action: 'crear')]
+            ),
             ...$this->itScheduleRules($isItUser),
             'salesforce_user_id' => [
                 Rule::requiredIf($isRankedCommercial),
@@ -184,7 +188,6 @@ class UserController extends Controller
         ]);
 
         $validator = Validator::make($validated, []);
-        $this->agendaValidationHook($validator);
         $validator->validate();
 
         try {
@@ -412,7 +415,10 @@ class UserController extends Controller
             'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
-            'enreach_extension' => $this->agendaExtensionRules(),
+            'enreach_extension' => array_merge(
+                $this->agendaExtensionRules(),
+                [new UserEnreachExtensionRule(ignoreUserId: $user->id, action: 'editar')]
+            ),
             ...$this->itScheduleRules($isItUser),
             'salesforce_user_id' => [
                 Rule::requiredIf($isRankedCommercial),
@@ -426,7 +432,6 @@ class UserController extends Controller
         ]);
 
         $validator = Validator::make($validated, []);
-        $this->agendaValidationHook($validator, $user->id);
         $validator->validate();
 
         $dealership = filled($validated['dealership_id'] ?? null)
