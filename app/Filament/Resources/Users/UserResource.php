@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Users;
 
 use App\Models\User;
+use App\Models\Dealership;
+use App\Rules\UserEnreachExtensionRule;
 use App\Services\UserDeactivationService;
 use BackedEnum;
 use Filament\Actions\CreateAction;
@@ -89,7 +91,13 @@ class UserResource extends Resource
                 ->maxLength(255),
             TextInput::make('enreach_extension')
                 ->label('Extensión Enreach')
-                ->maxLength(255),
+                ->maxLength(255)
+                ->rules(fn (?User $record): array => [
+                    new UserEnreachExtensionRule(
+                        ignoreUserId: $record?->id,
+                        action: $record ? 'editar' : 'crear',
+                    ),
+                ]),
             Select::make('role')
                 ->label('Rol base')
                 ->options(fn (): array => auth()->user()?->role === User::ROLE_ADMIN
@@ -315,8 +323,28 @@ class UserResource extends Resource
                             default => $query,
                         };
                     }),
+                SelectFilter::make('dealership_id')
+                    ->label('Delegación')
+                    ->options(fn (): array => ['__none__' => 'Sin delegación'] + Dealership::query()
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->query(function (Builder $query, array $data): Builder {
+                        return match ($data['value'] ?? null) {
+                            '__none__' => $query->whereNull('dealership_id'),
+                            null, '' => $query,
+                            default => $query->where('dealership_id', $data['value']),
+                        };
+                    })
+                    ->searchable()
+                    ->preload(),
             ])
             ->toolbarActions([
+                Action::make('exportCsv')
+                    ->label('Exportar CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->url(fn (): string => route('users.export-csv')),
                 Action::make('viewLogs')
                     ->label('Ver logs')
                     ->icon('heroicon-o-clipboard-document-list')

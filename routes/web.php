@@ -93,9 +93,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])
         ->whereNumber('dealership')
         ->name('dealerships.show');
+    Route::get('/delegaciones/exportar-csv', [DealershipController::class, 'exportCsv'])
+        ->name('dealerships.export-csv');
     Route::get('/usuarios/{user}', [UserController::class, 'show'])
         ->whereNumber('user')
         ->name('users.show');
+    Route::get('/usuarios/exportar-csv', [UserController::class, 'exportCsv'])
+        ->middleware('role:admin,gestor')
+        ->name('users.export-csv');
     Route::get('/web', function () {
         return redirect()->away(config('portal.links.tools.web_hr_motor'));
     })->name('tools.web');

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\UserActivityLog;
 use App\Notifications\UserOnboardingNotification;
 use App\Notifications\UserWelcomeNotification;
+use App\Rules\UserEnreachExtensionRule;
 use App\Services\CompanyChatDefaultGroupSyncService;
 use App\Services\UserDeactivationService;
 use App\Services\UserInvitationService;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class UserController extends Controller
@@ -110,6 +112,38 @@ class UserController extends Controller
         ]);
     }
 
+    public function exportCsv(): StreamedResponse
+    {
+        $users = User::query()
+            ->with('assignedDealership')
+            ->orderBy('name')
+            ->get();
+
+        $filename = 'usuarios-' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($users): void {
+            $output = fopen('php://output', 'w');
+
+            fwrite($output, "\xEF\xBB\xBF");
+
+            fputcsv($output, ['Usuario', 'Correo', 'Rol', 'Delegación', 'Estado']);
+
+            foreach ($users as $user) {
+                fputcsv($output, [
+                    $user->name,
+                    $user->email,
+                    $user->role_label,
+                    $user->resolved_dealership_name ?? 'No aplica',
+                    $this->resolveCsvStatusLabel($user),
+                ]);
+            }
+
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     public function store(Request $request)
     {
         $authUser = $request->user();
@@ -138,7 +172,10 @@ class UserController extends Controller
             'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
-            'enreach_extension' => $this->agendaExtensionRules(),
+            'enreach_extension' => array_merge(
+                $this->agendaExtensionRules(),
+                [new UserEnreachExtensionRule(action: 'crear')]
+            ),
             ...$this->itScheduleRules($isItUser),
             'salesforce_user_id' => [
                 Rule::requiredIf($isRankedCommercial),
@@ -151,7 +188,6 @@ class UserController extends Controller
         ]);
 
         $validator = Validator::make($validated, []);
-        $this->agendaValidationHook($validator);
         $validator->validate();
 
         try {
@@ -379,7 +415,10 @@ class UserController extends Controller
             'role' => ['required', 'string', Rule::in($allowedBaseRoles)],
             'extra_role' => ['nullable', 'string', Rule::in($allowedExtraRoles)],
             'phone' => $this->agendaPhoneRules(),
-            'enreach_extension' => $this->agendaExtensionRules(),
+            'enreach_extension' => array_merge(
+                $this->agendaExtensionRules(),
+                [new UserEnreachExtensionRule(ignoreUserId: $user->id, action: 'editar')]
+            ),
             ...$this->itScheduleRules($isItUser),
             'salesforce_user_id' => [
                 Rule::requiredIf($isRankedCommercial),
@@ -393,7 +432,6 @@ class UserController extends Controller
         ]);
 
         $validator = Validator::make($validated, []);
-        $this->agendaValidationHook($validator, $user->id);
         $validator->validate();
 
         $dealership = filled($validated['dealership_id'] ?? null)
@@ -506,6 +544,23 @@ class UserController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Correo de activacion reenviado correctamente.');
+    }
+
+    protected function resolveCsvStatusLabel(User $user): string
+    {
+        if ($user->isDisabled()) {
+            return 'Desactivado';
+        }
+
+        if ($user->is_active) {
+            return 'Activo';
+        }
+
+        if ($user->isInvitationExpired()) {
+            return 'Caducado';
+        }
+
+        return 'Pendiente';
     }
 
     protected function ensureCanManageListedUser(User $authUser, User $targetUser, string $action, bool $preventSelf = false): ?RedirectResponse
