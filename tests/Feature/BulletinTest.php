@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\Bulletins\BulletinPostResource;
 use App\Models\AdminPermissionGrant;
 use App\Models\BulletinPost;
 use App\Models\BulletinPostAttachment;
@@ -93,7 +94,7 @@ class BulletinTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->get(route('admin.tablon.index'))
+            ->get(BulletinPostResource::getUrl())
             ->assertOk()
             ->assertSee(html_entity_decode('Tabl&oacute;n'));
 
@@ -122,21 +123,19 @@ class BulletinTest extends TestCase
             ->assertSee(html_entity_decode('Tabl&oacute;n'));
     }
 
-    public function test_admin_bulletin_form_exposes_mentionable_users_for_autocomplete(): void
+    public function test_admin_bulletin_filament_form_is_available_for_creating_publications(): void
     {
         $admin = User::factory()->create([
             'role' => User::ROLE_ADMIN,
         ]);
-        $mentionableUser = User::factory()->create([
-            'role' => User::ROLE_COMMERCIAL,
-            'name' => 'Ana López',
-        ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.tablon.create'))
+            ->get(BulletinPostResource::getUrl('create'))
             ->assertOk()
-            ->assertSee('data-bulletin-mention-composer', false)
-            ->assertSee('Pulsa Tab o Enter para insertar', false);
+            ->assertSee('Título')
+            ->assertSee('Contenido')
+            ->assertSee('Publicar ahora')
+            ->assertSee('Escribe');
     }
 
     public function test_publishing_a_bulletin_sends_a_priority_notification_to_active_users(): void
@@ -211,11 +210,10 @@ class BulletinTest extends TestCase
 
         $post = BulletinPost::query()->where('title', 'Borrador con acción')->with('attachments')->firstOrFail();
 
-        $response = $this->actingAs($publisher)->get(route('admin.tablon.index'));
+        $response = $this->actingAs($publisher)->get(BulletinPostResource::getUrl());
         $response
             ->assertOk()
-            ->assertSee('Publicar', false)
-            ->assertSee(route('admin.tablon.update', $post), false);
+            ->assertSee('Publicar', false);
 
         $this->actingAs($publisher)
             ->put(route('admin.tablon.update', $post), [
@@ -363,3 +361,4 @@ class BulletinTest extends TestCase
             ->assertSee('text-sky-600', false);
     }
 }
+
