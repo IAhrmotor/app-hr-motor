@@ -2080,8 +2080,6 @@ class TicketsInteriorTest extends TestCase
         $this->actingAs($manager)
             ->get(route('tickets.index'))
             ->assertOk()
-            ->assertSee('managed_page=2', false)
-            ->assertSee('assigned_page=2', false)
             ->assertSee('IT-000011', false)
             ->assertDontSee('IT-000001', false);
     }

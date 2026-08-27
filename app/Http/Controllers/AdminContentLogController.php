@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Filament\Resources\Bulletins\BulletinPostResource;
 use App\Models\ContentActivityLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -15,6 +17,10 @@ class AdminContentLogController extends Controller
 {
     public function index(Request $request)
     {
+        if ($request->query('content_type') === ContentActivityLog::CONTENT_TYPE_BULLETIN) {
+            return redirect()->to($this->bulletinLogsUrl($request));
+        }
+
         $contentType = $this->sanitizeContentType($request->query('content_type'));
         $action = $this->sanitizeAction($request->query('action'));
         $dateFrom = $this->sanitizeDate($request->query('date_from'));
@@ -65,8 +71,12 @@ class AdminContentLogController extends Controller
         ]);
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): StreamedResponse|RedirectResponse
     {
+        if ($request->query('content_type') === ContentActivityLog::CONTENT_TYPE_BULLETIN) {
+            return redirect()->to($this->bulletinLogsExportUrl($request));
+        }
+
         $contentType = $this->sanitizeContentType($request->query('content_type'));
         $action = $this->sanitizeAction($request->query('action'));
         $dateFrom = $this->sanitizeDate($request->query('date_from'));
@@ -150,7 +160,6 @@ class AdminContentLogController extends Controller
         $allowedTypes = [
             ContentActivityLog::CONTENT_TYPE_MAGAZINE,
             ContentActivityLog::CONTENT_TYPE_CONTACT,
-            ContentActivityLog::CONTENT_TYPE_BULLETIN,
         ];
 
         return in_array($contentType, $allowedTypes, true) ? $contentType : null;
@@ -202,6 +211,30 @@ class AdminContentLogController extends Controller
             ->whereIn('role', ['admin', 'gestor'])
             ->orderBy('name')
             ->get(['id', 'name']);
+    }
+
+    private function bulletinLogsUrl(Request $request): string
+    {
+        $query = array_filter([
+            'action' => $this->sanitizeAction($request->query('action')),
+            'actor' => $this->sanitizeActorId($request->query('actor')),
+            'date_from' => $this->sanitizeDate($request->query('date_from')),
+            'date_to' => $this->sanitizeDate($request->query('date_to')),
+        ], static fn (mixed $value): bool => filled($value));
+
+        $url = BulletinPostResource::getUrl('logs');
+
+        return $query === [] ? $url : $url . '?' . http_build_query($query);
+    }
+
+    private function bulletinLogsExportUrl(Request $request): string
+    {
+        return route('admin.bulletin-logs.export', array_filter([
+            'action' => $this->sanitizeAction($request->query('action')),
+            'actor' => $this->sanitizeActorId($request->query('actor')),
+            'date_from' => $this->sanitizeDate($request->query('date_from')),
+            'date_to' => $this->sanitizeDate($request->query('date_to')),
+        ], static fn (mixed $value): bool => filled($value)));
     }
 
     private function filteredLogsQuery(?string $contentType, ?string $action, ?string $dateFrom, ?string $dateTo, ?int $actorId): Builder

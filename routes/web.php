@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AdminBulletinLogController;
 use App\Http\Controllers\AdminConversationAccessController;
 use App\Http\Controllers\AdminConversationAccessLogController;
 use App\Http\Controllers\AdminChatRetentionLogController;
@@ -2058,14 +2059,20 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:admin')->group(function () {
-        Route::redirect('/admin/logs/tablon', '/admin/logs/contenidos?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)
+        Route::get('/admin/logs/tablon', [AdminBulletinLogController::class, 'index'])
             ->name('admin.bulletin-logs.index');
-        Route::redirect('/admin/logs/tablon/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)
+        Route::get('/admin/logs/tablon/descargar', [AdminBulletinLogController::class, 'export'])
             ->name('admin.bulletin-logs.export');
-        Route::get('/admin/tablon', [AdminTablonController::class, 'index'])->name('admin.tablon.index');
-        Route::get('/admin/tablon/crear', [AdminTablonController::class, 'create'])->name('admin.tablon.create');
+        Route::get('/admin/tablon', function () {
+            return redirect(\App\Filament\Resources\Bulletins\BulletinPostResource::getUrl());
+        })->name('admin.tablon.index');
+        Route::get('/admin/tablon/crear', function () {
+            return redirect(\App\Filament\Resources\Bulletins\BulletinPostResource::getUrl('create'));
+        })->name('admin.tablon.create');
         Route::post('/admin/tablon', [AdminTablonController::class, 'store'])->name('admin.tablon.store');
-        Route::get('/admin/tablon/{bulletin}/editar', [AdminTablonController::class, 'edit'])
+        Route::get('/admin/tablon/{bulletin}/editar', function (\App\Models\BulletinPost $bulletin) {
+            return redirect(\App\Filament\Resources\Bulletins\BulletinPostResource::getUrl('edit', ['record' => $bulletin]));
+        })
             ->whereNumber('bulletin')
             ->name('admin.tablon.edit');
         Route::put('/admin/tablon/{bulletin}', [AdminTablonController::class, 'update'])
