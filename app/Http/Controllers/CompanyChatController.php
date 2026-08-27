@@ -558,8 +558,15 @@ class CompanyChatController extends Controller
         $mimeType = (string) ($attachment['mime_type'] ?? 'application/octet-stream');
         $downloadName = (string) ($attachment['original_name'] ?? '');
         $downloadName = $downloadName !== '' ? $downloadName : ((basename($path) !== '') ? basename($path) : 'archivo');
+        $isJsonAttachment = $this->isJsonAttachment($attachment, $path, $mimeType);
 
         abort_unless($path !== '' && Storage::disk('public')->exists($path), 404);
+
+        if ($isJsonAttachment) {
+            return Storage::disk('public')->download($path, $downloadName, [
+                'Content-Type' => $mimeType,
+            ]);
+        }
 
         return Storage::disk('public')->response($path, $downloadName, [
             'Content-Type' => $mimeType,
@@ -1473,6 +1480,7 @@ class CompanyChatController extends Controller
                     'size' => (int) ($attachment['size'] ?? 0),
                     'size_label' => $this->formatBytes((int) ($attachment['size'] ?? 0)),
                     'is_image' => (bool) ($attachment['is_image'] ?? str_starts_with($mimeType, 'image/')),
+                    'is_json' => $this->isJsonAttachment($attachment, $path, $mimeType),
                     'url' => route('chat.beta.attachments.show', [
                         'conversation' => $message->company_chat_conversation_id,
                         'message' => $message->id,
@@ -1502,6 +1510,16 @@ class CompanyChatController extends Controller
         return collect((array) $request->file('attachments'))
             ->filter()
             ->sum(static fn ($file): int => (int) ($file?->getSize() ?? 0));
+    }
+
+    private function isJsonAttachment(array $attachment, string $path, string $mimeType): bool
+    {
+        $originalName = strtolower((string) ($attachment['original_name'] ?? ''));
+        $resolvedPath = strtolower($path);
+
+        return $mimeType === 'application/json'
+            || str_ends_with($originalName, '.json')
+            || str_ends_with($resolvedPath, '.json');
     }
 
     private function guardAgainstBrokenAttachmentUploads(Request $request): void
