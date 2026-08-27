@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\Bulletins\BulletinPostResource;
+use App\Models\BulletinActivityLog;
 use App\Models\AdminPermissionGrant;
 use App\Models\BulletinPost;
 use App\Models\BulletinPostAttachment;
-use App\Models\ContentActivityLog;
 use App\Models\User;
 use App\Notifications\AdminPriorityNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -111,16 +111,17 @@ class BulletinTest extends TestCase
             'is_published' => true,
         ]);
 
-        $this->assertDatabaseHas('content_activity_logs', [
-            'content_type' => ContentActivityLog::CONTENT_TYPE_BULLETIN,
-            'action' => ContentActivityLog::ACTION_CREATED,
+        $this->assertDatabaseHas('bulletin_activity_logs', [
+            'action' => BulletinActivityLog::ACTION_CREATED,
             'target_name' => 'Nuevo aviso interno',
         ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.content-logs.index', ['content_type' => ContentActivityLog::CONTENT_TYPE_BULLETIN]))
+            ->get(BulletinPostResource::getUrl('logs'))
             ->assertOk()
-            ->assertSee(html_entity_decode('Tabl&oacute;n'));
+            ->assertSee('Logs del tablón')
+            ->assertSee('Alta')
+            ->assertSee('Nuevo aviso interno');
     }
 
     public function test_admin_bulletin_filament_form_is_available_for_creating_publications(): void

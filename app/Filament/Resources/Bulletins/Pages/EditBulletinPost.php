@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Bulletins\Pages;
 
 use App\Filament\Resources\Bulletins\BulletinPostResource;
 use App\Models\BulletinPost;
-use App\Models\ContentActivityLog;
+use App\Models\BulletinActivityLog;
 use App\Models\User;
 use Illuminate\Support\Arr;
 use Filament\Actions\DeleteAction;
@@ -110,7 +110,7 @@ class EditBulletinPost extends EditRecord
 
         BulletinPostResource::recordActivity(
             actor: $actor,
-            action: ContentActivityLog::ACTION_UPDATED,
+            action: BulletinActivityLog::ACTION_UPDATED,
             post: $post,
             changes: $this->pendingActivityLogChanges,
         );

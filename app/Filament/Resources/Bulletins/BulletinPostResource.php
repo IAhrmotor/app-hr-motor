@@ -4,13 +4,14 @@ namespace App\Filament\Resources\Bulletins;
 
 use App\Filament\Resources\Bulletins\Pages\CreateBulletinPost;
 use App\Filament\Resources\Bulletins\Pages\EditBulletinPost;
+use App\Filament\Resources\Bulletins\Pages\ListBulletinLogs;
 use App\Filament\Resources\Bulletins\Pages\ListBulletinPosts;
+use App\Models\BulletinActivityLog;
 use App\Models\BulletinPost;
 use App\Models\BulletinPostAttachment;
-use App\Models\ContentActivityLog;
 use App\Models\User;
 use App\Notifications\AdminPriorityNotification;
-use App\Services\ContentActivityLogger;
+use App\Services\BulletinActivityLogWriter;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -192,6 +193,11 @@ class BulletinPostResource extends Resource
                     ->color('gray')
                     ->url(fn (): string => route('tablon.index'))
                     ->openUrlInNewTab(),
+                Action::make('viewLogs')
+                    ->label('Ver logs')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('gray')
+                    ->url(static::getUrl('logs')),
                 CreateAction::make()
                     ->label('Nueva publicación')
                     ->url(static::getUrl('create'))
@@ -227,6 +233,7 @@ class BulletinPostResource extends Resource
     {
         return [
             'index' => ListBulletinPosts::route('/'),
+            'logs' => ListBulletinLogs::route('/logs'),
             'create' => CreateBulletinPost::route('/create'),
             'edit' => EditBulletinPost::route('/{record}/edit'),
         ];
@@ -252,7 +259,7 @@ class BulletinPostResource extends Resource
         if (! $wasPublished) {
             static::recordActivity(
                 actor: $actor,
-                action: ContentActivityLog::ACTION_UPDATED,
+                action: BulletinActivityLog::ACTION_UPDATED,
                 post: $post,
                 changes: [
                     'is_published' => ['from' => 'false', 'to' => 'true'],
@@ -274,7 +281,7 @@ class BulletinPostResource extends Resource
 
         static::recordActivity(
             actor: $actor,
-            action: ContentActivityLog::ACTION_DELETED,
+            action: BulletinActivityLog::ACTION_DELETED,
             post: $post,
             changes: [
                 'title' => ['from' => $post->title, 'to' => null],
@@ -290,12 +297,10 @@ class BulletinPostResource extends Resource
 
     public static function recordActivity(User $actor, string $action, BulletinPost $post, array $changes): void
     {
-        app(ContentActivityLogger::class)->record(
+        app(BulletinActivityLogWriter::class)->record(
             actor: $actor,
-            contentType: ContentActivityLog::CONTENT_TYPE_BULLETIN,
             action: $action,
-            targetName: $post->title,
-            targetReference: $post->published_at?->format('Y-m-d H:i:s'),
+            bulletin: $post,
             changes: $changes,
         );
     }

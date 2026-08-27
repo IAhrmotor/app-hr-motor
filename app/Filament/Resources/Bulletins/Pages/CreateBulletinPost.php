@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Bulletins\Pages;
 
 use App\Filament\Resources\Bulletins\BulletinPostResource;
 use App\Models\BulletinPost;
-use App\Models\ContentActivityLog;
+use App\Models\BulletinActivityLog;
 use App\Models\User;
 use Illuminate\Support\Arr;
 use Filament\Resources\Pages\CreateRecord;
@@ -46,7 +46,7 @@ class CreateBulletinPost extends CreateRecord
 
         BulletinPostResource::recordActivity(
             actor: $actor,
-            action: ContentActivityLog::ACTION_CREATED,
+            action: BulletinActivityLog::ACTION_CREATED,
             post: $post,
             changes: [
                 'title' => ['from' => null, 'to' => $post->title],

@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\BulletinPost;
 use App\Models\BulletinPostAttachment;
-use App\Models\ContentActivityLog;
+use App\Models\BulletinActivityLog;
 use App\Models\User;
 use App\Notifications\AdminPriorityNotification;
-use App\Services\ContentActivityLogger;
+use App\Services\BulletinActivityLogWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -71,12 +71,10 @@ class AdminTablonController extends Controller
                 $this->storeImages($post, $request->file('images', []), $storedImages);
                 $shouldNotify = $post->is_published;
 
-                app(ContentActivityLogger::class)->record(
+                $this->recordActivity(
                     actor: $request->user(),
-                    contentType: ContentActivityLog::CONTENT_TYPE_BULLETIN,
-                    action: ContentActivityLog::ACTION_CREATED,
-                    targetName: $post->title,
-                    targetReference: $post->published_at?->format('Y-m-d H:i:s'),
+                    action: BulletinActivityLog::ACTION_CREATED,
+                    post: $post,
                     changes: [
                         'title' => ['from' => null, 'to' => $post->title],
                         'body_excerpt' => ['from' => null, 'to' => $this->excerpt($post->body)],
@@ -180,12 +178,10 @@ class AdminTablonController extends Controller
                     $attachment->delete();
                 });
 
-                app(ContentActivityLogger::class)->record(
+                $this->recordActivity(
                     actor: $request->user(),
-                    contentType: ContentActivityLog::CONTENT_TYPE_BULLETIN,
-                    action: ContentActivityLog::ACTION_UPDATED,
-                    targetName: $bulletin->title,
-                    targetReference: $bulletin->published_at?->format('Y-m-d H:i:s'),
+                    action: BulletinActivityLog::ACTION_UPDATED,
+                    post: $bulletin,
                     changes: $changes,
                 );
             });
@@ -205,12 +201,10 @@ class AdminTablonController extends Controller
 
     public function destroy(Request $request, BulletinPost $bulletin): RedirectResponse
     {
-        app(ContentActivityLogger::class)->record(
+        $this->recordActivity(
             actor: $request->user(),
-            contentType: ContentActivityLog::CONTENT_TYPE_BULLETIN,
-            action: ContentActivityLog::ACTION_DELETED,
-            targetName: $bulletin->title,
-            targetReference: $bulletin->published_at?->format('Y-m-d H:i:s'),
+            action: BulletinActivityLog::ACTION_DELETED,
+            post: $bulletin,
             changes: [
                 'title' => ['from' => $bulletin->title, 'to' => null],
                 'body_excerpt' => ['from' => $this->excerpt($bulletin->body), 'to' => null],
@@ -230,6 +224,16 @@ class AdminTablonController extends Controller
     private function excerpt(string $body): string
     {
         return Str::limit(Str::squish($body), 120);
+    }
+
+    private function recordActivity(User $actor, string $action, BulletinPost $post, array $changes): void
+    {
+        app(BulletinActivityLogWriter::class)->record(
+            actor: $actor,
+            action: $action,
+            bulletin: $post,
+            changes: $changes,
+        );
     }
 
     /**
