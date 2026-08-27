@@ -836,6 +836,43 @@ class CompanyChatTest extends TestCase
         $this->assertSame('application/json', $message->attachments[0]['mime_type']);
     }
 
+    public function test_chat_json_attachment_route_forces_download(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create([
+            'name' => 'Marta Test',
+        ]);
+
+        $this->acceptChatPolicy($sender);
+        $this->acceptChatPolicy($recipient);
+
+        $conversation = CompanyChatConversation::query()->create([
+            'user_one_id' => min($sender->id, $recipient->id),
+            'user_two_id' => max($sender->id, $recipient->id),
+        ]);
+
+        $this->actingAs($sender)
+            ->post(route('chat.beta.messages.store', $conversation), [
+                'body' => '',
+                'attachments' => [
+                    UploadedFile::fake()->create('config.json', 8, 'application/json'),
+                ],
+            ])
+            ->assertRedirect(route('chat.beta', ['conversation' => $conversation->id]));
+
+        $message = CompanyChatMessage::query()->latest('id')->firstOrFail();
+
+        $this->actingAs($recipient)
+            ->get(route('chat.beta.attachments.show', [
+                'conversation' => $conversation->id,
+                'message' => $message->id,
+                'attachmentIndex' => 0,
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/json')
+            ->assertHeader('content-disposition', 'attachment; filename=config.json');
+    }
+
     public function test_chat_accepts_rdp_attachments(): void
     {
         $sender = User::factory()->create();
