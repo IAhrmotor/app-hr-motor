@@ -725,6 +725,7 @@
                                                             @foreach ($messageAttachments as $attachment)
                                                                 @php
                                                                     $isImageAttachment = (bool) ($attachment['is_image'] ?? str_starts_with((string) ($attachment['mime_type'] ?? ''), 'image/'));
+                                                                    $isJsonAttachment = (bool) ($attachment['is_json'] ?? str_ends_with(strtolower((string) ($attachment['original_name'] ?? '')), '.json') || (string) ($attachment['mime_type'] ?? '') === 'application/json');
                                                                     $attachmentName = $attachment['original_name'] ?? 'archivo';
                                                                     $attachmentSize = $attachment['size_label'] ?? '';
                                                                     $attachmentUrl = route('chat.beta.attachments.show', [
@@ -750,7 +751,7 @@
                                                                         </span>
                                                                     </button>
                                                                 @else
-                                                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                                                                    <a href="{{ $attachmentUrl }}" @if ($isJsonAttachment) download="{{ $attachmentName }}" @else target="_blank" rel="noopener" @endif class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
                                                                         <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
@@ -2208,6 +2209,7 @@
                     const name = attachment.original_name ?? 'archivo';
                     const sizeLabel = attachment.size_label ?? '';
                     const isImageAttachment = Boolean(attachment.is_image ?? false);
+                    const isJsonAttachment = Boolean(attachment.is_json ?? false) || name.toLowerCase().endsWith('.json') || String(attachment.mime_type ?? '') === 'application/json';
 
                     if (isImageAttachment) {
                         return `
@@ -2229,7 +2231,7 @@
                     }
 
                     return `
-                        <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
+                        <a href="${escapeHtml(url)}"${isJsonAttachment ? ` download="${escapeHtml(name)}"` : ' target="_blank" rel="noopener"'} class="flex items-center gap-3 rounded-[1rem] border border-black/5 bg-white/60 px-3 py-2 transition hover:bg-white">
                             <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
