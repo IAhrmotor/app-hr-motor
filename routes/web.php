@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminContentLogController;
+use App\Http\Controllers\AdminBulletinLogController;
 use App\Http\Controllers\AdminConversationAccessController;
 use App\Http\Controllers\AdminConversationAccessLogController;
 use App\Http\Controllers\AdminChatRetentionLogController;
@@ -2058,9 +2059,9 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:admin')->group(function () {
-        Route::redirect('/admin/logs/tablon', '/admin/logs/contenidos?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)
+        Route::get('/admin/logs/tablon', [AdminBulletinLogController::class, 'index'])
             ->name('admin.bulletin-logs.index');
-        Route::redirect('/admin/logs/tablon/descargar', '/admin/logs/contenidos/descargar?content_type=' . \App\Models\ContentActivityLog::CONTENT_TYPE_BULLETIN)
+        Route::get('/admin/logs/tablon/descargar', [AdminBulletinLogController::class, 'export'])
             ->name('admin.bulletin-logs.export');
         Route::get('/admin/tablon', function () {
             return redirect(\App\Filament\Resources\Bulletins\BulletinPostResource::getUrl());
