@@ -180,7 +180,7 @@ class ItTicketsTest extends TestCase
         );
     }
 
-    public function test_user_must_acknowledge_the_summer_schedule_warning_after_three_pm(): void
+    public function test_user_can_create_a_ticket_after_three_pm_without_the_summer_schedule_warning(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-14 15:30:00', 'Europe/Madrid'));
 
@@ -194,19 +194,11 @@ class ItTicketsTest extends TestCase
                 'color' => '#1d4ed8',
             ]);
 
-            $response = $this->actingAs($user)
-                ->post(route('it-tickets.store'), [
-                    'submission_token' => (string) \Illuminate\Support\Str::uuid(),
-                    'tool' => (string) $tool->id,
-                    'priority' => 'medium',
-                    'title' => 'Ticket fuera de horario',
-                    'description' => 'Debe bloquearse si no se acepta el aviso.',
-                    'after_hours_acknowledged' => '0',
-                    'screenshots' => [],
-                ]);
-
-            $response->assertSessionHasErrors('after_hours_acknowledged');
-            $this->assertSame(0, ItTicket::query()->count());
+            $this->actingAs($user)
+                ->get(route('it-tickets.create'))
+                ->assertOk()
+                ->assertDontSee('Horario de verano', false)
+                ->assertDontSee('after_hours_acknowledged', false);
 
             $this->actingAs($user)
                 ->post(route('it-tickets.store'), [
@@ -214,8 +206,7 @@ class ItTicketsTest extends TestCase
                     'tool' => (string) $tool->id,
                     'priority' => 'medium',
                     'title' => 'Ticket fuera de horario',
-                    'description' => 'Debe crearse al aceptar el aviso.',
-                    'after_hours_acknowledged' => '1',
+                    'description' => 'Debe crearse con normalidad aunque sea después de las 15:00.',
                     'screenshots' => [],
                 ])
                 ->assertRedirect(route('it-tickets.index'));

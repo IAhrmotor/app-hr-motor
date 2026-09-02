@@ -33,6 +33,7 @@ class ItTicketController extends Controller
         return view('it-tickets.create', [
             'ticketPriorities' => $this->ticketPriorities(),
             'ticketTools' => $this->ticketTools(),
+            'afterHoursWarningEnabled' => $this->afterHoursWarningEnabled(),
         ]);
     }
 
@@ -52,7 +53,7 @@ class ItTicketController extends Controller
             'after_hours_acknowledged' => ['nullable', 'boolean'],
         ]);
 
-        if (now()->hour >= 15 && ! $request->boolean('after_hours_acknowledged')) {
+        if ($this->afterHoursWarningEnabled() && now()->hour >= 15 && ! $request->boolean('after_hours_acknowledged')) {
             return back()
                 ->withInput()
                 ->withErrors([
@@ -232,5 +233,10 @@ class ItTicketController extends Controller
                 ],
             ])
             ->all();
+    }
+
+    private function afterHoursWarningEnabled(): bool
+    {
+        return (bool) config('support.it_ticket_after_hours_warning_enabled', false);
     }
 }
