@@ -10,10 +10,13 @@
     @csrf
     @php
         $submissionToken = old('submission_token', (string) \Illuminate\Support\Str::uuid());
+        $afterHoursWarningEnabled = $afterHoursWarningEnabled ?? false;
     @endphp
 
     <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
-    <input type="hidden" name="after_hours_acknowledged" value="0" x-ref="afterHoursAcknowledged">
+    @if ($afterHoursWarningEnabled)
+        <input type="hidden" name="after_hours_acknowledged" value="0" x-ref="afterHoursAcknowledged">
+    @endif
 
     <div
         class="space-y-2"
@@ -152,11 +155,13 @@
         Preparar incidencia
     </button>
 
-    @error('after_hours_acknowledged')
-        <p class="text-sm font-medium text-amber-700">{{ $message }}</p>
-    @enderror
+    @if ($afterHoursWarningEnabled)
+        @error('after_hours_acknowledged')
+            <p class="text-sm font-medium text-amber-700">{{ $message }}</p>
+        @enderror
 
-    @include('it-tickets.partials.after-hours-warning', ['mode' => 'create'])
+        @include('it-tickets.partials.after-hours-warning', ['mode' => 'create'])
+    @endif
 
     <div
         x-cloak

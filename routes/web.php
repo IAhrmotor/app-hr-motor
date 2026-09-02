@@ -335,9 +335,9 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/brevo.webp'),
                     ],
                     [
-                        'label' => 'Woffu',
-                        'url' => config('portal.links.tools.woffu'),
-                        'image' => asset('images/tools/woffu.webp'),
+                        'label' => 'Sage',
+                        'url' => config('portal.links.tools.sage'),
+                        'image' => asset('images/tools/Sage.webp'),
                     ],
                     [
                         'label' => 'Contact Center Motorflash',
@@ -504,11 +504,6 @@ Route::middleware('auth')->group(function () {
                         'image' => asset('images/tools/logo-formacion-cuadrado.webp'),
                     ],
                     [
-                        'label' => 'ServiceForm',
-                        'url' => config('portal.links.tools.serviceform'),
-                        'image' => asset('images/tools/serviceform.webp'),
-                    ],
-                    [
                         'label' => 'Coches de cortesía',
                         'url' => 'https://docs.google.com/spreadsheets/d/1_fiL4TyclqhOtkBijSqaxAcc8c6XmmSy/edit?pli=1&gid=590253332#gid=590253332',
                         'image' => asset('images/tools/coches-cortesia.webp'),
@@ -618,11 +613,6 @@ Route::middleware('auth')->group(function () {
                         'url' => 'https://www.fleetvalidation.com/login?redirect=%2F1031%2F',
                         'image' => asset('images/tools/norauto.webp'),
                     ],
-                    [
-                        'label' => 'Chat ServiceForm',
-                        'url' => 'https://dash.serviceform.com/chat?sid=3466609922234647151187',
-                        'image' => asset('images/tools/serviceform.webp'),
-                    ],
                 ],
             ],
             [
@@ -659,7 +649,6 @@ Route::middleware('auth')->group(function () {
                     'Lendismart',
                     'My Mutua',
                     'Formación Comerciales',
-                    'ServiceForm',
                 ];
 
                 $captadorButtonLabels = [
@@ -686,7 +675,6 @@ Route::middleware('auth')->group(function () {
                     'GarantiAuto',
                     'Coches.net',
                     'Norauto',
-                    'Chat ServiceForm',
                 ];
 
                 $humanResourcesButtonLabels = [
@@ -796,13 +784,13 @@ Route::middleware('auth')->group(function () {
                 ];
 
                 $fixedGeneralButtonLabels = [
-                    'Woffu',
+                    'Sage',
                     'Web HR Motor',
                     'OneDrive',
                 ];
 
                 $filteredButtons = collect($section['buttons'] ?? [])
-                    ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Woffu', 'Web HR Motor'], true) || (
+                    ->filter(fn (array $button) => in_array($button['label'] ?? null, ['OneDrive', 'Sage', 'Web HR Motor'], true) || (
                         in_array($button['label'] ?? null, $commercialButtonLabels, true)
                         && app_user_has_any_role($authUser, [User::ROLE_COMMERCIAL, User::ROLE_STORE_MANAGER, User::ROLE_AREA_MANAGER])
                     ) || (
@@ -1300,11 +1288,6 @@ Route::middleware('auth')->group(function () {
                         'label' => 'Ricoh',
                         'url' => 'https://eu.portal.ricoh-europe.com/es/login?next=%2Fmy-products',
                         'image' => asset('images/tools/ricoh.webp'),
-                    ],
-                    [
-                        'label' => 'Serviceform',
-                        'url' => 'https://www.serviceform.es/',
-                        'image' => asset('images/tools/serviceform.webp'),
                     ],
                     [
                         'label' => 'Vodafone',
