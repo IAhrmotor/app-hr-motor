@@ -1542,13 +1542,6 @@ Route::middleware('auth')->group(function () {
                     'icon' => 'magazine',
                 ],
                 [
-                    'label' => 'Notificaciones prioritarias',
-                    'description' => 'Envía avisos destacados a los roles que elijas para que aparezcan por encima de las notificaciones normales.',
-                    'route' => 'admin.notifications.create',
-                    'kind' => 'management',
-                    'icon' => 'notifications',
-                ],
-                [
                     'label' => 'Logs de notificaciones',
                     'description' => 'Revisa qué notificaciones prioritarias se enviaron, a quién iban dirigidas y cuántos usuarios las recibieron.',
                     'route' => 'admin.notification-logs.index',

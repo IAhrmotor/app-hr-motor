@@ -18,6 +18,8 @@ class AdminNotificationController extends Controller
     public function create(Request $request)
     {
         $authUser = $request->user();
+        abort_unless($authUser?->role === User::ROLE_ADMIN, 403);
+
         $availableTargets = $this->availableTargetsFor($authUser);
 
         return view('admin.notifications.create', compact('availableTargets'));
@@ -26,6 +28,8 @@ class AdminNotificationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $authUser = $request->user();
+        abort_unless($authUser?->role === User::ROLE_ADMIN, 403);
+
         $availableTargets = $this->availableTargetsFor($authUser);
         $availableTargetValues = array_column($availableTargets, 'value');
 
