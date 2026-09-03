@@ -56,6 +56,68 @@ class CommercialCommissionsTest extends TestCase
         });
     }
 
+    public function test_commercial_profiles_can_query_only_their_own_commissions(): void
+    {
+        $profiles = [
+            User::ROLE_COMMERCIAL,
+            User::ROLE_STORE_MANAGER,
+            User::ROLE_AREA_MANAGER,
+        ];
+
+        $users = collect($profiles)->map(function (string $extraRole, int $index): User {
+            return $this->commercial([
+                'email' => "commission-profile-{$index}@example.com",
+                'extra_role' => $extraRole,
+                'salesforce_user_id' => "SF-PROFILE-{$index}",
+            ]);
+        });
+
+        Http::fake(function ($request) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return Http::response([
+                'commercial_id' => $query['salesforce_id'],
+                'month' => $query['month'],
+                'has_data' => true,
+                'row' => ['final_commission' => 10],
+            ]);
+        });
+
+        foreach ($users as $user) {
+            $this->actingAs($user)
+                ->get(route('profile.commissions', ['month' => '2026-07']))
+                ->assertOk()
+                ->assertJsonPath('data.commercial_id', $user->salesforce_user_id);
+        }
+
+        Http::assertSentCount(3);
+        foreach ($users as $user) {
+            Http::assertSent(function ($request) use ($user): bool {
+                parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+                return $query['salesforce_id'] === $user->salesforce_user_id
+                    && $query['month'] === '2026-07';
+            });
+        }
+    }
+
+    public function test_hr_newcars_can_query_own_commissions(): void
+    {
+        $user = $this->commercial(['extra_role' => User::ROLE_HR_NEWCARS]);
+
+        Http::fake(['*' => Http::response([
+            'commercial_id' => $user->salesforce_user_id,
+            'month' => '2026-07',
+            'has_data' => true,
+            'row' => ['final_commission' => 10],
+        ])]);
+
+        $this->actingAs($user)
+            ->get(route('profile.commissions', ['month' => '2026-07']))
+            ->assertOk()
+            ->assertJsonPath('data.commercial_id', $user->salesforce_user_id);
+    }
+
     public function test_only_own_commission_route_exists(): void
     {
         $this->assertTrue(Route::has('profile.commissions'));

@@ -3,6 +3,23 @@
 @section('content')
     @php
         $isOwnProfile = auth()->id() === $user->id;
+        $commissionData = $commissionData ?? null;
+        $commissionError = $commissionError ?? null;
+        $commissionMonth = $commissionMonth ?? now()->format('Y-m');
+        $commissionMonthNames = [
+            '01' => 'enero', '02' => 'febrero', '03' => 'marzo', '04' => 'abril',
+            '05' => 'mayo', '06' => 'junio', '07' => 'julio', '08' => 'agosto',
+            '09' => 'septiembre', '10' => 'octubre', '11' => 'noviembre', '12' => 'diciembre',
+        ];
+        $formatCommissionMonth = static function (?string $month, bool $lowercase = false) use ($commissionMonthNames): string {
+            if (! is_string($month) || ! preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $month, $matches)) {
+                return '';
+            }
+
+            $label = $commissionMonthNames[$matches[2]] . ' de ' . $matches[1];
+
+            return $lowercase ? $label : ucfirst($label);
+        };
         $visibleRole = app_visible_role(auth()->user());
         $canOpenRankings = app_can_access_rankings(auth()->user());
         $salesRankingPosition = $rankingPositions['sales']['position'] ?? null;
@@ -268,6 +285,411 @@
                             </div>
                         @endif
                     </div>
+                </section>
+            @endif
+
+            @if ($isOwnProfile && $user->role === \App\Models\User::ROLE_USER && in_array($user->extra_role, [\App\Models\User::ROLE_COMMERCIAL, \App\Models\User::ROLE_STORE_MANAGER, \App\Models\User::ROLE_AREA_MANAGER, \App\Models\User::ROLE_HR_NEWCARS], true) && filled($user->salesforce_user_id))
+                <section class="mt-8 rounded-3xl border border-brand-primary/15 bg-gradient-to-br from-brand-primary/5 via-white to-white p-6 shadow-sm" data-personal-commissions-card>
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary/80">Resumen económico</p>
+                            <h2 class="mt-2 text-xl font-semibold text-brand-secondary">Comisiones personales</h2>
+                            <p class="mt-1 text-sm text-brand-secondary/65">Consulta únicamente tu comisión oficial del mes seleccionado.</p>
+                        </div>
+
+                        <form method="GET" action="{{ route('profile.show') }}" class="flex flex-col gap-2 sm:items-end">
+                            <label for="commission-month" class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-secondary/60">Mes consultado</label>
+                            <div class="flex gap-2">
+                                <input id="commission-month" name="month" type="month" value="{{ $commissionMonth }}" max="{{ now()->format('Y-m') }}"
+                                    class="rounded-2xl border border-brand-secondary/15 bg-white px-3 py-2 text-sm text-brand-secondary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20">
+                                <button type="submit" class="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">Consultar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    @if ($commissionError)
+                        <div class="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                            @switch($commissionError['status'])
+                                @case(404)
+                                    No se ha encontrado información de comisiones para este comercial o no está habilitado.
+                                    @break
+                                @case(422)
+                                    El mes seleccionado no es válido o no se pueden consultar meses futuros.
+                                    @break
+                                @case(429)
+                                    Se ha alcanzado temporalmente el límite de consultas. Inténtalo de nuevo más tarde.
+                                    @if (! empty($commissionError['retry_after']))
+                                        <span class="mt-1 block text-xs">Puedes reintentarlo en {{ $commissionError['retry_after'] }} segundos.</span>
+                                    @endif
+                                    @break
+                                @default
+                                    El servicio de comisiones no está disponible temporalmente. Inténtalo de nuevo más tarde.
+                            @endswitch
+                        </div>
+                    @elseif (is_array($commissionData) && ! $commissionData['has_data'])
+                        <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            No hay datos económicos para {{ $formatCommissionMonth($commissionData['month'] ?? $commissionMonth, true) }}.
+                        </div>
+                    @elseif (is_array($commissionData) && $commissionData['has_data'])
+                        @php
+                            $commissionRow = is_array($commissionData['row'] ?? null) ? $commissionData['row'] : [];
+                            $commissionDetails = is_array($commissionRow['details'] ?? null) ? $commissionRow['details'] : [];
+                            $commissionHasValue = static fn (array $source, string $key): bool => array_key_exists($key, $source) && $source[$key] !== null;
+                            $commissionHasAmount = static fn (array $source, string $key): bool => $commissionHasValue($source, $key) && is_numeric($source[$key]) && (float) $source[$key] !== 0.0;
+                            $formatCommissionAmount = static fn (mixed $value): string => number_format(abs((float) $value), 2, ',', '.') . ' €';
+                            $commissionMode = strtolower((string) ($commissionRow['commission_mode'] ?? $commissionData['commission_mode'] ?? 'comercial'));
+                            $deliveryAdjustment = null;
+                            if (is_numeric($commissionRow['prima_total'] ?? null) && is_numeric($commissionRow['prima_adjusted'] ?? null)) {
+                                $calculatedDeliveryAdjustment = (float) $commissionRow['prima_total'] - (float) $commissionRow['prima_adjusted'];
+                                $deliveryAdjustment = $calculatedDeliveryAdjustment !== 0.0 ? $calculatedDeliveryAdjustment : null;
+                            }
+
+                            $commercialSections = [
+                                ['lines' => [
+                                    ['field' => 'sales_amount', 'label' => 'Ventas gestionadas', 'sign' => '+'],
+                                    ['field' => 'shared_amount', 'label' => 'Comisión por ventas de otros comerciales', 'sign' => '+'],
+                                    ['field' => 'stock_150_amount', 'label' => 'Incentivo Stock 150', 'sign' => '+'],
+                                    ['field' => 'bonus_15_amount', 'label' => 'Bonificación 15', 'sign' => '+'],
+                                    ['field' => 'discount_penalty_amount', 'label' => 'Penalización por descuento', 'sign' => '−'],
+                                    ['field' => 'purchases_amount', 'label' => 'Tasaciones y cambios', 'sign' => '+'],
+                                ], 'subtotal' => ['field' => 'prima_total', 'label' => 'Subtotal de prima']],
+                                ['lines' => [
+                                    ['value' => $deliveryAdjustment, 'label' => 'Ajuste por tramo de entregas', 'sign' => '−'],
+                                ], 'subtotal' => ['field' => 'prima_adjusted', 'label' => 'Prima ajustada']],
+                                ['lines' => [
+                                    ['field' => 'guarantee_penalty', 'label' => 'Penalización de garantías', 'sign' => '−'],
+                                    ['field' => 'reviews_penalty', 'label' => 'Penalización de reseñas', 'sign' => '−'],
+                                    ['field' => 'financing_penalty', 'label' => 'Penalización de financiación', 'sign' => '−'],
+                                    ['field' => 'financing_cancellation_penalty_amount', 'label' => 'Cancelación de financiación', 'sign' => '−'],
+                                ], 'subtotal' => ['field' => 'prima_after_penalties', 'label' => 'Prima después de penalizaciones']],
+                                ['lines' => [
+                                    ['field' => 'financing_product_amount', 'label' => 'Comisión de producto financiero', 'sign' => '+'],
+                                    ['field' => 'guarantee_product_amount', 'label' => 'Comisión de producto de garantía', 'sign' => '+'],
+                                ]],
+                            ];
+                            $appraiserLines = [
+                                ['field' => 'purchases_amount', 'label' => 'Compras gestionadas', 'sign' => '+'],
+                                ['field' => 'sales_amount', 'label' => 'Ventas gestionadas', 'sign' => '+'],
+                                ['field' => 'appraiser_financing_commission', 'label' => 'Comisión de financiación', 'sign' => '+'],
+                                ['field' => 'appraiser_speed_amount', 'label' => 'Incentivo por velocidad', 'sign' => '+'],
+                                ['field' => 'financing_cancellation_penalty_amount', 'label' => 'Cancelación de financiación', 'sign' => '−'],
+                            ];
+                            $settlementSections = $commissionMode === 'tasador' ? [['lines' => $appraiserLines]] : $commercialSections;
+                            $commissionLineHasAmount = static fn (array $line): bool => array_key_exists('value', $line)
+                                ? is_numeric($line['value']) && (float) $line['value'] !== 0.0
+                                : $commissionHasAmount($commissionRow, $line['field']);
+                            $commissionLineValue = static fn (array $line): mixed => array_key_exists('value', $line)
+                                ? $line['value']
+                                : $commissionRow[$line['field']];
+                            $operationTypeLabels = [
+                                'sale' => 'Venta', 'venta' => 'Venta',
+                                'shared_sale' => 'Venta compartida propia', 'venta_compartida' => 'Venta compartida propia',
+                                'appraisal' => 'Tasación', 'tasacion' => 'Tasación', 'tasación' => 'Tasación',
+                                'change' => 'Cambio', 'cambio' => 'Cambio',
+                            ];
+                            $formatOperationDate = static function (mixed $value): ?string {
+                                if (! is_string($value) || trim($value) === '') {
+                                    return null;
+                                }
+
+                                try {
+                                    return \Carbon\CarbonImmutable::parse($value)->format('d/m/Y');
+                                } catch (\Throwable) {
+                                    return $value;
+                                }
+                            };
+                            $operationRows = is_array($commissionDetails['operations'] ?? null) ? $commissionDetails['operations'] : [];
+                            $operationRows = array_is_list($operationRows) ? $operationRows : [$operationRows];
+                            $operationGroups = collect($operationRows)
+                                ->filter(fn (mixed $operation): bool => is_array($operation)
+                                    && array_key_exists('commission_amount', $operation)
+                                    && $operation['commission_amount'] !== null
+                                    && is_numeric($operation['commission_amount'])
+                                    && (float) $operation['commission_amount'] !== 0.0)
+                                ->groupBy(fn (array $operation): string => implode('|', [
+                                    (string) ($operation['type'] ?? ''),
+                                    (string) ($operation['reason'] ?? ''),
+                                    (string) $operation['commission_amount'],
+                                ]));
+                            $sharedRows = is_array($commissionDetails['shared'] ?? null) ? $commissionDetails['shared'] : [];
+                            $sharedRows = array_is_list($sharedRows) ? $sharedRows : [$sharedRows];
+                            $sharedRows = collect($sharedRows)->filter(fn (mixed $shared): bool => is_array($shared)
+                                && array_key_exists('amount', $shared)
+                                && $shared['amount'] !== null
+                                && is_numeric($shared['amount'])
+                                && (float) $shared['amount'] !== 0.0);
+                            $sharedGroups = $sharedRows->groupBy(fn (array $shared): string => implode('|', [
+                                (string) ($shared['operation'] ?? ''),
+                                (string) $shared['amount'],
+                            ]));
+                            $hasSharedDetails = $sharedRows->isNotEmpty();
+
+                            $detailDefinitions = [
+                                'shared' => ['title' => 'Comisión por venta de otro comercial', 'amount' => 'amount', 'fields' => [
+                                    'operation' => 'Operación', 'commercial' => 'Comercial implicado', 'commercial_name' => 'Comercial implicado', 'amount' => 'Importe',
+                                ]],
+                                'stock_150' => ['title' => 'Stock 150', 'amount' => 'amount', 'fields' => [
+                                    'operation' => 'Operación', 'vehicle' => 'Vehículo', 'vehiculo' => 'Vehículo',
+                                    'stock_days' => 'Días en stock', 'days_in_stock' => 'Días en stock', 'amount' => 'Importe',
+                                ]],
+                                'financing_cancellations' => ['title' => 'Cancelaciones de financiación', 'amount' => 'amount', 'fields' => [
+                                    'concept' => 'Concepto', 'concepto' => 'Concepto', 'reason' => 'Motivo', 'motivo' => 'Motivo', 'amount' => 'Importe',
+                                ]],
+                                'appraiser_sales' => ['title' => 'Ventas del tasador', 'amount' => 'commission_amount', 'fields' => ['commission_amount' => 'Importe']],
+                                'appraiser_financing' => ['title' => 'Financiación del tasador', 'amount' => 'commission_amount', 'fields' => ['commission_amount' => 'Importe']],
+                                'appraiser_speed' => ['title' => 'Velocidad de gestión', 'amount' => 'commission_amount', 'fields' => [
+                                    'speed_tier' => 'Tramo de velocidad', 'speed_bracket' => 'Tramo de velocidad',
+                                    'days_until_sale' => 'Días hasta la venta', 'days' => 'Días hasta la venta', 'commission_amount' => 'Importe',
+                                ]],
+                            ];
+                            $hasOtherDetailGroups = collect($detailDefinitions)->filter(fn (array $definition, string $detailKey): bool => $detailKey !== 'shared')
+                                ->contains(function (array $definition, string $detailKey) use ($commissionDetails): bool {
+                                    $rows = $commissionDetails[$detailKey] ?? null;
+                                    if (! is_array($rows)) {
+                                        return false;
+                                    }
+
+                                    $rows = array_is_list($rows) ? $rows : [$rows];
+
+                                    return collect($rows)->contains(fn (mixed $row): bool => is_array($row)
+                                        && array_key_exists($definition['amount'], $row)
+                                        && $row[$definition['amount']] !== null
+                                        && is_numeric($row[$definition['amount']])
+                                        && (float) $row[$definition['amount']] !== 0.0);
+                                });
+                        @endphp
+
+                        @if ($commissionHasValue($commissionRow, 'final_commission'))
+                            <div class="mt-6 rounded-3xl border border-brand-secondary/10 bg-white px-4 py-4 sm:px-6">
+                                <div class="space-y-2">
+                                    @foreach ($settlementSections as $sectionIndex => $section)
+                                        @php
+                                            $visibleLines = collect($section['lines'])->filter($commissionLineHasAmount);
+                                        @endphp
+                                        @if ($visibleLines->isNotEmpty() || (isset($section['subtotal']) && $commissionHasAmount($commissionRow, $section['subtotal']['field'])))
+                                            @if ($sectionIndex > 0)
+                                                <div class="my-3 border-t border-brand-secondary/10"></div>
+                                            @endif
+                                            @foreach ($visibleLines as $line)
+                                                <div class="flex items-center justify-between gap-4 py-1.5 text-sm sm:text-base">
+                                                    <span class="min-w-0 text-brand-secondary/75">
+                                                        <span class="mr-2 inline-block w-4 font-semibold {{ $line['sign'] === '−' ? 'text-rose-600' : 'text-emerald-700' }}">{{ $line['sign'] }}</span> {{ $line['label'] }}
+                                                    </span>
+                                                    <span class="shrink-0 font-semibold text-brand-secondary">{{ $formatCommissionAmount($commissionLineValue($line)) }}</span>
+                                                </div>
+                                            @endforeach
+                                            @if (isset($section['subtotal']) && $commissionHasAmount($commissionRow, $section['subtotal']['field']))
+                                                <div class="mt-4 border-t border-brand-secondary/15 pt-3">
+                                                    <div class="flex items-center justify-between gap-4 py-1 text-sm font-semibold text-brand-secondary sm:text-base">
+                                                        <span>{{ $section['subtotal']['label'] }}</span>
+                                                        <span class="shrink-0">{{ $formatCommissionAmount($commissionRow[$section['subtotal']['field']]) }}</span>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <div class="mt-3 border-t-2 border-brand-secondary/15 pt-3">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <span class="font-semibold text-brand-secondary">Comisión final</span>
+                                        <span class="shrink-0 text-3xl font-bold tracking-tight text-emerald-800 sm:text-4xl">{{ $formatCommissionAmount($commissionRow['final_commission']) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if (($commissionMode === 'comercial' && $operationGroups->isNotEmpty()) || $hasSharedDetails || $hasOtherDetailGroups)
+                            <details x-data="{ open: false }" x-on:toggle="open = $event.target.open" class="group mt-4 rounded-2xl border border-brand-secondary/10 bg-white">
+                                <summary :aria-expanded="open ? 'true' : 'false'" class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 font-semibold text-brand-secondary marker:hidden">
+                                    <span>Ver detalle</span>
+                                    <svg :class="open ? 'rotate-180' : ''" class="h-4 w-4 shrink-0 text-brand-secondary/45 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                                    </svg>
+                                </summary>
+                                <div class="space-y-3 border-t border-brand-secondary/10 p-4">
+                                    <p class="text-sm text-brand-secondary/65">El detalle explica el origen de los importes y no se suma de nuevo a la comisión final.</p>
+                                    @if ($commissionMode === 'comercial' && $operationGroups->isNotEmpty())
+                                        <h3 class="pt-1 text-sm font-semibold text-brand-secondary">Operaciones</h3>
+                                        @foreach ($operationGroups as $operationGroup)
+                                        @php
+                                            $firstOperation = $operationGroup->first();
+                                            $operationReason = filled($firstOperation['reason'] ?? null)
+                                                ? (strcasecmp(trim((string) $firstOperation['reason']), 'Venta compartida') === 0
+                                                    ? 'Venta compartida propia'
+                                                    : $firstOperation['reason'])
+                                                : ($operationTypeLabels[strtolower((string) ($firstOperation['type'] ?? ''))] ?? 'Operación');
+                                            $operationCount = $operationGroup->count();
+                                            $operationTotal = $operationGroup->sum(fn (array $operation): float => (float) $operation['commission_amount']);
+                                            $operationLabel = $operationReason . ($operationCount > 1 ? ' × ' . $operationCount : '');
+                                        @endphp
+                                        <details x-data="{ open: false }" x-on:toggle="open = $event.target.open" class="group rounded-xl border border-brand-secondary/10 bg-slate-50">
+                                            <summary :aria-expanded="open ? 'true' : 'false'" class="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_6.5rem_1.25rem] items-center gap-3 px-3 py-3 text-sm font-semibold text-brand-secondary marker:hidden sm:grid-cols-[minmax(0,1fr)_8rem_1.25rem] sm:text-base">
+                                                <span class="min-w-0">{{ $operationLabel }}</span>
+                                                <span class="w-full text-right">{{ $formatCommissionAmount($operationTotal) }}</span>
+                                                <svg :class="open ? 'rotate-180' : ''" class="h-4 w-4 justify-self-end text-brand-secondary/45 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                                                </svg>
+                                            </summary>
+                                            <div class="border-t border-brand-secondary/10 bg-white p-3">
+                                                <div class="hidden overflow-x-auto md:block">
+                                                    <table class="min-w-full text-left text-sm">
+                                                        <tbody class="divide-y divide-brand-secondary/10">
+                                                            @foreach ($operationGroup as $operation)
+                                                                <tr>
+                                                                    @if (filled($operation['reason'] ?? null))
+                                                                        <td class="px-3 py-2"><span class="block text-xs text-brand-secondary/55">Motivo</span>{{ $operation['reason'] }}</td>
+                                                                    @endif
+                                                                    @if (filled($operation['type'] ?? null))
+                                                                        <td class="px-3 py-2"><span class="block text-xs text-brand-secondary/55">Tipo de operación</span>{{ $operationTypeLabels[strtolower((string) $operation['type'])] ?? 'Operación' }}</td>
+                                                                    @endif
+                                                                    @if (filled($operation['cv_signed_date'] ?? null))
+                                                                        <td class="px-3 py-2"><span class="block text-xs text-brand-secondary/55">Fecha</span>{{ $formatOperationDate($operation['cv_signed_date']) }}</td>
+                                                                    @endif
+                                                                    @if (filled($operation['vehicle_plate'] ?? null))
+                                                                        <td class="px-3 py-2"><span class="block text-xs text-brand-secondary/55">Matrícula</span>{{ $operation['vehicle_plate'] }}</td>
+                                                                    @endif
+                                                                    @if (filled($operation['opportunity_name'] ?? null))
+                                                                        <td class="px-3 py-2"><span class="block text-xs text-brand-secondary/55">Operación</span>{{ $operation['opportunity_name'] }}</td>
+                                                                    @endif
+                                                                    <td class="whitespace-nowrap px-3 py-2"><span class="block text-xs text-brand-secondary/55">Importe</span>{{ $formatCommissionAmount($operation['commission_amount']) }}</td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="space-y-2 md:hidden">
+                                                    @foreach ($operationGroup as $operation)
+                                                        <div class="rounded-xl bg-slate-50 p-3">
+                                                            @if (filled($operation['reason'] ?? null))
+                                                                <div class="flex items-start justify-between gap-3 py-1 text-sm"><span class="text-brand-secondary/60">Motivo</span><span class="text-right font-medium text-brand-secondary">{{ $operation['reason'] }}</span></div>
+                                                            @endif
+                                                            @if (filled($operation['type'] ?? null))
+                                                                <div class="flex items-start justify-between gap-3 py-1 text-sm"><span class="text-brand-secondary/60">Tipo de operación</span><span class="text-right font-medium text-brand-secondary">{{ $operationTypeLabels[strtolower((string) $operation['type'])] ?? 'Operación' }}</span></div>
+                                                            @endif
+                                                            @if (filled($operation['cv_signed_date'] ?? null))
+                                                                <div class="flex items-start justify-between gap-3 py-1 text-sm"><span class="text-brand-secondary/60">Fecha</span><span class="text-right font-medium text-brand-secondary">{{ $formatOperationDate($operation['cv_signed_date']) }}</span></div>
+                                                            @endif
+                                                            @if (filled($operation['vehicle_plate'] ?? null))
+                                                                <div class="flex items-start justify-between gap-3 py-1 text-sm"><span class="text-brand-secondary/60">Matrícula</span><span class="text-right font-medium text-brand-secondary">{{ $operation['vehicle_plate'] }}</span></div>
+                                                            @endif
+                                                            @if (filled($operation['opportunity_name'] ?? null))
+                                                                <div class="flex items-start justify-between gap-3 py-1 text-sm"><span class="text-brand-secondary/60">Operación</span><span class="text-right font-medium text-brand-secondary">{{ $operation['opportunity_name'] }}</span></div>
+                                                            @endif
+                                                            <div class="flex items-start justify-between gap-3 py-1 text-sm"><span class="text-brand-secondary/60">Importe</span><span class="text-right font-medium text-brand-secondary">{{ $formatCommissionAmount($operation['commission_amount']) }}</span></div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </details>
+                                        @endforeach
+                                    @endif
+                                @if ($sharedGroups->isNotEmpty())
+                                    @foreach ($sharedGroups as $sharedGroup)
+                                        @php
+                                            $sharedCount = $sharedGroup->count();
+                                            $sharedTotal = $sharedGroup->sum(fn (array $shared): float => (float) $shared['amount']);
+                                            $sharedLabel = 'Comisión por venta de otro comercial' . ($sharedCount > 1 ? ' × ' . $sharedCount : '');
+                                        @endphp
+                                        <details x-data="{ open: false }" x-on:toggle="open = $event.target.open" class="group rounded-xl border border-brand-secondary/10 bg-slate-50">
+                                            <summary :aria-expanded="open ? 'true' : 'false'" class="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_6.5rem_1.25rem] items-center gap-3 px-3 py-3 text-sm font-semibold text-brand-secondary marker:hidden sm:grid-cols-[minmax(0,1fr)_8rem_1.25rem] sm:text-base">
+                                                <span class="min-w-0">{{ $sharedLabel }}</span>
+                                                <span class="w-full text-right">{{ $formatCommissionAmount($sharedTotal) }}</span>
+                                                <svg :class="open ? 'rotate-180' : ''" class="h-4 w-4 justify-self-end text-brand-secondary/45 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                                                </svg>
+                                            </summary>
+                                            <div class="grid gap-2 border-t border-brand-secondary/10 bg-white p-3 sm:grid-cols-2">
+                                                @foreach ($sharedGroup as $sharedRow)
+                                                    <div class="rounded-xl bg-slate-50 p-3 text-sm">
+                                                        @if (filled($sharedRow['operation'] ?? null))
+                                                            <p><span class="text-brand-secondary/60">Operación:</span> {{ $sharedRow['operation'] }}</p>
+                                                        @endif
+                                                        @if (filled($sharedRow['commercial'] ?? null))
+                                                            <p><span class="text-brand-secondary/60">Comercial implicado:</span> {{ $sharedRow['commercial'] }}</p>
+                                                        @elseif (filled($sharedRow['commercial_name'] ?? null))
+                                                            <p><span class="text-brand-secondary/60">Comercial implicado:</span> {{ $sharedRow['commercial_name'] }}</p>
+                                                        @endif
+                                                        <p class="mt-1 font-semibold text-brand-secondary">Importe: {{ $formatCommissionAmount($sharedRow['amount']) }}</p>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </details>
+                                    @endforeach
+                                @endif
+                        @php
+                            $availableDetailGroups = collect($detailDefinitions)->filter(function (array $definition, string $detailKey) use ($commissionDetails): bool {
+                                if ($detailKey === 'shared') {
+                                    return false;
+                                }
+
+                                $rows = $commissionDetails[$detailKey] ?? null;
+                                if (! is_array($rows)) {
+                                    return false;
+                                }
+                                $rows = array_is_list($rows) ? $rows : [$rows];
+
+                                return collect($rows)->contains(function (mixed $row) use ($definition): bool {
+                                    return is_array($row) && array_key_exists($definition['amount'], $row)
+                                        && $row[$definition['amount']] !== null && is_numeric($row[$definition['amount']])
+                                        && (float) $row[$definition['amount']] !== 0.0;
+                                });
+                            });
+                        @endphp
+
+                        @if ($availableDetailGroups->isNotEmpty())
+                            <div class="space-y-4 pt-2">
+                                    @foreach ($availableDetailGroups as $detailKey => $definition)
+                                        @php
+                                            $detailRows = $commissionDetails[$detailKey];
+                                            $detailRows = array_is_list($detailRows) ? $detailRows : [$detailRows];
+                                        @endphp
+                                        <section>
+                                            <h3 class="mb-2 text-sm font-semibold text-brand-secondary">{{ $definition['title'] }}</h3>
+                                            <div class="hidden overflow-x-auto md:block">
+                                                <table class="min-w-full text-left text-sm">
+                                                    <tbody class="divide-y divide-brand-secondary/10">
+                                                        @foreach ($detailRows as $detailRow)
+                                                            @if (is_array($detailRow) && array_key_exists($definition['amount'], $detailRow) && $detailRow[$definition['amount']] !== null && is_numeric($detailRow[$definition['amount']]) && (float) $detailRow[$definition['amount']] !== 0.0)
+                                                                <tr>
+                                                                    @foreach ($definition['fields'] as $field => $label)
+                                                                        @if (array_key_exists($field, $detailRow) && $detailRow[$field] !== null && $detailRow[$field] !== '')
+                                                                            <td class="whitespace-nowrap px-3 py-2 align-top">
+                                                                                <span class="block text-xs text-brand-secondary/55">{{ $label }}</span>
+                                                                                <span class="font-medium text-brand-secondary">{{ $field === $definition['amount'] ? $formatCommissionAmount($detailRow[$field]) : $detailRow[$field] }}</span>
+                                                                            </td>
+                                                                        @endif
+                                                                    @endforeach
+                                                                </tr>
+                                                            @endif
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="space-y-2 md:hidden">
+                                                @foreach ($detailRows as $detailRow)
+                                                    @if (is_array($detailRow) && array_key_exists($definition['amount'], $detailRow) && $detailRow[$definition['amount']] !== null && is_numeric($detailRow[$definition['amount']]) && (float) $detailRow[$definition['amount']] !== 0.0)
+                                                        <div class="rounded-xl bg-slate-50 p-3">
+                                                            @foreach ($definition['fields'] as $field => $label)
+                                                                @if (array_key_exists($field, $detailRow) && $detailRow[$field] !== null && $detailRow[$field] !== '')
+                                                                    <div class="flex items-start justify-between gap-3 py-1 text-sm">
+                                                                        <span class="text-brand-secondary/60">{{ $label }}</span>
+                                                                        <span class="text-right font-medium text-brand-secondary">{{ $field === $definition['amount'] ? $formatCommissionAmount($detailRow[$field]) : $detailRow[$field] }}</span>
+                                                                    </div>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                        </section>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                                </div>
+                                </details>
+                    @endif
+                    @endif
                 </section>
             @endif
         </section>
