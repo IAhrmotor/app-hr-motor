@@ -109,6 +109,7 @@ class UserResource extends Resource
                 ->label('Rol extra')
                 ->options(User::extraRoleLabels())
                 ->placeholder('Sin rol extra')
+                ->required(fn (?User $record): bool => $record === null)
                 ->searchable()
                 ->live()
                 ->afterStateUpdated(function (Set $set, ?string $state) use ($itScheduleFields): void {

@@ -131,6 +131,29 @@ class FilamentUserResourceActionsTest extends TestCase
             ->assertSee('Activo');
     }
 
+    public function test_create_user_requires_an_extra_role(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'is_active' => true,
+        ]);
+
+        Livewire::actingAs($admin);
+
+        Livewire::test(CreateUser::class)
+            ->set('data.name', 'Nuevo usuario')
+            ->set('data.email', 'nuevo@example.com')
+            ->set('data.company_entry_date', '2024-01-02')
+            ->set('data.job_position', 'Comercial')
+            ->set('data.role', User::ROLE_USER)
+            ->call('create')
+            ->assertHasFormErrors(['extra_role']);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'nuevo@example.com',
+        ]);
+    }
+
     public function test_edit_user_shows_specific_error_when_enreach_extension_is_already_assigned(): void
     {
         $admin = User::factory()->create([
