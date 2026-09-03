@@ -26,6 +26,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\TicketToolController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyChatController;
+use App\Http\Controllers\CommercialCommissionsController;
 use App\Http\Controllers\CurriculumsController;
 use App\Http\Controllers\FeedbackReportController;
 use App\Http\Controllers\ItTicketController;
@@ -51,6 +52,8 @@ Route::middleware('auth')->group(function () {
     Route::view('/legal', 'legal')->name('legal');
 
     Route::get('/mi-perfil', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/mi-perfil/comisiones', [CommercialCommissionsController::class, 'showOwn'])
+        ->name('profile.commissions');
     Route::get('/perfil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/notificaciones/resumen', [NotificationController::class, 'summary'])->name('notifications.summary');
