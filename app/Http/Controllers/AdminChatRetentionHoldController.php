@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Filament\Pages\ChatRetentionHoldsPage;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatRetentionHoldAudit;
 use App\Models\CompanyChatRetentionUserHold;
 use App\Models\CompanyChatRetentionUserHoldAudit;
 use App\Models\User;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +20,18 @@ use Illuminate\View\View;
 class AdminChatRetentionHoldController extends Controller
 {
     public function index(Request $request): View
+    {
+        $this->authorizeAdmin();
+
+        return view('admin.chat-retention-holds.legacy', $this->pageData($request));
+    }
+
+    /**
+     * Data shared by the legacy page and the Filament backoffice page.
+     *
+     * @return array<string, mixed>
+     */
+    public function pageData(Request $request): array
     {
         $this->authorizeAdmin();
 
@@ -43,17 +57,18 @@ class AdminChatRetentionHoldController extends Controller
             ? $this->emptyPaginator()
             : $this->activeUserHoldsQuery()->paginate(20)->withQueryString();
 
-        $availableUsers = $missingTable
-            ? collect()
-            : $this->availableUsers();
+        // Users are independent from the retention tables. Keep them
+        // available so the backoffice can show the searchable selectors and
+        // explain the missing migration separately.
+        $availableUsers = $this->availableUsers();
 
-        return view('admin.chat-retention-holds.index', [
+        return [
             'activeHolds' => $activeHolds,
             'availableConversations' => $availableConversations,
             'activeUserHolds' => $activeUserHolds,
             'availableUsers' => $availableUsers,
             'missingTable' => $missingTable,
-        ]);
+        ];
     }
 
     public function store(Request $request): RedirectResponse
@@ -100,9 +115,7 @@ class AdminChatRetentionHoldController extends Controller
             request: $request,
         );
 
-        return redirect()
-            ->route('admin.chat-retention-holds.index')
-            ->with('status', 'La conversación se ha marcado para conservación excepcional.');
+        return $this->redirectWithStatus('La conversación se ha marcado para retenerse y no eliminarse correctamente.');
     }
 
     public function update(Request $request, CompanyChatConversation $conversation): RedirectResponse
@@ -163,12 +176,10 @@ class AdminChatRetentionHoldController extends Controller
         }
 
         if (! $changesMade) {
-            return back()->with('status', 'No se han detectado cambios en la conservación excepcional.');
+            return $this->redirectWithStatus('No se han detectado cambios en la conservación excepcional.');
         }
 
-        return redirect()
-            ->route('admin.chat-retention-holds.index')
-            ->with('status', 'La conservación excepcional se ha actualizado correctamente.');
+        return $this->redirectWithStatus('La conservación excepcional se ha actualizado correctamente.');
     }
 
     public function storeUser(Request $request): RedirectResponse
@@ -214,9 +225,7 @@ class AdminChatRetentionHoldController extends Controller
             request: $request,
         );
 
-        return redirect()
-            ->route('admin.chat-retention-holds.index')
-            ->with('status', 'Se ha activado la conservación excepcional para todas las conversaciones de ese usuario.');
+        return $this->redirectWithStatus('Se ha activado la conservación excepcional para todas las conversaciones de ese usuario.');
     }
 
     public function updateUser(Request $request, CompanyChatRetentionUserHold $userHold): RedirectResponse
@@ -273,12 +282,10 @@ class AdminChatRetentionHoldController extends Controller
         }
 
         if (! $changesMade) {
-            return back()->with('status', 'No se han detectado cambios en la conservación excepcional del usuario.');
+            return $this->redirectWithStatus('No se han detectado cambios en la conservación excepcional del usuario.');
         }
 
-        return redirect()
-            ->route('admin.chat-retention-holds.index')
-            ->with('status', 'La conservación excepcional del usuario se ha actualizado correctamente.');
+        return $this->redirectWithStatus('La conservación excepcional del usuario se ha actualizado correctamente.');
     }
 
     public function destroyUser(Request $request, CompanyChatRetentionUserHold $userHold): RedirectResponse
@@ -319,9 +326,7 @@ class AdminChatRetentionHoldController extends Controller
             request: $request,
         );
 
-        return redirect()
-            ->route('admin.chat-retention-holds.index')
-            ->with('status', 'La conservación excepcional del usuario ha sido desactivada.');
+        return $this->redirectWithStatus('La conservación excepcional del usuario ha sido desactivada.');
     }
 
     public function destroy(Request $request, CompanyChatConversation $conversation): RedirectResponse
@@ -361,18 +366,12 @@ class AdminChatRetentionHoldController extends Controller
             request: $request,
         );
 
-        return redirect()
-            ->route('admin.chat-retention-holds.index')
-            ->with('status', 'La conversación ha dejado de tener conservación excepcional.');
+        return $this->redirectWithStatus('La conversación ha dejado de tener conservación excepcional.');
     }
 
     private function authorizeAdmin(): void
     {
-        abort_unless(
-            app_real_role(auth()->user()) === User::ROLE_ADMIN
-                || app_user_can_manage_admin_tool(auth()->user(), 'chat-retention-holds.manage'),
-            403
-        );
+        abort_unless(app_visible_role(auth()->user()) === User::ROLE_ADMIN, 403);
     }
 
     private function ensureSchemaReady(): void
@@ -417,9 +416,31 @@ class AdminChatRetentionHoldController extends Controller
     private function availableUsers(): Collection
     {
         return User::query()
-            ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'email']);
+            ->get(['id', 'name', 'email', 'is_active']);
+    }
+
+    private function indexUrl(): string
+    {
+        return request()->routeIs('backoffice.chat-retention-holds.*')
+            ? ChatRetentionHoldsPage::getUrl()
+            : route('admin.chat-retention-holds.index');
+    }
+
+    private function redirectWithStatus(string $message): RedirectResponse
+    {
+        if (request()->routeIs('backoffice.chat-retention-holds.*')) {
+            Notification::make()
+                ->title($message)
+                ->success()
+                ->send();
+
+            return redirect()->to($this->indexUrl());
+        }
+
+        return redirect()
+            ->to($this->indexUrl())
+            ->with('status', $message);
     }
 
     private function emptyPaginator()

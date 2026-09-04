@@ -1779,6 +1779,26 @@ Route::middleware('auth')->group(function () {
             Route::delete('/admin/conversacion-excepcional/usuarios/{userHold}/desactivar', [AdminChatRetentionHoldController::class, 'destroyUser'])
                 ->whereNumber('userHold')
                 ->name('admin.chat-retention-holds.users.destroy');
+
+            // Endpoints used by the backoffice page. The Filament GET page is
+            // registered by ChatRetentionHoldsPage; these mutations stay
+            // behind the same admin-only boundary as the legacy screen.
+            Route::post('/backoffice/conservacion-excepcional', [AdminChatRetentionHoldController::class, 'store'])
+                ->name('backoffice.chat-retention-holds.store');
+            Route::patch('/backoffice/conservacion-excepcional/{conversation}', [AdminChatRetentionHoldController::class, 'update'])
+                ->whereNumber('conversation')
+                ->name('backoffice.chat-retention-holds.update');
+            Route::delete('/backoffice/conservacion-excepcional/{conversation}/desactivar', [AdminChatRetentionHoldController::class, 'destroy'])
+                ->whereNumber('conversation')
+                ->name('backoffice.chat-retention-holds.destroy');
+            Route::post('/backoffice/conservacion-excepcional/usuarios', [AdminChatRetentionHoldController::class, 'storeUser'])
+                ->name('backoffice.chat-retention-holds.users.store');
+            Route::patch('/backoffice/conservacion-excepcional/usuarios/{userHold}', [AdminChatRetentionHoldController::class, 'updateUser'])
+                ->whereNumber('userHold')
+                ->name('backoffice.chat-retention-holds.users.update');
+            Route::delete('/backoffice/conservacion-excepcional/usuarios/{userHold}/desactivar', [AdminChatRetentionHoldController::class, 'destroyUser'])
+                ->whereNumber('userHold')
+                ->name('backoffice.chat-retention-holds.users.destroy');
         });
         Route::get('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'edit'])->name('admin.magazine.edit');
         Route::put('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'update'])->name('admin.magazine.update');
