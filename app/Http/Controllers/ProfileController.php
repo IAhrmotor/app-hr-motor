@@ -2,21 +2,59 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\CommercialCommissionsApiUnavailableException;
+use App\Exceptions\CommercialCommissionsNetworkException;
+use App\Exceptions\CommercialCommissionsRateLimitException;
+use App\Exceptions\CommercialNotFoundException;
+use App\Exceptions\InvalidCommercialCommissionParametersException;
+use App\Exceptions\InvalidCommercialCommissionsResponseException;
 use App\Models\User;
+use App\Services\CommercialCommissionsApiService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request): View
+    public function show(Request $request, CommercialCommissionsApiService $commissionsService): View
     {
         /** @var User $user */
         $user = $request->user();
+        $commissionMonth = (string) $request->query('month', now()->format('Y-m'));
+        $commissionData = null;
+        $commissionError = null;
 
-        return view('users.show', compact('user'));
+        if (Gate::forUser($user)->allows('commercial-commission.view')) {
+            try {
+                $commissionData = $commissionsService->get($user, $commissionMonth);
+            } catch (CommercialNotFoundException $exception) {
+                $commissionError = ['status' => 404, 'message' => $exception->getMessage()];
+            } catch (InvalidCommercialCommissionParametersException $exception) {
+                $commissionError = ['status' => 422, 'message' => $exception->getMessage()];
+            } catch (CommercialCommissionsRateLimitException $exception) {
+                $commissionError = [
+                    'status' => 429,
+                    'message' => $exception->getMessage(),
+                    'retry_after' => $exception->retryAfter,
+                ];
+            } catch (CommercialCommissionsApiUnavailableException|CommercialCommissionsNetworkException|InvalidCommercialCommissionsResponseException $exception) {
+                $commissionError = ['status' => 503, 'message' => $exception->getMessage()];
+            }
+        }
+
+        return view('users.show', [
+            'user' => $user,
+            'rankingPositions' => [
+                'sales' => ['position' => null, 'total' => 0],
+                'purchases' => ['position' => null, 'total' => 0],
+            ],
+            'commissionData' => $commissionData,
+            'commissionError' => $commissionError,
+            'commissionMonth' => $commissionMonth,
+        ]);
     }
 
     public function edit(): View

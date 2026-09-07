@@ -64,6 +64,13 @@ return [
         ))),
     ],
 
+    'commercial_commissions' => [
+        'url' => env('COMMERCIAL_COMMISSIONS_API_URL'),
+        'username' => env('COMMERCIAL_COMMISSIONS_API_USERNAME'),
+        'password' => env('COMMERCIAL_COMMISSIONS_API_PASSWORD'),
+        'timeout' => (int) env('COMMERCIAL_COMMISSIONS_API_TIMEOUT', 15),
+    ],
+
     'google_business_profile' => [
         'client_id' => env('GOOGLE_BUSINESS_PROFILE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET'),
