@@ -40,6 +40,7 @@ class FilamentAdminNotificationResourceTest extends TestCase
 
         $admin = User::factory()->create([
             'role' => User::ROLE_ADMIN,
+            'extra_role' => null,
             'is_active' => true,
         ]);
         $commercial = User::factory()->create([
