@@ -968,7 +968,35 @@ class CompanyChatTest extends TestCase
 
         $this->assertSame('Mensaje editado', $message->fresh()->body);
         $this->assertNotNull($message->fresh()->edited_at);
-        $this->assertSame('Mensaje editado', $conversation->fresh()->last_message_excerpt);
+        $this->assertDatabaseHas('company_chat_message_revisions', [
+            'company_chat_message_id' => $message->id,
+            'body' => 'Mensaje original',
+            'edited_by' => $sender->id,
+        ]);
+        $this->assertSame(1, $message->revisions()->count());
+
+        $this->actingAs($sender)
+            ->patchJson(route('chat.beta.messages.update', [$conversation, $message]), [
+                'body' => 'Mensaje editado por segunda vez',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message.body', 'Mensaje editado por segunda vez');
+
+        $this->assertSame('Mensaje editado por segunda vez', $message->fresh()->body);
+        $this->assertSame(2, $message->revisions()->count());
+        $this->assertSame(
+            ['Mensaje original', 'Mensaje editado'],
+            $message->revisions()->orderBy('edited_at')->pluck('body')->all(),
+        );
+
+        $this->actingAs($sender)
+            ->patchJson(route('chat.beta.messages.update', [$conversation, $message]), [
+                'body' => 'Mensaje editado por segunda vez',
+            ])
+            ->assertOk();
+
+        $this->assertSame(2, $message->revisions()->count());
+        $this->assertSame('Mensaje editado por segunda vez', $conversation->fresh()->last_message_excerpt);
 
         $this->actingAs($sender)
             ->deleteJson(route('chat.beta.messages.destroy', [$conversation, $message]))

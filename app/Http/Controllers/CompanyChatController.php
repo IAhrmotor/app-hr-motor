@@ -8,6 +8,7 @@ use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatGroup;
 use App\Models\CompanyChatFavoriteContact;
 use App\Models\CompanyChatMessage;
+use App\Models\CompanyChatMessageRevision;
 use App\Models\CompanyChatMessageRead;
 use App\Models\PolicyAcceptance;
 use App\Models\User;
@@ -451,7 +452,8 @@ class CompanyChatController extends Controller
             'body' => ['nullable', 'string', 'max:4000'],
         ]);
 
-        $originalBody = trim((string) $message->body);
+        $originalBody = (string) $message->body;
+        $originalBodyForComparison = trim($originalBody);
         $body = trim((string) ($validated['body'] ?? ''));
         $hasAttachments = filled($message->attachments);
 
@@ -461,10 +463,23 @@ class CompanyChatController extends Controller
             ]);
         }
 
-        $message->forceFill([
-            'body' => $body,
-            'edited_at' => $body !== $originalBody ? now() : $message->edited_at,
-        ])->save();
+        if ($body !== $originalBodyForComparison) {
+            $editedAt = now();
+
+            DB::transaction(function () use ($message, $originalBody, $body, $editedAt): void {
+                CompanyChatMessageRevision::query()->create([
+                    'company_chat_message_id' => $message->id,
+                    'body' => $originalBody,
+                    'edited_at' => $editedAt,
+                    'edited_by' => request()->user()?->id,
+                ]);
+
+                $message->forceFill([
+                    'body' => $body,
+                    'edited_at' => $editedAt,
+                ])->save();
+            });
+        }
 
         $this->refreshConversationSummary($conversation);
 
