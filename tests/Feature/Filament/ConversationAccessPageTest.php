@@ -337,7 +337,13 @@ class ConversationAccessPageTest extends TestCase
             ->assertSet('contentUnlocked', true)
             ->assertSee('Mensaje paginado 1')
             ->assertSee('Mensaje paginado 50')
-            ->assertDontSee('Mensaje paginado 51');
+            ->assertDontSee('Mensaje paginado 51')
+            ->assertSee('conversation-messages', false)
+            ->assertSee('conversation-pagination', false)
+            ->assertSee('conversation-pagination-content', false)
+            ->assertSee('conversation-pagination-summary', false)
+            ->assertSee('conversation-pagination-controls', false)
+            ->assertSee('Mensajes 1-50 de 55');
 
         $this->assertSame(50, $component->instance()->selectedMessages->count());
         $this->assertSame(55, $component->instance()->selectedMessagesTotal);

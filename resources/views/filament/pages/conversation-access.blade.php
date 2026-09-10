@@ -132,6 +132,59 @@
             color: #fecaca !important;
         }
 
+        .conversation-view {
+            overflow: hidden !important;
+            border-radius: 0.75rem !important;
+        }
+
+        .conversation-view .conversation-messages {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            padding-bottom: 1.25rem !important;
+        }
+
+        .conversation-view .conversation-pagination {
+            width: calc(100% + 3rem) !important;
+            box-sizing: border-box !important;
+            margin-top: 0 !important;
+            margin-right: -1.5rem !important;
+            margin-bottom: -1.5rem !important;
+            margin-left: -1.5rem !important;
+            border: 0 !important;
+            border-top: 1px solid rgb(55 65 81) !important;
+            border-radius: 0 !important;
+            padding: 1rem 1.25rem !important;
+            background: inherit !important;
+        }
+
+        .dark .conversation-view .conversation-pagination {
+            background: inherit !important;
+        }
+
+        .conversation-pagination-content {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.65rem !important;
+            text-align: center !important;
+        }
+
+        .conversation-pagination-summary {
+            width: 100% !important;
+            text-align: center !important;
+        }
+
+        .conversation-pagination-controls {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+            flex-wrap: wrap !important;
+        }
+
         .message-status-icon {
             display: inline-flex !important;
             align-items: center !important;
@@ -172,7 +225,7 @@
         {{ $this->content }}
 
         <?php if ($this->contentUnlocked && $this->selectedConversation): ?>
-            <x-filament::section class="mt-6">
+            <x-filament::section class="conversation-view mt-6">
                 <x-slot name="heading">Conversación</x-slot>
                 <x-slot name="afterHeader">
                     <x-filament::button
@@ -218,7 +271,7 @@
                     </div>
                 </x-slot>
 
-                <div class="max-h-[38rem] overflow-y-auto rounded-xl bg-gray-50 p-4 ring-1 ring-gray-950/5 dark:bg-gray-950/40 dark:ring-white/10 sm:p-6">
+                <div class="conversation-messages max-h-[38rem] overflow-y-auto p-4 sm:p-6">
                     @php
                         $conversation = $this->selectedConversation;
                         $participantIds = $conversation->isGroupConversation()
@@ -352,9 +405,12 @@
                         $firstMessageNumber = (($this->selectedMessagesPage - 1) * $this->selectedMessagesPerPage) + 1;
                         $lastMessageNumber = min($this->selectedMessagesPage * $this->selectedMessagesPerPage, $this->selectedMessagesTotal);
                     @endphp
-                    <div class="-mx-4 -mb-4 flex flex-col items-center gap-3 rounded-b-xl border-t border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-950/40 dark:text-gray-400 sm:-mx-6 sm:-mb-6 sm:px-6">
-                        <span>Mensajes {{ $firstMessageNumber }}-{{ $lastMessageNumber }} de {{ $this->selectedMessagesTotal }}</span>
-                        <div class="flex flex-wrap items-center justify-center gap-2">
+                    <footer class="conversation-pagination text-sm text-gray-500 dark:text-gray-400">
+                        <div class="conversation-pagination-content flex flex-col items-center justify-center gap-3 text-center">
+                            <div class="conversation-pagination-summary">
+                                Mensajes {{ $firstMessageNumber }}-{{ $lastMessageNumber }} de {{ $this->selectedMessagesTotal }}
+                            </div>
+                            <div class="conversation-pagination-controls flex w-full flex-wrap items-center justify-center gap-2">
                             <x-filament::button
                                 wire:click="goToMessagesPage({{ $this->selectedMessagesPage - 1 }})"
                                 wire:loading.attr="disabled"
@@ -376,8 +432,9 @@
                             >
                                 Siguientes
                             </x-filament::button>
+                            </div>
                         </div>
-                    </div>
+                    </footer>
                 <?php endif; ?>
             </x-filament::section>
         <?php endif; ?>
