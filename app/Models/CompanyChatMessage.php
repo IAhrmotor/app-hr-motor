@@ -49,6 +49,13 @@ class CompanyChatMessage extends Model
         return $this->belongsTo(User::class, 'sender_id');
     }
 
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(CompanyChatMessageRevision::class, 'company_chat_message_id')
+            ->orderBy('edited_at')
+            ->orderBy('id');
+    }
+
     /**
      * @return HasMany<CompanyChatMessageRead>
      */
@@ -65,6 +72,56 @@ class CompanyChatMessage extends Model
     public function isSystemMessage(): bool
     {
         return (bool) $this->is_system;
+    }
+
+    /**
+     * Return the single source of truth used by the justified-access UI and CSV export.
+     */
+    public function accessMessageState(): string
+    {
+        if ($this->trashed() && $this->edited_at !== null) {
+            return 'deleted_and_edited';
+        }
+
+        if ($this->trashed()) {
+            return 'deleted';
+        }
+
+        if ($this->isSystemMessage()) {
+            return 'system';
+        }
+
+        if ($this->edited_at !== null) {
+            return 'edited';
+        }
+
+        return 'normal';
+    }
+
+    public function accessMessageStateLabel(): string
+    {
+        return match ($this->accessMessageState()) {
+            'deleted_and_edited' => 'Eliminado',
+            'deleted' => 'Eliminado',
+            'system' => 'Sistema',
+            'edited' => 'Editado',
+            default => 'Normal',
+        };
+    }
+
+    public function accessMessageContent(): string
+    {
+        $body = (string) $this->body;
+
+        if (trim($body) !== '') {
+            return $body;
+        }
+
+        if ($this->isSystemMessage()) {
+            return 'Evento del sistema';
+        }
+
+        return filled($this->attachments) ? '[Adjunto]' : 'Mensaje sin texto.';
     }
 
     public function mentionsUser(User $user): bool

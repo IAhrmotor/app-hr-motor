@@ -181,6 +181,16 @@ class AdminConversationAccessTest extends TestCase
             ->assertSee('Mensaje sensible de prueba');
     }
 
+    public function test_admin_conversation_access_page_loads_without_a_selected_conversation(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.conversation-access.index'))
+            ->assertOk()
+            ->assertSee('Selecciona una conversación');
+    }
+
     public function test_granted_access_is_only_momentary_and_is_lost_on_new_navigation(): void
     {
         $admin = User::factory()->create([
