@@ -76,6 +76,89 @@
             background: color-mix(in srgb, var(--danger-500) 10%, transparent);
         }
 
+        .conversation-access-message-bubble .message-meta {
+            color: #64748b;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+        }
+
+        .conversation-access-message-bubble .message-sender {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .conversation-access-message-bubble .message-date {
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 400;
+        }
+
+        .conversation-access-message-bubble .message-content {
+            color: #0f172a;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5rem;
+        }
+
+        .conversation-access-message-bubble.is-deleted .message-sender {
+            color: #b91c1c;
+        }
+
+        .conversation-access-message-bubble.is-deleted .message-content {
+            color: #991b1b !important;
+        }
+
+        .dark .conversation-access-message-bubble .message-meta {
+            color: #94a3b8;
+        }
+
+        .dark .conversation-access-message-bubble .message-sender {
+            color: #cbd5e1;
+        }
+
+        .dark .conversation-access-message-bubble .message-date {
+            color: #64748b;
+        }
+
+        .dark .conversation-access-message-bubble .message-content {
+            color: #f1f5f9;
+        }
+
+        .dark .conversation-access-message-bubble.is-deleted .message-sender {
+            color: #fca5a5;
+        }
+
+        .dark .conversation-access-message-bubble.is-deleted .message-content {
+            color: #fecaca !important;
+        }
+
+        .message-status-icon {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 16px !important;
+            height: 16px !important;
+            min-width: 16px !important;
+            min-height: 16px !important;
+            max-width: 16px !important;
+            max-height: 16px !important;
+            flex: 0 0 16px !important;
+            vertical-align: middle !important;
+            margin-right: 4px !important;
+        }
+
+        .message-status-icon svg,
+        .message-status-svg {
+            display: block !important;
+            width: 14px !important;
+            height: 14px !important;
+            min-width: 14px !important;
+            min-height: 14px !important;
+            max-width: 14px !important;
+            max-height: 14px !important;
+            flex: none !important;
+        }
+
         @media (max-width: 640px) {
             .conversation-access-message-bubble { max-width: 88%; }
         }
@@ -162,10 +245,12 @@
                             <?php if ($isSystemMessage): ?>
                                 <div class="conversation-access-message-row is-system px-2 py-1" data-message-id="{{ $message->id }}" data-message-type="system">
                                     <div class="conversation-access-message-bubble">
-                                        <span class="font-medium">{{ $message->sender?->name ?? 'Sistema' }}</span>
-                                        <span class="mx-1 text-gray-300 dark:text-gray-600">·</span>
-                                        <span>{{ $message->created_at?->format('d/m/Y H:i') }}</span>
-                                        <div class="mt-1 text-gray-600 dark:text-gray-300"><?php echo nl2br(e($messageContent)); ?></div>
+                                        <div class="message-meta" data-message-meta>
+                                            <span class="message-sender">{{ $message->sender?->name ?? 'Sistema' }}</span>
+                                            <span class="mx-1">·</span>
+                                            <span class="message-date">{{ $message->created_at?->format('d/m/Y H:i') }}</span>
+                                        </div>
+                                        <div class="message-content mt-1" data-message-content><?php echo nl2br(e($messageContent)); ?></div>
                                         <?php if ($isEditedMessage): ?>
                                             <div class="mt-1 text-[0.7rem] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                                 Editado{{ $message->edited_at ? ' · ' . $message->edited_at->format('d/m/Y H:i') : '' }}
@@ -176,18 +261,35 @@
                             <?php else: ?>
                                 <div class="conversation-access-message-row {{ $messageSide === 'right' ? 'is-right' : 'is-left' }}" data-message-id="{{ $message->id }}" data-message-type="user" data-sender-id="{{ $message->sender_id }}">
                                     <article class="conversation-access-message-bubble {{ $isDeletedMessage ? 'is-deleted' : '' }}">
-                                        <header class="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs">
-                                            <span class="font-semibold {{ $isDeletedMessage ? 'text-danger-700 dark:text-danger-300' : ($messageSide === 'right' ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-200') }}">
+                                        <header class="message-meta mb-2 flex flex-wrap items-center justify-start gap-x-4 gap-y-1" data-message-meta>
+                                            <span class="message-sender {{ $isDeletedMessage ? 'text-danger-700 dark:text-danger-300' : '' }}">
                                                 {{ $message->sender?->name ?? 'Usuario eliminado' }}
                                             </span>
-                                            <time class="text-gray-500 dark:text-gray-400" datetime="{{ $message->created_at?->toIso8601String() }}">
+                                            <time class="message-date" datetime="{{ $message->created_at?->toIso8601String() }}">
                                                 {{ $message->created_at?->format('d/m/Y H:i') }}
                                             </time>
+                                            <?php if ($isDeletedMessage): ?>
+                                                <span
+                                                    class="message-status-icon"
+                                                    title="Mensaje eliminado"
+                                                    aria-label="Mensaje eliminado"
+                                                >
+                                                    <x-heroicon-o-trash class="message-status-svg text-red-400" />
+                                                </span>
+                                            <?php elseif ($isEditedMessage): ?>
+                                                <span
+                                                    class="message-status-icon"
+                                                    title="Mensaje editado"
+                                                    aria-label="Mensaje editado"
+                                                >
+                                                    <x-heroicon-o-pencil-square class="message-status-svg text-amber-400" />
+                                                </span>
+                                            <?php endif; ?>
                                         </header>
 
                                         <?php if ($messageState !== 'normal'): ?>
-                                            <div class="mb-2 text-xs font-semibold uppercase tracking-wide {{ $isDeletedMessage ? 'text-danger-700 dark:text-danger-300' : 'text-primary-700 dark:text-primary-300' }}">
-                                                {{ $message->accessMessageStateLabel() }}
+                                            <div class="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide {{ $isDeletedMessage ? 'text-danger-700 dark:text-danger-300' : 'text-primary-700 dark:text-primary-300' }}">
+                                                <span>{{ $message->accessMessageStateLabel() }}</span>
                                                 <?php if ($isEditedMessage && $message->edited_at): ?>
                                                     · {{ $message->edited_at->format('d/m/Y H:i') }}
                                                 <?php endif; ?>
@@ -223,7 +325,7 @@
                                             <div class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">Contenido actual:</div>
                                         <?php endif; ?>
 
-                                        <div class="break-words text-sm leading-6 {{ $isDeletedMessage ? 'text-danger-800 line-through decoration-danger-400 dark:text-danger-200' : 'text-gray-900 dark:text-gray-100' }}">
+                                        <div class="message-content break-words {{ $isDeletedMessage ? 'text-danger-800 line-through decoration-danger-400 dark:text-danger-200' : '' }}" data-message-content>
                                             <?php echo nl2br(e($messageContent)); ?>
                                         </div>
 
@@ -240,7 +342,7 @@
                             <div class="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
                                 La conversación no contiene mensajes.
                             </div>
-                        <?php endif; ?>
+                <?php endif; ?>
                     </div>
                 </div>
 
@@ -250,9 +352,9 @@
                         $firstMessageNumber = (($this->selectedMessagesPage - 1) * $this->selectedMessagesPerPage) + 1;
                         $lastMessageNumber = min($this->selectedMessagesPage * $this->selectedMessagesPerPage, $this->selectedMessagesTotal);
                     @endphp
-                    <div class="mt-4 flex flex-col gap-3 text-sm text-gray-500 dark:text-gray-400 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="-mx-4 -mb-4 flex flex-col items-center gap-3 rounded-b-xl border-t border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-950/40 dark:text-gray-400 sm:-mx-6 sm:-mb-6 sm:px-6">
                         <span>Mensajes {{ $firstMessageNumber }}-{{ $lastMessageNumber }} de {{ $this->selectedMessagesTotal }}</span>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center justify-center gap-2">
                             <x-filament::button
                                 wire:click="goToMessagesPage({{ $this->selectedMessagesPage - 1 }})"
                                 wire:loading.attr="disabled"
