@@ -6,11 +6,11 @@ use App\Models\User;
 use App\Models\Dealership;
 use App\Rules\UserEnreachExtensionRule;
 use App\Services\UserDeactivationService;
+use App\Services\UserPasswordResetService;
 use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Select;
@@ -27,6 +27,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Password;
 use Filament\Notifications\Notification;
 
 class UserResource extends Resource
@@ -294,6 +295,23 @@ class UserResource extends Resource
             ])
             ->defaultSort('name')
             ->striped()
+            ->recordUrl(function (User $record): ?string {
+                $authUser = auth()->user();
+
+                if (! $authUser instanceof User) {
+                    return null;
+                }
+
+                if ($authUser->role === User::ROLE_ADMIN) {
+                    return static::getUrl('edit', ['record' => $record]);
+                }
+
+                return $authUser->role === User::ROLE_MANAGER
+                    && $authUser->id !== $record->id
+                    && $record->role === User::ROLE_USER
+                    ? static::getUrl('edit', ['record' => $record])
+                    : null;
+            })
             ->filters([
                 SelectFilter::make('status')
                     ->label('Estado')
@@ -355,22 +373,6 @@ class UserResource extends Resource
                 CreateAction::make(),
             ])
             ->actions([
-                EditAction::make()
-                    ->visible(function (User $record): bool {
-                        $authUser = auth()->user();
-
-                        if (! $authUser) {
-                            return false;
-                        }
-
-                        if ($authUser->role === User::ROLE_ADMIN) {
-                            return true;
-                        }
-
-                        return $authUser->role === User::ROLE_MANAGER
-                            && $authUser->id !== $record->id
-                            && $record->role === User::ROLE_USER;
-                }),
                 DeleteAction::make()
                     ->label('Borrar')
                     ->modalIconColor('primary')
@@ -435,6 +437,78 @@ class UserResource extends Resource
                             ->success()
                             ->title('Usuario desactivado correctamente.')
                             ->body('El usuario ya no podrá acceder al backoffice.')
+                            ->send();
+                    }),
+                Action::make('reactivate')
+                    ->label('Activar')
+                    ->icon('heroicon-o-user-plus')
+                    ->color('success')
+                    ->visible(function (User $record): bool {
+                        $authUser = auth()->user();
+
+                        return $authUser instanceof User
+                            && app(UserDeactivationService::class)->canReactivate($authUser, $record);
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Activar usuario')
+                    ->modalDescription('¿Estás seguro de que quieres activar este usuario? Podrá volver a acceder a la aplicación.')
+                    ->action(function (User $record): void {
+                        $authUser = auth()->user();
+
+                        if (! $authUser instanceof User) {
+                            return;
+                        }
+
+                        try {
+                            app(UserDeactivationService::class)->reactivate($authUser, $record);
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->danger()
+                                ->title($e->getMessage())
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Usuario activado correctamente.')
+                            ->body('El usuario ya puede volver a acceder a la aplicación.')
+                            ->send();
+                    }),
+                Action::make('resetPassword')
+                    ->label('Restablecer')
+                    ->tooltip('Restablecer contraseña')
+                    ->icon('heroicon-o-key')
+                    ->color('primary')
+                    ->visible(function (User $record): bool {
+                        return ! $record->isDisabled()
+                            && ($record->is_active || $record->isInvitationExpired());
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Restablecer contraseña')
+                    ->modalDescription(fn (User $record): string => "Se enviará un enlace de restablecimiento a {$record->email}. ¿Quieres continuar?")
+                    ->action(function (User $record): void {
+                        $status = app(UserPasswordResetService::class)->send($record);
+
+                        if ($status !== Password::RESET_LINK_SENT) {
+                            Notification::make()
+                                ->danger()
+                                ->title(match ($status) {
+                                    UserPasswordResetService::DELIVERY_FAILED => 'El servidor SMTP ha rechazado el correo.',
+                                    Password::RESET_THROTTLED => 'Espera un momento antes de volver a enviar el correo.',
+                                    Password::INVALID_USER => 'No se ha encontrado un usuario válido.',
+                                    default => 'No se ha podido enviar el correo de restablecimiento.',
+                                })
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Correo de restablecimiento enviado correctamente.')
+                            ->body('El usuario recibirá un enlace para definir una nueva contraseña.')
                             ->send();
                     }),
             ]);

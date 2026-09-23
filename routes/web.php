@@ -1372,7 +1372,7 @@ Route::middleware('auth')->group(function () {
                     ],
                     [
                         'label' => 'Motorflash Maestro',
-                        'url' => 'https://axiumsoluciones-my.sharepoint.com/:x:/r/personal/g1_departamentoit_hrmotor_es/_layouts/15/Doc.aspx?sourcedoc=%7B1FA93C75-604F-4F67-B81D-1F53EA1E5C0F%7D&file=Altas%20Motorflash.xlsx&action=default&mobileredirect=true',
+                        'url' => 'https://axiumsoluciones-my.sharepoint.com/:x:/r/personal/g1_departamentoit_hrmotor_es/_layouts/15/Doc.aspx?sourcedoc=%7B475B2534-F15F-46BF-B879-C5F63DA00BAA%7D&file=Control_Motorflash_Limpio.xlsx&action=default&mobileredirect=true',
                         'image' => asset('images/tools/tareas-asignadas.webp'),
                     ],
                 ],

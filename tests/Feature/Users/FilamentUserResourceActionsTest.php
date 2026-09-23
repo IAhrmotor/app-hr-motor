@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\UserDeactivationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Illuminate\Support\Facades\Password;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use Tests\TestCase;
@@ -41,6 +42,88 @@ class FilamentUserResourceActionsTest extends TestCase
             ->assertOk()
             ->assertSee('Borrar', false)
             ->assertSee('Desactivar', false);
+    }
+
+    public function test_admin_sees_activate_action_for_deactivated_users(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'is_active' => true,
+        ]);
+
+        User::factory()->create([
+            'name' => 'Usuario desactivado',
+            'role' => User::ROLE_USER,
+            'is_active' => false,
+            'disabled_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get('/backoffice/usuarios');
+
+        $response
+            ->assertOk()
+            ->assertSee('Activar', false);
+    }
+
+    public function test_admin_can_reactivate_a_deactivated_user_from_filament(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'is_active' => false,
+            'disabled_at' => now(),
+            'disabled_by' => $admin->id,
+            'disabled_reason' => 'Baja de empleado',
+        ]);
+
+        Livewire::actingAs($admin);
+
+        Livewire::test(\App\Filament\Resources\Users\Pages\ListUsers::class)
+            ->callTableAction('reactivate', $user);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_active' => true,
+            'disabled_at' => null,
+            'disabled_by' => null,
+            'disabled_reason' => null,
+        ]);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'action' => \App\Models\UserActivityLog::ACTION_REACTIVATED,
+            'actor_user_id' => $admin->id,
+            'target_user_id' => $user->id,
+        ]);
+    }
+
+    public function test_filament_can_send_a_password_reset_email_to_an_active_user(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'role' => User::ROLE_USER,
+            'email' => 'activo@example.com',
+            'is_active' => true,
+        ]);
+
+        Password::shouldReceive('broker->sendResetLink')
+            ->once()
+            ->with(['email' => $user->email])
+            ->andReturn(Password::RESET_LINK_SENT);
+
+        Livewire::actingAs($admin);
+
+        Livewire::test(\App\Filament\Resources\Users\Pages\ListUsers::class)
+            ->callTableAction('resetPassword', $user);
+
+        $this->assertTrue($user->fresh()->is_active);
     }
 
     public function test_manager_does_not_see_delete_action_and_can_only_deactivate_plain_users(): void
