@@ -105,7 +105,7 @@
 </style>
 
 <x-filament-panels::page>
-    @include('admin.chat-retention-holds.index', [
+    @include('shared.chat-retention-holds', [
         'backoffice' => true,
         'retentionRoutes' => [
             'index' => 'backoffice.chat-retention-holds.index',

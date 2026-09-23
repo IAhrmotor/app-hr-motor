@@ -7,49 +7,12 @@ use App\Models\User;
 use App\Services\CompanyChatGroupActivityLogFormatter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminChatGroupLogController extends Controller
 {
-    public function index(Request $request)
-    {
-        $action = $this->sanitizeAction($request->query('action'));
-        $dateFrom = $this->sanitizeDate($request->query('date_from'));
-        $dateTo = $this->sanitizeDate($request->query('date_to'));
-        [$dateFrom, $dateTo] = $this->normalizeDateRange($dateFrom, $dateTo);
-        $actorId = $this->sanitizeActorId($request->query('actor'));
-        $actors = $this->availableActors();
-
-        if (! Schema::hasTable('company_chat_group_activity_logs')) {
-            $logs = new LengthAwarePaginator(
-                items: new Collection,
-                total: 0,
-                perPage: 20,
-                currentPage: LengthAwarePaginator::resolveCurrentPage(),
-                options: [
-                    'path' => LengthAwarePaginator::resolveCurrentPath(),
-                    'query' => $request->query(),
-                ],
-            );
-            $logs->withQueryString();
-            $missingTable = true;
-
-            return $this->renderIndexResponse($request, compact('logs', 'action', 'dateFrom', 'dateTo', 'actorId', 'actors', 'missingTable'));
-        }
-
-        $logs = $this->filteredLogsQuery($action, $dateFrom, $dateTo, $actorId)
-            ->orderByDesc('created_at')
-            ->paginate(20)
-            ->withQueryString();
-
-        $missingTable = false;
-
-        return $this->renderIndexResponse($request, compact('logs', 'action', 'dateFrom', 'dateTo', 'actorId', 'actors', 'missingTable'));
-    }
-
     public function export(Request $request): StreamedResponse
     {
         $action = $this->sanitizeAction($request->query('action'));
@@ -192,14 +155,4 @@ class AdminChatGroupLogController extends Controller
         return app(CompanyChatGroupActivityLogFormatter::class)->format($log);
     }
 
-    private function renderIndexResponse(Request $request, array $data)
-    {
-        if ($request->ajax()) {
-            return response()->json([
-                'html' => view('admin.chat-group-logs.partials.content', $data)->render(),
-            ]);
-        }
-
-        return view('admin.chat-group-logs.index', $data);
-    }
 }

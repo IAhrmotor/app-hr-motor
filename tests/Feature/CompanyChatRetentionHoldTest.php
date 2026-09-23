@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\ChatRetentionHoldsPage;
 use App\Models\CompanyChatConversation;
 use App\Models\CompanyChatMessage;
 use App\Models\CompanyChatRetentionHoldAudit;
@@ -39,10 +40,9 @@ class CompanyChatRetentionHoldTest extends TestCase
             ]);
 
             $this->actingAs($admin)
-                ->get(route('admin.index'))
+                ->get(ChatRetentionHoldsPage::getUrl())
                 ->assertOk()
-                ->assertSee('Conservación excepcional')
-                ->assertSee(route('admin.chat-retention-holds.index'), false);
+                ->assertSee('Conservación excepcional');
 
             $conversation = CompanyChatConversation::query()->create([
                 'user_one_id' => min($firstUser->id, $secondUser->id),
@@ -50,12 +50,12 @@ class CompanyChatRetentionHoldTest extends TestCase
             ]);
 
             $this->actingAs($admin)
-                ->post(route('admin.chat-retention-holds.store'), [
+                ->post(route('backoffice.chat-retention-holds.store'), [
                     'conversation_id' => $conversation->id,
                     'reason' => 'Motivo legal de conservación',
                     'expires_at' => '2026-06-28',
                 ])
-                ->assertRedirect(route('admin.chat-retention-holds.index'));
+                ->assertRedirect(ChatRetentionHoldsPage::getUrl());
 
             $conversation->refresh();
 
@@ -73,11 +73,11 @@ class CompanyChatRetentionHoldTest extends TestCase
             ]);
 
             $this->actingAs($admin)
-                ->patch(route('admin.chat-retention-holds.update', $conversation), [
+                ->patch(route('backoffice.chat-retention-holds.update', $conversation), [
                     'reason' => 'Motivo legal actualizado',
                     'expires_at' => '2026-07-15',
                 ])
-                ->assertRedirect(route('admin.chat-retention-holds.index'));
+                ->assertRedirect(ChatRetentionHoldsPage::getUrl());
 
             $this->assertDatabaseHas('company_chat_retention_hold_audits', [
                 'company_chat_conversation_id' => $conversation->id,
@@ -92,10 +92,10 @@ class CompanyChatRetentionHoldTest extends TestCase
             ]);
 
             $this->actingAs($admin)
-                ->delete(route('admin.chat-retention-holds.destroy', $conversation), [
+                ->delete(route('backoffice.chat-retention-holds.destroy', $conversation), [
                     'reason' => 'Ya no es necesario conservarla',
                 ])
-                ->assertRedirect(route('admin.chat-retention-holds.index'));
+                ->assertRedirect(ChatRetentionHoldsPage::getUrl());
 
             $conversation->refresh();
 
@@ -124,7 +124,7 @@ class CompanyChatRetentionHoldTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->get(route('admin.chat-retention-holds.index'))
+            ->get(ChatRetentionHoldsPage::getUrl())
             ->assertForbidden();
     }
 
@@ -161,11 +161,11 @@ class CompanyChatRetentionHoldTest extends TestCase
             ]);
 
             $this->actingAs($admin)
-                ->post(route('admin.chat-retention-holds.store'), [
+                ->post(route('backoffice.chat-retention-holds.store'), [
                     'conversation_id' => $conversation->id,
                     'reason' => 'Conservación excepcional activa',
                 ])
-                ->assertRedirect(route('admin.chat-retention-holds.index'));
+                ->assertRedirect(ChatRetentionHoldsPage::getUrl());
 
             $this->artisan('chat:purge-expired-messages')
                 ->assertExitCode(0);
@@ -212,11 +212,11 @@ class CompanyChatRetentionHoldTest extends TestCase
             ]);
 
             $this->actingAs($admin)
-                ->post(route('admin.chat-retention-holds.users.store'), [
+                ->post(route('backoffice.chat-retention-holds.users.store'), [
                     'user_id' => $sender->id,
                     'reason' => 'Retención legal sobre el usuario',
                 ])
-                ->assertRedirect(route('admin.chat-retention-holds.index'));
+                ->assertRedirect(ChatRetentionHoldsPage::getUrl());
 
             $this->assertDatabaseHas('company_chat_retention_user_holds', [
                 'user_id' => $sender->id,

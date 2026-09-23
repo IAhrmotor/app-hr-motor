@@ -1,13 +1,13 @@
 @php
     $backoffice = $backoffice ?? false;
     $retentionRoutes = $retentionRoutes ?? [
-        'index' => 'admin.chat-retention-holds.index',
-        'conversation.store' => 'admin.chat-retention-holds.store',
-        'conversation.update' => 'admin.chat-retention-holds.update',
-        'conversation.destroy' => 'admin.chat-retention-holds.destroy',
-        'user.store' => 'admin.chat-retention-holds.users.store',
-        'user.update' => 'admin.chat-retention-holds.users.update',
-        'user.destroy' => 'admin.chat-retention-holds.users.destroy',
+        'index' => 'backoffice.chat-retention-holds.index',
+        'conversation.store' => 'backoffice.chat-retention-holds.store',
+        'conversation.update' => 'backoffice.chat-retention-holds.update',
+        'conversation.destroy' => 'backoffice.chat-retention-holds.destroy',
+        'user.store' => 'backoffice.chat-retention-holds.users.store',
+        'user.update' => 'backoffice.chat-retention-holds.users.update',
+        'user.destroy' => 'backoffice.chat-retention-holds.users.destroy',
     ];
 @endphp
 
@@ -652,3 +652,4 @@
             };
         }
     </script>
+

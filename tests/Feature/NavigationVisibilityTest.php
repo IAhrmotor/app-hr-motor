@@ -81,8 +81,23 @@ class NavigationVisibilityTest extends TestCase
 
         $navbarHtml = view('components.layout.navbar')->render();
 
-        $this->assertStringContainsString('Admin', $navbarHtml);
-        $this->assertStringContainsString(route('admin.index'), $navbarHtml);
+        $this->assertStringNotContainsString('/admin', $navbarHtml);
+        $this->assertStringContainsString('/backoffice', $navbarHtml);
+    }
+
+    public function test_manager_sees_the_admin_backoffice_link_in_the_navbar(): void
+    {
+        $manager = User::factory()->create([
+            'role' => User::ROLE_MANAGER,
+            'email' => 'manager-backoffice@example.com',
+        ]);
+
+        $this->actingAs($manager);
+
+        $navbarHtml = view('components.layout.navbar')->render();
+
+        $this->assertStringContainsString('/backoffice', $navbarHtml);
+        $this->assertStringNotContainsString('/admin', $navbarHtml);
     }
 
     public function test_management_user_sees_informes_in_the_navbar_and_footer(): void

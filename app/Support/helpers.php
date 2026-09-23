@@ -312,13 +312,6 @@ if (! function_exists('app_user_can_access_admin_panel')) {
     }
 }
 
-if (! function_exists('app_user_can_see_admin_nav')) {
-    function app_user_can_see_admin_nav(?User $user = null): bool
-    {
-        return app_admin_visible_sections($user) !== [];
-    }
-}
-
 if (! function_exists('app_user_can_view_admin_logs')) {
     function app_user_can_view_admin_logs(?User $user = null): bool
     {
@@ -354,132 +347,9 @@ if (! function_exists('app_admin_permission_key_for_route')) {
         return match (true) {
             Str::startsWith($routeName, ['users.']) => 'users.manage',
             Str::startsWith($routeName, ['dealerships.']) => 'dealerships.manage',
-            Str::startsWith($routeName, ['admin.zones.']) => 'zones.manage',
-            Str::startsWith($routeName, ['admin.contacts.']) => 'contacts.manage',
-            Str::startsWith($routeName, ['admin.ticket-tools.']) => 'ticket-tools.manage',
             Str::startsWith($routeName, ['tickets.']) => 'tickets-it.manage',
-            Str::startsWith($routeName, ['admin.magazine.']) => 'magazine.manage',
-            Str::startsWith($routeName, ['admin.tablon.']) => 'bulletin.manage',
-            Str::startsWith($routeName, ['admin.notifications.']) => 'notifications.manage',
-            Str::startsWith($routeName, ['admin.chat-retention-holds.']) => 'chat-retention-holds.manage',
-            Str::startsWith($routeName, ['admin.conversation-access.']) => 'conversation-access.manage',
-            Str::startsWith($routeName, ['admin.chat-groups.']) => 'chat-groups.manage',
             default => null,
         };
-    }
-}
-
-if (! function_exists('app_admin_visible_sections')) {
-    function app_admin_visible_sections(?User $user = null): array
-    {
-        $user ??= auth()->user();
-        $sections = [];
-
-        if (! $user) {
-            return $sections;
-        }
-
-        $visibleRole = app_visible_role($user);
-        $isAdminViewerMode = $user->role === User::ROLE_ADMIN && app_role_viewer_active($user);
-
-        foreach (app_admin_permission_definitions() as $permissionKey => $definition) {
-            $defaultRoles = $definition['default_roles'] ?? [];
-
-            if ($isAdminViewerMode) {
-                if (! app_role_has_admin_permission($visibleRole, $permissionKey)) {
-                    continue;
-                }
-            } elseif (! app_user_has_admin_permission($user, $permissionKey)) {
-                continue;
-            }
-
-            if ($isAdminViewerMode || app_user_has_admin_permission($user, $permissionKey)) {
-                if (! empty($definition['hide_from_admin_panel'])) {
-                    continue;
-                }
-
-                $sections[] = [
-                    'label' => $definition['label'],
-                    'description' => $definition['description'],
-                    'route' => $definition['route'],
-                    'kind' => 'management',
-                    'icon' => $definition['icon'],
-                ];
-            }
-        }
-
-        if (app_user_can_manage_admin_permissions($user) && ! $isAdminViewerMode) {
-            $sections[] = [
-                'label' => 'Permisos',
-                'description' => 'Gestiona grupos de usuarios, asignaciones directas y auditoría de permisos.',
-                'route' => 'admin.permissions.index',
-                'kind' => 'management',
-                'icon' => 'permissions',
-            ];
-        }
-
-        if (app_user_can_view_admin_logs($user) && ! $isAdminViewerMode) {
-            $sections = array_merge($sections, [
-                [
-                    'label' => 'Notificaciones',
-                    'description' => 'Revisa qué notificaciones prioritarias se enviaron, a quién iban dirigidas y cuántos usuarios las recibieron.',
-                    'route' => 'admin.notification-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'notification-log',
-                ],
-                [
-                    'label' => 'Contenidos',
-                    'description' => 'Consulta el historial de la revista mensual, los contactos y el tablón en un único lugar.',
-                    'route' => 'admin.content-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'content-log',
-                ],
-                [
-                    'label' => 'Tablón',
-                    'description' => 'Consulta el historial de altas, cambios y borrados de las publicaciones del tablón.',
-                    'route' => 'admin.bulletin-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'bulletin-log',
-                ],
-                [
-                    'label' => 'Política de aceptación',
-                    'description' => 'Revisa qué usuarios han aceptado la política vigente del chat corporativo y descarga el histórico.',
-                    'route' => 'admin.policy-acceptance-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'policy-acceptance-log',
-                ],
-                [
-                    'label' => 'Borrado chats',
-                    'description' => 'Consulta las ejecuciones diarias de la purga automática de mensajes de chat.',
-                    'route' => 'admin.chat-retention-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'chat-retention-log',
-                ],
-                [
-                    'label' => 'Accesos administrativos a conversaciones',
-                    'description' => 'Consulta el histórico de accesos administrativos justificados a conversaciones ajenas.',
-                    'route' => 'admin.conversation-access.logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'conversation-access-log',
-                ],
-                [
-                    'label' => 'Grupos del chat',
-                    'description' => 'Consulta el histórico de altas, ediciones y eliminaciones de grupos del chat.',
-                    'route' => 'admin.chat-group-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'chat-groups-log',
-                ],
-                [
-                    'label' => 'Permisos',
-                    'description' => 'Consulta el histórico de cambios en grupos, asignaciones y permisos concedidos.',
-                    'route' => 'admin.permission-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'permissions-log',
-                ],
-            ]);
-        }
-
-        return $sections;
     }
 }
 

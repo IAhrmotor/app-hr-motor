@@ -41,14 +41,9 @@ class PolicyAcceptanceLogTest extends TestCase
             'source' => 'web-chat',
         ]);
 
-        $pageResponse = $this->actingAs($admin)->get(route('admin.policy-acceptance-logs.index'));
-
-        $pageResponse
-            ->assertOk()
-            ->assertSee('Política de aceptación')
-            ->assertSee('Empleado Chat')
-            ->assertSee('empleado@example.com')
-            ->assertSee(route('admin.policy-acceptance-logs.export'), false);
+        $this->actingAs($admin)
+            ->get('/admin/logs/politica-aceptacion')
+            ->assertNotFound();
 
         $downloadResponse = $this->actingAs($admin)->get(route('admin.policy-acceptance-logs.export'));
 
@@ -103,18 +98,9 @@ class PolicyAcceptanceLogTest extends TestCase
             'source' => 'web-chat',
         ]);
 
-        $response = $this->actingAs($admin)->get(route('admin.policy-acceptance-logs.index', [
-            'date_from' => '2026-05-28',
-            'date_to' => '2026-05-28',
-            'user' => $employee->id,
-        ]));
-
-        $response
-            ->assertOk()
-            ->assertSee('Empleado Filtro')
-            ->assertDontSee('otro@example.com')
-            ->assertSee('Del 28/05/2026 al 28/05/2026')
-            ->assertSee('filtro@example.com');
+        $this->actingAs($admin)
+            ->get('/admin/logs/politica-aceptacion')
+            ->assertNotFound();
 
         $downloadResponse = $this->actingAs($admin)->get(route('admin.policy-acceptance-logs.export', [
             'date_from' => '2026-05-28',

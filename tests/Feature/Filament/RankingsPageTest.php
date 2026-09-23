@@ -111,10 +111,10 @@ class RankingsPageTest extends TestCase
         $service->shouldReceive('hasSalesforceConnection')->once()->andReturnTrue();
         $service->shouldReceive('sync')->once();
 
-        $this->from(route('admin.index'))
+        $this->from('/backoffice')
             ->actingAs($admin)
             ->post(route('leaderboard.sync'))
-            ->assertRedirect(route('admin.index'))
+            ->assertRedirect('/backoffice')
             ->assertSessionHas('success', 'Rankings de ventas, compras y coches actualizados correctamente.');
     }
 
