@@ -60,6 +60,49 @@ class UserDeactivationService
         });
     }
 
+    public function canReactivate(?User $actor, User $target): bool
+    {
+        return $this->reactivationError($actor, $target) === null;
+    }
+
+    public function reactivate(User $actor, User $target): void
+    {
+        if ($error = $this->reactivationError($actor, $target)) {
+            throw new RuntimeException($error);
+        }
+
+        DB::transaction(function () use ($actor, $target): void {
+            $target->forceFill([
+                'is_active' => true,
+                'disabled_at' => null,
+                'disabled_by' => null,
+                'disabled_reason' => null,
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            app(CompanyChatDefaultGroupSyncService::class)->syncUser($target, false);
+            $this->invalidateUserSessions($target);
+
+            UserActivityLog::query()->create([
+                'action' => UserActivityLog::ACTION_REACTIVATED,
+                'result' => 'success',
+                'actor_user_id' => $actor->id,
+                'actor_name' => $actor->name,
+                'actor_email' => $actor->email,
+                'target_user_id' => $target->id,
+                'target_name' => $target->name,
+                'target_email' => $target->email,
+                'target_role' => $target->role,
+                'target_dealership' => $target->dealership,
+                'changes' => null,
+                'reason' => null,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'created_at' => now(),
+            ]);
+        });
+    }
+
     private function deactivationError(?User $actor, User $target): ?string
     {
         if (! $actor) {
@@ -93,6 +136,31 @@ class UserDeactivationService
             if ($otherActiveAdmins === 0) {
                 return 'No puedes desactivar al ultimo administrador activo.';
             }
+        }
+
+        return null;
+    }
+
+    private function reactivationError(?User $actor, User $target): ?string
+    {
+        if (! $actor) {
+            return 'No tienes permisos para reactivar este usuario.';
+        }
+
+        if ($actor->id === $target->id) {
+            return 'No puedes reactivar tu propio usuario.';
+        }
+
+        if (! in_array($actor->role, [User::ROLE_ADMIN, User::ROLE_MANAGER], true)) {
+            return 'No tienes permisos para reactivar este usuario.';
+        }
+
+        if (! $target->isDisabled()) {
+            return 'Solo puedes reactivar usuarios desactivados.';
+        }
+
+        if ($actor->role !== User::ROLE_ADMIN && $target->role !== User::ROLE_USER) {
+            return 'No tienes permisos para reactivar este usuario.';
         }
 
         return null;
