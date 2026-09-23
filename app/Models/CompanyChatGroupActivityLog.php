@@ -55,10 +55,20 @@ class CompanyChatGroupActivityLog extends Model
     public function getActionLabelAttribute(): string
     {
         return match ($this->action) {
-            self::ACTION_CREATED => 'Alta',
-            self::ACTION_UPDATED => 'Edicion',
-            self::ACTION_DELETED => 'Eliminacion',
+            self::ACTION_CREATED => 'Creación',
+            self::ACTION_UPDATED => 'Edición',
+            self::ACTION_DELETED => 'Eliminación',
             default => ucfirst((string) $this->action),
+        };
+    }
+
+    public function getResultLabelAttribute(): string
+    {
+        return match ($this->result) {
+            'success' => 'Correcto',
+            'failure', 'error' => 'Error',
+            'warning' => 'Aviso',
+            default => blank($this->result) ? 'Correcto' : ucfirst((string) $this->result),
         };
     }
 }

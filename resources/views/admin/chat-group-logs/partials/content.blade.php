@@ -159,7 +159,7 @@
                             </td>
                             <td class="px-6 py-5 text-sm text-brand-secondary">
                                 <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
-                                    {{ $log->result ?: 'success' }}
+                                    {{ $log->result_label }}
                                 </span>
                                 @if (filled($log->reason))
                                     <p class="mt-2 text-xs leading-5 text-brand-secondary/60">
@@ -186,18 +186,7 @@
                                 <p class="mt-1 text-brand-secondary/65">{{ $log->target_description ?: 'Sin descripcion' }}</p>
                             </td>
                             <td class="px-6 py-5 text-sm text-brand-secondary/75">
-                                @if (filled($log->changes))
-                                    <ul class="space-y-2">
-                                        @foreach ($log->changes as $field => $change)
-                                            <li>
-                                                <span class="font-semibold text-brand-secondary">{{ $field }}:</span>
-                                                {{ $change['from'] ?? 'vacio' }} -> {{ $change['to'] ?? 'vacio' }}
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span class="text-brand-secondary/60">Sin cambios adicionales registrados.</span>
-                                @endif
+                                <span class="whitespace-pre-line">{{ app(\App\Services\CompanyChatGroupActivityLogFormatter::class)->format($log) }}</span>
                             </td>
                         </tr>
                     @empty
