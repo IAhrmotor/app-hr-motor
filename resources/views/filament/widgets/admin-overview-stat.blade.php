@@ -26,6 +26,7 @@
 
         <div
             class="fi-wi-stats-overview-stat-value"
+            style="font-size: 2.5rem;"
             data-count-up-value="{{ $value }}"
             x-data="{
                 init() {
