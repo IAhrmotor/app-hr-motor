@@ -6,14 +6,16 @@ use App\Models\CompanyChatGroup;
 use App\Models\Dealership;
 use App\Models\ItTicket;
 use App\Models\User;
+use App\Filament\Widgets\AdminOverviewStat;
 use Closure;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class AdminOverviewWidget extends BaseWidget
 {
+    protected static bool $isLazy = false;
+
     protected static ?int $sort = -2;
 
     protected int | string | array $columnSpan = 'full';
@@ -26,12 +28,10 @@ class AdminOverviewWidget extends BaseWidget
 
     protected ?string $pollingInterval = null;
 
-    protected string $view = 'filament.widgets.admin-overview-widget';
-
     protected function getStats(): array
     {
         return [
-            Stat::make('Usuarios activos', $this->safeCount(
+            AdminOverviewStat::make('Usuarios activos', $this->safeCount(
                 'active_users',
                 fn (): int => User::query()
                     ->where('is_active', true)
@@ -39,17 +39,17 @@ class AdminOverviewWidget extends BaseWidget
                     ->count(),
             ))
                 ->icon('heroicon-o-users'),
-            Stat::make('Grupos activos', $this->safeCount(
+            AdminOverviewStat::make('Grupos activos', $this->safeCount(
                 'active_groups',
                 fn (): int => CompanyChatGroup::query()->count(),
             ))
                 ->icon('heroicon-o-user-group'),
-            Stat::make('Delegaciones activas', $this->safeCount(
+            AdminOverviewStat::make('Delegaciones activas', $this->safeCount(
                 'active_dealerships',
                 fn (): int => Dealership::query()->count(),
             ))
                 ->icon('heroicon-o-building-office-2'),
-            Stat::make('Incidencias resueltas', $this->safeCount(
+            AdminOverviewStat::make('Incidencias resueltas', $this->safeCount(
                 'resolved_tickets',
                 fn (): int => ItTicket::query()
                     ->whereIn('status', ['closed', 'clausurado'])

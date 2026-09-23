@@ -35,6 +35,7 @@ class AdminDashboardTest extends TestCase
         CompanyChatGroup::query()->create(['name' => 'Grupo KPI 1']);
         CompanyChatGroup::query()->create(['name' => 'Grupo KPI 2']);
         Dealership::factory()->count(3)->create();
+        $expectedGroupCount = CompanyChatGroup::query()->count();
         foreach (['closed', 'clausurado', 'in_progress'] as $index => $status) {
             ItTicket::query()->create([
                 'user_id' => $admin->id,
@@ -50,7 +51,10 @@ class AdminDashboardTest extends TestCase
         $this->actingAs($admin)
             ->get('/backoffice')
             ->assertOk()
-            ->assertSee(AdminOverviewWidget::class, false);
+            ->assertSee(AdminOverviewWidget::class, false)
+            ->assertSee('data-count-up-value="2"', false)
+            ->assertSee('data-count-up-value="' . $expectedGroupCount . '"', false)
+            ->assertSee('data-count-up-value="3"', false);
 
         Livewire::actingAs($admin);
 
@@ -63,7 +67,12 @@ class AdminDashboardTest extends TestCase
             ->assertDontSee('Todos los grupos existentes')
             ->assertDontSee('Todas las delegaciones existentes')
             ->assertDontSee('Total acumulado')
-            ->assertSeeInOrder(['2', '2', '3', '2']);
+            ->assertSee('data-count-up-value="2"', false)
+            ->assertSee('data-count-up-value="' . $expectedGroupCount . '"', false)
+            ->assertSee('data-count-up-value="3"', false)
+            ->assertSee('requestAnimationFrame', false)
+            ->assertSee('prefers-reduced-motion', false)
+            ->assertSee('countUpAnimated', false);
     }
 
     public function test_dashboard_is_not_accessible_without_backoffice_role(): void
