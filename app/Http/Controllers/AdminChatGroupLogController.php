@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CompanyChatGroupActivityLog;
 use App\Models\User;
+use App\Services\CompanyChatGroupActivityLogFormatter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -24,7 +25,7 @@ class AdminChatGroupLogController extends Controller
 
         if (! Schema::hasTable('company_chat_group_activity_logs')) {
             $logs = new LengthAwarePaginator(
-                items: new Collection(),
+                items: new Collection,
                 total: 0,
                 perPage: 20,
                 currentPage: LengthAwarePaginator::resolveCurrentPage(),
@@ -111,7 +112,7 @@ class AdminChatGroupLogController extends Controller
                 fputcsv($output, [
                     $log->created_at?->format('Y-m-d H:i:s'),
                     $log->action_label,
-                    $log->result,
+                    $log->result_label,
                     $log->actor_name,
                     $log->actor_email,
                     $log->target_name,
@@ -119,7 +120,7 @@ class AdminChatGroupLogController extends Controller
                     $log->reason,
                     $log->ip_address,
                     $log->user_agent,
-                    $this->formatChanges($log->changes ?? []),
+                    $this->formatChanges($log),
                 ], ';');
             }
 
@@ -186,25 +187,9 @@ class AdminChatGroupLogController extends Controller
             ->when($actorId, fn (Builder $query) => $query->where('actor_user_id', $actorId));
     }
 
-    private function formatChanges(array $changes): string
+    private function formatChanges(CompanyChatGroupActivityLog $log): string
     {
-        if ($changes === []) {
-            return '';
-        }
-
-        return collect($changes)
-            ->map(function (array $change, string $field): string {
-                $from = $change['from'] ?? null;
-                $to = $change['to'] ?? null;
-
-                return sprintf(
-                    '%s: "%s" -> "%s"',
-                    $field,
-                    $from ?? 'vacio',
-                    $to ?? 'vacio',
-                );
-            })
-            ->implode(' | ');
+        return app(CompanyChatGroupActivityLogFormatter::class)->format($log);
     }
 
     private function renderIndexResponse(Request $request, array $data)
