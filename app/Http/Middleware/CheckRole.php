@@ -69,15 +69,6 @@ class CheckRole
         return Str::startsWith($routeName, [
             'users.',
             'dealerships.',
-            'admin.zones.',
-            'admin.contacts.',
-            'admin.ticket-tools.',
-            'admin.magazine.',
-            'admin.tablon.',
-            'admin.notifications.',
-            'admin.chat-retention-holds.',
-            'admin.conversation-access.',
-            'admin.chat-groups.',
             'admin.index',
         ]);
     }

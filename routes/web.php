@@ -2,28 +2,20 @@
 
 use App\Http\Controllers\AdminContentLogController;
 use App\Http\Controllers\AdminBulletinLogController;
-use App\Http\Controllers\AdminConversationAccessController;
 use App\Http\Controllers\AdminConversationAccessLogController;
 use App\Http\Controllers\AdminChatRetentionLogController;
 use App\Http\Controllers\AdminChatRetentionHoldController;
-use App\Http\Controllers\AdminChatGroupController;
 use App\Http\Controllers\AdminChatGroupLogController;
-use App\Http\Controllers\AdminPermissionController;
 use App\Http\Controllers\AdminPermissionLogController;
 use App\Http\Controllers\AdminPolicyAcceptanceLogController;
 use App\Http\Controllers\AgendaController;
-use App\Http\Controllers\AdminTablonController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AdminNotificationLogController;
-use App\Http\Controllers\AdminMonthlyMagazineController;
 use App\Http\Controllers\GoogleBusinessProfileAuthController;
 use App\Http\Controllers\RoleViewerController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\DealershipController;
-use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\TicketToolController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyChatController;
 use App\Http\Controllers\CommercialCommissionsController;
@@ -67,33 +59,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboard/ventas', [LeaderboardController::class, 'sales'])->name('leaderboard.sales');
     Route::get('/leaderboard/compras', [LeaderboardController::class, 'purchases'])->name('leaderboard.purchases');
     Route::get('/leaderboard/coches', [LeaderboardController::class, 'vehicles'])->name('leaderboard.vehicles');
-        Route::get('/admin/delegaciones', [DealershipController::class, 'index'])
-            ->middleware('role:admin,gestor')
-            ->name('dealerships.index');
-        Route::get('/admin/zonas', [ZoneController::class, 'index'])
-            ->middleware('role:admin,gestor')
-            ->name('admin.zones.index');
-        Route::get('/admin/zonas/crear', [ZoneController::class, 'create'])
-            ->middleware('role:admin,gestor')
-            ->name('admin.zones.create');
-        Route::post('/admin/zonas', [ZoneController::class, 'store'])
-            ->middleware('role:admin,gestor')
-            ->name('admin.zones.store');
-        Route::get('/admin/zonas/{zone}/editar', [ZoneController::class, 'edit'])
-            ->whereNumber('zone')
-            ->middleware('role:admin,gestor')
-            ->name('admin.zones.edit');
-        Route::put('/admin/zonas/{zone}', [ZoneController::class, 'update'])
-            ->whereNumber('zone')
-            ->middleware('role:admin,gestor')
-            ->name('admin.zones.update');
-        Route::delete('/admin/zonas/{zone}', [ZoneController::class, 'destroy'])
-            ->whereNumber('zone')
-            ->middleware('role:admin,gestor')
-            ->name('admin.zones.destroy');
         Route::get('/delegaciones', function () {
-            return redirect()->route('dealerships.index');
-        })->middleware('role:admin,gestor');
+            return redirect()->to(\App\Filament\Resources\Dealerships\DealershipResource::getUrl());
+        })->middleware('role:admin,gestor')->name('dealerships.index');
     Route::get('/delegaciones/{dealership}', [DealershipController::class, 'show'])
         ->whereNumber('dealership')
         ->name('dealerships.show');
@@ -1513,114 +1481,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin,gestor')->group(function () {
         Route::get('/admin', function () {
-            $authUser = auth()->user();
-
-            $adminSections = [
-                [
-                    'label' => 'Gestión de usuarios',
-                    'description' => 'Altas, edición de perfiles, roles y seguimiento del equipo.',
-                    'route' => 'users.index',
-                    'kind' => 'management',
-                    'icon' => 'users',
-                ],
-                [
-                    'label' => 'Gestión de delegaciones',
-                    'description' => 'Consulta, crea y organiza las delegaciones disponibles.',
-                    'route' => 'dealerships.index',
-                    'kind' => 'management',
-                    'icon' => 'dealership',
-                ],
-                [
-                    'label' => 'Contactos de agenda',
-                    'description' => 'Mantiene los contactos externos que aparecen junto al directorio interno.',
-                    'route' => 'admin.contacts.index',
-                    'kind' => 'management',
-                    'icon' => 'contacts',
-                ],
-                [
-                    'label' => 'Revista mensual',
-                    'description' => 'Publica la edición mensual, actualiza el texto visible de la portada y gestiona el nombre del archivo.',
-                    'route' => 'admin.magazine.edit',
-                    'kind' => 'management',
-                    'icon' => 'magazine',
-                ],
-                [
-                    'label' => 'Logs de notificaciones',
-                    'description' => 'Revisa qué notificaciones prioritarias se enviaron, a quién iban dirigidas y cuántos usuarios las recibieron.',
-                    'route' => 'admin.notification-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'notification-log',
-                ],
-                [
-                    'label' => 'Logs de contenidos',
-                    'description' => 'Consulta el historial de la revista mensual, los contactos y el tablón en un único lugar.',
-                    'route' => 'admin.content-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'content-log',
-                ],
-                [
-                    'label' => 'Política de aceptación',
-                    'description' => 'Revisa qué usuarios han aceptado la política vigente del chat corporativo y descarga el histórico.',
-                    'route' => 'admin.policy-acceptance-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'policy-acceptance-log',
-                ],
-                [
-                    'label' => 'Borrado chats',
-                    'description' => 'Consulta las ejecuciones diarias de la purga automática de mensajes de chat.',
-                    'route' => 'admin.chat-retention-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'chat-retention-log',
-                ],
-            ];
-
-            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
-                $adminSections[] = [
-                    'label' => 'Conservación excepcional',
-                    'description' => 'Bloquea conversaciones concretas o usuarios completos para que no entren en la purga automática.',
-                    'route' => 'admin.chat-retention-holds.index',
-                    'kind' => 'management',
-                    'icon' => 'chat-retention-hold',
-                ];
-            }
-
-            if (app_visible_role($authUser) === User::ROLE_ADMIN) {
-                $adminSections[] = [
-                    'label' => 'Acceso justificado a conversaciones',
-                    'description' => 'Solicita acceso temporal y auditado a conversaciones ajenas indicando un motivo justificado.',
-                    'route' => 'admin.conversation-access.index',
-                    'kind' => 'management',
-                    'icon' => 'conversation-access',
-                ];
-
-                $adminSections[] = [
-                    'label' => 'Accesos administrativos a conversaciones',
-                    'description' => 'Consulta el histórico de accesos administrativos justificados a conversaciones ajenas.',
-                    'route' => 'admin.conversation-access.logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'conversation-access-log',
-                ];
-
-                $adminSections[] = [
-                    'label' => 'Grupos del chat',
-                    'description' => 'Crea, edita y elimina los grupos internos disponibles para el chat.',
-                    'route' => 'admin.chat-groups.index',
-                    'kind' => 'management',
-                    'icon' => 'chat-groups',
-                ];
-
-                $adminSections[] = [
-                    'label' => 'Logs de grupos del chat',
-                    'description' => 'Consulta el histórico de altas, ediciones y eliminaciones de grupos del chat.',
-                    'route' => 'admin.chat-group-logs.index',
-                    'kind' => 'logs',
-                    'icon' => 'chat-groups-log',
-                ];
-            }
-
-            return view('admin.index', [
-                'adminSections' => app_admin_visible_sections($authUser),
-            ]);
+            return redirect()->to('/backoffice');
         })->name('admin.index');
 
         Route::get('/integraciones/salesforce/conectar', [SalesforceAuthController::class, 'redirect'])->name('salesforce.connect');
@@ -1663,18 +1524,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/delegaciones/{dealership}', [DealershipController::class, 'destroy'])
             ->whereNumber('dealership')
             ->name('dealerships.destroy');
-        Route::get('/admin/herramientas-tickets', [TicketToolController::class, 'index'])->name('admin.ticket-tools.index');
-        Route::get('/admin/herramientas-tickets/crear', [TicketToolController::class, 'create'])->name('admin.ticket-tools.create');
-        Route::post('/admin/herramientas-tickets', [TicketToolController::class, 'store'])->name('admin.ticket-tools.store');
-        Route::get('/admin/herramientas-tickets/{ticketTool}/editar', [TicketToolController::class, 'edit'])
-            ->whereNumber('ticketTool')
-            ->name('admin.ticket-tools.edit');
-        Route::put('/admin/herramientas-tickets/{ticketTool}', [TicketToolController::class, 'update'])
-            ->whereNumber('ticketTool')
-            ->name('admin.ticket-tools.update');
-        Route::delete('/admin/herramientas-tickets/{ticketTool}', [TicketToolController::class, 'destroy'])
-            ->whereNumber('ticketTool')
-            ->name('admin.ticket-tools.destroy');
         Route::get('/backoffice/herramientas-tickets/logs/descargar', function () {
             if (! \Illuminate\Support\Facades\Schema::hasTable('ticket_tool_activity_logs')) {
                 return response()->streamDownload(function (): void {
@@ -1739,46 +1588,12 @@ Route::middleware('auth')->group(function () {
                 'Content-Type' => 'text/csv; charset=UTF-8',
             ]);
         })->name('backoffice.ticket-tool-logs.export');
-        Route::get('/admin/logs/contenidos', [AdminContentLogController::class, 'index'])->name('admin.content-logs.index');
         Route::get('/admin/logs/contenidos/descargar', [AdminContentLogController::class, 'export'])->name('admin.content-logs.export');
-        Route::get('/admin/logs/politica-aceptacion', [AdminPolicyAcceptanceLogController::class, 'index'])->name('admin.policy-acceptance-logs.index');
         Route::get('/admin/logs/politica-aceptacion/descargar', [AdminPolicyAcceptanceLogController::class, 'export'])->name('admin.policy-acceptance-logs.export');
-        Route::get('/admin/logs/borrado-chats', [AdminChatRetentionLogController::class, 'index'])->name('admin.chat-retention-logs.index');
         Route::get('/admin/logs/borrado-chats/descargar', [AdminChatRetentionLogController::class, 'export'])->name('admin.chat-retention-logs.export');
 
         Route::middleware('role:admin')->group(function () {
-            Route::get('/admin/grupos-chat', [AdminChatGroupController::class, 'index'])->name('admin.chat-groups.index');
-            Route::get('/admin/grupos-chat/crear', [AdminChatGroupController::class, 'create'])->name('admin.chat-groups.create');
-            Route::post('/admin/grupos-chat', [AdminChatGroupController::class, 'store'])->name('admin.chat-groups.store');
-            Route::get('/admin/grupos-chat/{chatGroup}/editar', [AdminChatGroupController::class, 'edit'])
-                ->whereNumber('chatGroup')
-                ->name('admin.chat-groups.edit');
-            Route::put('/admin/grupos-chat/{chatGroup}', [AdminChatGroupController::class, 'update'])
-                ->whereNumber('chatGroup')
-                ->name('admin.chat-groups.update');
-            Route::delete('/admin/grupos-chat/{chatGroup}', [AdminChatGroupController::class, 'destroy'])
-                ->whereNumber('chatGroup')
-                ->name('admin.chat-groups.destroy');
-
-            Route::get('/admin/logs/grupos-chat', [AdminChatGroupLogController::class, 'index'])->name('admin.chat-group-logs.index');
             Route::get('/admin/logs/grupos-chat/descargar', [AdminChatGroupLogController::class, 'export'])->name('admin.chat-group-logs.export');
-
-            Route::get('/admin/conversacion-excepcional', [AdminChatRetentionHoldController::class, 'index'])->name('admin.chat-retention-holds.index');
-            Route::post('/admin/conversacion-excepcional', [AdminChatRetentionHoldController::class, 'store'])->name('admin.chat-retention-holds.store');
-            Route::patch('/admin/conversacion-excepcional/{conversation}', [AdminChatRetentionHoldController::class, 'update'])
-                ->whereNumber('conversation')
-                ->name('admin.chat-retention-holds.update');
-            Route::delete('/admin/conversacion-excepcional/{conversation}/desactivar', [AdminChatRetentionHoldController::class, 'destroy'])
-                ->whereNumber('conversation')
-                ->name('admin.chat-retention-holds.destroy');
-            Route::post('/admin/conversacion-excepcional/usuarios', [AdminChatRetentionHoldController::class, 'storeUser'])
-                ->name('admin.chat-retention-holds.users.store');
-            Route::patch('/admin/conversacion-excepcional/usuarios/{userHold}', [AdminChatRetentionHoldController::class, 'updateUser'])
-                ->whereNumber('userHold')
-                ->name('admin.chat-retention-holds.users.update');
-            Route::delete('/admin/conversacion-excepcional/usuarios/{userHold}/desactivar', [AdminChatRetentionHoldController::class, 'destroyUser'])
-                ->whereNumber('userHold')
-                ->name('admin.chat-retention-holds.users.destroy');
 
             // Endpoints used by the backoffice page. The Filament GET page is
             // registered by ChatRetentionHoldsPage; these mutations stay
@@ -1800,11 +1615,6 @@ Route::middleware('auth')->group(function () {
                 ->whereNumber('userHold')
                 ->name('backoffice.chat-retention-holds.users.destroy');
         });
-        Route::get('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'edit'])->name('admin.magazine.edit');
-        Route::put('/admin/revista-mensual', [AdminMonthlyMagazineController::class, 'update'])->name('admin.magazine.update');
-        Route::get('/admin/notificaciones', [AdminNotificationController::class, 'create'])->name('admin.notifications.create');
-        Route::post('/admin/notificaciones', [AdminNotificationController::class, 'store'])->name('admin.notifications.store');
-        Route::get('/admin/logs/notificaciones', [AdminNotificationLogController::class, 'index'])->name('admin.notification-logs.index');
         Route::get('/admin/logs/notificaciones/descargar', [AdminNotificationLogController::class, 'export'])->name('admin.notification-logs.export');
         Route::get('/backoffice/delegaciones/logs/descargar', function (\Illuminate\Http\Request $request) {
             abort_unless(auth()->user()?->role === 'admin', 403);
@@ -2026,59 +1836,16 @@ Route::middleware('auth')->group(function () {
                 'Content-Type' => 'text/csv; charset=UTF-8',
             ]);
         })->name('backoffice.zone-logs.export');
-        Route::get('/admin/contactos', [ContactController::class, 'index'])->name('admin.contacts.index');
-        Route::get('/admin/contactos/crear', [ContactController::class, 'create'])->name('admin.contacts.create');
-        Route::post('/admin/contactos', [ContactController::class, 'store'])->name('admin.contacts.store');
-        Route::get('/admin/contactos/{contact}/editar', [ContactController::class, 'edit'])->name('admin.contacts.edit');
-        Route::put('/admin/contactos/{contact}', [ContactController::class, 'update'])->name('admin.contacts.update');
-        Route::delete('/admin/contactos/{contact}', [ContactController::class, 'destroy'])->name('admin.contacts.destroy');
     });
 
-    Route::get('/admin/acceso-conversacion', [AdminConversationAccessController::class, 'index'])->name('admin.conversation-access.index');
-    Route::post('/admin/acceso-conversacion', [AdminConversationAccessController::class, 'store'])->name('admin.conversation-access.store');
-    Route::get('/admin/logs/acceso-conversacion', [AdminConversationAccessLogController::class, 'index'])->name('admin.conversation-access.logs.index');
     Route::get('/admin/logs/acceso-conversacion/descargar', [AdminConversationAccessLogController::class, 'export'])->name('admin.conversation-access.logs.export');
 
     Route::middleware('role:admin')->group(function () {
-        Route::get('/admin/permisos', [AdminPermissionController::class, 'index'])->name('admin.permissions.index');
-        Route::post('/admin/permisos/grupos', [AdminPermissionController::class, 'storeGroup'])->name('admin.permissions.groups.store');
-        Route::put('/admin/permisos/grupos/{group}', [AdminPermissionController::class, 'updateGroup'])
-            ->whereNumber('group')
-            ->name('admin.permissions.groups.update');
-        Route::delete('/admin/permisos/grupos/{group}', [AdminPermissionController::class, 'destroyGroup'])
-            ->whereNumber('group')
-            ->name('admin.permissions.groups.destroy');
-        Route::put('/admin/permisos/objetivo', [AdminPermissionController::class, 'syncTargetPermissions'])
-            ->name('admin.permissions.targets.sync');
-        Route::put('/admin/permisos/{permissionKey}', [AdminPermissionController::class, 'syncPermission'])
-            ->where('permissionKey', '[A-Za-z0-9_.-]+')
-            ->name('admin.permissions.sync');
-        Route::get('/admin/logs/permisos', [AdminPermissionLogController::class, 'index'])->name('admin.permission-logs.index');
         Route::get('/admin/logs/permisos/descargar', [AdminPermissionLogController::class, 'export'])->name('admin.permission-logs.export');
     });
 
     Route::middleware('role:admin')->group(function () {
-        Route::get('/admin/logs/tablon', [AdminBulletinLogController::class, 'index'])
-            ->name('admin.bulletin-logs.index');
         Route::get('/admin/logs/tablon/descargar', [AdminBulletinLogController::class, 'export'])
             ->name('admin.bulletin-logs.export');
-        Route::get('/admin/tablon', function () {
-            return redirect(\App\Filament\Resources\Bulletins\BulletinPostResource::getUrl());
-        })->name('admin.tablon.index');
-        Route::get('/admin/tablon/crear', function () {
-            return redirect(\App\Filament\Resources\Bulletins\BulletinPostResource::getUrl('create'));
-        })->name('admin.tablon.create');
-        Route::post('/admin/tablon', [AdminTablonController::class, 'store'])->name('admin.tablon.store');
-        Route::get('/admin/tablon/{bulletin}/editar', function (\App\Models\BulletinPost $bulletin) {
-            return redirect(\App\Filament\Resources\Bulletins\BulletinPostResource::getUrl('edit', ['record' => $bulletin]));
-        })
-            ->whereNumber('bulletin')
-            ->name('admin.tablon.edit');
-        Route::put('/admin/tablon/{bulletin}', [AdminTablonController::class, 'update'])
-            ->whereNumber('bulletin')
-            ->name('admin.tablon.update');
-        Route::delete('/admin/tablon/{bulletin}', [AdminTablonController::class, 'destroy'])
-            ->whereNumber('bulletin')
-            ->name('admin.tablon.destroy');
     });
 });

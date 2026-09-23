@@ -6,7 +6,6 @@ use App\Models\CompanyChatConversationAccessAudit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -14,54 +13,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminConversationAccessLogController extends Controller
 {
-    public function index(Request $request)
-    {
-        $this->authorizeAdmin($request);
-
-        $dateFrom = $this->sanitizeDate($request->query('date_from'));
-        $dateTo = $this->sanitizeDate($request->query('date_to'));
-        [$dateFrom, $dateTo] = $this->normalizeDateRange($dateFrom, $dateTo);
-        $userId = $this->sanitizeUserId($request->query('user'));
-        $users = $this->availableUsers();
-
-        if (! Schema::hasTable('company_chat_conversation_access_audits')) {
-            $logs = new LengthAwarePaginator(
-                items: new Collection(),
-                total: 0,
-                perPage: 20,
-                currentPage: LengthAwarePaginator::resolveCurrentPage(),
-                options: [
-                    'path' => LengthAwarePaginator::resolveCurrentPath(),
-                    'query' => $request->query(),
-                ],
-            );
-            $logs->withQueryString();
-
-            return $this->renderIndexResponse($request, [
-                'logs' => $logs,
-                'dateFrom' => $dateFrom,
-                'dateTo' => $dateTo,
-                'userId' => $userId,
-                'users' => $users,
-                'missingTable' => true,
-            ]);
-        }
-
-        $logs = $this->filteredLogsQuery($dateFrom, $dateTo, $userId)
-            ->orderByDesc('accessed_at')
-            ->paginate(20)
-            ->withQueryString();
-
-        return $this->renderIndexResponse($request, [
-            'logs' => $logs,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'userId' => $userId,
-            'users' => $users,
-            'missingTable' => false,
-        ]);
-    }
-
     public function export(Request $request): StreamedResponse
     {
         $this->authorizeAdmin($request);
@@ -196,17 +147,6 @@ class AdminConversationAccessLogController extends Controller
         return collect($users ?? [])
             ->map(static fn (mixed $user): string => is_array($user) ? (string) ($user['name'] ?? 'Usuario') : (string) $user)
             ->implode(' | ');
-    }
-
-    private function renderIndexResponse(Request $request, array $data)
-    {
-        if ($request->ajax()) {
-            return response()->json([
-                'html' => view('admin.conversation-access-logs.partials.content', $data)->render(),
-            ]);
-        }
-
-        return view('admin.conversation-access-logs.index', $data);
     }
 
     private function authorizeAdmin(Request $request): void

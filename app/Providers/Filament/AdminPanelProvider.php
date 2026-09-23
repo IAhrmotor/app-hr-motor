@@ -46,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
                 ? secure_asset('images/favicon-black.png')
                 : asset('images/favicon-black.png'))
             ->brandLogoHeight('2rem')
+            ->renderHook(PanelsRenderHook::USER_MENU_BEFORE, fn (): string => view('filament.backoffice.home-link')->render())
             ->renderHook(PanelsRenderHook::USER_MENU_BEFORE, fn (): string => view('filament.backoffice.theme-toggle')->render())
             ->colors([
                 'primary' => Color::hex('#E51A2E'),
