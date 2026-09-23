@@ -2,75 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Filament\Resources\Bulletins\BulletinPostResource;
 use App\Models\ContentActivityLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminContentLogController extends Controller
 {
-    public function index(Request $request)
-    {
-        if ($request->query('content_type') === ContentActivityLog::CONTENT_TYPE_BULLETIN) {
-            return redirect()->to($this->bulletinLogsUrl($request));
-        }
-
-        $contentType = $this->sanitizeContentType($request->query('content_type'));
-        $action = $this->sanitizeAction($request->query('action'));
-        $dateFrom = $this->sanitizeDate($request->query('date_from'));
-        $dateTo = $this->sanitizeDate($request->query('date_to'));
-        [$dateFrom, $dateTo] = $this->normalizeDateRange($dateFrom, $dateTo);
-        $actorId = $this->sanitizeActorId($request->query('actor'));
-        $actors = $this->availableActors();
-
-        if (! Schema::hasTable('content_activity_logs')) {
-            $logs = new LengthAwarePaginator(
-                items: new Collection(),
-                total: 0,
-                perPage: 20,
-                currentPage: LengthAwarePaginator::resolveCurrentPage(),
-                options: [
-                    'path' => LengthAwarePaginator::resolveCurrentPath(),
-                    'query' => $request->query(),
-                ],
-            );
-            $logs->withQueryString();
-
-            return $this->renderIndexResponse($request, [
-                'logs' => $logs,
-                'contentType' => $contentType,
-                'action' => $action,
-                'dateFrom' => $dateFrom,
-                'dateTo' => $dateTo,
-                'actorId' => $actorId,
-                'actors' => $actors,
-                'missingTable' => true,
-            ]);
-        }
-
-        $logs = $this->filteredLogsQuery($contentType, $action, $dateFrom, $dateTo, $actorId)
-            ->orderByDesc('created_at')
-            ->paginate(20)
-            ->withQueryString();
-
-        return $this->renderIndexResponse($request, [
-            'logs' => $logs,
-            'contentType' => $contentType,
-            'action' => $action,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'actorId' => $actorId,
-            'actors' => $actors,
-            'missingTable' => false,
-        ]);
-    }
-
     public function export(Request $request): StreamedResponse|RedirectResponse
     {
         if ($request->query('content_type') === ContentActivityLog::CONTENT_TYPE_BULLETIN) {
@@ -213,20 +155,6 @@ class AdminContentLogController extends Controller
             ->get(['id', 'name']);
     }
 
-    private function bulletinLogsUrl(Request $request): string
-    {
-        $query = array_filter([
-            'action' => $this->sanitizeAction($request->query('action')),
-            'actor' => $this->sanitizeActorId($request->query('actor')),
-            'date_from' => $this->sanitizeDate($request->query('date_from')),
-            'date_to' => $this->sanitizeDate($request->query('date_to')),
-        ], static fn (mixed $value): bool => filled($value));
-
-        $url = BulletinPostResource::getUrl('logs');
-
-        return $query === [] ? $url : $url . '?' . http_build_query($query);
-    }
-
     private function bulletinLogsExportUrl(Request $request): string
     {
         return route('admin.bulletin-logs.export', array_filter([
@@ -268,14 +196,4 @@ class AdminContentLogController extends Controller
             ->implode(' | ');
     }
 
-    private function renderIndexResponse(Request $request, array $data)
-    {
-        if ($request->ajax()) {
-            return response()->json([
-                'html' => view('admin.content-logs.partials.content', $data)->render(),
-            ]);
-        }
-
-        return view('admin.content-logs.index', $data);
-    }
 }

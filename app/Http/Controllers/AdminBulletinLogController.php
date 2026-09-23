@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Filament\Resources\Bulletins\BulletinPostResource;
 use App\Models\BulletinActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -10,11 +9,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminBulletinLogController extends Controller
 {
-    public function index()
-    {
-        return redirect(BulletinPostResource::getUrl('logs'));
-    }
-
     public function export(Request $request): StreamedResponse
     {
         $action = $this->sanitizeAction($request->query('action'));

@@ -27,12 +27,9 @@ class CompanyChatRetentionLogTest extends TestCase
             'email' => 'admin@example.com',
         ]);
 
-        $response = $this->actingAs($admin)->get(route('admin.index'));
-
-        $response
-            ->assertOk()
-            ->assertSee('Borrado chats')
-            ->assertSee(route('admin.chat-retention-logs.index'), false);
+        $this->actingAs($admin)
+            ->get(route('admin.index'))
+            ->assertRedirect('/backoffice');
     }
 
     public function test_admin_chat_retention_logs_page_lists_activity_and_allows_csv_download(): void
@@ -60,14 +57,9 @@ class CompanyChatRetentionLogTest extends TestCase
             'source' => 'cron',
         ]);
 
-        $pageResponse = $this->actingAs($admin)->get(route('admin.chat-retention-logs.index'));
-
-        $pageResponse
-            ->assertOk()
-            ->assertSee('Borrado chats')
-            ->assertSee('Empleado Borrado')
-            ->assertSee('4')
-            ->assertSee(route('admin.chat-retention-logs.export'), false);
+        $this->actingAs($admin)
+            ->get('/admin/logs/borrado-chats')
+            ->assertNotFound();
 
         $downloadResponse = $this->actingAs($admin)->get(route('admin.chat-retention-logs.export'));
 
@@ -135,19 +127,9 @@ class CompanyChatRetentionLogTest extends TestCase
             'source' => 'cron',
         ]);
 
-        $response = $this->actingAs($admin)->get(route('admin.chat-retention-logs.index', [
-            'date_from' => '2026-05-28',
-            'date_to' => '2026-05-28',
-            'user' => $employee->id,
-        ]));
-
-        $response
-            ->assertOk()
-            ->assertSee('Empleado Filtro')
-            ->assertSee('Del 28/05/2026 al 28/05/2026')
-            ->assertSee('2')
-            ->assertDontSee('Error de prueba')
-            ->assertDontSee('Con errores');
+        $this->actingAs($admin)
+            ->get('/admin/logs/borrado-chats')
+            ->assertNotFound();
 
         $downloadResponse = $this->actingAs($admin)->get(route('admin.chat-retention-logs.export', [
             'date_from' => '2026-05-28',

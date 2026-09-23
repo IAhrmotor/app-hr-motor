@@ -15,17 +15,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\View\View;
 
 class AdminChatRetentionHoldController extends Controller
 {
-    public function index(Request $request): View
-    {
-        $this->authorizeAdmin();
-
-        return view('admin.chat-retention-holds.legacy', $this->pageData($request));
-    }
-
     /**
      * Data shared by the legacy page and the Filament backoffice page.
      *
@@ -422,25 +414,17 @@ class AdminChatRetentionHoldController extends Controller
 
     private function indexUrl(): string
     {
-        return request()->routeIs('backoffice.chat-retention-holds.*')
-            ? ChatRetentionHoldsPage::getUrl()
-            : route('admin.chat-retention-holds.index');
+        return ChatRetentionHoldsPage::getUrl();
     }
 
     private function redirectWithStatus(string $message): RedirectResponse
     {
-        if (request()->routeIs('backoffice.chat-retention-holds.*')) {
-            Notification::make()
-                ->title($message)
-                ->success()
-                ->send();
+        Notification::make()
+            ->title($message)
+            ->success()
+            ->send();
 
-            return redirect()->to($this->indexUrl());
-        }
-
-        return redirect()
-            ->to($this->indexUrl())
-            ->with('status', $message);
+        return redirect()->to($this->indexUrl());
     }
 
     private function emptyPaginator()

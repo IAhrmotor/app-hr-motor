@@ -6,59 +6,12 @@ use App\Models\NotificationActivityLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminNotificationLogController extends Controller
 {
-    public function index(Request $request)
-    {
-        $dateFrom = $this->sanitizeDate($request->query('date_from'));
-        $dateTo = $this->sanitizeDate($request->query('date_to'));
-        [$dateFrom, $dateTo] = $this->normalizeDateRange($dateFrom, $dateTo);
-        $actorId = $this->sanitizeActorId($request->query('actor'));
-        $actors = $this->availableActors();
-
-        if (! Schema::hasTable('notification_activity_logs')) {
-            $logs = new LengthAwarePaginator(
-                items: new Collection(),
-                total: 0,
-                perPage: 20,
-                currentPage: LengthAwarePaginator::resolveCurrentPage(),
-                options: [
-                    'path' => LengthAwarePaginator::resolveCurrentPath(),
-                    'query' => $request->query(),
-                ],
-            );
-            $logs->withQueryString();
-
-            return $this->renderIndexResponse($request, [
-                'logs' => $logs,
-                'dateFrom' => $dateFrom,
-                'dateTo' => $dateTo,
-                'actorId' => $actorId,
-                'actors' => $actors,
-                'missingTable' => true,
-            ]);
-        }
-
-        $logs = $this->filteredLogsQuery($dateFrom, $dateTo, $actorId)
-            ->orderByDesc('created_at')
-            ->paginate(20)
-            ->withQueryString();
-
-        return $this->renderIndexResponse($request, [
-            'logs' => $logs,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'actorId' => $actorId,
-            'actors' => $actors,
-            'missingTable' => false,
-        ]);
-    }
-
     public function export(Request $request): StreamedResponse
     {
         $dateFrom = $this->sanitizeDate($request->query('date_from'));
@@ -183,14 +136,4 @@ class AdminNotificationLogController extends Controller
             ->implode(' | ');
     }
 
-    private function renderIndexResponse(Request $request, array $data)
-    {
-        if ($request->ajax()) {
-            return response()->json([
-                'html' => view('admin.notification-logs.partials.content', $data)->render(),
-            ]);
-        }
-
-        return view('admin.notification-logs.index', $data);
-    }
 }

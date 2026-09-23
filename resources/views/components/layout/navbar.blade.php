@@ -155,28 +155,11 @@
                         </div>
                     </div>
                 @endforeach
+
                 @auth
-                    @if (app_user_can_see_admin_nav($authUser))
-                        @php
-                            $isAdminActive = request()->routeIs('admin.index');
-                            $isAdminLogsActive = request()->routeIs('admin.logs.*');
-                            $isContentLogsActive = request()->routeIs('admin.content-logs.*');
-                            $isBulletinLogsActive = request()->routeIs('admin.bulletin-logs.*');
-                            $isUsersActive = request()->routeIs('users.*');
-                            $isDealershipsActive = request()->routeIs('dealerships.*');
-                            $isZonesActive = request()->routeIs('admin.zones.*');
-                            $isMagazineActive = request()->routeIs('admin.magazine.*');
-                            $isBulletinActive = request()->routeIs('admin.tablon.*');
-                            $isContactsActive = request()->routeIs('admin.contacts.*');
-                            $isPermissionsActive = request()->routeIs('admin.permissions.*');
-                            $isPermissionLogsActive = request()->routeIs('admin.permission-logs.*');
-                            $isConversationAccessActive = request()->routeIs('admin.conversation-access.*');
-                            $isChatGroupsActive = request()->routeIs('admin.chat-groups.*');
-                            $isChatRetentionActive = request()->routeIs('admin.chat-retention-holds.*');
-                            $isNotificationsActive = request()->routeIs('admin.notifications.*');
-                        @endphp
-                        <a href="{{ route('admin.index') }}"
-                            class="{{ $navItemClass }} px-1 font-semibold {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isZonesActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? $navItemActiveClass : $navItemInactiveClass }}">
+                    @if (in_array($authUser?->role, [\App\Models\User::ROLE_ADMIN, \App\Models\User::ROLE_MANAGER], true))
+                        <a href="{{ url('/backoffice') }}"
+                            class="{{ $navItemClass }} px-1 font-semibold {{ request()->is('backoffice*') ? $navItemActiveClass : $navItemInactiveClass }}">
                             Admin
                         </a>
                     @endif
@@ -1165,31 +1148,12 @@
             @endforeach
 
             @auth
-                @if (app_user_can_see_admin_nav($authUser))
-                    @php
-                        $isAdminActive = request()->routeIs('admin.index');
-                        $isAdminLogsActive = request()->routeIs('admin.logs.*');
-                        $isContentLogsActive = request()->routeIs('admin.content-logs.*');
-                        $isBulletinLogsActive = request()->routeIs('admin.bulletin-logs.*');
-                        $isUsersActive = request()->routeIs('users.*');
-                        $isDealershipsActive = request()->routeIs('dealerships.*');
-                        $isZonesActive = request()->routeIs('admin.zones.*');
-                        $isMagazineActive = request()->routeIs('admin.magazine.*');
-                        $isBulletinActive = request()->routeIs('admin.tablon.*');
-                        $isContactsActive = request()->routeIs('admin.contacts.*');
-                        $isPermissionsActive = request()->routeIs('admin.permissions.*');
-                        $isPermissionLogsActive = request()->routeIs('admin.permission-logs.*');
-                        $isConversationAccessActive = request()->routeIs('admin.conversation-access.*');
-                        $isChatGroupsActive = request()->routeIs('admin.chat-groups.*');
-                        $isChatRetentionActive = request()->routeIs('admin.chat-retention-holds.*');
-                        $isNotificationsActive = request()->routeIs('admin.notifications.*');
-                    @endphp
-                    <a href="{{ route('admin.index') }}" @click="open = false"
-                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium transition {{ $isAdminActive || $isAdminLogsActive || $isContentLogsActive || $isBulletinLogsActive || $isUsersActive || $isDealershipsActive || $isZonesActive || $isMagazineActive || $isBulletinActive || $isContactsActive || $isPermissionsActive || $isPermissionLogsActive || $isConversationAccessActive || $isChatGroupsActive || $isChatRetentionActive || $isNotificationsActive ? 'text-brand-primary' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
-                            Admin
-                        </a>
+                @if (in_array($authUser?->role, [\App\Models\User::ROLE_ADMIN, \App\Models\User::ROLE_MANAGER], true))
+                    <a href="{{ url('/backoffice') }}" @click="open = false"
+                        class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium {{ request()->is('backoffice*') ? 'text-brand-primary' : 'text-gray-700 transition hover:bg-gray-100 hover:text-gray-900' }}">
+                        Admin
+                    </a>
                 @endif
-
             @endauth
 
             <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t border-gray-200 pt-2">

@@ -3,7 +3,9 @@
 @section('content')
     @php
         $visibleRole = app_visible_role(auth()->user());
-        $backUrl = in_array($visibleRole, ['admin', 'gestor'], true) ? route('admin.contacts.index') : route('agenda.index');
+        $backUrl = in_array($visibleRole, ['admin', 'gestor'], true)
+            ? \App\Filament\Resources\Contacts\ContactResource::getUrl()
+            : route('agenda.index');
     @endphp
 
     <main class="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-8">
@@ -23,7 +25,7 @@
 
                 <div class="flex flex-wrap items-center gap-3">
                     @if (in_array($visibleRole, ['admin', 'gestor'], true))
-                        <a href="{{ route('admin.contacts.edit', $contact) }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Editar contacto</a>
+                        <a href="{{ \App\Filament\Resources\Contacts\ContactResource::getUrl('edit', ['record' => $contact]) }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Editar contacto</a>
                     @endif
 
                     <a href="{{ $backUrl }}" class="inline-flex items-center rounded-2xl border border-brand-secondary/15 px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:bg-brand-secondary/5">Volver</a>
